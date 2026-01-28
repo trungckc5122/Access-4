@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Module 3a</title>
+    <style>
+        /* ========================================================================
+        TECHNICAL REQUIREMENTS IMPLEMENTED:
+        
+        1. DATA INTEGRITY: All content from provided images preserved exactly
+        
+        2. STICKY UI: Word Bank follows scrolling when needed with position: sticky
+        
+        3. SINGLE SOLVE: Individual 'Show' buttons per question with 👁️ icon
+        
+        4. PEDAGOGICAL HINTS: Detailed English explanations via (i) button toggle
+        
+        5. SAFE-HIGHLIGHT: Keyword highlighting on error (green/red color coding)
+           - Green (#27ae60) for correct answers
+           - Red (#e74c3c) for incorrect answers
+           - Background colors change to indicate status
+        
+        6. CLICK-TO-SELECT & DRAG-DROP: Dual input methods for Word Bank
+           - Click on word bank items to select them
+           - Drag and drop onto input fields
+           - Visual feedback with color change (#ffeaa7 for selected)
+        
+        7. AUTO-WIDTH: Inputs resize based on content using oninput event
+           - Base widths: letter-input=45px, preposition-input=80px, word-input=120px, grammar-input=150px
+           - Dynamic adjustment: Math.max(el.value.length * 10 + 20, baseWidth)
+        
+        8. CASE-INSENSITIVE: Matching handles A/a equally via normalizeAnswer() function
+           - Converts to lowercase, trims whitespace, removes punctuation
+        
+        9. WORD BANK MANAGEMENT: Auto-hide used items with frequency tracking
+           - Counts occurrences of each word in inputs
+           - Hides items when used count >= total available (handles x2 duplicates)
+        
+        10. LOCAL CONTROLS: Individual Task 'Show All' and 'Reset' buttons
+            - Each exercise has its own control buttons
+            - Prefix-based selection for targeted operations
+        
+        11. KEYBOARD: Enter to check all answers, Arrow keys for navigation
+            - Event listener on document for keydown events
+            - Enter key triggers checkAll() function
+        
+        12. ENHANCED HINTS: Detailed explanations for every question
+            - Hidden divs that toggle on (i) button click
+            - Each hint contains pedagogical explanation
+        
+        13. AUTOMATIC FORMAT DETECTION: Based on data structure
+            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint' properties
+            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint' and [INPUT] placeholder
+            - RULE 3: PREPOSITION EXERCISE - objects with 'q', 'ans', 'hint' for fill-in-blank
+            - RULE 4: ADJECTIVE FORMS - objects with 'q', 'ans', 'hint' with parentheses for adjective hint
+            - RULE 5: ERROR CORRECTION - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
+        
+        14. MULTI-FORMAT SUPPORT:
+            - Vocabulary Matching (Task 1): 2-column grid with letter inputs
+            - Gap-fill with Word Bank (Task 2): Input fields with sticky word bank
+            - Relative Clauses (Task 3): Single-word input fields
+            - Passive Voice (Task 4): Grammar-focused inputs
+            - Comparative/Superlative forms (Task 5): Grammar-focused inputs
+            - So/Such/Enough (Task 6): Grammar-focused inputs
+        
+        15. ERROR CORRECTION ENHANCEMENT: Word-picker format for mistake identification
+            - Each sentence is displayed as clickable word units
+            - Users click on the incorrect word to select it
+            - Selected word gets visual feedback with different styling
+            - Separate input field for entering correction
+            - Visual comparison of selected vs correct answer
+        
+        16. EXERCISE NUMBER HANDLING: Preserves existing numbering from content
+            - If sentences already have numbers (like "1.", "2."), uses those numbers
+            - Otherwise uses automatic numbering with exercise-number class
+            - Number detection regex: /^\d+\.\s/
+        
+        17. DOCUMENTATION PRESERVATION: All technical requirement comments maintained
+            - This section must remain intact in any derivative code
+            - New requirements added as additional numbered points
+            - Never modify or remove existing technical requirements
+            - Always keep the complete history of all requirements
+        
+        18. ERROR CORRECTION - WORD PICKER ALGORITHM:
+            - Data structure: { words: array, errIdx: number, corr: string, hint: string }
+            - words: Array of word strings forming the sentence (includes punctuation)
+            - errIdx: Index position of the incorrect word/phrase in the words array
+            - corr: Correct version of the word/phrase
+            - hint: Pedagogical explanation
+            - Rendering: Each word becomes a clickable .word-unit span
+            - Selection: Clicking on word unit toggles 'selected' class
+            - Validation: Compare selected word index with errIdx for correctness
+        
+        19. IPA PRONUNCIATION FEATURE FOR MATCHING EXERCISES:
+            - Each vocabulary item in matching exercises has IPA pronunciation data
+            - Speaker button (🔊) added next to eye (👁️) button
+            - Clicking speaker button shows IPA pronunciation in a dedicated box
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - Visual design: IPA box appears below the vocabulary item with gray background
+        
+        20. MULTIPLE CORRECT ANSWERS SUPPORT:
+            - For exercises where multiple answers are possible (e.g., which/that in relative clauses),
+              answers can be stored as arrays or pipe-separated strings
+            - Validation logic checks if user answer matches any of the acceptable answers
+            - Supports British/American spelling variations (e.g., fibre/fiber)
+            - Grammar rule explanations reflect multiple acceptable forms
+        
+        21. CONTEXT-AWARE VALIDATION:
+            - Relative pronouns: which/that both acceptable for things in defining clauses
+            - Spelling variations: British vs American English both accepted
+            - Grammar structures: Alternative correct forms accepted based on pedagogical context
+        
+        22. CONSISTENT CASE HANDLING FOR WORD BANKS AND ANSWERS:
+            - WORD BANK ITEMS: Always displayed in lowercase for visual consistency
+            - ANSWER DISPLAY: Show answers with exact original capitalization from data
+            - VALIDATION: Case-insensitive comparison during validation
+            - USER INPUT: Preserves user's original capitalization input
+            - KEY RULE: When dragging from word bank, lowercase words are inserted, 
+              but when showing answers, the exact capitalization from data is displayed
+        
+        23. CASE HANDLING IMPLEMENTATION:
+            - Word bank creation: Uses toLowerCase() for all displayed words
+            - Answer display: Shows exact 'ans' property from data (preserves original case)
+            - Validation: Uses normalizeAnswer() for case-insensitive comparison
+            - User experience: No automatic case modification during user typing
+            - This ensures proper nouns (like "Obento") are displayed correctly when shown as answers
+        
+        24. GAP DETECTION AND REPLACEMENT:
+            - Any occurrence of "______" (any length of underscores) in question text is automatically
+              replaced with an input field
+            - Regex pattern: /_{2,}/g matches 2 or more consecutive underscores
+            - This handles variations in gap length from different sources
+            - Input fields are inserted exactly where the underscores appear
+        
+        25. GRAMMAR REFERENCE CONTENT POLICY:
+            - Grammar Reference & Study Notes section contains ONLY grammar explanations
+            - Vocabulary explanations are NOT included in this section
+            - Focus is on grammatical structures, tenses, and language rules
+            - Vocabulary is taught through exercises, not in grammar reference
+        
+        26. MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
+            - Left column: Vocabulary items with input boxes for matching letters
+            - Right column: Definitions in alphabetical order (A, B, C, D, etc.)
+            - Each vocabulary item has three control buttons:
+              1. 👁️ Eye button: Shows the correct answer
+              2. 🔊 Speaker button: Shows IPA pronunciation from authoritative dictionary
+              3. (i) Info button: Shows pedagogical hint
+            - IPA pronunciation data comes from reliable dictionary sources
+            - IPA display appears in a dedicated box below each vocabulary item
+        
+        27. IPA PRONUNCIATION IMPLEMENTATION:
+            - Speaker button size matches eye button (28x28px)
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - IPA display uses phonetic font and proper formatting
+            - IPA box has distinct visual styling for clear pronunciation display
+            - Multiple pronunciation variants supported when applicable
+        
+        28. IPA SINGLE ACTIVE DISPLAY SYSTEM:
+            - Only ONE IPA pronunciation box can be visible at a time
+            - Clicking a speaker button shows that word's IPA and hides any other visible IPA box
+            - Clicking the same speaker button again toggles (hides) its IPA box
+            - This prevents visual clutter and ensures clean interface
+            - System tracks currently active IPA box and manages visibility states
+        
+        29. DEFINITIONS COLUMN OPTIMIZATION:
+            - Definitions column displays clean list without unnecessary headers
+            - Alphabetical ordering (A, B, C, D) maintained for easy reference
+            - Visual hierarchy maintained through consistent styling
+            - Column alignment optimized for readability and space efficiency
+        
+        30. SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
+            - Definitions column has independent vertical scrolling when content is too long
+            - Fixed height with overflow-y: auto enables scrolling within the column
+            - Scrollbar styling matches the design system with subtle appearance
+            - Allows users to scroll through definitions while keeping vocabulary column fixed
+            - Responsive height calculation based on available space
+        
+        31. MULTI-GAP QUESTIONS WITH SEPARATE VALIDATION:
+            - For questions with multiple gaps, each gap gets its own input field
+            - Data structure supports multiple answers in one 'ans' field separated by |
+            - Validation checks each input field against its corresponding answer
+            - Example: "were cut|were steamed" validates first input against "were cut" and second against "were steamed"
+            - Hints provide explanations for each gap when applicable
+            - Show All button fills all gaps with correct answers
+        
+        ======================================================================== */
+        :root {
+            --primary: #2980b9; 
+            --primary-dark: #1c5982; 
+            --success: #27ae60;
+            --error: #e74c3c; 
+            --warning: #f1c40f; 
+            --bg: #f4f7f9;
+            --text: #2c3e50; 
+            --card: #ffffff;
+            --selection: #3498db;
+            --selection-bg: #ebf5fb;
+        }
+        
+        body { 
+            font-family: 'Times New Roman', serif; 
+            font-size: 13pt; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px 20px 100px 20px; 
+            line-height: 1.6; 
+        }
+        
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        
+        .sticky-bank { 
+            position: sticky; 
+            top: 15px; 
+            z-index: 100;
+            background-color: #fff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 25px; 
+            border: 2px solid var(--primary); 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .word-item { 
+            background: #eef2f7; 
+            border: 1px solid var(--primary); 
+            color: var(--primary-dark); 
+            padding: 6px 12px; 
+            border-radius: 5px; 
+            cursor: grab; 
+            user-select: none; 
+            transition: 0.2s; 
+            font-size: 0.9em; 
+            font-weight: 500;
+        }
+        
+        .word-item.used { 
+            display: none; 
+        }
+        
+        .word-item:hover { 
+            background: var(--primary); 
+            color: white; 
+        }
+
+        .exercise-card { 
+            background: var(--card); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            padding: 25px; 
+            margin-bottom: 30px; 
+        }
+        
+        .exercise-title { 
+            font-weight: bold; 
+            font-size: 1.25em; 
+            margin-bottom: 18px; 
+            color: var(--primary-dark); 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 8px; 
+        }
+        
+        .matching-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            margin-top: 10px; 
+        }
+        
+        .vocab-item { 
+            margin-bottom: 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        
+        .vocab-text { 
+            min-width: 150px; 
+            font-weight: 500; 
+        }
+        
+        .def-item { 
+            margin-bottom: 12px; 
+            padding: 4px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+            min-height: 40px; 
+            display: flex; 
+            align-items: center; 
+        }
+
+        .question-row { 
+            margin-bottom: 18px; 
+            line-height: 2.2; 
+            border-bottom: 1px solid #f9f9f9; 
+            padding-bottom: 10px; 
+            position: relative; 
+        }
+        
+        input[type="text"] { 
+            border: none; 
+            border-bottom: 2px solid #bdc3c7; 
+            background: #fafafa; 
+            padding: 2px 8px; 
+            font-size: 1em; 
+            transition: 0.2s; 
+            outline: none;
+            min-width: 60px; 
+            border-radius: 4px 4px 0 0; 
+            text-align: center; 
+            font-family: 'Times New Roman';
+        }
+        
+        input.letter-input { 
+            width: 45px; 
+            min-width: 45px; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            color: var(--primary-dark); 
+        }
+        
+        input.word-input { 
+            min-width: 120px; 
+            max-width: 250px; 
+            text-align: left; 
+        }
+        
+        input.grammar-input { 
+            min-width: 150px; 
+            max-width: 300px; 
+            text-align: left; 
+        }
+        
+        input.relative-input { 
+            min-width: 80px; 
+            max-width: 120px; 
+            text-align: center; 
+        }
+        
+        input.correct { 
+            border-bottom-color: var(--success) !important; 
+            background-color: #e8f8f5 !important; 
+            color: #1e8449 !important; 
+        }
+        
+        input.incorrect-marked { 
+            border-bottom-color: var(--error) !important; 
+            background-color: #fdedec !important; 
+        }
+
+        .row-btns { 
+            display: inline-flex; 
+            gap: 5px; 
+            vertical-align: middle; 
+            margin-left: 10px; 
+        }
+        
+        .btn-small { 
+            background: #eee; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            width: 28px; 
+            height: 28px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 14px; 
+            transition: 0.2s;
+        }
+        
+        .btn-small:hover {
+            background: #ddd;
+        }
+        
+        .speaker-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+        }
+        
+        .speaker-btn:hover {
+            background: #2980b9;
+        }
+        
+        .info-btn { 
+            background: #95a5a6; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            width: 20px; 
+            height: 20px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s;
+        }
+        
+        .info-btn:hover {
+            background: #7f8c8d;
+        }
+        
+        .hint-box { 
+            display: none; 
+            margin-top: 8px; 
+            padding: 10px; 
+            background-color: #fef9e7; 
+            border-left: 4px solid var(--warning); 
+            color: #7d6608; 
+            border-radius: 4px; 
+            font-size: 0.85em; 
+        }
+        
+        .ipa-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            color: #2c3e50;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .ipa-label {
+            font-weight: bold;
+            color: #3498db;
+            margin-right: 5px;
+        }
+        
+        .ipa-text {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .controls-row { 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 10px; 
+            margin-top: 15px; 
+        }
+        
+        .btn { 
+            padding: 8px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            border: none; 
+            font-weight: bold; 
+            transition: 0.3s; 
+        }
+        
+        .btn-reset { 
+            background: #95a5a6; 
+            color: white; 
+        }
+        
+        .btn-show-all { 
+            background: var(--primary); 
+            color: white; 
+        }
+        
+        .check-all-btn { 
+            position: fixed; 
+            right: 30px; 
+            bottom: 30px; 
+            background-color: var(--success); 
+            color: white; 
+            padding: 15px 30px; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            z-index: 1000; 
+            font-weight: bold; 
+            border: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        }
+        
+        /* Grammar reference section */
+        .grammar-reference {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+        }
+        
+        .grammar-reference h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1em;
+        }
+        
+        .grammar-reference ul {
+            padding-left: 20px;
+        }
+        
+        .grammar-reference li {
+            margin-bottom: 8px;
+        }
+        
+        .reference-note {
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 0.85em;
+            margin-top: 10px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        /* Exercise numbering */
+        .instructions {
+            color: #7f8c8d;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        /* Number handling - preserves existing numbers */
+        .existing-number {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 8px;
+        }
+        
+        /* Definitions column styling - UPDATED WITH SCROLL */
+        .definitions-column {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            height: 500px; /* Fixed height for scrollable area */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        
+        /* Custom scrollbar styling */
+        .definitions-column::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .definition-item {
+            margin-bottom: 12px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: white;
+            border-radius: 4px;
+            min-height: 40px; /* Ensure consistent height */
+        }
+        
+        .definition-letter {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 10px;
+            min-width: 20px;
+            display: inline-block;
+        }
+        
+        .definition-text {
+            display: inline;
+        }
+        
+        /* Multi-gap question styling */
+        .multi-gap-hint {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">Access 4 - Module 3a</h1>
+    
+    <!-- Grammar Reference Section -->
+    <div class="exercise-card">
+        <div class="exercise-title">Grammar Reference & Study Notes</div>
+        <div class="grammar-reference">
+            <h3>Present Perfect vs. Past Simple:</h3>
+            <ul>
+                <li><strong>Past Simple:</strong> Used for completed actions at a specific time in the past ("I visited Kyoto last summer")</li>
+                <li><strong>Present Perfect:</strong> Used for actions that happened at an unspecified time or have a connection to the present ("I have finished my homework already")</li>
+                <li><strong>Signal words:</strong> Past Simple: yesterday, last week, ago, in 2022. Present Perfect: already, yet, never, ever, since, for, just</li>
+                <li><strong>Note:</strong> Present Perfect often focuses on the result or experience, not when it happened</li>
+            </ul>
+            
+            <h3>Relative Clauses:</h3>
+            <ul>
+                <li><strong>Who:</strong> Used for people ("the mother who prepared...")</li>
+                <li><strong>Which:</strong> Used for things and animals ("the magazine which provides...")</li>
+                <li><strong>That:</strong> Used for both people and things in defining relative clauses ("the ingredients that are used...")</li>
+                <li><strong>Where:</strong> Used for places ("the kitchen where we cook...")</li>
+                <li><strong>Whose:</strong> Used to show possession ("the boy whose favorite food...")</li>
+                <li><strong>Note:</strong> In defining relative clauses, 'that' can replace 'who' or 'which'</li>
+            </ul>
+            
+            <h3>Passive Voice:</h3>
+            <ul>
+                <li><strong>Structure:</strong> Subject + to be + past participle + (by agent)</li>
+                <li><strong>Present Simple:</strong> am/is/are + past participle ("Obento is prepared")</li>
+                <li><strong>Past Simple:</strong> was/were + past participle ("A new menu was introduced")</li>
+                <li><strong>Present Perfect:</strong> have/has been + past participle ("Snacks have been removed")</li>
+                <li><strong>Future:</strong> will be + past participle ("A workshop will be organized")</li>
+            </ul>
+            <p class="reference-note">Grammar references based on Cambridge English Grammar in Use and Oxford English Grammar Course.</p>
+        </div>
+    </div>
+
+    <!-- TASK 1: Vocabulary Matching – Match the word to its definition -->
+    <div class="exercise-card" id="card-t1">
+        <div class="exercise-title">Exercise 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-K) in the box.</div>
+        
+        <div class="matching-grid">
+            <div id="vocab-t1"></div>
+            <div class="definitions-column">
+                <div id="def-t1"></div>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 2: Fill in the blanks -->
+    <div class="exercise-card" id="card-t2">
+        <div class="exercise-title">Exercise 2: Fill in the gaps – Use the correct word from Exercise 1</div>
+        <div class="instructions">Complete each sentence using the correct word from the vocabulary list. You can click words from the bank below or type them directly.</div>
+        <div class="sticky-bank" id="bank-t2"></div>
+        <div id="questions-t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 3: Present Perfect vs. Past Simple -->
+    <div class="exercise-card" id="card-t3">
+        <div class="exercise-title">Exercise 3: Present Perfect vs. Past Simple – Fill in the blanks</div>
+        <div class="instructions">Complete each sentence with the correct form of the verb in brackets. Use either Past Simple or Present Perfect tense.</div>
+        <div id="questions-t3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 4: Cooking Vocabulary Matching -->
+    <div class="exercise-card" id="card-t4">
+        <div class="exercise-title">Exercise 4: Vocabulary Matching – Match the word to its definition</div>
+        <div class="instructions">Match the cooking word on the left with its definition on the right by entering the correct letter (A-K) in the box.</div>
+        
+        <div class="matching-grid">
+            <div id="vocab-t4"></div>
+            <div class="definitions-column">
+                <div id="def-t4"></div>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t4')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 5: Cooking Instructions -->
+    <div class="exercise-card" id="card-t5">
+        <div class="exercise-title">Exercise 5: Fill in the gaps – Use the correct word from exercise 4</div>
+        <div class="instructions">Complete each cooking instruction using the correct word from the vocabulary list. You can click words from the bank below or type them directly.</div>
+        <div class="sticky-bank" id="bank-t5"></div>
+        <div id="questions-t5"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t5')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t5')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 6: Relative Clauses -->
+    <div class="exercise-card" id="card-t6">
+        <div class="exercise-title">REVIEW: Relative Clauses - Complete the sentences using the proper relative pronoun</div>
+        <div class="instructions">Complete each sentence with the appropriate relative pronoun (who, whom, which, that, whose, where).</div>
+        <div id="questions-t6"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t6')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t6')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 7: Passive Voice -->
+    <div class="exercise-card" id="card-t7">
+        <div class="exercise-title">REVIEW: Passive Voice – Mixed Tenses</div>
+        <div class="instructions">Complete each sentence using the correct passive form of the verb in brackets.</div>
+        <div id="questions-t7"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t7')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t7')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+/* --- DATA --- */
+// Task 1: Vocabulary Matching – Match the word to its meaning - STRUCTURE PATTERN: { v, letter, def, hint, ipa }
+const t1_data = [
+    { v: "1. packed lunch", letter: "K", def: "A type of food prepared at home and taken to eat elsewhere, usually at work or school", hint: "A meal prepared at home and brought to eat at school or work.", ipa: "/pækt lʌntʃ/" },
+    { v: "2. pickled", letter: "A", def: "Food that is preserved in a vinegar or brine solution", hint: "Food preserved in vinegar, like pickled cucumbers or onions.", ipa: "/ˈpɪkəld/" },
+    { v: "3. nourishing", letter: "J", def: "Healthy and good for your body", hint: "Food that provides good nutrition and helps you stay healthy.", ipa: "/ˈnʌrɪʃɪŋ/" },
+    { v: "4. take great pride in", letter: "C", def: "To admire or respect someone highly", hint: "To feel very proud about something or someone.", ipa: "/teɪk ɡreɪt praɪd ɪn/" },
+    { v: "5. nursery school", letter: "D", def: "Schools for young children before they begin primary school", hint: "School for very young children, usually ages 3-5.", ipa: "/ˈnɜːrsəri skuːl/" },
+    { v: "6. establish regulations", letter: "I", def: "Set rules or guidelines officially", hint: "To create official rules that people must follow.", ipa: "/ɪˈstæblɪʃ ˌreɡjʊˈleɪʃənz/" },
+    { v: "7. picky eater", letter: "E", def: "Someone who is very selective about the food they eat", hint: "A person who is very fussy or choosy about what they eat.", ipa: "/ˈpɪki ˈiːtər/" },
+    { v: "8. look upon", letter: "F", def: "Consider or view in a particular way", hint: "To regard or think about someone or something in a certain way.", ipa: "/lʊk əˈpɒn/" },
+    { v: "9. influence (N)", letter: "G", def: "The power to affect someone's behavior or development", hint: "The ability to have an effect on someone or something.", ipa: "/ˈɪnfluəns/" },
+    { v: "10. run out of", letter: "B", def: "Use up completely, leaving none left", hint: "To have no more of something because it has all been used.", ipa: "/rʌn aʊt ɒv/" },
+    { v: "11. inspire", letter: "H", def: "To give someone the desire or motivation to do something", hint: "To encourage someone to do something creative or good.", ipa: "/ɪnˈspaɪər/" }
+];
+
+// Task 2: Fill in the blanks - STRUCTURE PATTERN: { q, ans, hint } 
+const t2_data = [
+    { q: "1. Obento should be ______ so that children stay healthy and grow well.", ans: "nourishing", hint: "The word means healthy and good for your body." },
+    { q: "2. Parents have a strong ______ on what their children like to eat.", ans: "influence", hint: "The power to affect someone's behavior or choices." },
+    { q: "3. Obento is a kind of ______ that Japanese people often prepare for school or work.", ans: "packed lunch", hint: "Food prepared at home and taken to eat elsewhere." },
+    { q: "4. Magazines often provide ideas to ______ parents in making creative obento.", ans: "inspire", hint: "To give someone ideas or motivation to do something." },
+    { q: "5. The Japanese always ______ the mother as an important figure in child-rearing.", ans: "look upon", hint: "To consider or view someone in a particular way." },
+    { q: "6. Some vegetables in obento are ______, which means they are preserved in vinegar.", ans: "pickled", hint: "Food preserved in a vinegar or brine solution." },
+    { q: "7. Schools have ______ to make sure the food is healthy and safe.", ans: "established regulations", hint: "Set rules or guidelines officially." },
+    { q: "8. Mothers in Japan ______ preparing a beautiful obento for their children.", ans: "take great pride in", hint: "To feel very proud about doing something." },
+    { q: "9. Many Japanese children attend a ______ before starting primary school.", ans: "nursery school", hint: "School for young children before primary school." },
+    { q: "10. Some children are ______ and refuse to eat certain foods.", ans: "picky eaters", hint: "People who are very selective about the food they eat." },
+    { q: "11. If you forget to buy ingredients, you might ______ vegetables or rice.", ans: "run out of", hint: "To use up completely, leaving none left." }
+];
+
+// Task 3: Present Perfect vs. Past Simple - STRUCTURE PATTERN: { q, ans, hint }
+const t3_data = [
+    { q: "1. I ______ (visit) Kyoto last summer when I went to Japan.", ans: "visited", hint: "Use Past Simple for completed actions at specific times in the past (last summer)." },
+    { q: "2. She ______ (finish) her homework already, so now she can watch TV.", ans: "has finished", hint: "Use Present Perfect for actions completed recently with present relevance (already)." },
+    { q: "3. They ______ (see) the new movie two days ago.", ans: "saw", hint: "Use Past Simple with specific time expressions (two days ago)." },
+    { q: "4. We ______ (live) in this city since 2019.", ans: "have lived", hint: "Use Present Perfect for actions that started in the past and continue to the present (since 2019)." },
+    { q: "5. He ______ (lose) his wallet yesterday at the train station.", ans: "lost", hint: "Use Past Simple with specific time expressions (yesterday)." },
+    { q: "6. My parents ______ (travel) to Europe three times in their lives.", ans: "have traveled", hint: "Use Present Perfect for life experiences when time is not specified." },
+    { q: "7. She ______ (meet) her best friend at school last Monday.", ans: "met", hint: "Use Past Simple with specific time expressions (last Monday)." },
+    { q: "8. I ______ (not eat) breakfast this morning.", ans: "have not eaten", hint: "Use Present Perfect for actions in a time period that is not yet finished (this morning)." },
+    { q: "9. They ______ (buy) a new car last week.", ans: "bought", hint: "Use Past Simple with specific time expressions (last week)." },
+    { q: "10. We ______ (study) English for five years, so now we can speak quite well.", ans: "have studied", hint: "Use Present Perfect for actions that started in the past and continue to the present (for five years)." },
+    { q: "11. He ______ (break) his leg when he was skiing last winter.", ans: "broke", hint: "Use Past Simple with specific time expressions (last winter)." },
+    { q: "12. I ______ (never see) such a beautiful sunset before.", ans: "have never seen", hint: "Use Present Perfect with 'never' for life experiences." },
+    { q: "13. My brother ______ (graduate) from university in 2022.", ans: "graduated", hint: "Use Past Simple with specific years (in 2022)." },
+    { q: "14. They ______ (already finish) their project, so the teacher is very happy.", ans: "have already finished", hint: "Use Present Perfect with 'already' for recently completed actions." },
+    { q: "15. Last year, I ______ (take) part in a school festival for the first time.", ans: "took", hint: "Use Past Simple with specific time expressions (last year)." }
+];
+
+// Task 4: Cooking Vocabulary Matching - STRUCTURE PATTERN: { v, letter, def, hint, ipa }
+const t4_data = [
+    { v: "1. grate", letter: "I", def: "Cut food into small shreds using a special tool", hint: "To rub food against a grater to make small pieces, like cheese.", ipa: "/ɡreɪt/" },
+    { v: "2. grill", letter: "A", def: "Cook food over direct heat, usually on a metal frame", hint: "To cook food on a grill over direct heat, like barbecue.", ipa: "/ɡrɪl/" },
+    { v: "3. melt", letter: "E", def: "Heat something until it becomes liquid", hint: "To make something solid become liquid by heating, like butter.", ipa: "/melt/" },
+    { v: "4. poach", letter: "H", def: "Cook food in hot water just below boiling point", hint: "To cook food gently in simmering water, like eggs or fish.", ipa: "/pəʊtʃ/" },
+    { v: "5. steam", letter: "C", def: "Cook food using steam from boiling water", hint: "To cook food with steam, which keeps nutrients in vegetables.", ipa: "/stiːm/" },
+    { v: "6. slice", letter: "B", def: "Cut something into thin, flat pieces", hint: "To cut food into thin pieces, like slicing bread or tomatoes.", ipa: "/slaɪs/" },
+    { v: "7. peel", letter: "D", def: "Remove the outer skin of fruits or vegetables", hint: "To remove the skin from fruits or vegetables.", ipa: "/piːl/" },
+    { v: "8. beat", letter: "K", def: "Mix food quickly and strongly with a fork or whisk", hint: "To mix ingredients vigorously, like beating eggs.", ipa: "/biːt/" },
+    { v: "9. scramble", letter: "F", def: "Cook an egg by mixing it and heating it gently in a pan", hint: "To cook eggs while stirring them in a pan.", ipa: "/ˈskræmbəl/" },
+    { v: "10. mash", letter: "G", def: "Beat or crush food until it becomes soft and smooth", hint: "To crush food into a soft mixture, like mashed potatoes.", ipa: "/mæʃ/" },
+    { v: "11. roast", letter: "J", def: "Cook food in an oven with dry heat", hint: "To cook food in an oven, like roasting chicken or vegetables.", ipa: "/rəʊst/" }
+];
+
+// Task 5: Cooking Instructions - STRUCTURE PATTERN: { q, ans, hint } 
+const t5_data = [
+    { q: "1. For the pasta topping, the recipe tells you to ______ the cheese into very fine pieces so it can melt easily.", ans: "grate", hint: "To cut cheese into small shreds using a grater." },
+    { q: "2. To keep the vegetables healthy and full of vitamins, many cooks prefer to ______ them instead of boiling.", ans: "steam", hint: "To cook with steam, which preserves nutrients better than boiling." },
+    { q: "3. Every Sunday, her family likes to ______ a whole chicken in the oven until the skin becomes golden and crispy.", ans: "roast", hint: "To cook meat in an oven with dry heat." },
+    { q: "4. The teacher showed the students how to ______ the tomatoes thinly so they could put them in sandwiches.", ans: "slice", hint: "To cut into thin, flat pieces." },
+    { q: "5. After boiling the potatoes for twenty minutes, you should ______ them until they become smooth and creamy.", ans: "mash", hint: "To crush cooked potatoes until soft and smooth." },
+    { q: "6. When preparing the soup, the first step is to ______ the carrots because the skin is too tough to eat.", ans: "peel", hint: "To remove the outer skin of vegetables." },
+    { q: "7. At the barbecue party, they decided to ______ the meat over hot charcoal for a smoky flavour.", ans: "grill", hint: "To cook over direct heat on a grill." },
+    { q: "8. If you leave the butter in a hot pan for a few seconds, it will ______ and become liquid.", ans: "melt", hint: "To change from solid to liquid when heated." },
+    { q: "9. On busy mornings, she often ______ her eggs quickly in a pan because it only takes a minute.", ans: "scrambles", hint: "To cook eggs by mixing and heating them in a pan." },
+    { q: "10. To make the cake mixture light and airy, you need to ______ the eggs and sugar until they become fluffy.", ans: "beat", hint: "To mix ingredients vigorously with a whisk or fork." },
+    { q: "11. Some chefs prefer to ______ fish gently in hot water just below boiling point so it stays soft and delicate.", ans: "poach", hint: "To cook gently in simmering water." }
+];
+
+// Task 6: Relative Clauses - STRUCTURE PATTERN: { q, ans, hint }
+const t6_data = [
+    { q: "1. The mother ______ prepared the obento is very creative.", ans: "who|that", hint: "Use 'who' or 'that' for people in defining relative clauses." },
+    { q: "2. I know a school ______ teaches children how to make healthy lunches.", ans: "which|that", hint: "Use 'which' or 'that' for things (school) in defining relative clauses." },
+    { q: "3. Children, ______ eat too much fast food, may have health problems.", ans: "who", hint: "Use 'who' for people (children). In non-defining clauses, 'who' is preferred over 'that'." },
+    { q: "4. This is the magazine ______ provides ideas for obento.", ans: "which|that", hint: "Use 'which' or 'that' for things (magazine) in defining relative clauses." },
+    { q: "5. The teacher, ______ helps the students, is very patient.", ans: "who", hint: "Use 'who' for people (teacher) in non-defining relative clauses." },
+    { q: "6. The ingredients ______ are used in obento should be fresh and nourishing.", ans: "which|that", hint: "Use 'which' or 'that' for things (ingredients) in defining relative clauses." },
+    { q: "7. He is the boy ______ favorite food is sushi.", ans: "whose", hint: "Use 'whose' to show possession (the boy's favorite food)." },
+    { q: "8. The kitchen ______ we cook the obento is always very clean.", ans: "where", hint: "Use 'where' for places (kitchen)." },
+    { q: "9. Mothers, ______ often spend hours preparing lunches, deserve praise.", ans: "who", hint: "Use 'who' for people (mothers) in non-defining relative clauses." },
+    { q: "10. The rules ______ schools establish are important for children's health.", ans: "which|that", hint: "Use 'which' or 'that' for things (rules) in defining relative clauses." }
+];
+
+// Task 7: Passive Voice - STRUCTURE PATTERN: { q, ans, hint }
+// UPDATED: Câu số 6 có nhiều chỗ trống với các đáp án khác nhau
+const t7_data = [
+    { q: "1. Obento ______ (prepare) every morning by many mothers in Japan.", ans: "is prepared", hint: "Present Simple passive: 'is' + past participle 'prepared'." },
+    { q: "2. A new lunch menu ______ (introduce) at the school last week to encourage healthier eating.", ans: "was introduced", hint: "Past Simple passive: 'was' + past participle 'introduced'." },
+    { q: "3. Several unhealthy snacks ______ (remove) from the cafeteria recently.", ans: "have been removed", hint: "Present Perfect passive: 'have been' + past participle 'removed'." },
+    { q: "4. The cooking room ______ (clean) by the students every Friday afternoon.", ans: "is cleaned", hint: "Present Simple passive: 'is' + past participle 'cleaned'." },
+    { q: "5. New food safety guidelines ______ (just / establish) to protect children's health.", ans: "have just been established", hint: "Present Perfect passive with 'just': 'have just been' + past participle 'established'." },
+    { 
+        q: "6. Vegetables ______ (cut) and ______ (steam) yesterday morning for the school lunch.", 
+        ans: "were cut|were steamed", 
+        hint: "Past Simple passive for both actions: 'were' + past participle 'cut' and 'were' + past participle 'steamed'. Both verbs need to be in passive form." 
+    },
+    { q: "7. A set of creative obento ideas ______ (share) with parents recently.", ans: "has been shared", hint: "Present Perfect passive: 'has been' + past participle 'shared'." },
+    { q: "8. A new kitchen area ______ (build) next semester. (be going to)", ans: "is going to be built", hint: "Future with 'be going to' passive: 'is going to be' + past participle 'built'." },
+    { q: "9. More nutritious dishes ______ (add) to the menu next month. (be going to)", ans: "are going to be added", hint: "Future with 'be going to' passive: 'are going to be' + past participle 'added'." },
+    { q: "10. A health workshop for parents ______ (organize) next week. (will)", ans: "will be organized", hint: "Future Simple passive: 'will be' + past participle 'organized'." }
+];
+
+/* --- GLOBAL STATE --- */
+let currentActiveIPA = null;
+
+/* --- RENDERING FUNCTIONS --- */
+
+function renderMatching(id, data) {
+    const v = document.getElementById(`vocab-${id}`); 
+    const d = document.getElementById(`def-${id}`);
+    
+    // Clear existing content
+    v.innerHTML = '';
+    d.innerHTML = '';
+    
+    // Create definitions list in alphabetical order (A, B, C, D, etc.)
+    const definitions = {};
+    data.forEach(item => {
+        definitions[item.letter] = item.def;
+    });
+    
+    // Sort definitions by letter (A, B, C, D, etc.)
+    const sortedLetters = Object.keys(definitions).sort();
+    sortedLetters.forEach(letter => {
+        d.innerHTML += `
+            <div class="definition-item">
+                <span class="definition-letter">${letter}.</span>
+                <span class="definition-text">${definitions[letter]}</span>
+            </div>`;
+    });
+    
+    // Render vocabulary items in numerical order with IPA support
+    data.forEach((item, i) => {
+        const qid = `${id}-q${i}`;
+        
+        v.innerHTML += `
+            <div class="vocab-item">
+                <span class="vocab-text">${item.v}</span>
+                <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showSingleAns('${qid}')" title="Show answer">👁️</button>
+                    <button class="btn-small speaker-btn" onclick="toggleIPA('${qid}')" title="Show pronunciation">🔊</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')" title="Show hint">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+                <div class="ipa-box" id="${qid}-ipa">
+                    <span class="ipa-label">IPA:</span>
+                    <span class="ipa-text">${item.ipa}</span>
+                </div>
+            </div>`;
+    });
+}
+
+function renderGapFill(id, data, bankId) {
+    const container = document.getElementById(`questions-${id}`);
+    const bank = document.getElementById(bankId);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    bank.innerHTML = '';
+    
+    // Create word bank - IMPORTANT: Always use lowercase for word bank display
+    const words = [...new Set(data.map(item => item.ans.toLowerCase()))].sort();
+    words.forEach(w => {
+        // Word bank items are always displayed in lowercase
+        bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
+    });
+    
+    // Render questions
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
+        });
+        
+        // Store the answers for each gap
+        const answers = it.ans.split('|');
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // Set data-ans attribute for each input field
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && answers[j]) {
+                    input.setAttribute('data-ans', answers[j]);
+                }
+            }
+        }, 0);
+    });
+}
+
+function renderGrammarFill(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="grammar-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)">`;
+        });
+        
+        // Store the answers for each gap
+        const answers = it.ans.split('|');
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // Set data-ans attribute for each input field
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && answers[j]) {
+                    input.setAttribute('data-ans', answers[j]);
+                }
+            }
+        }, 0);
+    });
+}
+
+function renderRelativeClauses(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        sentence = sentence.replace(/_{2,}/g, `<input type="text" class="relative-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">`);
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+    });
+}
+
+function renderPassiveVoice(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="grammar-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)">`;
+        });
+        
+        // Store the answers for each gap
+        const answers = it.ans.split('|');
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // Set data-ans attribute for each input field
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && answers[j]) {
+                    input.setAttribute('data-ans', answers[j]);
+                }
+            }
+        }, 0);
+    });
+}
+
+/* --- UTILITY FUNCTIONS --- */
+
+function adjustWidth(el) { 
+    const baseWidth = el.classList.contains('letter-input') ? 45 : 
+                     el.classList.contains('relative-input') ? 80 :
+                     el.classList.contains('word-input') ? 120 :
+                     el.classList.contains('grammar-input') ? 150 : 60;
+    
+    // Calculate width based on content
+    const newWidth = Math.max(el.value.length * 10 + 20, baseWidth);
+    el.style.width = newWidth + "px"; 
+    
+    // Update word bank after input
+    updateWordBank();
+}
+
+function toggleHint(id) { 
+    const h = document.getElementById(id + '-hint'); 
+    if (h) {
+        h.style.display = h.style.display === 'block' ? 'none' : 'block'; 
+    }
+}
+
+function toggleIPA(id) { 
+    const ipaBox = document.getElementById(id + '-ipa'); 
+    
+    // If clicking the same IPA box that's currently active, hide it
+    if (currentActiveIPA === ipaBox) {
+        ipaBox.style.display = 'none';
+        currentActiveIPA = null;
+        return;
+    }
+    
+    // Hide previously active IPA box if exists
+    if (currentActiveIPA) {
+        currentActiveIPA.style.display = 'none';
+    }
+    
+    // Show the clicked IPA box
+    if (ipaBox) {
+        ipaBox.style.display = 'block';
+        currentActiveIPA = ipaBox;
+    }
+}
+
+function showSingleAns(id) { 
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const ans = el.dataset.ans;
+    if (ans) {
+        // For multiple answers separated by |, show the first one with exact case
+        const firstAns = ans.split('|')[0];
+        // IMPORTANT: Show answer with exact original capitalization
+        el.value = firstAns;
+        el.classList.add('correct');
+        el.classList.remove('incorrect-marked');
+        adjustWidth(el);
+        
+        updateWordBank();
+    }
+}
+
+function showMultiGapAns(parentId, gapCount, answersStr) {
+    const answers = answersStr.split('|');
+    
+    for (let i = 0; i < gapCount; i++) {
+        const inputId = `${parentId}-${i}`;
+        const el = document.getElementById(inputId);
+        if (el && answers[i]) {
+            // IMPORTANT: Show answer with exact original capitalization
+            el.value = answers[i];
+            el.classList.add('correct');
+            el.classList.remove('incorrect-marked');
+            adjustWidth(el);
+        }
+    }
+    
+    updateWordBank();
+}
+
+function showAnswers(prefix) { 
+    // Handle regular single-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && !el.dataset.parent) {
+            showSingleAns(el.id);
+        }
+    });
+    
+    // Handle multi-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && el.dataset.parent) {
+            // Find all inputs with the same parent
+            const parentId = el.dataset.parent;
+            const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
+            const answers = [];
+            
+            // Collect answers from all inputs
+            inputs.forEach(input => {
+                if (input.dataset.ans) {
+                    answers[parseInt(input.dataset.gapIndex)] = input.dataset.ans;
+                }
+            });
+            
+            // Show answers for each input
+            inputs.forEach(input => {
+                const index = parseInt(input.dataset.gapIndex);
+                if (answers[index]) {
+                    input.value = answers[index];
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect-marked');
+                    adjustWidth(input);
+                }
+            });
+        }
+    });
+}
+
+function resetSection(prefix) { 
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { 
+        if(i.tagName === 'INPUT') { 
+            i.value = ""; 
+            i.classList.remove('correct', 'incorrect-marked'); 
+            adjustWidth(i); 
+        } 
+        const hBox = document.getElementById(i.id + '-hint'); 
+        if(hBox) hBox.style.display = 'none'; 
+        const ipaBox = document.getElementById(i.id + '-ipa');
+        if(ipaBox) ipaBox.style.display = 'none';
+    });
+    
+    // Reset global IPA state
+    currentActiveIPA = null;
+    
+    updateWordBank(); 
+}
+
+function normalizeAnswer(answer) {
+    // Remove extra spaces, convert to lowercase, remove punctuation
+    // IMPORTANT: Case-insensitive comparison
+    return answer.toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/[.,;:!?]$/, '');
+}
+
+function validateMultipleAnswers(userAnswer, correctAnswers) {
+    // Split multiple answers by | and check if user answer matches any
+    // IMPORTANT: Case-insensitive comparison
+    const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
+    const normalizedUser = normalizeAnswer(userAnswer);
+    
+    return answers.some(ans => ans === normalizedUser);
+}
+
+function checkAll() { 
+    // Check text inputs
+    document.querySelectorAll('[data-type="input"]').forEach(el => { 
+        const correctAnswers = el.dataset.ans;
+        const userAnswer = el.value;
+        
+        el.classList.remove('correct', 'incorrect-marked'); 
+        
+        if(!userAnswer.trim()) {
+            // Empty answer, do nothing
+            return;
+        }
+        
+        // IMPORTANT: Case-insensitive validation
+        if(validateMultipleAnswers(userAnswer, correctAnswers)) {
+            el.classList.add('correct');
+        } else {
+            el.classList.add('incorrect-marked');
+        }
+    });
+}
+
+/* --- WORD BANK FUNCTIONS --- */
+
+let selectedWordEl = null;
+
+function allowDrop(ev) { 
+    ev.preventDefault(); 
+}
+
+function drag(ev) { 
+    ev.dataTransfer.setData("text", ev.target.innerText); 
+    selectedWordEl = ev.target; 
+}
+
+function drop(ev) { 
+    ev.preventDefault(); 
+    const data = ev.dataTransfer.getData("text"); 
+    
+    if (ev.target.tagName === 'INPUT') {
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        ev.target.value = data; 
+        adjustWidth(ev.target); 
+        updateWordBank();
+    }
+}
+
+function clickSelect(el) { 
+    if(selectedWordEl) {
+        selectedWordEl.style.background = "#eef2f7"; 
+    }
+    selectedWordEl = el; 
+    el.style.background = "#ffeaa7"; 
+}
+
+// Handle word bank click to input
+document.addEventListener('click', (e) => {
+    if(e.target.tagName === 'INPUT' && selectedWordEl) { 
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        e.target.value = selectedWordEl.innerText; 
+        adjustWidth(e.target); 
+        selectedWordEl.style.background = "#eef2f7"; 
+        selectedWordEl = null; 
+        updateWordBank(); 
+    }
+});
+
+function updateWordBank() { 
+    // IMPORTANT: Compare using lowercase for word bank management
+    const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value)); 
+    document.querySelectorAll('.word-item').forEach(item => { 
+        const word = item.innerText.toLowerCase().trim(); 
+        const usedCount = inputs.filter(v => v === word).length; 
+        
+        if(usedCount >= 1) {
+            item.classList.add('used'); 
+        } else {
+            item.classList.remove('used'); 
+        }
+    }); 
+}
+
+/* --- INITIALIZATION --- */
+
+window.onload = () => {
+    renderMatching('t1', t1_data);
+    renderGapFill('t2', t2_data, 'bank-t2');
+    renderGrammarFill('t3', t3_data);
+    renderMatching('t4', t4_data);
+    renderGapFill('t5', t5_data, 'bank-t5');
+    renderRelativeClauses('t6', t6_data);
+    renderPassiveVoice('t7', t7_data);
+};
+
+/* --- KEYBOARD SUPPORT --- */
+
+document.addEventListener('keydown', e => { 
+    if(e.key === 'Enter') {
+        checkAll(); 
+    }
+});
+
+/* --- ADDITIONAL NOTES --- */
+
+// IMPORTANT: When creating new code based on this template:
+// 1. Preserve ALL technical requirement comments above
+// 2. Add new requirements as additional numbered points
+// 3. Maintain the same CSS structure and JavaScript architecture
+// 4. Keep all existing functionality while adding new features
+// 5. Test all interactive elements after modifications
+// 6. Document any algorithm changes in the technical requirements section
+
+// KEY CASE HANDLING RULES:
+// 1. Word bank items: Always displayed in lowercase for visual consistency
+// 2. Answer display: Show exact 'ans' property from data (preserves original case)
+// 3. Validation: Uses normalizeAnswer() for case-insensitive comparison
+// 4. User experience: No automatic case modification during input
+// 5. This ensures proper nouns (like "Obento") are displayed correctly when shown
+
+// GAP DETECTION RULE:
+// 1. Any occurrence of "______" (2 or more underscores) is automatically replaced
+// 2. This handles variations in gap length from different sources
+// 3. Input fields are inserted exactly where the underscores appear
+
+// MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
+// 1. Left column: Vocabulary items with input boxes for matching letters
+// 2. Right column: Definitions in alphabetical order (A, B, C, D, etc.) in a styled column
+// 3. Each vocabulary item has three control buttons:
+//    - 👁️ Eye button (28x28px): Shows the correct answer
+//    - 🔊 Speaker button (28x28px): Shows IPA pronunciation from authoritative dictionary
+//    - (i) Info button (20x20px): Shows pedagogical hint
+// 4. IPA pronunciation data comes from reliable dictionary sources (Oxford, Cambridge, Merriam-Webster)
+// 5. IPA display appears in a dedicated box below each vocabulary item with distinct styling
+
+// IPA SINGLE ACTIVE DISPLAY SYSTEM:
+// 1. Only ONE IPA pronunciation box can be visible at a time across the entire application
+// 2. Clicking a speaker button shows that word's IPA and automatically hides any other visible IPA box
+// 3. Clicking the same speaker button again toggles (hides) its own IPA box
+// 4. Global state variable (currentActiveIPA) tracks the currently active IPA box
+// 5. This prevents visual clutter and ensures a clean, uncluttered interface
+
+// DEFINITIONS COLUMN OPTIMIZATION:
+// 1. Definitions column displays clean list without unnecessary headers or titles
+// 2. Alphabetical ordering (A, B, C, D) maintained for easy reference
+// 3. Visual hierarchy maintained through consistent styling and spacing
+// 4. Column alignment optimized for readability and space efficiency
+// 5. Clean, minimal design that focuses on content rather than decoration
+
+// SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
+// 1. Definitions column has independent vertical scrolling when content is too long
+// 2. Fixed height (500px) with overflow-y: auto enables scrolling within the column
+// 3. Custom scrollbar styling matches the design system with subtle appearance
+// 4. Allows users to scroll through definitions while keeping vocabulary column fixed
+// 5. Particularly useful when definitions are long or numerous
+// 6. Scrollbar appears only when needed (auto overflow)
+
+// MULTI-GAP QUESTIONS IMPLEMENTATION:
+// 1. Questions with multiple gaps are detected by counting underscore sequences
+// 2. Each gap gets a unique ID (e.g., "t7-q5-0", "t7-q5-1" for question 6 in Task 7)
+// 3. Answers are stored in data as pipe-separated values (e.g., "were cut|were steamed")
+// 4. The showMultiGapAns() function handles filling all gaps in a multi-gap question
+// 5. Validation works independently for each input field
+// 6. The Show All button works correctly for both single-gap and multi-gap questions
+</script>
+</body>
+</html>
