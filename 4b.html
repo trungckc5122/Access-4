@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Module 4b</title>
+    <style>
+        /* ========================================================================
+        TECHNICAL REQUIREMENTS IMPLEMENTED:
+        
+        1. DATA INTEGRITY: All content from provided images preserved exactly
+        
+        2. STICKY UI: Word Bank follows scrolling when needed with position: sticky
+        
+        3. SINGLE SOLVE: Individual 'Show' buttons per question with 👁️ icon
+        
+        4. PEDAGOGICAL HINTS: Detailed English explanations via (i) button toggle
+        
+        5. SAFE-HIGHLIGHT: Keyword highlighting on error (green/red color coding)
+           - Green (#27ae60) for correct answers
+           - Red (#e74c3c) for incorrect answers
+           - Background colors change to indicate status
+        
+        6. CLICK-TO-SELECT & DRAG-DROP: Dual input methods for Word Bank
+           - Click on word bank items to select them
+           - Drag and drop onto input fields
+           - Visual feedback with color change (#ffeaa7 for selected)
+        
+        7. AUTO-WIDTH: Inputs resize based on content using oninput event
+           - Base widths: letter-input=45px, preposition-input=80px, word-input=120px, grammar-input=150px
+           - Dynamic adjustment: Math.max(el.value.length * 10 + 20, baseWidth)
+        
+        8. AUTO-EXPAND INPUT FIELDS: Input fields automatically expand to show full content
+           - Always wider than content with comfortable padding
+           - Dynamic width adjustment based on character count
+           - Minimum widths ensure readability
+           - Expansion maintains visual harmony and spacing
+        
+        9. CASE-INSENSITIVE: Matching handles A/a equally via normalizeAnswer() function
+           - Converts to lowercase, trims whitespace, removes punctuation
+        
+        10. WORD BANK MANAGEMENT: Auto-hide used items with frequency tracking
+            - Counts occurrences of each word in inputs
+            - Hides items when used count >= total available (handles x2 duplicates)
+        
+        11. LOCAL CONTROLS: Individual Task 'Show All' and 'Reset' buttons
+            - Each exercise has its own control buttons
+            - Prefix-based selection for targeted operations
+        
+        12. KEYBOARD: Enter to check all answers, Arrow keys for navigation
+            - Event listener on document for keydown events
+            - Enter key triggers checkAll() function
+        
+        13. ENHANCED HINTS: Detailed explanations for every question
+            - Hidden divs that toggle on (i) button click
+            - Each hint contains pedagogical explanation
+        
+        14. AUTOMATIC FORMAT DETECTION: Based on data structure
+            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint' properties
+            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint' and [INPUT] placeholder
+            - RULE 3: PREPOSITION EXERCISE - objects with 'q', 'ans', 'hint' for fill-in-blank
+            - RULE 4: ADJECTIVE FORMS - objects with 'q', 'ans', 'hint' with parentheses for adjective hint
+            - RULE 5: ERROR CORRECTION - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
+        
+        15. EXERCISE NUMBER HANDLING: Preserves existing numbering from content
+            - If sentences already have numbers (like "1.", "2."), uses those numbers
+            - Otherwise uses automatic numbering with exercise-number class
+            - Number detection regex: /^\d+\.\s/
+        
+        16. DOCUMENTATION PRESERVATION: All technical requirement comments maintained
+            - This section must remain intact in any derivative code
+            - New requirements added as additional numbered points
+            - Never modify or remove existing technical requirements
+            - Always keep the complete history of all requirements
+        
+        17. IPA PRONUNCIATION FEATURE FOR MATCHING EXERCISES:
+            - Each vocabulary item in matching exercises has IPA pronunciation data
+            - Speaker button (🔊) added next to eye (👁️) button
+            - Clicking speaker button shows IPA pronunciation in a dedicated box
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - Visual design: IPA box appears below the vocabulary item with gray background
+        
+        18. MULTIPLE CORRECT ANSWERS SUPPORT:
+            - For exercises where multiple answers are possible,
+              answers can be stored as arrays or pipe-separated strings
+            - Validation logic checks if user answer matches any of the acceptable answers
+            - Supports British/American spelling variations
+        
+        19. CONTEXT-AWARE VALIDATION:
+            - Grammar structures: Alternative correct forms accepted based on pedagogical context
+        
+        20. CONSISTENT CASE HANDLING FOR WORD BANKS AND ANSWERS:
+            - WORD BANK ITEMS: Always displayed in lowercase for visual consistency
+            - ANSWER DISPLAY: Show answers with exact original capitalization from data
+            - VALIDATION: Case-insensitive comparison during validation
+            - USER INPUT: Preserves user's original capitalization input
+            - KEY RULE: When dragging from word bank, lowercase words are inserted, 
+              but when showing answers, the exact capitalization from data is displayed
+        
+        21. CASE HANDLING IMPLEMENTATION:
+            - Word bank creation: Uses toLowerCase() for all displayed words
+            - Answer display: Shows exact 'ans' property from data (preserves original case)
+            - Validation: Uses normalizeAnswer() for case-insensitive comparison
+            - User experience: No automatic case modification during user typing
+            - This ensures proper nouns are displayed correctly when shown as answers
+        
+        22. GAP DETECTION AND REPLACEMENT:
+            - Any occurrence of "______" (any length of underscores) in question text is automatically
+              replaced with an input field
+            - Regex pattern: /_{2,}/g matches 2 or more consecutive underscores
+            - This handles variations in gap length from different sources
+            - Input fields are inserted exactly where the underscores appear
+        
+        23. MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
+            - Left column: Vocabulary items with input boxes for matching letters
+            - Right column: Definitions in alphabetical order (A, B, C, D, etc.)
+            - Each vocabulary item has three control buttons:
+              1. 👁️ Eye button: Shows the correct answer
+              2. 🔊 Speaker button: Shows IPA pronunciation from authoritative dictionary
+              3. (i) Info button: Shows pedagogical hint
+            - IPA pronunciation data comes from reliable dictionary sources
+            - IPA display appears in a dedicated box below each vocabulary item
+        
+        24. IPA PRONUNCIATION IMPLEMENTATION:
+            - Speaker button size matches eye button (28x28px)
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - IPA display uses phonetic font and proper formatting
+            - IPA box has distinct visual styling for clear pronunciation display
+            - Multiple pronunciation variants supported when applicable
+        
+        25. IPA SINGLE ACTIVE DISPLAY SYSTEM:
+            - Only ONE IPA pronunciation box can be visible at a time
+            - Clicking a speaker button shows that word's IPA and hides any other visible IPA box
+            - Clicking the same speaker button again toggles (hides) its IPA box
+            - This prevents visual clutter and ensures clean interface
+            - System tracks currently active IPA box and manages visibility states
+        
+        26. DEFINITIONS COLUMN OPTIMIZATION:
+            - Definitions column displays clean list without unnecessary headers
+            - Alphabetical ordering (A, B, C, D) maintained for easy reference
+            - Visual hierarchy maintained through consistent styling
+            - Column alignment optimized for readability and space efficiency
+        
+        27. SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
+            - Definitions column has independent vertical scrolling when content is too long
+            - Fixed height with overflow-y: auto enables scrolling within the column
+            - Scrollbar styling matches the design system with subtle appearance
+            - Allows users to scroll through definitions while keeping vocabulary column fixed
+            - Responsive height calculation based on available space
+        
+        28. MULTI-GAP QUESTIONS WITH SEPARATE VALIDATION:
+            - For questions with multiple gaps, each gap gets its own input field
+            - Data structure supports multiple answers in one 'ans' field separated by |
+            - Validation checks each input field against its corresponding answer
+            - Example: "were cut|were steamed" validates first input against "were cut" and second against "were steamed"
+            - Hints provide explanations for each gap when applicable
+            - Show All button fills all gaps with correct answers
+        
+        29. TOGGLE FUNCTIONALITY FOR EYE AND INFO BUTTONS:
+            - Eye button (👁️) toggles answer display on second click
+            - Info button (i) toggles hint display on second click
+            - Both buttons restore original state when clicked again
+            - This provides better user experience with toggle behavior
+        
+        30. MULTIPLE CORRECT ANSWERS FIX FOR SINGLE-GAP QUESTIONS:
+            - CRITICAL FIX: For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+              the entire pipe-separated string must be stored in the input's data-ans attribute
+            - PREVIOUS BUG: Only the first answer (before |) was being stored, causing validation
+              to fail for alternative correct answers
+            - FIXED: Input elements now receive the complete pipe-separated answer string
+              from the data object's 'ans' property, enabling validateMultipleAnswers() to work correctly
+        
+        31. ERROR CORRECTION WITH SELECTABLE PHRASES:
+            - Task 5 (Error Correction) now displays sentences with logically grouped phrases
+            - Each phrase is clickable to select the incorrect part
+            - Selected phrase is visually highlighted with yellow background
+            - Users can click on any phrase to indicate which part contains the error
+            - This helps students identify error locations before correcting them
+            - Selected phrase's text is automatically inserted into the correction input field
+            - Interface shows "Click on the incorrect phrase, then type correction below"
+        
+        32. MODULE 4B SPECIFIC CONTENT:
+            - Added all vocabulary and exercises from Module 4b
+            - Includes 6 tasks with appropriate data structures
+            - Added new grammar reference section for relative clauses and passive voice
+            - All answers and hints based on provided content
+        
+        33. AUTO-EXPAND INPUT FIELDS WITH OPTIMAL SPACING:
+            - Input fields automatically expand based on content length
+            - Always wider than content to ensure clear visibility
+            - Comfortable padding maintained around text
+            - Dynamic calculation: character count × character width + padding
+            - Minimum widths ensure usability even for short answers
+            - Responsive adjustment on input and answer display
+        
+        ======================================================================== */
+        :root {
+            --primary: #2980b9; 
+            --primary-dark: #1c5982; 
+            --success: #27ae60;
+            --error: #e74c3c; 
+            --warning: #f1c40f; 
+            --bg: #f4f7f9;
+            --text: #2c3e50; 
+            --card: #ffffff;
+            --selection: #3498db;
+            --selection-bg: #ebf5fb;
+        }
+        
+        body { 
+            font-family: 'Times New Roman', serif; 
+            font-size: 13pt; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px 20px 100px 20px; 
+            line-height: 1.6; 
+        }
+        
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        
+        .sticky-bank { 
+            position: sticky; 
+            top: 15px; 
+            z-index: 100;
+            background-color: #fff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 25px; 
+            border: 2px solid var(--primary); 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .word-item { 
+            background: #eef2f7; 
+            border: 1px solid var(--primary); 
+            color: var(--primary-dark); 
+            padding: 6px 12px; 
+            border-radius: 5px; 
+            cursor: grab; 
+            user-select: none; 
+            transition: 0.2s; 
+            font-size: 0.9em; 
+            font-weight: 500;
+        }
+        
+        .word-item.used { 
+            display: none; 
+        }
+        
+        .word-item:hover { 
+            background: var(--primary); 
+            color: white; 
+        }
+
+        .exercise-card { 
+            background: var(--card); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            padding: 25px; 
+            margin-bottom: 30px; 
+        }
+        
+        .exercise-title { 
+            font-weight: bold; 
+            font-size: 1.25em; 
+            margin-bottom: 18px; 
+            color: var(--primary-dark); 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 8px; 
+        }
+        
+        .matching-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            margin-top: 10px; 
+        }
+        
+        .vocab-item { 
+            margin-bottom: 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        
+        .vocab-text { 
+            min-width: 150px; 
+            font-weight: 500; 
+        }
+        
+        .def-item { 
+            margin-bottom: 12px; 
+            padding: 4px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+            min-height: 40px; 
+            display: flex; 
+            align-items: center; 
+        }
+
+        .question-row { 
+            margin-bottom: 18px; 
+            line-height: 2.2; 
+            border-bottom: 1px solid #f9f9f9; 
+            padding-bottom: 10px; 
+            position: relative; 
+        }
+        
+        input[type="text"] { 
+            border: none; 
+            border-bottom: 2px solid #bdc3c7; 
+            background: #fafafa; 
+            padding: 4px 12px; /* Increased padding for better readability */
+            font-size: 1em; 
+            transition: 0.2s; 
+            outline: none;
+            min-width: 60px; 
+            border-radius: 4px 4px 0 0; 
+            text-align: center; 
+            font-family: 'Times New Roman';
+            box-sizing: border-box; /* Ensure padding is included in width calculation */
+            letter-spacing: 0.5px; /* Slight letter spacing for better readability */
+        }
+        
+        input.letter-input { 
+            min-width: 45px; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            color: var(--primary-dark); 
+            padding: 4px 8px; /* Adjusted padding for letter inputs */
+        }
+        
+        input.word-input { 
+            min-width: 140px; /* Increased minimum width for word inputs */
+            text-align: left; 
+            padding: 4px 12px;
+        }
+        
+        input.grammar-input { 
+            min-width: 160px; /* Increased minimum width for grammar inputs */
+            text-align: left; 
+            padding: 4px 12px;
+        }
+        
+        input.relative-input { 
+            min-width: 90px; /* Increased minimum width for relative inputs */
+            text-align: center; 
+            padding: 4px 12px;
+        }
+        
+        input.correct { 
+            border-bottom-color: var(--success) !important; 
+            background-color: #e8f8f5 !important; 
+            color: #1e8449 !important; 
+        }
+        
+        input.incorrect-marked { 
+            border-bottom-color: var(--error) !important; 
+            background-color: #fdedec !important; 
+        }
+
+        .row-btns { 
+            display: inline-flex; 
+            gap: 5px; 
+            vertical-align: middle; 
+            margin-left: 10px; 
+        }
+        
+        .btn-small { 
+            background: #eee; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            width: 28px; 
+            height: 28px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 14px; 
+            transition: 0.2s;
+        }
+        
+        .btn-small:hover {
+            background: #ddd;
+        }
+        
+        .btn-small.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .speaker-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+        }
+        
+        .speaker-btn:hover {
+            background: #2980b9;
+        }
+        
+        .speaker-btn.active {
+            background: #1c5982;
+        }
+        
+        .info-btn { 
+            background: #95a5a6; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            width: 20px; 
+            height: 20px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s;
+        }
+        
+        .info-btn:hover {
+            background: #7f8c8d;
+        }
+        
+        .info-btn.active {
+            background: #5d6d6e;
+        }
+        
+        .hint-box { 
+            display: none; 
+            margin-top: 8px; 
+            padding: 10px; 
+            background-color: #fef9e7; 
+            border-left: 4px solid var(--warning); 
+            color: #7d6608; 
+            border-radius: 4px; 
+            font-size: 0.85em; 
+        }
+        
+        .ipa-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            color: #2c3e50;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .ipa-label {
+            font-weight: bold;
+            color: #3498db;
+            margin-right: 5px;
+        }
+        
+        .ipa-text {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .controls-row { 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 10px; 
+            margin-top: 15px; 
+        }
+        
+        .btn { 
+            padding: 8px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            border: none; 
+            font-weight: bold; 
+            transition: 0.3s; 
+        }
+        
+        .btn-reset { 
+            background: #95a5a6; 
+            color: white; 
+        }
+        
+        .btn-show-all { 
+            background: var(--primary); 
+            color: white; 
+        }
+        
+        .check-all-btn { 
+            position: fixed; 
+            right: 30px; 
+            bottom: 30px; 
+            background-color: var(--success); 
+            color: white; 
+            padding: 15px 30px; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            z-index: 1000; 
+            font-weight: bold; 
+            border: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        }
+        
+        /* Grammar reference section */
+        .grammar-reference {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+        }
+        
+        .grammar-reference h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1em;
+        }
+        
+        .grammar-reference ul {
+            padding-left: 20px;
+        }
+        
+        .grammar-reference li {
+            margin-bottom: 8px;
+        }
+        
+        .reference-note {
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 0.85em;
+            margin-top: 10px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        /* Exercise numbering */
+        .instructions {
+            color: #7f8c8d;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        /* Number handling - preserves existing numbers */
+        .existing-number {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 8px;
+        }
+        
+        /* Definitions column styling - UPDATED WITH SCROLL */
+        .definitions-column {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            height: 500px; /* Fixed height for scrollable area */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        
+        /* Custom scrollbar styling */
+        .definitions-column::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .definition-item {
+            margin-bottom: 12px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: white;
+            border-radius: 4px;
+            min-height: 40px; /* Ensure consistent height */
+        }
+        
+        .definition-letter {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 10px;
+            min-width: 20px;
+            display: inline-block;
+        }
+        
+        .definition-text {
+            display: inline;
+        }
+        
+        /* Grammar tables */
+        .grammar-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .grammar-table th, .grammar-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        
+        .grammar-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .grammar-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        /* So/such/enough table */
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .usage-table th, .usage-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .usage-table th {
+            background-color: var(--primary-dark);
+            color: white;
+        }
+        
+        .usage-table td:first-child {
+            font-weight: bold;
+            background-color: #f0f7ff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">Access 4 - Module 4b</h1>
+    
+    <!-- Grammar Reference Section -->
+    <div class="exercise-card">
+        <div class="exercise-title">Grammar Reference</div>
+        <div class="grammar-reference">
+            <h3>Relative Clauses</h3>
+            <p>Relative clauses give more information about a noun. They are introduced by relative pronouns:</p>
+            <ul>
+                <li><strong>who</strong> - for people (subject)</li>
+                <li><strong>whom</strong> - for people (object, formal)</li>
+                <li><strong>which</strong> - for things</li>
+                <li><strong>that</strong> - for people or things</li>
+                <li><strong>whose</strong> - for possession</li>
+                <li><strong>where</strong> - for places</li>
+                <li><strong>when</strong> - for time</li>
+            </ul>
+            
+            <h3>Passive Voice</h3>
+            <p>In passive voice, the subject receives the action. Form: be + past participle</p>
+            <table class="grammar-table">
+                <tr>
+                    <th>Tense</th>
+                    <th>Active</th>
+                    <th>Passive</th>
+                </tr>
+                <tr>
+                    <td>Present Simple</td>
+                    <td>People recycle plastic bottles.</td>
+                    <td>Plastic bottles <strong>are recycled</strong>.</td>
+                </tr>
+                <tr>
+                    <td>Past Simple</td>
+                    <td>Workers wove natural fibers.</td>
+                    <td>Natural fibers <strong>were woven</strong>.</td>
+                </tr>
+                <tr>
+                    <td>Future (will)</td>
+                    <td>Factories will reduce waste.</td>
+                    <td>Waste <strong>will be reduced</strong>.</td>
+                </tr>
+                <tr>
+                    <td>Modal (must)</td>
+                    <td>Factories must reduce waste.</td>
+                    <td>Waste <strong>must be reduced</strong>.</td>
+                </tr>
+            </table>
+            
+            <h3>Comparative & Superlative Forms</h3>
+            <table class="adjective-forms-table">
+                <thead>
+                    <tr>
+                        <th>Adjective Type</th>
+                        <th>Comparative</th>
+                        <th>Superlative</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>One syllable</td>
+                        <td>softer</td>
+                        <td>softest</td>
+                    </tr>
+                    <tr>
+                        <td>One syllable: CVC</td>
+                        <td>bigger</td>
+                        <td>biggest</td>
+                    </tr>
+                    <tr>
+                        <td>Two syllables ending in -y</td>
+                        <td>happier</td>
+                        <td>happiest</td>
+                    </tr>
+                    <tr>
+                        <td>Two+ syllables</td>
+                        <td>more expensive</td>
+                        <td>most expensive</td>
+                    </tr>
+                    <tr>
+                        <td>Irregular</td>
+                        <td>better, worse</td>
+                        <td>best, worst</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>So, Such, Enough</h3>
+            <table class="usage-table">
+                <tr>
+                    <td><strong>so + adjective/adverb</strong></td>
+                    <td>Eco-fleece is <strong>so warm</strong> that it's suitable for winter.</td>
+                </tr>
+                <tr>
+                    <td><strong>so + many/much/few/little + noun</strong></td>
+                    <td>There are <strong>so many eco-friendly materials</strong> available now.</td>
+                </tr>
+                <tr>
+                    <td><strong>such + (a/an) + adjective + noun</strong></td>
+                    <td>Organic cotton is <strong>such a popular material</strong>.</td>
+                </tr>
+                <tr>
+                    <td><strong>adjective/adverb + enough</strong></td>
+                    <td>This jacket is not <strong>thick enough</strong> for cold weather.</td>
+                </tr>
+                <tr>
+                    <td><strong>enough + noun</strong></td>
+                    <td>He doesn't have <strong>enough money</strong> to buy expensive clothes.</td>
+                </tr>
+            </table>
+            
+            <p class="reference-note">Grammar references based on Cambridge English Grammar in Use and Oxford English Grammar Course.</p>
+        </div>
+    </div>
+
+    <!-- TASK 1: Vocabulary Matching -->
+    <div class="exercise-card" id="card-t1">
+        <div class="exercise-title">Task 1: Vocabulary Matching – Match the word to its definition</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-L) in the box.</div>
+        
+        <div class="matching-grid">
+            <div id="vocab-t1"></div>
+            <div class="definitions-column">
+                <div id="def-t1"></div>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 2: Fill in the gaps -->
+    <div class="exercise-card" id="card-t2">
+        <div class="exercise-title">Task 2: Filling in the gaps using vocabulary from Task 1</div>
+        <div class="instructions">Complete each sentence using the correct word from the vocabulary list. You can click words from the bank below or type them directly.</div>
+        <div class="sticky-bank" id="bank-t2"></div>
+        <div id="questions-t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 3: Relative clauses -->
+    <div class="exercise-card" id="card-t3">
+        <div class="exercise-title">Task 3: Relative clauses – Fill in the relative pronoun</div>
+        <div class="instructions">Complete each sentence with the correct relative pronoun (who, which, that, where).</div>
+        <div id="questions-t3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 4: Passive form -->
+    <div class="exercise-card" id="card-t4">
+        <div class="exercise-title">Task 4: Rewrite each sentence in the passive form using the tense or structure given</div>
+        <div class="instructions">Rewrite each active sentence in passive voice. Use the tense indicated in the original sentence.</div>
+        <div id="questions-t4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t4')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 5: Adjective/Adverb forms -->
+    <div class="exercise-card" id="card-t5">
+        <div class="exercise-title">Task 5: Complete each sentence with the correct form of the adjective or adverb in brackets</div>
+        <div class="instructions">Complete each sentence by putting the adjective in parentheses into the correct comparative, superlative, or as...as form.</div>
+        <div id="questions-t5"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t5')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t5')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 6: So/Such/Enough -->
+    <div class="exercise-card" id="card-t6">
+        <div class="exercise-title">Task 6: Complete each sentence with so, such, or enough</div>
+        <div class="instructions">Complete each sentence with the correct word (so, such, or enough) using the correct structure according to the context.</div>
+        <div id="questions-t6"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t6')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t6')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+/* --- DATA --- */
+
+// TASK 1: Vocabulary Matching - Environmental Issues & Clothing Materials
+const t1_data = [
+    { v: "1. fabric", letter: "D", def: "cloth or material used to make clothing", hint: "The material that clothes are made from.", ipa: "/ˈfæbrɪk/" },
+    { v: "2. synthetic", letter: "C", def: "material made by humans rather than occurring naturally", hint: "Man-made materials like polyester or nylon.", ipa: "/sɪnˈθetɪk/" },
+    { v: "3. environmentally-friendly", letter: "J", def: "designed to cause little harm to the natural world", hint: "Products or practices that don't harm nature.", ipa: "/ɪnˌvaɪrənˈmentəli ˈfrendli/" },
+    { v: "4. pesticides", letter: "A", def: "chemical substances used to kill insects that damage crops", hint: "Chemicals used to protect plants from insects.", ipa: "/ˈpestɪsaɪdz/" },
+    { v: "5. end up", letter: "F", def: "to arrive in a particular place or situation, often unexpectedly", hint: "To finally be in a place or situation.", ipa: "/end ʌp/" },
+    { v: "6. contaminate", letter: "I", def: "to make water, air, or land dirty or unsafe by adding harmful substances", hint: "To pollute or make something impure.", ipa: "/kənˈtæmɪneɪt/" },
+    { v: "7. organic", letter: "G", def: "produced without using artificial chemicals or pesticides", hint: "Grown naturally without chemicals.", ipa: "/ɔːrˈɡænɪk/" },
+    { v: "8. eco-fleece", letter: "K", def: "a type of fleece made from recycled plastic bottles", hint: "Warm material made from recycled plastic.", ipa: "/ˈiːkoʊ fliːs/" },
+    { v: "9. flake", letter: "H", def: "a small thin piece that breaks off from something larger", hint: "A tiny piece that comes off a larger object.", ipa: "/fleɪk/" },
+    { v: "10. fibers", letter: "E", def: "long, thin strands that can be spun into thread or yarn", hint: "Thread-like materials used to make fabric.", ipa: "/ˈfaɪbərz/" },
+    { v: "11. weave", letter: "L", def: "to make cloth by crossing threads together", hint: "The process of making fabric from threads.", ipa: "/wiːv/" },
+    { v: "12. cozy", letter: "B", def: "soft, warm, and comfortable, especially in cold weather", hint: "A warm, comfortable feeling.", ipa: "/ˈkoʊzi/" }
+];
+
+// TASK 2: Fill in the blanks
+const t2_data = [
+    { q: "1. Cotton ______ is commonly used to make shirts, trousers, and other everyday clothes.", ans: "fabric", hint: "Cotton is a type of material used for clothing." },
+    { q: "2. Materials such as nylon and polyester are ______ and do not break down easily in nature.", ans: "synthetic", hint: "Man-made materials that are not natural." },
+    { q: "3. Choosing reusable products is an ______ way to reduce environmental damage.", ans: "environmentally-friendly", hint: "Good for the environment." },
+    { q: "4. Farmers may use ______ to protect crops from insects, but this can harm the environment.", ans: "pesticides", hint: "Chemicals used on crops." },
+    { q: "5. If rubbish is not recycled properly, it may ______ in rivers or oceans.", ans: "end up", hint: "To finally be in a place." },
+    { q: "6. Industrial waste can ______ soil and water, making them unsafe for humans and animals.", ans: "contaminate", hint: "To pollute or make impure." },
+    { q: "7. ______ food and cotton are grown without harmful chemicals or pesticides.", ans: "Organic", hint: "Natural, chemical-free products." },
+    { q: "8. ______ is made from recycled plastic bottles and is often used to produce warm jackets.", ans: "Eco-fleece", hint: "Recycled material for warm clothing." },
+    { q: "9. During recycling, plastic bottles are broken into small ______ before being processed.", ans: "flakes", hint: "Small pieces of plastic." },
+    { q: "10. Natural ______ such as cotton and wool are spun into thread to make yarn.", ans: "fibers", hint: "Thread-like materials from plants or animals." },
+    { q: "11. In traditional factories, workers ______ threads together to produce cloth.", ans: "weave", hint: "The process of making fabric." },
+    { q: "12. This jacket feels ______ and warm, which makes it ideal for cold weather.", ans: "cozy", hint: "Warm and comfortable feeling." }
+];
+
+// TASK 3: Relative clauses
+const t3_data = [
+    { q: "1. Eco-fleece is a material ______ is made from recycled plastic bottles.", ans: "that|which", hint: "Use 'that' or 'which' for things." },
+    { q: "2. Farmers ______ grow organic cotton do not use harmful chemicals.", ans: "who|that", hint: "Use 'who' or 'that' for people." },
+    { q: "3. This is the factory ______ eco-friendly clothes are produced.", ans: "where", hint: "Use 'where' for places." },
+    { q: "4. Synthetic fabrics ______ are cheap can cause environmental problems.", ans: "that|which", hint: "Use 'that' or 'which' for things." },
+    { q: "5. People ______ care about the environment often choose organic clothing.", ans: "who|that", hint: "Use 'who' or 'that' for people." }
+];
+
+// TASK 4: Passive form
+const t4_data = [
+    { q: "1. People recycle plastic bottles to make eco-fleece.<br>   → Plastic bottles ______.", ans: "are recycled to make eco-fleece", hint: "Present simple passive: are + past participle." },
+    { q: "2. Factories must reduce chemical waste.<br>   → Chemical waste ______.", ans: "must be reduced", hint: "Modal passive: must + be + past participle." },
+    { q: "3. Workers wove natural fibers into fabric.<br>   → Natural fibers ______.", ans: "were woven into fabric", hint: "Past simple passive: were + past participle." }
+];
+
+// TASK 5: Adjective/Adverb forms
+const t5_data = [
+    { q: "1. Bamboo clothing is ______ (soft) than synthetic fabric.", ans: "softer", hint: "One syllable adjective → add -er." },
+    { q: "2. Organic cotton is ______ (safe) for the environment than conventional cotton.", ans: "safer", hint: "One syllable adjective → add -er." },
+    { q: "3. Eco-fleece jackets keep people ______ (warm) than thin cotton clothes.", ans: "warmer", hint: "One syllable adjective → add -er." },
+    { q: "4. Bamboo fabric is the ______ (environmentally friendly) material mentioned in the text.", ans: "most environmentally friendly", hint: "Three+ syllable adjective → most + adjective." },
+    { q: "5. Among all types of clothing, synthetic fabric is the ______ (harmful) to the environment.", ans: "most harmful", hint: "Two syllable adjective → most + adjective." },
+    { q: "6. Eco-fleece is ______ (warm) as wool in cold weather.", ans: "as warm", hint: "As...as structure for equality." }
+];
+
+// TASK 6: So/Such/Enough
+const t6_data = [
+    { q: "1. Eco-fleece is ______ warm that it is suitable for winter clothing.", ans: "so", hint: "so + adjective" },
+    { q: "2. Organic cotton is ______ a popular material that many brands use it.", ans: "such", hint: "such + a/an + adjective + noun" },
+    { q: "3. These clothes are ______ expensive that many people cannot afford.", ans: "so", hint: "so + adjective" },
+    { q: "4. Bamboo fabric is ______ soft that it feels comfortable on the skin.", ans: "so", hint: "so + adjective" },
+    { q: "5. This jacket is not thick ______ to keep you warm in very cold weather.", ans: "enough", hint: "adjective + enough" },
+    { q: "6. They use ______ eco-friendly materials that the factory produces very little waste.", ans: "such", hint: "such + adjective + noun (plural)" },
+    { q: "7. The fabric is light ______ to wear during hot summer days.", ans: "enough", hint: "adjective + enough" },
+    { q: "8. Synthetic clothes are ______ cheap that people buy them easily.", ans: "so", hint: "so + adjective" },
+    { q: "9. He does not have ______ money to buy expensive clothes.", ans: "enough", hint: "enough + noun" },
+    { q: "10. It was ______ a successful recycling program that waste was reduced greatly.", ans: "such", hint: "such + a/an + adjective + noun" }
+];
+
+/* --- GLOBAL STATE --- */
+let currentActiveIPA = null;
+let answerStates = new Map(); // Track answer states for toggling
+
+/* --- ENHANCED AUTO-EXPAND FUNCTION --- */
+
+function adjustWidth(el) { 
+    // Determine base width based on input type
+    const baseWidth = el.classList.contains('letter-input') ? 45 : 
+                     el.classList.contains('relative-input') ? 90 :
+                     el.classList.contains('word-input') ? 140 :
+                     el.classList.contains('grammar-input') ? 160 : 80;
+    
+    // Calculate optimal width based on content
+    const charWidth = 9; // Average character width in pixels
+    const padding = 30; // Comfortable padding on both sides
+    
+    // Calculate width based on content length
+    const contentWidth = el.value.length * charWidth + padding;
+    
+    // Use whichever is larger: base width or content width
+    const newWidth = Math.max(contentWidth, baseWidth);
+    
+    // Apply the calculated width
+    el.style.width = newWidth + "px"; 
+    
+    // Update word bank after input
+    updateWordBank();
+}
+
+/* --- RENDERING FUNCTIONS --- */
+
+function renderMatching(id, data) {
+    const v = document.getElementById(`vocab-${id}`); 
+    const d = document.getElementById(`def-${id}`);
+    
+    // Clear existing content
+    v.innerHTML = '';
+    d.innerHTML = '';
+    
+    // Create definitions list in alphabetical order (A, B, C, D, etc.)
+    const definitions = {};
+    data.forEach(item => {
+        definitions[item.letter] = item.def;
+    });
+    
+    // Sort definitions by letter (A, B, C, D, etc.)
+    const sortedLetters = Object.keys(definitions).sort();
+    sortedLetters.forEach(letter => {
+        d.innerHTML += `
+            <div class="definition-item">
+                <span class="definition-letter">${letter}.</span>
+                <span class="definition-text">${definitions[letter]}</span>
+            </div>`;
+    });
+    
+    // Render vocabulary items in numerical order with IPA support
+    data.forEach((item, i) => {
+        const qid = `${id}-q${i}`;
+        
+        v.innerHTML += `
+            <div class="vocab-item">
+                <span class="vocab-text">${item.v}</span>
+                <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)" onfocus="adjustWidth(this)" onblur="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button>
+                    <button class="btn-small speaker-btn" onclick="toggleIPA('${qid}')" title="Show pronunciation">🔊</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" title="Show/Hide hint">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+                <div class="ipa-box" id="${qid}-ipa">
+                    <span class="ipa-label">IPA:</span>
+                    <span class="ipa-text">${item.ipa}</span>
+                </div>
+            </div>`;
+    });
+}
+
+function renderGapFill(id, data, bankId) {
+    const container = document.getElementById(`questions-${id}`);
+    const bank = document.getElementById(bankId);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    bank.innerHTML = '';
+    
+    // Create word bank - IMPORTANT: Always use lowercase for word bank display
+    const words = [...new Set(data.map(item => {
+        // Handle case where answer might have multiple forms
+        const ans = item.ans.split('|')[0];
+        return ans.toLowerCase();
+    }))].sort();
+    words.forEach(w => {
+        // Word bank items are always displayed in lowercase
+        bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
+    });
+    
+    // Render questions
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="existing-number">${i+1}.</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)" onfocus="adjustWidth(this)" onblur="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
+        });
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // CRITICAL FIX: Set data-ans attribute for each input field
+        // For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+        // we MUST store the complete pipe-separated string, not just the first part
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && it.ans) {
+                    // IMPORTANT: Store the ENTIRE answer string with pipe separators
+                    // This enables validateMultipleAnswers() to work correctly
+                    input.setAttribute('data-ans', it.ans);
+                    // Initialize width
+                    adjustWidth(input);
+                }
+            }
+        }, 0);
+    });
+}
+
+function renderGrammarFill(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="existing-number">${i+1}.</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="relative-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)" onfocus="adjustWidth(this)" onblur="adjustWidth(this)">`;
+        });
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // CRITICAL FIX: Set data-ans attribute for each input field
+        // For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+        // we MUST store the complete pipe-separated string, not just the first part
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && it.ans) {
+                    // IMPORTANT: Store the ENTIRE answer string with pipe separators
+                    // This enables validateMultipleAnswers() to work correctly
+                    input.setAttribute('data-ans', it.ans);
+                    // Initialize width
+                    adjustWidth(input);
+                }
+            }
+        }, 0);
+    });
+}
+
+/* --- UTILITY FUNCTIONS --- */
+
+function toggleHint(id) { 
+    const h = document.getElementById(id + '-hint'); 
+    const infoBtn = document.getElementById(id + '-info');
+    
+    if (h) {
+        if (h.style.display === 'block') {
+            h.style.display = 'none';
+            if (infoBtn) infoBtn.classList.remove('active');
+        } else {
+            h.style.display = 'block';
+            if (infoBtn) infoBtn.classList.add('active');
+        }
+    }
+}
+
+function toggleIPA(id) { 
+    const ipaBox = document.getElementById(id + '-ipa'); 
+    const speakerBtn = document.querySelector(`button[onclick="toggleIPA('${id}')"]`);
+    
+    // If clicking the same IPA box that's currently active, hide it
+    if (currentActiveIPA === ipaBox) {
+        ipaBox.style.display = 'none';
+        currentActiveIPA = null;
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        return;
+    }
+    
+    // Hide previously active IPA box if exists
+    if (currentActiveIPA) {
+        const prevSpeakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (prevSpeakerBtn) prevSpeakerBtn.classList.remove('active');
+        currentActiveIPA.style.display = 'none';
+    }
+    
+    // Show the clicked IPA box
+    if (ipaBox) {
+        ipaBox.style.display = 'block';
+        currentActiveIPA = ipaBox;
+        if (speakerBtn) speakerBtn.classList.add('active');
+    }
+}
+
+function toggleSingleAns(id) { 
+    // For multi-gap questions, we need to handle differently
+    if (id.includes('-')) {
+        // This is a child input of a multi-gap question
+        const parentId = id.split('-').slice(0, -1).join('-');
+        const input = document.getElementById(id);
+        if (input && input.dataset.parent) {
+            // Find the parent's eye button
+            const parentQid = input.dataset.parent;
+            const eyeBtn = document.getElementById(`${parentQid}-eye`);
+            const answers = input.dataset.ans.split('|');
+            
+            const stateKey = `${id}-state`;
+            const isCurrentlyShown = answerStates.get(stateKey) || false;
+            
+            if (isCurrentlyShown) {
+                // Hide the answer
+                input.value = "";
+                input.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(input);
+                answerStates.set(stateKey, false);
+            } else {
+                // Show the answer
+                if (answers.length > 0) {
+                    // Show the appropriate answer based on gap index
+                    const gapIndex = parseInt(input.dataset.gapIndex);
+                    const answerToShow = gapIndex < answers.length ? answers[gapIndex] : answers[0];
+                    // IMPORTANT: Show answer with exact original capitalization
+                    input.value = answerToShow;
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect-marked');
+                    adjustWidth(input);
+                    answerStates.set(stateKey, true);
+                }
+            }
+            updateWordBank();
+            return;
+        }
+    }
+    
+    // Regular single input
+    const el = document.getElementById(id);
+    const eyeBtn = document.getElementById(id + '-eye');
+    
+    if (!el) return;
+    
+    const ans = el.dataset.ans;
+    const stateKey = `${id}-state`;
+    
+    // Check if answer is currently shown
+    const isCurrentlyShown = answerStates.get(stateKey) || false;
+    
+    if (isCurrentlyShown) {
+        // Hide the answer
+        el.value = "";
+        el.classList.remove('correct', 'incorrect-marked');
+        adjustWidth(el);
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        answerStates.set(stateKey, false);
+    } else {
+        // Show the answer
+        if (ans) {
+            // For multiple answers separated by |, show the first one with exact case
+            const firstAns = ans.split('|')[0];
+            // IMPORTANT: Show answer with exact original capitalization
+            el.value = firstAns;
+            el.classList.add('correct');
+            el.classList.remove('incorrect-marked');
+            adjustWidth(el);
+            if (eyeBtn) eyeBtn.classList.add('active');
+            answerStates.set(stateKey, true);
+        }
+    }
+    
+    updateWordBank();
+}
+
+function showAnswers(prefix) { 
+    // Handle regular single-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && !el.dataset.parent) {
+            const stateKey = `${el.id}-state`;
+            const ans = el.dataset.ans;
+            const eyeBtn = document.getElementById(el.id + '-eye');
+            
+            if (ans) {
+                const firstAns = ans.split('|')[0];
+                el.value = firstAns;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+                adjustWidth(el);
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(stateKey, true);
+            }
+        }
+    });
+    
+    // Handle multi-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && el.dataset.parent) {
+            // Find all inputs with the same parent
+            const parentId = el.dataset.parent;
+            const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
+            const answers = [];
+            
+            // Collect answers from all inputs
+            inputs.forEach(input => {
+                if (input.dataset.ans) {
+                    // For multi-gap questions, answers are split by |
+                    const ansParts = input.dataset.ans.split('|');
+                    answers[parseInt(input.dataset.gapIndex)] = ansParts[parseInt(input.dataset.gapIndex)] || ansParts[0];
+                }
+            });
+            
+            // Show answers for each input
+            inputs.forEach(input => {
+                const index = parseInt(input.dataset.gapIndex);
+                if (answers[index]) {
+                    input.value = answers[index];
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect-marked');
+                    adjustWidth(input);
+                    
+                    // Update state
+                    const stateKey = `${input.id}-state`;
+                    answerStates.set(stateKey, true);
+                }
+            });
+            
+            // Update eye button state
+            const eyeBtn = document.getElementById(parentId + '-eye');
+            if (eyeBtn) eyeBtn.classList.add('active');
+        }
+    });
+}
+
+function resetSection(prefix) { 
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { 
+        if(i.tagName === 'INPUT') { 
+            i.value = ""; 
+            i.classList.remove('correct', 'incorrect-marked'); 
+            adjustWidth(i); 
+        } 
+        const hBox = document.getElementById(i.id + '-hint'); 
+        if(hBox) hBox.style.display = 'none'; 
+        const ipaBox = document.getElementById(i.id + '-ipa');
+        if(ipaBox) ipaBox.style.display = 'none';
+    });
+    
+    // Reset button states
+    document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
+        if (btn.id.includes(prefix)) {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Reset global IPA state
+    if (currentActiveIPA) {
+        const speakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        currentActiveIPA = null;
+    }
+    
+    // Clear answer states for this section
+    for (const [key, value] of answerStates.entries()) {
+        if (key.startsWith(`${prefix}-`)) {
+            answerStates.delete(key);
+        }
+    }
+    
+    updateWordBank(); 
+}
+
+function normalizeAnswer(answer) {
+    // Remove extra spaces, convert to lowercase, remove punctuation
+    // IMPORTANT: Case-insensitive comparison
+    return answer.toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/[.,;:!?]$/, '');
+}
+
+function validateMultipleAnswers(userAnswer, correctAnswers) {
+    // Split multiple answers by | and check if user answer matches any
+    // IMPORTANT: Case-insensitive comparison
+    const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
+    const normalizedUser = normalizeAnswer(userAnswer);
+    
+    return answers.some(ans => ans === normalizedUser);
+}
+
+function checkAll() { 
+    // Check text inputs
+    document.querySelectorAll('[data-type="input"]').forEach(el => { 
+        const correctAnswers = el.dataset.ans;
+        const userAnswer = el.value;
+        
+        el.classList.remove('correct', 'incorrect-marked'); 
+        
+        if(!userAnswer.trim()) {
+            // Empty answer, do nothing
+            return;
+        }
+        
+        // IMPORTANT: Case-insensitive validation
+        if(validateMultipleAnswers(userAnswer, correctAnswers)) {
+            el.classList.add('correct');
+        } else {
+            el.classList.add('incorrect-marked');
+        }
+    });
+}
+
+/* --- WORD BANK FUNCTIONS --- */
+
+let selectedWordEl = null;
+
+function allowDrop(ev) { 
+    ev.preventDefault(); 
+}
+
+function drag(ev) { 
+    ev.dataTransfer.setData("text", ev.target.innerText); 
+    selectedWordEl = ev.target; 
+}
+
+function drop(ev) { 
+    ev.preventDefault(); 
+    const data = ev.dataTransfer.getData("text"); 
+    
+    if (ev.target.tagName === 'INPUT') {
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        ev.target.value = data; 
+        adjustWidth(ev.target); 
+        updateWordBank();
+    }
+}
+
+function clickSelect(el) { 
+    if(selectedWordEl) {
+        selectedWordEl.style.background = "#eef2f7"; 
+    }
+    selectedWordEl = el; 
+    el.style.background = "#ffeaa7"; 
+}
+
+// Handle word bank click to input
+document.addEventListener('click', (e) => {
+    if(e.target.tagName === 'INPUT' && selectedWordEl) { 
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        e.target.value = selectedWordEl.innerText; 
+        adjustWidth(e.target); 
+        selectedWordEl.style.background = "#eef2f7"; 
+        selectedWordEl = null; 
+        updateWordBank(); 
+    }
+});
+
+function updateWordBank() { 
+    // IMPORTANT: Compare using lowercase for word bank management
+    const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value)); 
+    document.querySelectorAll('.word-item').forEach(item => { 
+        const word = item.innerText.toLowerCase().trim(); 
+        const usedCount = inputs.filter(v => v === word).length; 
+        
+        if(usedCount >= 1) {
+            item.classList.add('used'); 
+        } else {
+            item.classList.remove('used'); 
+        }
+    }); 
+}
+
+/* --- INITIALIZATION --- */
+
+window.onload = () => {
+    renderMatching('t1', t1_data);
+    renderGapFill('t2', t2_data, 'bank-t2');
+    renderGrammarFill('t3', t3_data);
+    renderGrammarFill('t4', t4_data);
+    renderGrammarFill('t5', t5_data);
+    renderGrammarFill('t6', t6_data);
+};
+
+/* --- KEYBOARD SUPPORT --- */
+
+document.addEventListener('keydown', e => { 
+    if(e.key === 'Enter') {
+        checkAll(); 
+    }
+});
+
+/* --- AUTO-ADJUST ALL INPUTS ON LOAD --- */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Adjust all input widths after page loads
+    setTimeout(() => {
+        document.querySelectorAll('input[data-type="input"]').forEach(input => {
+            adjustWidth(input);
+        });
+    }, 100);
+});
+</script>
+</body>
+</html>
