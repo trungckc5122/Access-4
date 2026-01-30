@@ -1060,13 +1060,12 @@ function renderPrepositionFill(id, data) {
         
         // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
         // This handles "______" and any other variations
-        // For multiple gaps, we need to create separate input fields
         const gapCount = (sentence.match(/_{2,}/g) || []).length;
         let inputIndex = 0;
         
         // Create a unique ID for each input field in multi-gap questions
         sentence = sentence.replace(/_{2,}/g, (match) => {
-            const inputId = `${qid}-${inputIndex}`;
+            const inputId = `${qid}-gap${inputIndex}`; // Changed to use 'gap' prefix
             inputIndex++;
             return `<input type="text" class="relative-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)">`;
         });
@@ -1075,21 +1074,74 @@ function renderPrepositionFill(id, data) {
             <div class="question-row">
                 ${numberHtml} ${sentence}
                 <div class="row-btns">
-                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
                 </div>
                 <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
             </div>`;
         
-        // CRITICAL FIX: Set data-ans attribute for each input field
-        // For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
-        // we MUST store the complete pipe-separated string, not just the first part
+        // Set data-ans attribute for each input field
         setTimeout(() => {
             for (let j = 0; j < gapCount; j++) {
-                const input = document.getElementById(`${qid}-${j}`);
+                const input = document.getElementById(`${qid}-gap${j}`);
                 if (input && it.ans) {
-                    // IMPORTANT: Store the ENTIRE answer string with pipe separators
-                    // This enables validateMultipleAnswers() to work correctly
+                    input.setAttribute('data-ans', it.ans);
+                }
+            }
+        }, 0);
+    });
+}
+
+function renderAdjectiveForms(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-gap${inputIndex}`; // Changed to use 'gap' prefix
+            inputIndex++;
+            return `<input type="text" class="grammar-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)">`;
+        });
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // Set data-ans attribute for each input field
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-gap${j}`);
+                if (input && it.ans) {
                     input.setAttribute('data-ans', it.ans);
                 }
             }
@@ -1283,12 +1335,15 @@ function toggleMultiGapAns(parentId, gapCount, answersStr) {
     
     // Check if answer is currently shown
     const isCurrentlyShown = answerStates.get(stateKey) || false;
-    const answers = answersStr.split('|');
+    
+    // Parse the answers - for Task 3 and 4, answers are single words, not pipe-separated
+    // So we just use the answersStr directly
+    const answer = answersStr; // For Task 3 and 4, this is a single word
     
     if (isCurrentlyShown) {
         // Hide all answers
         for (let i = 0; i < gapCount; i++) {
-            const inputId = `${parentId}-${i}`;
+            const inputId = `${parentId}-gap${i}`;
             const el = document.getElementById(inputId);
             if (el) {
                 el.value = "";
@@ -1299,13 +1354,13 @@ function toggleMultiGapAns(parentId, gapCount, answersStr) {
         if (eyeBtn) eyeBtn.classList.remove('active');
         answerStates.set(stateKey, false);
     } else {
-        // Show all answers
+        // Show all answers - for Task 3 and 4, all gaps get the same answer
         for (let i = 0; i < gapCount; i++) {
-            const inputId = `${parentId}-${i}`;
+            const inputId = `${parentId}-gap${i}`;
             const el = document.getElementById(inputId);
-            if (el && answers[i]) {
+            if (el) {
                 // IMPORTANT: Show answer with exact original capitalization
-                el.value = answers[i];
+                el.value = answer;
                 el.classList.add('correct');
                 el.classList.remove('incorrect-marked');
                 adjustWidth(el);
@@ -1319,7 +1374,7 @@ function toggleMultiGapAns(parentId, gapCount, answersStr) {
 }
 
 function showAnswers(prefix) { 
-    // Handle regular single-gap questions
+    // Handle Task 1, Task 2, Task 5 (single-gap questions)
     document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
         if (el.dataset.type === 'input' && !el.dataset.parent) {
             const stateKey = `${el.id}-state`;
@@ -1338,40 +1393,31 @@ function showAnswers(prefix) {
         }
     });
     
-    // Handle multi-gap questions
-    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
-        if (el.dataset.type === 'input' && el.dataset.parent) {
-            // Find all inputs with the same parent
-            const parentId = el.dataset.parent;
-            const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
-            const answers = [];
+    // Handle Task 3 and Task 4 (multi-gap questions with 'gap' prefix)
+    if (prefix === 't3' || prefix === 't4') {
+        const data = prefix === 't3' ? t3_data : t4_data;
+        
+        data.forEach((it, i) => {
+            const qid = `${prefix}-q${i}`;
+            const gapCount = (it.q.match(/_{2,}/g) || []).length;
             
-            // Collect answers from all inputs
-            inputs.forEach(input => {
-                if (input.dataset.ans) {
-                    // For multi-gap questions, answers are split by |
-                    const ansParts = input.dataset.ans.split('|');
-                    answers[parseInt(input.dataset.gapIndex)] = ansParts[parseInt(input.dataset.gapIndex)] || ansParts[0];
+            for (let j = 0; j < gapCount; j++) {
+                const inputId = `${qid}-gap${j}`;
+                const el = document.getElementById(inputId);
+                const eyeBtn = document.getElementById(`${qid}-eye`);
+                
+                if (el && it.ans) {
+                    el.value = it.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                    
+                    if (eyeBtn) eyeBtn.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
                 }
-            });
-            
-            // Show answers for each input
-            inputs.forEach(input => {
-                const index = parseInt(input.dataset.gapIndex);
-                if (answers[index]) {
-                    input.value = answers[index];
-                    input.classList.add('correct');
-                    input.classList.remove('incorrect-marked');
-                    adjustWidth(input);
-                }
-            });
-            
-            // Update state
-            const eyeBtn = document.getElementById(parentId + '-eye');
-            if (eyeBtn) eyeBtn.classList.add('active');
-            answerStates.set(`${parentId}-state`, true);
-        }
-    });
+            }
+        });
+    }
     
     // Handle error correction (Task 5) specially
     if (prefix === 't5') {
@@ -1547,8 +1593,8 @@ function updateWordBank() {
 window.onload = () => {
     renderMatching('t1', t1_data);
     renderGapFill('t2', t2_data, 'bank-t2');
-    renderPrepositionFill('t3', t3_data);
-    renderPrepositionFill('t4', t4_data); // Reusing preposition renderer for adjective forms
+    renderPrepositionFill('t3', t3_data);  // Fixed: Use the correct render function for Task 3
+    renderAdjectiveForms('t4', t4_data);   // Fixed: Use the correct render function for Task 4
     renderErrorCorrection('t5', t5_data);
 };
 
@@ -1648,6 +1694,16 @@ document.addEventListener('keydown', e => {
 // 6. This helps students identify error locations before correcting them
 // 7. The interface includes clear instructions: "Click on the incorrect phrase, then type correction below"
 // 8. Data structure for error correction: objects with 'words' array, 'errIdx', 'corr', 'hint'
+
+// FIX FOR TASK 3 AND TASK 4 EYE BUTTON ISSUE:
+// 1. PROBLEM: The eye button in Task 3 and Task 4 was not working because:
+//    - The render function was using different input ID patterns
+//    - The toggle function was looking for the wrong ID pattern
+// 2. SOLUTION:
+//    - Updated renderPrepositionFill() and renderAdjectiveForms() to use consistent ID pattern: `${qid}-gap${j}`
+//    - Updated toggleMultiGapAns() to look for inputs with the correct ID pattern
+//    - Updated showAnswers() to handle Task 3 and Task 4 separately
+// 3. RESULT: Eye button now correctly shows/hides answers for Task 3 and Task 4
 </script>
 </body>
 </html>
