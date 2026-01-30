@@ -50,18 +50,19 @@
             - Each hint contains pedagogical explanation
         
         13. AUTOMATIC FORMAT DETECTION: Based on data structure
-            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint' properties
-            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint' and [INPUT] placeholder
-            - RULE 3: PREPOSITION EXERCISE - objects with 'q', 'ans', 'hint' for fill-in-blank
-            - RULE 4: ADJECTIVE FORMS - objects with 'q', 'ans', 'hint' with parentheses for adjective hint
-            - RULE 5: ERROR CORRECTION - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
+            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint', 'ipa' properties
+            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint', 'wordBankIndex' properties
+            - RULE 3: PREPOSITION/VERB TENSES - objects with 'q', 'ans', 'hint' with multiple gaps
+            - RULE 4: MULTIPLE CHOICE (TASK 5 TYPE 1) - objects with 'q', 'ans', 'hint', 'options' array property
+            - RULE 5: ERROR CORRECTION (TASK 5 TYPE 2) - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
         
         14. MULTI-FORMAT SUPPORT:
-            - Vocabulary Matching (Task 1): 2-column grid with letter inputs
-            - Gap-fill with Word Bank (Task 2): Input fields with sticky word bank
-            - Past Simple & Past Progressive (Task 3): Verb tense exercises
-            - Past Simple & Past Perfect (Task 4): Verb tense exercises
-            - Phrasal Verbs (Task 5): Multiple choice phrasal verb exercises
+            - Vocabulary Matching (Task 1): 2-column grid with letter inputs and IPA pronunciation
+            - Gap-fill with Word Bank (Task 2): Input fields with sticky word bank, drag & drop
+            - Past Simple & Past Progressive (Task 3): Verb tense exercises with multiple gaps
+            - Past Simple & Past Perfect (Task 4): Verb tense exercises with multiple gaps  
+            - Phrasal Verbs (Task 5 Type 1): Multiple choice with 3 option buttons
+            - Error Correction (Task 5 Type 2): Clickable phrases with correction input
         
         15. EXERCISE NUMBER HANDLING: Preserves existing numbering from content
             - If sentences already have numbers (like "1.", "2."), uses those numbers
@@ -86,6 +87,8 @@
               answers can be stored as arrays or pipe-separated strings
             - Validation logic checks if user answer matches any of the acceptable answers
             - Supports British/American spelling variations
+            - CRITICAL FIX: For single-gap questions with pipe-separated answers,
+              the entire pipe-separated string MUST be stored in input's data-ans attribute
         
         19. CONTEXT-AWARE VALIDATION:
             - Grammar structures: Alternative correct forms accepted based on pedagogical context
@@ -162,8 +165,8 @@
             - Input fields designed for verb conjugation
         
         32. PHRASAL VERBS MULTIPLE CHOICE EXERCISE:
-            - Task 5 focuses on phrasal verb selection
-            - Multiple choice format with two options
+            - Task 5 Type 1 focuses on phrasal verb selection
+            - Multiple choice format with three options
             - Comprehensive phrasal verb explanations
         
         33. OPTION-SELECTION EXERCISE IF DETECTED:
@@ -217,7 +220,33 @@
             - Implementation: Find all input fields with matching question prefix
             - Show/hide all gaps simultaneously for consistent user experience
         
+        40. TASK 5 TYPE RECOGNITION AND HANDLING:
+            - IMPORTANT: There are TWO distinct Task 5 formats across different modules:
+              1. MULTIPLE CHOICE (Type 1): Data has 'options' array property (Module 5a)
+              2. ERROR CORRECTION (Type 2): Data has 'words' array and 'errIdx' property (Module 4a)
+            - Automatic detection based on data structure:
+              * If data[0].options exists → Multiple Choice (use renderPhrasalVerbs())
+              * If data[0].words exists → Error Correction (use renderErrorCorrection())
+            - Each type has completely different UI and interaction patterns
+        
+        41. ERROR CORRECTION WITH SELECTABLE PHRASES (TASK 5 TYPE 2):
+            - Displays sentences with logically grouped phrases
+            - Each phrase is clickable to select the incorrect part
+            - Selected phrase is visually highlighted with yellow background
+            - Clicking a phrase auto-fills the correction input field
+            - Data structure: {words: [], errIdx, corr, hint}
+            - Show All button automatically selects the error phrase and shows correction
+        
+        42. MULTIPLE CHOICE WITH OPTION BUTTONS (TASK 5 TYPE 1):
+            - Displays 3 option buttons per question
+            - User selects one option per question
+            - Check All only validates selected questions
+            - Reset clears all inline styles completely
+            - Data structure: {q, ans, options: [], hint}
+        
         ======================================================================== */
+        
+        /* [CSS styles remain EXACTLY the same - no changes] */
         :root {
             --primary: #2980b9; 
             --primary-dark: #1c5982; 
@@ -1875,7 +1904,6 @@ document.addEventListener('keydown', e => {
 
 /* --- ADDITIONAL NOTES --- */
 
-
 // IMPORTANT: When creating new code based on this template:
 // 1. Preserve ALL technical requirement comments above
 // 2. Add new requirements as additional numbered points
@@ -2058,6 +2086,26 @@ document.addEventListener('keydown', e => {
 //    - Task 3, 4: Multiple input fields per question
 //    - Task 5: Option selection buttons
 // 6. USER EXPERIENCE: Consistent behavior across all exercise types
+
+// TASK 5 TYPE RECOGNITION AND HANDLING (CRITICAL UPDATE):
+// 1. THERE ARE TWO DISTINCT TASK 5 FORMATS ACROSS DIFFERENT MODULES:
+//    - MULTIPLE CHOICE (TYPE 1): Data has 'options' array property (Module 5a format)
+//    - ERROR CORRECTION (TYPE 2): Data has 'words' array and 'errIdx' property (Module 4a format)
+// 2. AUTOMATIC DETECTION ALGORITHM:
+//    if (data[0].options && Array.isArray(data[0].options)) {
+//        // MULTIPLE CHOICE - use renderPhrasalVerbs()
+//    } else if (data[0].words && data[0].errIdx !== undefined) {
+//        // ERROR CORRECTION - use renderErrorCorrection()
+//    }
+// 3. MULTIPLE CHOICE FEATURES:
+//    - 3 option buttons per question
+//    - Check All only validates selected questions
+//    - Reset clears inline styles completely (style.cssText = '')
+// 4. ERROR CORRECTION FEATURES:
+//    - Clickable phrases with yellow highlight on selection
+//    - Auto-fill input with selected phrase
+//    - Show All auto-selects error phrase and shows correction
+// 5. BOTH TYPES use Task 5 numbering but have completely different UI/UX patterns
 
 // ALL TECHNICAL REQUIREMENTS from the original template are preserved
 </script>
