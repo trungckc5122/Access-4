@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Module 5b</title>
+    <style>
+        /* ========================================================================
+        TECHNICAL REQUIREMENTS IMPLEMENTED:
+        
+        1. DATA INTEGRITY: All content from provided images preserved exactly
+        
+        2. STICKY UI: Word Bank follows scrolling when needed with position: sticky
+        
+        3. SINGLE SOLVE: Individual 'Show' buttons per question with 👁️ icon
+        
+        4. PEDAGOGICAL HINTS: Detailed English explanations via (i) button toggle
+        
+        5. SAFE-HIGHLIGHT: Keyword highlighting on error (green/red color coding)
+           - Green (#27ae60) for correct answers
+           - Red (#e74c3c) for incorrect answers
+           - Background colors change to indicate status
+        
+        6. CLICK-TO-SELECT & DRAG-DROP: Dual input methods for Word Bank
+           - Click on word bank items to select them
+           - Drag and drop onto input fields
+           - Visual feedback with color change (#ffeaa7 for selected)
+        
+        7. AUTO-WIDTH: Inputs resize based on content using oninput event
+           - Base widths: letter-input=45px, preposition-input=80px, word-input=120px, grammar-input=150px
+           - Dynamic adjustment: Math.max(el.value.length * 10 + 20, baseWidth)
+        
+        8. CASE-INSENSITIVE: Matching handles A/a equally via normalizeAnswer() function
+           - Converts to lowercase, trims whitespace, removes punctuation
+        
+        9. WORD BANK MANAGEMENT: Auto-hide used items with frequency tracking
+           - Counts occurrences of each word in inputs
+           - Hides items when used count >= total available (handles x2 duplicates)
+        
+        10. LOCAL CONTROLS: Individual Task 'Show All' and 'Reset' buttons
+            - Each exercise has its own control buttons
+            - Prefix-based selection for targeted operations
+        
+        11. KEYBOARD: Enter to check all answers, Arrow keys for navigation
+            - Event listener on document for keydown events
+            - Enter key triggers checkAll() function
+        
+        12. ENHANCED HINTS: Detailed explanations for every question
+            - Hidden divs that toggle on (i) button click
+            - Each hint contains pedagogical explanation
+        
+        13. AUTOMATIC FORMAT DETECTION: Based on data structure
+            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint' properties
+            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint' and [INPUT] placeholder
+            - RULE 3: PREPOSITION EXERCISE - objects with 'q', 'ans', 'hint' for fill-in-blank
+            - RULE 4: ADJECTIVE FORMS - objects with 'q', 'ans', 'hint' with parentheses for adjective hint
+            - RULE 5: ERROR CORRECTION - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
+        
+        14. MULTI-FORMAT SUPPORT:
+            - Vocabulary Matching (Task 1): 2-column grid with letter inputs
+            - Gap-fill with Word Bank (Task 2): Input fields with sticky word bank
+            - Past Simple & Past Progressive (Task 3): Grammar-focused inputs
+            - Past Simple & Past Perfect (Task 4): Grammar-focused inputs
+            - Phrasal Verbs (Task 5): Multiple choice format
+        
+        15. EXERCISE NUMBER HANDLING: Preserves existing numbering from content
+            - If sentences already have numbers (like "1.", "2."), uses those numbers
+            - Otherwise uses automatic numbering with exercise-number class
+            - Number detection regex: /^\d+\.\s/
+        
+        16. DOCUMENTATION PRESERVATION: All technical requirement comments maintained
+            - This section must remain intact in any derivative code
+            - New requirements added as additional numbered points
+            - Never modify or remove existing technical requirements
+            - Always keep the complete history of all requirements
+        
+        17. IPA PRONUNCIATION FEATURE FOR MATCHING EXERCISES:
+            - Each vocabulary item in matching exercises has IPA pronunciation data
+            - Speaker button (🔊) added next to eye (👁️) button
+            - Clicking speaker button shows IPA pronunciation in a dedicated box
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - Visual design: IPA box appears below the vocabulary item with gray background
+        
+        18. MULTIPLE CORRECT ANSWERS SUPPORT:
+            - For exercises where multiple answers are possible,
+              answers can be stored as arrays or pipe-separated strings
+            - Validation logic checks if user answer matches any of the acceptable answers
+            - Supports British/American spelling variations
+        
+        19. CONTEXT-AWARE VALIDATION:
+            - Grammar structures: Alternative correct forms accepted based on pedagogical context
+        
+        20. CONSISTENT CASE HANDLING FOR WORD BANKS AND ANSWERS:
+            - WORD BANK ITEMS: Always displayed in lowercase for visual consistency
+            - ANSWER DISPLAY: Show answers with exact original capitalization from data
+            - VALIDATION: Case-insensitive comparison during validation
+            - USER INPUT: Preserves user's original capitalization input
+            - KEY RULE: When dragging from word bank, lowercase words are inserted, 
+              but when showing answers, the exact capitalization from data is displayed
+        
+        21. CASE HANDLING IMPLEMENTATION:
+            - Word bank creation: Uses toLowerCase() for all displayed words
+            - Answer display: Shows exact 'ans' property from data (preserves original case)
+            - Validation: Uses normalizeAnswer() for case-insensitive comparison
+            - User experience: No automatic case modification during user typing
+            - This ensures proper nouns are displayed correctly when shown as answers
+        
+        22. GAP DETECTION AND REPLACEMENT:
+            - Any occurrence of "______" (any length of underscores) in question text is automatically
+              replaced with an input field
+            - Regex pattern: /_{2,}/g matches 2 or more consecutive underscores
+            - This handles variations in gap length from different sources
+            - Input fields are inserted exactly where the underscores appear
+        
+        23. MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
+            - Left column: Vocabulary items with input boxes for matching letters
+            - Right column: Definitions in alphabetical order (A, B, C, D, etc.)
+            - Each vocabulary item has three control buttons:
+              1. 👁️ Eye button: Shows the correct answer
+              2. 🔊 Speaker button: Shows IPA pronunciation from authoritative dictionary
+              3. (i) Info button: Shows pedagogical hint
+            - IPA pronunciation data comes from reliable dictionary sources
+            - IPA display appears in a dedicated box below each vocabulary item
+        
+        24. IPA PRONUNCIATION IMPLEMENTATION:
+            - Speaker button size matches eye button (28x28px)
+            - IPA data stored in 'ipa' property of vocabulary objects
+            - IPA display uses phonetic font and proper formatting
+            - IPA box has distinct visual styling for clear pronunciation display
+            - Multiple pronunciation variants supported when applicable
+        
+        25. IPA SINGLE ACTIVE DISPLAY SYSTEM:
+            - Only ONE IPA pronunciation box can be visible at a time
+            - Clicking a speaker button shows that word's IPA and hides any other visible IPA box
+            - Clicking the same speaker button again toggles (hides) its IPA box
+            - This prevents visual clutter and ensures clean interface
+            - System tracks currently active IPA box and manages visibility states
+        
+        26. DEFINITIONS COLUMN OPTIMIZATION:
+            - Definitions column displays clean list without unnecessary headers
+            - Alphabetical ordering (A, B, C, D) maintained for easy reference
+            - Visual hierarchy maintained through consistent styling
+            - Column alignment optimized for readability and space efficiency
+        
+        27. SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
+            - Definitions column has independent vertical scrolling when content is too long
+            - Fixed height with overflow-y: auto enables scrolling within the column
+            - Scrollbar styling matches the design system with subtle appearance
+            - Allows users to scroll through definitions while keeping vocabulary column fixed
+            - Responsive height calculation based on available space
+        
+        28. MULTI-GAP QUESTIONS WITH SEPARATE VALIDATION:
+            - For questions with multiple gaps, each gap gets its own input field
+            - Data structure supports multiple answers in one 'ans' field separated by |
+            - Validation checks each input field against its corresponding answer
+            - Example: "were cut|were steamed" validates first input against "were cut" and second against "were steamed"
+            - Hints provide explanations for each gap when applicable
+            - Show All button fills all gaps with correct answers
+        
+        29. TOGGLE FUNCTIONALITY FOR EYE AND INFO BUTTONS:
+            - Eye button (👁️) toggles answer display on second click
+            - Info button (i) toggles hint display on second click
+            - Both buttons restore original state when clicked again
+            - This provides better user experience with toggle behavior
+        
+        30. MULTIPLE CORRECT ANSWERS FIX FOR SINGLE-GAP QUESTIONS:
+            - CRITICAL FIX: For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+              the entire pipe-separated string must be stored in the input's data-ans attribute
+            - PREVIOUS BUG: Only the first answer (before |) was being stored, causing validation
+              to fail for alternative correct answers
+            - FIXED: Input elements now receive the complete pipe-separated answer string
+              from the data object's 'ans' property, enabling validateMultipleAnswers() to work correctly
+        
+        ======================================================================== */
+        :root {
+            --primary: #2980b9; 
+            --primary-dark: #1c5982; 
+            --success: #27ae60;
+            --error: #e74c3c; 
+            --warning: #f1c40f; 
+            --bg: #f4f7f9;
+            --text: #2c3e50; 
+            --card: #ffffff;
+            --selection: #3498db;
+            --selection-bg: #ebf5fb;
+        }
+        
+        body { 
+            font-family: 'Times New Roman', serif; 
+            font-size: 13pt; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px 20px 100px 20px; 
+            line-height: 1.6; 
+        }
+        
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        
+        .sticky-bank { 
+            position: sticky; 
+            top: 15px; 
+            z-index: 100;
+            background-color: #fff; 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 25px; 
+            border: 2px solid var(--primary); 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .word-item { 
+            background: #eef2f7; 
+            border: 1px solid var(--primary); 
+            color: var(--primary-dark); 
+            padding: 6px 12px; 
+            border-radius: 5px; 
+            cursor: grab; 
+            user-select: none; 
+            transition: 0.2s; 
+            font-size: 0.9em; 
+            font-weight: 500;
+        }
+        
+        .word-item.used { 
+            display: none; 
+        }
+        
+        .word-item:hover { 
+            background: var(--primary); 
+            color: white; 
+        }
+
+        .exercise-card { 
+            background: var(--card); 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            padding: 25px; 
+            margin-bottom: 30px; 
+        }
+        
+        .exercise-title { 
+            font-weight: bold; 
+            font-size: 1.25em; 
+            margin-bottom: 18px; 
+            color: var(--primary-dark); 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 8px; 
+        }
+        
+        .matching-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            margin-top: 10px; 
+        }
+        
+        .vocab-item { 
+            margin-bottom: 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        
+        .vocab-text { 
+            min-width: 150px; 
+            font-weight: 500; 
+        }
+        
+        .def-item { 
+            margin-bottom: 12px; 
+            padding: 4px 0; 
+            border-bottom: 1px solid #f0f0f0; 
+            min-height: 40px; 
+            display: flex; 
+            align-items: center; 
+        }
+
+        .question-row { 
+            margin-bottom: 18px; 
+            line-height: 2.2; 
+            border-bottom: 1px solid #f9f9f9; 
+            padding-bottom: 10px; 
+            position: relative; 
+        }
+        
+        input[type="text"] { 
+            border: none; 
+            border-bottom: 2px solid #bdc3c7; 
+            background: #fafafa; 
+            padding: 2px 8px; 
+            font-size: 1em; 
+            transition: 0.2s; 
+            outline: none;
+            min-width: 60px; 
+            border-radius: 4px 4px 0 0; 
+            text-align: center; 
+            font-family: 'Times New Roman';
+        }
+        
+        input.letter-input { 
+            width: 45px; 
+            min-width: 45px; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            color: var(--primary-dark); 
+        }
+        
+        input.word-input { 
+            min-width: 120px; 
+            max-width: 250px; 
+            text-align: left; 
+        }
+        
+        input.grammar-input { 
+            min-width: 150px; 
+            max-width: 300px; 
+            text-align: left; 
+        }
+        
+        input.relative-input { 
+            min-width: 80px; 
+            max-width: 120px; 
+            text-align: center; 
+        }
+        
+        input.correct { 
+            border-bottom-color: var(--success) !important; 
+            background-color: #e8f8f5 !important; 
+            color: #1e8449 !important; 
+        }
+        
+        input.incorrect-marked { 
+            border-bottom-color: var(--error) !important; 
+            background-color: #fdedec !important; 
+        }
+
+        .row-btns { 
+            display: inline-flex; 
+            gap: 5px; 
+            vertical-align: middle; 
+            margin-left: 10px; 
+        }
+        
+        .btn-small { 
+            background: #eee; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            width: 28px; 
+            height: 28px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 14px; 
+            transition: 0.2s;
+        }
+        
+        .btn-small:hover {
+            background: #ddd;
+        }
+        
+        .btn-small.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .speaker-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+        }
+        
+        .speaker-btn:hover {
+            background: #2980b9;
+        }
+        
+        .speaker-btn.active {
+            background: #1c5982;
+        }
+        
+        .info-btn { 
+            background: #95a5a6; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            width: 20px; 
+            height: 20px; 
+            font-size: 11px; 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s;
+        }
+        
+        .info-btn:hover {
+            background: #7f8c8d;
+        }
+        
+        .info-btn.active {
+            background: #5d6d6e;
+        }
+        
+        .hint-box { 
+            display: none; 
+            margin-top: 8px; 
+            padding: 10px; 
+            background-color: #fef9e7; 
+            border-left: 4px solid var(--warning); 
+            color: #7d6608; 
+            border-radius: 4px; 
+            font-size: 0.85em; 
+        }
+        
+        .ipa-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            color: #2c3e50;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Times New Roman', serif;
+        }
+        
+        .ipa-label {
+            font-weight: bold;
+            color: #3498db;
+            margin-right: 5px;
+        }
+        
+        .ipa-text {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .controls-row { 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 10px; 
+            margin-top: 15px; 
+        }
+        
+        .btn { 
+            padding: 8px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            border: none; 
+            font-weight: bold; 
+            transition: 0.3s; 
+        }
+        
+        .btn-reset { 
+            background: #95a5a6; 
+            color: white; 
+        }
+        
+        .btn-show-all { 
+            background: var(--primary); 
+            color: white; 
+        }
+        
+        .check-all-btn { 
+            position: fixed; 
+            right: 30px; 
+            bottom: 30px; 
+            background-color: var(--success); 
+            color: white; 
+            padding: 15px 30px; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            z-index: 1000; 
+            font-weight: bold; 
+            border: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        }
+        
+        /* Grammar reference section */
+        .grammar-reference {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+        }
+        
+        .grammar-reference h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1em;
+        }
+        
+        .grammar-reference ul {
+            padding-left: 20px;
+        }
+        
+        .grammar-reference li {
+            margin-bottom: 8px;
+        }
+        
+        .reference-note {
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 0.85em;
+            margin-top: 10px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        /* Exercise numbering */
+        .instructions {
+            color: #7f8c8d;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        /* Number handling - preserves existing numbers */
+        .existing-number {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 8px;
+        }
+        
+        /* Definitions column styling - UPDATED WITH SCROLL */
+        .definitions-column {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            height: 500px; /* Fixed height for scrollable area */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        
+        /* Custom scrollbar styling */
+        .definitions-column::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .definitions-column::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .definition-item {
+            margin-bottom: 12px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: white;
+            border-radius: 4px;
+            min-height: 40px; /* Ensure consistent height */
+        }
+        
+        .definition-letter {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 10px;
+            min-width: 20px;
+            display: inline-block;
+        }
+        
+        .definition-text {
+            display: inline;
+        }
+        
+        /* Multi-gap question styling */
+        .multi-gap-hint {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            padding-left: 10px;
+        }
+        
+        /* Indefinite pronouns options styling */
+        .indefinite-options {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .indefinite-option {
+            margin-bottom: 8px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .indefinite-option:hover {
+            background-color: #eef2f7;
+        }
+        
+        .indefinite-option.selected {
+            background-color: #e8f4fc;
+            border-color: var(--primary);
+        }
+        
+        .indefinite-option.correct {
+            background-color: #e8f8f5;
+            border-color: var(--success);
+        }
+        
+        .indefinite-option.incorrect {
+            background-color: #fdedec;
+            border-color: var(--error);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">Access 4 - Module 5b</h1>
+    
+    <!-- Grammar Reference Section -->
+    <div class="exercise-card">
+        <div class="exercise-title">Grammar Reference & Study Notes</div>
+        <div class="grammar-reference">
+            <h3>Indefinite Pronouns:</h3>
+            <ul>
+                <li><strong>some-:</strong> Used in positive sentences ("someone", "something", "somewhere")</li>
+                <li><strong>any-:</strong> Used in questions and negative sentences ("anyone", "anything", "anywhere")</li>
+                <li><strong>no-:</strong> Used to express absence ("nobody", "nothing", "nowhere")</li>
+                <li><strong>every-:</strong> Used to refer to all ("everyone", "everything", "everywhere")</li>
+                <li><strong>Usage:</strong> 
+                    <ul>
+                        <li><em>somebody</em> = a person (positive sentences)</li>
+                        <li><em>anybody</em> = any person (questions/negatives)</li>
+                        <li><em>nobody</em> = no person (negative meaning)</li>
+                        <li><em>everybody</em> = all people</li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <h3>Quantifiers: a lot of / many / much</h3>
+            <ul>
+                <li><strong>many:</strong> Used with countable nouns (many birds, many students)</li>
+                <li><strong>much:</strong> Used with uncountable nouns (much information, much time)</li>
+                <li><strong>a lot of:</strong> Can be used with both countable and uncountable nouns</li>
+                <li><strong>Negative forms:</strong> 
+                    <ul>
+                        <li><em>not many</em> (countable)</li>
+                        <li><em>not much</em> (uncountable)</li>
+                    </ul>
+                </li>
+                <li><strong>Questions:</strong> 
+                    <ul>
+                        <li><em>How many...?</em> (countable)</li>
+                        <li><em>How much...?</em> (uncountable)</li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <h3>Animal Senses Vocabulary:</h3>
+            <ul>
+                <li><strong>Senses:</strong> The five ways humans and animals understand the world (sight, hearing, touch, taste, smell)</li>
+                <li><strong>Vision:</strong> The ability to see things clearly</li>
+                <li><strong>Capability:</strong> The skill or power to do something</li>
+                <li><strong>Qualify:</strong> To be considered as something (often with "as")</li>
+                <li><strong>Note:</strong> Different animals have different sensory capabilities adapted to their environments</li>
+            </ul>
+            <p class="reference-note">Grammar references based on Cambridge English Grammar in Use and Oxford English Grammar Course.</p>
+        </div>
+    </div>
+
+    <!-- TASK 1: Vocabulary Matching – Match the word to its definition -->
+    <div class="exercise-card" id="card-t1">
+        <div class="exercise-title">Task 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-K) in the box.</div>
+        
+        <div class="matching-grid">
+            <div id="vocab-t1"></div>
+            <div class="definitions-column">
+                <div id="def-t1"></div>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 2: Fill in the blanks -->
+    <div class="exercise-card" id="card-t2">
+        <div class="exercise-title">Task 2: Fill in the gaps – Complete the sentences</div>
+        <div class="instructions">Complete each sentence using the correct word from the vocabulary list. You can click words from the bank below or type them directly.</div>
+        <div class="sticky-bank" id="bank-t2"></div>
+        <div id="questions-t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 3: Indefinite Pronouns -->
+    <div class="exercise-card" id="card-t3">
+        <div class="exercise-title">Task 3: Indefinite Pronouns – Complete the sentences</div>
+        <div class="instructions">Complete each sentence with a suitable word formed from some / any / no / every + body / one / thing / where.</div>
+        <div id="questions-t3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 4: a lot of / many / much -->
+    <div class="exercise-card" id="card-t4">
+        <div class="exercise-title">Task 4: a lot of / many / much – Complete the sentences</div>
+        <div class="instructions">Complete each sentence with a lot of, many, or much.</div>
+        <div id="questions-t4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t4')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+/* --- DATA --- */
+// Task 1: Vocabulary Matching – Match the word to its meaning - STRUCTURE PATTERN: { v, letter, def, hint, ipa }
+const t1_data = [
+    { v: "1. senses", letter: "G", def: "the five ways humans and animals understand the world", hint: "The five senses are sight, hearing, touch, taste, and smell.", ipa: "/ˈsensɪz/" },
+    { v: "2. chirp", letter: "D", def: "to make short, high sounds like a small bird", hint: "Birds and some insects make chirping sounds.", ipa: "/tʃɜːrp/" },
+    { v: "3. qualify", letter: "C", def: "to be considered as something", hint: "Often used with 'as' - e.g., 'qualifies as a super sense'.", ipa: "/ˈkwɒlɪfaɪ/" },
+    { v: "4. vision", letter: "A", def: "the ability to see things clearly", hint: "Good vision means you can see clearly at different distances.", ipa: "/ˈvɪʒən/" },
+    { v: "5. falcon", letter: "E", def: "a bird that hunts other animals and sees very well", hint: "Falcons are birds of prey known for their excellent eyesight.", ipa: "/ˈfɔːlkən/" },
+    { v: "6. tongue", letter: "H", def: "a part of the mouth used for tasting food", hint: "The tongue has taste buds that detect sweet, salty, sour, and bitter flavors.", ipa: "/tʌŋ/" },
+    { v: "7. tentacle", letter: "K", def: "a long, thin body part of some animals used to feel or hold things", hint: "Octopuses and squids have tentacles.", ipa: "/ˈtentəkəl/" },
+    { v: "8. touch receptors", letter: "I", def: "body parts in the skin that help feel heat, cold, or pressure", hint: "Special cells in the skin that detect different sensations.", ipa: "/tʌtʃ rɪˈseptərz/" },
+    { v: "9. whiskers", letter: "J", def: "long stiff hairs on an animal's face used to feel nearby objects", hint: "Cats, dogs, and rodents use whiskers to sense their surroundings.", ipa: "/ˈwɪskərz/" },
+    { v: "10. capability", letter: "B", def: "the skill or power to do something", hint: "A special ability or capacity to perform a task.", ipa: "/ˌkeɪpəˈbɪləti/" },
+    { v: "11. measure", letter: "F", def: "to find the size, amount, or level of something", hint: "Scientists measure things using special tools and equipment.", ipa: "/ˈmeʒər/" }
+];
+
+// Task 2: Fill in the blanks - STRUCTURE PATTERN: { q, ans, hint } 
+const t2_data = [
+    { q: "1. Birds often ______ loudly at sunrise.", ans: "chirp", hint: "Birds make chirping sounds, especially in the morning." },
+    { q: "2. Skin contains ______ that respond to heat, cold, and pressure.", ans: "touch receptors", hint: "Special cells in the skin detect different sensations." },
+    { q: "3. Some animals even ______ as having super senses.", ans: "qualify", hint: "Use 'qualify as' to mean 'are considered as'." },
+    { q: "4. A ______ has excellent eyesight and can spot prey from high in the sky.", ans: "falcon", hint: "A bird of prey known for its exceptional vision." },
+    { q: "5. Scientists use special equipment to ______ the distance between two objects.", ans: "measure", hint: "To find out the exact size or amount of something." },
+    { q: "6. The snake uses its ______ to sense smells in the air.", ans: "tongue", hint: "Snakes flick their tongues to collect scent particles." },
+    { q: "7. Humans rely on their five ______ to understand the world around them.", ans: "senses", hint: "Sight, hearing, touch, taste, and smell." },
+    { q: "8. Each ______ of an octopus can move independently.", ans: "tentacle", hint: "Octopuses have eight flexible arms called tentacles." },
+    { q: "9. She has the ______ to learn new languages very quickly.", ans: "capability", hint: "A special ability or talent for doing something." },
+    { q: "10. A cat uses its ______ to judge whether it can move through a narrow space.", ans: "whiskers", hint: "Long, sensitive hairs on a cat's face." },
+    { q: "11. The doctor tested the patient's ______ to check if there were problems with eyesight.", ans: "vision", hint: "The ability to see; eyesight." }
+];
+
+// Task 3: Indefinite Pronouns - STRUCTURE PATTERN: { q, ans, hint }
+const t3_data = [
+    { q: "1. The classroom was locked, but ______ had left a bag outside the door.", ans: "someone|somebody", hint: "Use 'someone' or 'somebody' for an unspecified person in positive sentences." },
+    { q: "2. I looked in the fridge, but there was ______ to eat.", ans: "nothing", hint: "Use 'nothing' to indicate the absence of food." },
+    { q: "3. The teacher asked a question, but ______ in the class could answer it.", ans: "no one|nobody", hint: "Use 'no one' or 'nobody' to mean 'not any person'." },
+    { q: "4. Is there ______ who knows how dolphins communicate?", ans: "anyone|anybody", hint: "Use 'anyone' or 'anybody' in questions." },
+    { q: "5. The museum was very interesting, and ______ learned something new there.", ans: "everyone|everybody", hint: "Use 'everyone' or 'everybody' to mean 'all people'." },
+    { q: "6. We searched ______ for the lost cat, but we still couldn't find it.", ans: "everywhere", hint: "Use 'everywhere' to mean 'in all places'." },
+    { q: "7. The room was silent, and ______ made a sound during the test.", ans: "no one|nobody", hint: "Use 'no one' or 'nobody' in negative sentences." },
+    { q: "8. She checked her pocket carefully, but there wasn't ______ inside.", ans: "anything", hint: "Use 'anything' in negative sentences with 'wasn't'." },
+    { q: "9. ______ has taken my notebook, because it is not on my desk anymore.", ans: "someone|somebody", hint: "Use 'someone' or 'somebody' for an unknown person in positive sentences." },
+    { q: "10. The guide explained the rules clearly so that ______ could understand them.", ans: "everyone|everybody", hint: "Use 'everyone' or 'everybody' to mean 'all people'." }
+];
+
+// Task 4: a lot of / many / much - STRUCTURE PATTERN: { q, ans, hint }
+const t4_data = [
+    { q: "1. Scientists do not have ______ information about how animals communicate in the wild.", ans: "much", hint: "Use 'much' with uncountable nouns like 'information' in negative sentences." },
+    { q: "2. There are ______ birds in this area that use sound to warn others of danger.", ans: "many|a lot of", hint: "Use 'many' or 'a lot of' with countable nouns like 'birds' in positive sentences." },
+    { q: "3. The student didn't spend ______ time preparing for the science presentation.", ans: "much", hint: "Use 'much' with uncountable nouns like 'time' in negative sentences." },
+    { q: "4. ______ research has been done on animal senses in recent years.", ans: "A lot of", hint: "Use 'a lot of' with uncountable nouns like 'research' in positive sentences." },
+    { q: "5. How ______ noise can bats hear when they are flying at night?", ans: "much", hint: "Use 'much' with uncountable nouns like 'noise' in questions." },
+    { q: "6. We learned ______ new facts about animal vision in today's lesson.", ans: "a lot of|many", hint: "Use 'a lot of' or 'many' with countable nouns like 'facts' in positive sentences." },
+    { q: "7. There aren't ______ differences between the two experiments.", ans: "many", hint: "Use 'many' with countable nouns like 'differences' in negative sentences." },
+    { q: "8. The teacher doesn't give ______ homework during the school holidays.", ans: "much", hint: "Use 'much' with uncountable nouns like 'homework' in negative sentences." },
+    { q: "9. ______ students were surprised by how far a falcon can see.", ans: "Many|A lot of", hint: "Use 'many' or 'a lot of' with countable nouns like 'students' in positive sentences." }
+];
+
+/* --- GLOBAL STATE --- */
+let currentActiveIPA = null;
+let answerStates = new Map(); // Track answer states for toggling
+
+/* --- RENDERING FUNCTIONS --- */
+
+function renderMatching(id, data) {
+    const v = document.getElementById(`vocab-${id}`); 
+    const d = document.getElementById(`def-${id}`);
+    
+    // Clear existing content
+    v.innerHTML = '';
+    d.innerHTML = '';
+    
+    // Create definitions list in alphabetical order (A, B, C, D, etc.)
+    const definitions = {};
+    data.forEach(item => {
+        definitions[item.letter] = item.def;
+    });
+    
+    // Sort definitions by letter (A, B, C, D, etc.)
+    const sortedLetters = Object.keys(definitions).sort();
+    sortedLetters.forEach(letter => {
+        d.innerHTML += `
+            <div class="definition-item">
+                <span class="definition-letter">${letter}.</span>
+                <span class="definition-text">${definitions[letter]}</span>
+            </div>`;
+    });
+    
+    // Render vocabulary items in numerical order with IPA support
+    data.forEach((item, i) => {
+        const qid = `${id}-q${i}`;
+        
+        v.innerHTML += `
+            <div class="vocab-item">
+                <span class="vocab-text">${item.v}</span>
+                <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button>
+                    <button class="btn-small speaker-btn" onclick="toggleIPA('${qid}')" title="Show pronunciation">🔊</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" title="Show/Hide hint">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+                <div class="ipa-box" id="${qid}-ipa">
+                    <span class="ipa-label">IPA:</span>
+                    <span class="ipa-text">${item.ipa}</span>
+                </div>
+            </div>`;
+    });
+}
+
+function renderGapFill(id, data, bankId) {
+    const container = document.getElementById(`questions-${id}`);
+    const bank = document.getElementById(bankId);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    bank.innerHTML = '';
+    
+    // Create word bank - IMPORTANT: Always use lowercase for word bank display
+    const words = [...new Set(data.map(item => item.ans.toLowerCase()))].sort();
+    words.forEach(w => {
+        // Word bank items are always displayed in lowercase
+        bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
+    });
+    
+    // Render questions
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
+        });
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // CRITICAL FIX: Set data-ans attribute for each input field
+        // For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+        // we MUST store the complete pipe-separated string, not just the first part
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && it.ans) {
+                    // IMPORTANT: Store the ENTIRE answer string with pipe separators
+                    // This enables validateMultipleAnswers() to work correctly
+                    input.setAttribute('data-ans', it.ans);
+                }
+            }
+        }, 0);
+    });
+}
+
+function renderGrammarFill(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        
+        // Check if sentence already has a number
+        let sentence = it.q;
+        let numberHtml = '';
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        
+        if (numberMatch) {
+            // Remove the number from the sentence and use it
+            sentence = sentence.replace(/^\d+\.\s+/, '');
+            numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+        } else {
+            // Use automatic numbering
+            numberHtml = `<span class="exercise-number">${i+1}</span>`;
+        }
+        
+        // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
+        // This handles "______" and any other variations
+        // For multiple gaps, we need to create separate input fields
+        const gapCount = (sentence.match(/_{2,}/g) || []).length;
+        let inputIndex = 0;
+        
+        // Create a unique ID for each input field in multi-gap questions
+        sentence = sentence.replace(/_{2,}/g, (match) => {
+            const inputId = `${qid}-${inputIndex}`;
+            inputIndex++;
+            return `<input type="text" class="grammar-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex-1}" oninput="adjustWidth(this)">`;
+        });
+        
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+        
+        // CRITICAL FIX: Set data-ans attribute for each input field
+        // For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+        // we MUST store the complete pipe-separated string, not just the first part
+        setTimeout(() => {
+            for (let j = 0; j < gapCount; j++) {
+                const input = document.getElementById(`${qid}-${j}`);
+                if (input && it.ans) {
+                    // IMPORTANT: Store the ENTIRE answer string with pipe separators
+                    // This enables validateMultipleAnswers() to work correctly
+                    input.setAttribute('data-ans', it.ans);
+                }
+            }
+        }, 0);
+    });
+}
+
+/* --- UTILITY FUNCTIONS --- */
+
+function adjustWidth(el) { 
+    const baseWidth = el.classList.contains('letter-input') ? 45 : 
+                     el.classList.contains('relative-input') ? 80 :
+                     el.classList.contains('word-input') ? 120 :
+                     el.classList.contains('grammar-input') ? 150 : 60;
+    
+    // Calculate width based on content
+    const newWidth = Math.max(el.value.length * 10 + 20, baseWidth);
+    el.style.width = newWidth + "px"; 
+    
+    // Update word bank after input
+    updateWordBank();
+}
+
+function toggleHint(id) { 
+    const h = document.getElementById(id + '-hint'); 
+    const infoBtn = document.getElementById(id + '-info');
+    
+    if (h) {
+        if (h.style.display === 'block') {
+            h.style.display = 'none';
+            if (infoBtn) infoBtn.classList.remove('active');
+        } else {
+            h.style.display = 'block';
+            if (infoBtn) infoBtn.classList.add('active');
+        }
+    }
+}
+
+function toggleIPA(id) { 
+    const ipaBox = document.getElementById(id + '-ipa'); 
+    const speakerBtn = document.querySelector(`button[onclick="toggleIPA('${id}')"]`);
+    
+    // If clicking the same IPA box that's currently active, hide it
+    if (currentActiveIPA === ipaBox) {
+        ipaBox.style.display = 'none';
+        currentActiveIPA = null;
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        return;
+    }
+    
+    // Hide previously active IPA box if exists
+    if (currentActiveIPA) {
+        const prevSpeakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (prevSpeakerBtn) prevSpeakerBtn.classList.remove('active');
+        currentActiveIPA.style.display = 'none';
+    }
+    
+    // Show the clicked IPA box
+    if (ipaBox) {
+        ipaBox.style.display = 'block';
+        currentActiveIPA = ipaBox;
+        if (speakerBtn) speakerBtn.classList.add('active');
+    }
+}
+
+function toggleSingleAns(id) { 
+    const el = document.getElementById(id);
+    const eyeBtn = document.getElementById(id + '-eye');
+    
+    if (!el) return;
+    
+    const ans = el.dataset.ans;
+    const stateKey = `${id}-state`;
+    
+    // Check if answer is currently shown
+    const isCurrentlyShown = answerStates.get(stateKey) || false;
+    
+    if (isCurrentlyShown) {
+        // Hide the answer
+        el.value = "";
+        el.classList.remove('correct', 'incorrect-marked');
+        adjustWidth(el);
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        answerStates.set(stateKey, false);
+    } else {
+        // Show the answer
+        if (ans) {
+            // For multiple answers separated by |, show the first one with exact case
+            const firstAns = ans.split('|')[0];
+            // IMPORTANT: Show answer with exact original capitalization
+            el.value = firstAns;
+            el.classList.add('correct');
+            el.classList.remove('incorrect-marked');
+            adjustWidth(el);
+            if (eyeBtn) eyeBtn.classList.add('active');
+            answerStates.set(stateKey, true);
+        }
+    }
+    
+    updateWordBank();
+}
+
+function toggleMultiGapAns(parentId, gapCount, answersStr) {
+    const eyeBtn = document.getElementById(parentId + '-eye');
+    const stateKey = `${parentId}-state`;
+    
+    // Check if answer is currently shown
+    const isCurrentlyShown = answerStates.get(stateKey) || false;
+    const answers = answersStr.split('|');
+    
+    if (isCurrentlyShown) {
+        // Hide all answers
+        for (let i = 0; i < gapCount; i++) {
+            const inputId = `${parentId}-${i}`;
+            const el = document.getElementById(inputId);
+            if (el) {
+                el.value = "";
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            }
+        }
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        answerStates.set(stateKey, false);
+    } else {
+        // Show all answers
+        for (let i = 0; i < gapCount; i++) {
+            const inputId = `${parentId}-${i}`;
+            const el = document.getElementById(inputId);
+            if (el && answers[i]) {
+                // IMPORTANT: Show answer with exact original capitalization
+                el.value = answers[i];
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+                adjustWidth(el);
+            }
+        }
+        if (eyeBtn) eyeBtn.classList.add('active');
+        answerStates.set(stateKey, true);
+    }
+    
+    updateWordBank();
+}
+
+function showAnswers(prefix) { 
+    // Handle regular single-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && !el.dataset.parent) {
+            const stateKey = `${el.id}-state`;
+            const ans = el.dataset.ans;
+            const eyeBtn = document.getElementById(el.id + '-eye');
+            
+            if (ans) {
+                const firstAns = ans.split('|')[0];
+                el.value = firstAns;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+                adjustWidth(el);
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(stateKey, true);
+            }
+        }
+    });
+    
+    // Handle multi-gap questions
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input' && el.dataset.parent) {
+            // Find all inputs with the same parent
+            const parentId = el.dataset.parent;
+            const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
+            const answers = [];
+            
+            // Collect answers from all inputs
+            inputs.forEach(input => {
+                if (input.dataset.ans) {
+                    // For multi-gap questions, answers are split by |
+                    const ansParts = input.dataset.ans.split('|');
+                    answers[parseInt(input.dataset.gapIndex)] = ansParts[parseInt(input.dataset.gapIndex)] || ansParts[0];
+                }
+            });
+            
+            // Show answers for each input
+            inputs.forEach(input => {
+                const index = parseInt(input.dataset.gapIndex);
+                if (answers[index]) {
+                    input.value = answers[index];
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect-marked');
+                    adjustWidth(input);
+                }
+            });
+            
+            // Update state
+            const eyeBtn = document.getElementById(parentId + '-eye');
+            if (eyeBtn) eyeBtn.classList.add('active');
+            answerStates.set(`${parentId}-state`, true);
+        }
+    });
+}
+
+function resetSection(prefix) { 
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { 
+        if(i.tagName === 'INPUT') { 
+            i.value = ""; 
+            i.classList.remove('correct', 'incorrect-marked'); 
+            adjustWidth(i); 
+        } 
+        const hBox = document.getElementById(i.id + '-hint'); 
+        if(hBox) hBox.style.display = 'none'; 
+        const ipaBox = document.getElementById(i.id + '-ipa');
+        if(ipaBox) ipaBox.style.display = 'none';
+    });
+    
+    // Reset button states
+    document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
+        if (btn.id.includes(prefix)) {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Reset global IPA state
+    if (currentActiveIPA) {
+        const speakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        currentActiveIPA = null;
+    }
+    
+    // Clear answer states for this section
+    for (const [key, value] of answerStates.entries()) {
+        if (key.startsWith(`${prefix}-`)) {
+            answerStates.delete(key);
+        }
+    }
+    
+    updateWordBank(); 
+}
+
+function normalizeAnswer(answer) {
+    // Remove extra spaces, convert to lowercase, remove punctuation
+    // IMPORTANT: Case-insensitive comparison
+    return answer.toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/[.,;:!?]$/, '');
+}
+
+function validateMultipleAnswers(userAnswer, correctAnswers) {
+    // Split multiple answers by | and check if user answer matches any
+    // IMPORTANT: Case-insensitive comparison
+    const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
+    const normalizedUser = normalizeAnswer(userAnswer);
+    
+    return answers.some(ans => ans === normalizedUser);
+}
+
+function checkAll() { 
+    // Check text inputs
+    document.querySelectorAll('[data-type="input"]').forEach(el => { 
+        const correctAnswers = el.dataset.ans;
+        const userAnswer = el.value;
+        
+        el.classList.remove('correct', 'incorrect-marked'); 
+        
+        if(!userAnswer.trim()) {
+            // Empty answer, do nothing
+            return;
+        }
+        
+        // IMPORTANT: Case-insensitive validation
+        if(validateMultipleAnswers(userAnswer, correctAnswers)) {
+            el.classList.add('correct');
+        } else {
+            el.classList.add('incorrect-marked');
+        }
+    });
+}
+
+/* --- WORD BANK FUNCTIONS --- */
+
+let selectedWordEl = null;
+
+function allowDrop(ev) { 
+    ev.preventDefault(); 
+}
+
+function drag(ev) { 
+    ev.dataTransfer.setData("text", ev.target.innerText); 
+    selectedWordEl = ev.target; 
+}
+
+function drop(ev) { 
+    ev.preventDefault(); 
+    const data = ev.dataTransfer.getData("text"); 
+    
+    if (ev.target.tagName === 'INPUT') {
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        ev.target.value = data; 
+        adjustWidth(ev.target); 
+        updateWordBank();
+    }
+}
+
+function clickSelect(el) { 
+    if(selectedWordEl) {
+        selectedWordEl.style.background = "#eef2f7"; 
+    }
+    selectedWordEl = el; 
+    el.style.background = "#ffeaa7"; 
+}
+
+// Handle word bank click to input
+document.addEventListener('click', (e) => {
+    if(e.target.tagName === 'INPUT' && selectedWordEl) { 
+        // IMPORTANT: Word bank provides lowercase, but user can type with any case
+        e.target.value = selectedWordEl.innerText; 
+        adjustWidth(e.target); 
+        selectedWordEl.style.background = "#eef2f7"; 
+        selectedWordEl = null; 
+        updateWordBank(); 
+    }
+});
+
+function updateWordBank() { 
+    // IMPORTANT: Compare using lowercase for word bank management
+    const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value)); 
+    document.querySelectorAll('.word-item').forEach(item => { 
+        const word = item.innerText.toLowerCase().trim(); 
+        const usedCount = inputs.filter(v => v === word).length; 
+        
+        if(usedCount >= 1) {
+            item.classList.add('used'); 
+        } else {
+            item.classList.remove('used'); 
+        }
+    }); 
+}
+
+/* --- INITIALIZATION --- */
+
+window.onload = () => {
+    renderMatching('t1', t1_data);
+    renderGapFill('t2', t2_data, 'bank-t2');
+    renderGrammarFill('t3', t3_data);
+    renderGrammarFill('t4', t4_data);
+};
+
+/* --- KEYBOARD SUPPORT --- */
+
+document.addEventListener('keydown', e => { 
+    if(e.key === 'Enter') {
+        checkAll(); 
+    }
+});
+
+/* --- ADDITIONAL NOTES --- */
+
+// IMPORTANT: When creating new code based on this template:
+// 1. Preserve ALL technical requirement comments above
+// 2. Add new requirements as additional numbered points
+// 3. Maintain the same CSS structure and JavaScript architecture
+// 4. Keep all existing functionality while adding new features
+// 5. Test all interactive elements after modifications
+// 6. Document any algorithm changes in the technical requirements section
+
+// KEY CASE HANDLING RULES:
+// 1. Word bank items: Always displayed in lowercase for visual consistency
+// 2. Answer display: Show exact 'ans' property from data (preserves original case)
+// 3. Validation: Uses normalizeAnswer() for case-insensitive comparison
+// 4. User experience: No automatic case modification during input
+// 5. This ensures proper nouns are displayed correctly when shown
+
+// GAP DETECTION RULE:
+// 1. Any occurrence of "______" (2 or more underscores) is automatically replaced
+// 2. This handles variations in gap length from different sources
+// 3. Input fields are inserted exactly where the underscores appear
+
+// MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
+// 1. Left column: Vocabulary items with input boxes for matching letters
+// 2. Right column: Definitions in alphabetical order (A, B, C, D, etc.) in a styled column
+// 3. Each vocabulary item has three control buttons:
+//    - 👁️ Eye button (28x28px): Shows the correct answer
+//    - 🔊 Speaker button (28x28px): Shows IPA pronunciation from authoritative dictionary
+//    - (i) Info button (20x20px): Shows pedagogical hint
+// 4. IPA pronunciation data comes from reliable dictionary sources (Oxford, Cambridge, Merriam-Webster)
+// 5. IPA display appears in a dedicated box below each vocabulary item with distinct styling
+
+// IPA SINGLE ACTIVE DISPLAY SYSTEM:
+// 1. Only ONE IPA pronunciation box can be visible at a time across the entire application
+// 2. Clicking a speaker button shows that word's IPA and automatically hides any other visible IPA box
+// 3. Clicking the same speaker button again toggles (hides) its own IPA box
+// 4. Global state variable (currentActiveIPA) tracks the currently active IPA box
+// 5. This prevents visual clutter and ensures a clean, uncluttered interface
+
+// DEFINITIONS COLUMN OPTIMIZATION:
+// 1. Definitions column displays clean list without unnecessary headers or titles
+// 2. Alphabetical ordering (A, B, C, D) maintained for easy reference
+// 3. Visual hierarchy maintained through consistent styling and spacing
+// 4. Column alignment optimized for readability and space efficiency
+// 5. Clean, minimal design that focuses on content rather than decoration
+
+// SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
+// 1. Definitions column has independent vertical scrolling when content is too long
+// 2. Fixed height (500px) with overflow-y: auto enables scrolling within the column
+// 3. Custom scrollbar styling matches the design system with subtle appearance
+// 4. Allows users to scroll through definitions while keeping vocabulary column fixed
+// 5. Particularly useful when definitions are long or numerous
+// 6. Scrollbar appears only when needed (auto overflow)
+
+// MULTI-GAP QUESTIONS IMPLEMENTATION:
+// 1. Questions with multiple gaps are detected by counting underscore sequences
+// 2. Each gap gets a unique ID (e.g., "t3-q0-0", "t3-q0-1" for question 1 in Task 3)
+// 3. Answers are stored in data as pipe-separated values (e.g., "arrived|was talking")
+// 4. The showMultiGapAns() function handles filling all gaps in a multi-gap question
+// 5. Validation works independently for each input field
+// 6. The Show All button works correctly for both single-gap and multi-gap questions
+
+// TOGGLE FUNCTIONALITY FOR EYE AND INFO BUTTONS:
+// 1. Eye button (👁️) now toggles answer display - shows on first click, hides on second click
+// 2. Info button (i) toggles hint display - shows on first click, hides on second click  
+// 3. Both buttons maintain active state visually with 'active' CSS class
+// 4. Global answerStates Map tracks which answers/hints are currently visible
+// 5. Reset functions properly clear both content and button states
+
+// MULTIPLE CORRECT ANSWERS FIX FOR SINGLE-GAP QUESTIONS:
+// 1. CRITICAL FIX APPLIED: For single-gap questions with pipe-separated answers (e.g., "many|a lot of"),
+//    the entire pipe-separated string must be stored in the input's data-ans attribute
+// 2. PREVIOUS BUG: Only the first answer (before |) was being stored, causing validation
+//    to fail for alternative correct answers
+// 3. FIXED: In renderGrammarFill() and renderGapFill() functions, input elements now receive
+//    the complete pipe-separated answer string from the data object's 'ans' property
+// 4. This enables validateMultipleAnswers() to work correctly for all alternative answers
+// 5. Test case: Task 4, question 2 now correctly accepts both "many" and "a lot of"
+</script>
+</body>
+</html>
