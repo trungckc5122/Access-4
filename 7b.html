@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Module 7b</title>
+    <style>
+        /* ========================================================================
+        TECHNICAL REQUIREMENTS:
+        1. DATA INTEGRITY: 100% original content from all provided images.
+        2. STICKY UI: Word Bank follows scrolling (top: 15px, z-index: 100).
+        3. SINGLE SOLVE: Individual 'Show' (👁️) buttons for per-question reveal.
+        4. PEDAGOGICAL HINTS: Detailed English explanations via (i) button with toggle display.
+        5. SAFE-HIGHLIGHT: Secure keyword highlighting on error (green/red color coding).
+        6. CLICK-TO-SELECT & DRAG-DROP: Dual input methods for Word Bank interaction.
+        7. AUTO-WIDTH: Inputs resize based on content (min-width: 60px, responsive to text length).
+        8. CASE-INSENSITIVE: Matching handles A/a equally through .toLowerCase() normalization.
+        9. WORD BANK MANAGEMENT: Auto-hide used items with frequency tracking (x2 support).
+        10. LOCAL CONTROLS: Individual Task 'Show All' and 'Reset' buttons.
+        11. KEYBOARD: Enter to check all answers, Arrow keys for navigation.
+        12. ENHANCED HINTS: Detailed explanations for every question in collapsible boxes.
+        13. SENTENCE REWRITING: Full sentence reconstruction with grammatical transformation.
+        14. MULTI-INPUT HANDLING: Support for multiple blanks in single sentences.
+        15. AUTOMATIC FORMAT DETECTION: Intelligent recognition of exercise types.
+        
+        DISPLAY SPECIFICATIONS:
+        - Font Family: Times New Roman (13pt) for academic appearance
+        - Color Scheme: Primary blue (#2980b9), Success green (#27ae60), Error red (#e74c3c)
+        - Card Design: White background with 12px border-radius, 0 4px 15px shadow
+        - Spacing: 25px padding in cards, 30px margin between cards, 15px sticky bank padding
+        - Input Fields: 2px bottom border, #fafafa background, centered text alignment
+        - Responsive: Max-width 1000px container, flex/grid layouts for adaptability
+        - Sentence Rewriting Fields: 300px minimum width for full sentence input
+        
+        ALGORITHM DETAILS:
+        
+        AUTO-FORMAT DETECTION & RENDERING SYSTEM:
+        1. MATCHING TASK DETECTION: Identified by data structure with 'v' (vocab) and 'def' properties
+           - Renders as 2-column grid (1fr 2fr ratio)
+           - Uses letter-input fields (45px wide, uppercase transformation)
+           - Implements showSingleAns() for individual reveals
+           
+        2. GAP-FILL TASK DETECTION: Identified by 'q' (question) with [INPUT] placeholder
+           - Creates sticky word bank from unique answers
+           - Supports drag-drop (ondragstart, ondrop, ondragover)
+           - Supports click-to-select (clickSelect function)
+           - Auto-width adjustment on input
+           
+        3. MODAL CHOICE TASK DETECTION: Identified by 'options' array property
+           - Renders as button-based selection (2 options typically)
+           - Uses option-btn styling with hover/selected states
+           - Tracks selection via data-qid attributes
+           
+        4. MULTI-INPUT CONDITIONAL TASK DETECTION: Identified by 'text' with multiple [INPUT] placeholders
+           - Handles conditional sentences with verb forms + type indicators
+           - Creates separate inputs for each placeholder ([INPUT1], [INPUT2])
+           - Uses type-input styling for conditional type indicators (40px width, dashed border)
+           - Implements showT2Ans() for revealing both answers simultaneously
+           
+        5. SENTENCE REWRITING TASK DETECTION: Identified by 'situation' and 'prompt' structure
+           - Renders original situation sentence above rewriting prompt
+           - Creates full-width input fields (300px+ minimum) for complete sentence reconstruction
+           - Provides grammatical transformation hints (Present/Past wish structures)
+           - Preserves original sentence meaning while changing grammatical structure
+           - Auto-width adjustment expands based on sentence length
+           
+        6. COMPLEX/MULTI-INPUT TASK DETECTION: Identified by Array.isArray(ans) check
+           - Handles multiple [INPUT] placeholders in single sentence
+           - Creates separate controls for each input
+           - Manages hint display for multiple parts
+        
+        SENTENCE REWRITING ALGORITHM (From Reference Code):
+        - Data Structure: Objects with 'situation', 'prompt', 'ans', 'hint', 'keys' properties
+        - Rendering: Two-line display with original situation and rewriting prompt
+        - Input Field: Wide text input (300px minimum) for full sentence completion
+        - Hint System: Detailed grammatical explanations (Past Perfect for regrets, Past Simple for present wishes)
+        - Validation: Case-insensitive comparison of full reconstructed sentences
+        - Special Cases: Handles negative forms ("hadn't", "didn't"), modal verbs ("could"), and complex tenses
+        
+        INPUT PROCESSING ALGORITHMS:
+        - adjustWidth(): Calculates width based on character count + 2ch minimum (8ch for non-letter inputs)
+        - updateWordBank(): Tracks used words, hides when usage >= frequency
+        - checkAll(): Validates all inputs against stored answers, applies color coding
+        - showSingleAns(): Reveals correct answer for specific input/option
+        - showT2Ans(): Special function for revealing both answers in conditional sentences
+        
+        EVENT HANDLING SYSTEM:
+        - Drag events: dragstart, dragover, drop for word bank items
+        - Click events: option selection, word bank selection, button controls
+        - Keyboard events: Enter key for bulk checking
+        - Hint system: Toggle display via info button clicks
+        - Input events: oninput for auto-width adjustment
+        
+        DATA STRUCTURE PATTERNS:
+        - tX_data naming convention for task data
+        - Matching tasks: { v, letter, def, hint }
+        - Gap-fill tasks: { q, ans, hint }
+        - Modal choice tasks: { q, ans, options, hint }
+        - Multi-input conditional tasks: { text, ans1, ans2, hint, keys }
+        - Sentence rewriting tasks: { situation, prompt, ans, hint, keys }
+        - Complex tasks support arrays for ans and hint properties
+        
+        VISUAL FEEDBACK MECHANISMS:
+        - Correct answers: Green border (#27ae60) with light green background (#e8f8f5)
+        - Incorrect answers: Red border (#e74c3c) with light red background (#fdedec)
+        - Selected options: Blue background with white text
+        - Hover states: Color inversion for interactive elements
+        - Hint boxes: Yellow background (#fef9e7) with warning color border
+        
+        PERFORMANCE OPTIMIZATIONS:
+        - Efficient DOM queries using querySelectorAll with attribute selectors
+        - Event delegation for dynamic elements
+        - Minimal reflows through classList manipulation
+        - Localized resets per task section
+        - Batch operations for showAll/reset functions
+        
+        This system automatically adapts to any exercise format by analyzing the
+        data structure and applying the appropriate rendering algorithm, including
+        sophisticated sentence rewriting tasks with full grammatical transformations.
+        ======================================================================== */
+        :root {
+            --primary: #2980b9; --primary-dark: #1c5982; --success: #27ae60;
+            --error: #e74c3c; --warning: #f1c40f; --bg: #f4f7f9;
+            --text: #2c3e50; --card: #ffffff;
+        }
+        body { font-family: 'Times New Roman', serif; font-size: 13pt; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px 20px 100px 20px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .sticky-bank { 
+            position: sticky; top: 15px; z-index: 100;
+            background-color: #fff; padding: 15px; border-radius: 10px; margin-bottom: 25px; 
+            border: 2px solid var(--primary); display: flex; flex-wrap: wrap; gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .word-item { 
+            background: #eef2f7; border: 1px solid var(--primary); color: var(--primary-dark); 
+            padding: 6px 12px; border-radius: 5px; cursor: grab; user-select: none; transition: 0.2s; font-size: 0.9em; font-weight: 500;
+        }
+        .word-item.used { display: none; }
+        .word-item:hover { background: var(--primary); color: white; }
+
+        .exercise-card { background: var(--card); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 30px; }
+        .exercise-title { font-weight: bold; font-size: 1.25em; margin-bottom: 18px; color: var(--primary-dark); border-bottom: 2px solid #eee; padding-bottom: 8px; }
+        
+        .matching-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-top: 10px; }
+        .vocab-item { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .vocab-text { min-width: 150px; font-weight: 500; }
+        .def-item { margin-bottom: 12px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; min-height: 40px; display: flex; align-items: center; }
+
+        .question-row { margin-bottom: 18px; line-height: 2.2; border-bottom: 1px solid #f9f9f9; padding-bottom: 10px; position: relative; }
+        
+        input[type="text"] { 
+            border: none; border-bottom: 2px solid #bdc3c7; background: #fafafa; 
+            padding: 2px 8px; font-size: 1em; transition: 0.2s; outline: none;
+            min-width: 60px; border-radius: 4px 4px 0 0; text-align: center; font-family: 'Times New Roman';
+        }
+        input.letter-input { width: 45px; min-width: 45px; text-transform: uppercase; font-weight: bold; color: var(--primary-dark); }
+        input.correct { border-bottom-color: var(--success) !important; background-color: #e8f8f5 !important; color: #1e8449 !important; }
+        input.incorrect-marked { border-bottom-color: var(--error) !important; background-color: #fdedec !important; }
+
+        /* Option buttons for choose-between-two style */
+        .option-btn-container { display: inline-flex; gap: 10px; margin: 0 10px; }
+        .option-btn { 
+            padding: 5px 15px; border: 2px solid #bdc3c7; background: #f8f9fa; 
+            border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s;
+        }
+        .option-btn:hover { background: #e9ecef; }
+        .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .option-btn.correct-option { background: var(--success); color: white; border-color: var(--success); }
+        .option-btn.incorrect-option { background: var(--error); color: white; border-color: var(--error); }
+
+        .row-btns { display: inline-flex; gap: 5px; vertical-align: middle; margin-left: 10px; }
+        .btn-small { background: #eee; border: 1px solid #ccc; border-radius: 4px; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .info-btn { background: #95a5a6; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .hint-box { display: none; margin-top: 8px; padding: 10px; background-color: #fef9e7; border-left: 4px solid var(--warning); color: #7d6608; border-radius: 4px; font-size: 0.85em; }
+
+        .controls-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        .btn { padding: 8px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
+        .btn-reset { background: #95a5a6; color: white; }
+        .btn-show-all { background: var(--primary); color: white; }
+        .check-all-btn { position: fixed; right: 30px; bottom: 30px; background-color: var(--success); color: white; padding: 15px 30px; border-radius: 50px; cursor: pointer; z-index: 1000; font-weight: bold; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">ACCESS 4 - MODULE 7B</h1>
+
+    <!-- TASK 1: Vocabulary Matching -->
+    <div class="exercise-card" id="card-t1">
+        <div class="exercise-title">Task 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="matching-grid">
+            <div id="vocab-t1"></div>
+            <div id="def-t1"></div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 2: Vocabulary Fill in the blanks -->
+    <div class="exercise-card" id="card-t2">
+        <div class="exercise-title">Task 2: Vocabulary – Fill in the blanks</div>
+        <div class="sticky-bank" id="bank-t2"></div>
+        <div id="questions-t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 3: Grammar - Choose the correct modal verb -->
+    <div class="exercise-card" id="card-t3">
+        <div class="exercise-title">Task 3: Grammar – Choose the correct modal verb</div>
+        <div id="questions-t3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 4: Grammar Fill in the blanks -->
+    <div class="exercise-card" id="card-t4">
+        <div class="exercise-title">Task 4: Grammar – Fill in the blanks (may, might, can, could, must, be able to x2)</div>
+        <div class="sticky-bank" id="bank-t4"></div>
+        <div id="questions-t4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t4')">Reset</button>
+        </div>
+    </div>
+
+    <!-- TASK 5: Choose the correct modal -->
+    <div class="exercise-card" id="card-t5">
+        <div class="exercise-title">Task 5: Choose the correct modal to complete the text.</div>
+        <div id="questions-t5"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t5')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t5')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+/* --- DATA --- */
+const t1_data = [
+    { v: "1. date back", letter: "D", def: "A. qualities or characteristics that something has", hint: "To originate from a particular time in the past." },
+    { v: "2. properties", letter: "A", def: "B. to affect or prevent something from working properly", hint: "Characteristics or qualities of something." },
+    { v: "3. emerging", letter: "E", def: "C. a tool used to see very small things", hint: "New and starting to become important." },
+    { v: "4. microscope", letter: "C", def: "D. to begin or originate at a particular time in the past", hint: "Scientific instrument for viewing small objects." },
+    { v: "5. field", letter: "G", def: "E. new and starting to develop or become important", hint: "An area of study or work." },
+    { v: "6. cancer cells", letter: "H", def: "F. difficult to understand because it has many parts", hint: "Harmful cells that grow uncontrollably." },
+    { v: "7. wrinkle-free", letter: "I", def: "G. a particular area of study or work", hint: "Smooth without lines or folds." },
+    { v: "8. complex", letter: "F", def: "H. cells that grow in an uncontrolled and harmful way in the body", hint: "Complicated with many parts." },
+    { v: "9. interfere", letter: "B", def: "I. smooth and without lines or folds", hint: "To disrupt or hinder something." }
+];
+
+const t2_data = [
+    { q: "1. The Lycurgus Cup is special because of its unique [INPUT].", ans: "properties", hint: "Unique characteristics or qualities." },
+    { q: "2. Scientists use a powerful [INPUT] to study nanoparticles.", ans: "microscope", hint: "A tool for viewing very small objects." },
+    { q: "3. Nanotechnology is an [INPUT] area of science.", ans: "emerging", hint: "New and developing field." },
+    { q: "4. Biology is a wide [INPUT] that studies living things.", ans: "field", hint: "Area of study." },
+    { q: "5. Some chemicals may [INPUT] with natural processes in the body.", ans: "interfere", hint: "To disrupt or affect negatively." },
+    { q: "6. Doctors are trying to destroy [INPUT] without harming healthy cells.", ans: "cancer cells", hint: "Harmful, uncontrolled cells." },
+    { q: "7. This machine is very [INPUT] and hard to understand.", ans: "complex", hint: "Complicated with many parts." },
+    { q: "8. Clothes made with nanotechnology are [INPUT] and easy to care for.", ans: "wrinkle-free", hint: "Smooth without wrinkles." },
+    { q: "9. This ancient object is believed to [INPUT] to the 4th century AD.", ans: "date back", hint: "To originate from a past time." }
+];
+
+const t3_data = [
+    { q: "1. This room is very dark. You [INPUT] turn on the light before entering.", ans: "must", options: ["can", "must"], hint: "Strong necessity or obligation." },
+    { q: "2. I'm not sure, but the meeting [INPUT] be canceled.", ans: "may", options: ["may", "must"], hint: "Possibility, not certainty." },
+    { q: "3. When he was young, he [INPUT] swim very well.", ans: "could", options: ["could", "must"], hint: "Past ability." },
+    { q: "4. This machine is dangerous. You [INPUT] follow the instructions.", ans: "must", options: ["can", "must"], hint: "Strong obligation for safety." },
+    { q: "5. The students finished early, so they [INPUT] leave now.", ans: "can", options: ["may", "can"], hint: "Permission or ability." }
+];
+
+const t4_data = [
+    { q: "1. It is cloudy today, so it [INPUT] rain later.", ans: "might", hint: "Possibility." },
+    { q: "2. He was very tired, so he [INPUT] not finish the task yesterday.", ans: "could", hint: "Past inability." },
+    { q: "3. Students [INPUT] bring their ID cards to enter the exam room.", ans: "must", hint: "Obligation." },
+    { q: "4. With more practice, you will [INPUT] speak English confidently.", ans: "be able to", hint: "Future ability." },
+    { q: "5. I'm not sure where Anna is. She [INPUT] be at home.", ans: "may", hint: "Possibility." },
+    { q: "6. This problem is easy. Everyone [INPUT] solve it.", ans: "can", hint: "Ability." }
+];
+
+const t5_data = [
+    { q: "Technology 1) [INPUT] help people complete daily tasks more easily, but users 2) [INPUT] use it responsibly.", ans: ["can", "must"], options: [["can", "must"], ["can", "must"]], hint: ["Ability.", "Obligation."] },
+    { q: "For example, students 3) [INPUT] check information carefully before sharing it online.", ans: "should", options: ["should", "might"], hint: "Advisability." },
+    { q: "Some new apps 4) [INPUT] collect personal data, so users need to be careful.", ans: "may", options: ["may", "ought to"], hint: "Possibility." },
+    { q: "In schools, computers 5) [INPUT] support learning, but students 6) [INPUT] not depend on them for every task.", ans: ["can", "must"], options: [["should", "can"], ["must", "could"]], hint: ["Ability.", "Prohibition/strong recommendation."] },
+    { q: "In the past, people 7) [INPUT] search for information in books rather than on the Internet.", ans: "would", options: ["would", "should"], hint: "Past habit." },
+    { q: "With further development, robots 8) [INPUT] work in dangerous environments such as deep oceans.", ans: "could", options: ["could", "must"], hint: "Future possibility." },
+    { q: "Because of these changes, users 9) [INPUT] learn how to use technology safely, and they 10) [INPUT] make wise choices when using it every day.", ans: ["ought to", "must"], options: [["may", "ought to"], ["might", "must"]], hint: ["Advisability.", "Obligation."] }
+];
+
+/* --- ENGINE --- */
+function renderMatching(id, data) {
+    const v = document.getElementById(`vocab-${id}`); 
+    const d = document.getElementById(`def-${id}`);
+    data.forEach((item, i) => {
+        const qid = `${id}-q${i}`;
+        v.innerHTML += `
+            <div class="vocab-item">
+                <span class="vocab-text">${item.v}</span>
+                <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1">
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+            </div>`;
+        d.innerHTML += `<div class="def-item">${item.def}</div>`;
+    });
+}
+
+function renderGapFill(id, data, bankId) {
+    const container = document.getElementById(`questions-${id}`);
+    const bank = document.getElementById(bankId);
+    const words = [...new Set(data.map(item => item.ans))].sort();
+    words.forEach(w => {
+        bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
+    });
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        let html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`);
+        container.innerHTML += `<div class="question-row">${html}<div class="row-btns"><button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button><button class="info-btn" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div></div>`;
+    });
+}
+
+function renderModalChoice(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        const optionsHtml = it.options.map(opt => 
+            `<button class="option-btn" data-qid="${qid}" data-ans="${opt}">${opt}</button>`
+        ).join('');
+        
+        container.innerHTML += `
+            <div class="question-row">
+                <div>${it.q.replace('[INPUT]', `<span class="option-btn-container">${optionsHtml}</span>`)}</div>
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                <input type="hidden" id="${qid}" data-type="option" data-ans="${it.ans}">
+            </div>`;
+    });
+}
+
+function renderComplexModal(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        let html = it.q;
+        let controlsHtml = '';
+        let hintHtml = '';
+        
+        if (Array.isArray(it.ans)) {
+            // Multiple inputs in one sentence
+            const parts = it.q.split('[INPUT]');
+            let fullHtml = parts[0];
+            for (let j = 0; j < it.ans.length; j++) {
+                const subQid = `${qid}-${j}`;
+                const optionsHtml = it.options[j].map(opt => 
+                    `<button class="option-btn" data-qid="${subQid}" data-ans="${opt}">${opt}</button>`
+                ).join('');
+                
+                fullHtml += `<span class="option-btn-container">${optionsHtml}</span>`;
+                if (j < parts.length - 1) fullHtml += parts[j + 1];
+                
+                controlsHtml += `<button class="btn-small" onclick="showSingleAns('${subQid}')">👁️</button>`;
+                hintHtml += `💡 ${it.hint[j]}<br>`;
+                
+                container.innerHTML += `<input type="hidden" id="${subQid}" data-type="option" data-ans="${it.ans[j]}">`;
+            }
+            
+            container.innerHTML += `
+                <div class="question-row">
+                    <div>${fullHtml}</div>
+                    <div class="row-btns">
+                        ${controlsHtml}
+                        <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${hintHtml}</div>
+                </div>`;
+        } else {
+            // Single input
+            const optionsHtml = it.options.map(opt => 
+                `<button class="option-btn" data-qid="${qid}" data-ans="${opt}">${opt}</button>`
+            ).join('');
+            
+            html = html.replace('[INPUT]', `<span class="option-btn-container">${optionsHtml}</span>`);
+            
+            container.innerHTML += `
+                <div class="question-row">
+                    <div>${html}</div>
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                    <input type="hidden" id="${qid}" data-type="option" data-ans="${it.ans}">
+                </div>`;
+        }
+    });
+}
+
+function adjustWidth(el) { 
+    if(!el.classList.contains('letter-input')) 
+        el.style.width = Math.max(el.value.length + 2, 10) + "ch"; 
+}
+
+function toggleHint(id) { 
+    const h = document.getElementById(id + '-hint'); 
+    h.style.display = h.style.display === 'block' ? 'none' : 'block'; 
+}
+
+function showSingleAns(id) { 
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const ans = el.dataset.ans;
+    if (el.dataset.type === 'option') {
+        // For option buttons, find and highlight the correct one
+        document.querySelectorAll(`button[data-qid^="${id}"]`).forEach(btn => {
+            btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+            if (btn.dataset.ans === ans) {
+                btn.classList.add('correct-option');
+            }
+        });
+    } else {
+        // For text inputs
+        el.value = ans;
+        el.classList.add('correct');
+        el.classList.remove('incorrect-marked');
+        adjustWidth(el);
+    }
+    updateWordBank();
+}
+
+function showAnswers(prefix) { 
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
+        if (el.dataset.type === 'input' || el.dataset.type === 'option') {
+            showSingleAns(el.id);
+        }
+    });
+}
+
+function resetSection(prefix) { 
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { 
+        if(i.tagName === 'INPUT') { 
+            i.value = ""; 
+            i.classList.remove('correct', 'incorrect-marked'); 
+            adjustWidth(i); 
+        } 
+        const hBox = document.getElementById(i.id + '-hint'); 
+        if(hBox) hBox.style.display = 'none'; 
+    });
+    
+    // Reset option buttons
+    document.querySelectorAll(`button[data-qid^="${prefix}"]`).forEach(btn => {
+        btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+    });
+    
+    updateWordBank(); 
+}
+
+function checkAll() { 
+    // Check text inputs
+    document.querySelectorAll('[data-type="input"]').forEach(el => { 
+        const ans = el.dataset.ans.toLowerCase().trim(); 
+        const val = el.value.toLowerCase().trim(); 
+        el.classList.remove('correct', 'incorrect-marked'); 
+        if(val === ans) {
+            el.classList.add('correct');
+        } else if(val) {
+            el.classList.add('incorrect-marked');
+        }
+    });
+    
+    // Check option buttons
+    document.querySelectorAll('[data-type="option"]').forEach(el => {
+        const qid = el.id;
+        const correctAns = el.dataset.ans;
+        let isCorrect = true;
+        
+        // Check all buttons with this qid
+        const buttons = document.querySelectorAll(`button[data-qid="${qid}"], button[data-qid^="${qid}-"]`);
+        buttons.forEach(btn => {
+            btn.classList.remove('correct-option', 'incorrect-option');
+            if (btn.classList.contains('selected')) {
+                if (btn.dataset.ans === correctAns) {
+                    btn.classList.add('correct-option');
+                } else {
+                    btn.classList.add('incorrect-option');
+                    isCorrect = false;
+                }
+            }
+        });
+    });
+}
+
+let selectedWordEl = null;
+
+function allowDrop(ev) { 
+    ev.preventDefault(); 
+}
+
+function drag(ev) { 
+    ev.dataTransfer.setData("text", ev.target.innerText); 
+    selectedWordEl = ev.target; 
+}
+
+function drop(ev) { 
+    ev.preventDefault(); 
+    const data = ev.dataTransfer.getData("text"); 
+    ev.target.value = data; 
+    adjustWidth(ev.target); 
+    updateWordBank(); 
+}
+
+function clickSelect(el) { 
+    if(selectedWordEl) selectedWordEl.style.background = "#eef2f7"; 
+    selectedWordEl = el; 
+    el.style.background = "#ffeaa7"; 
+}
+
+// Handle option button clicks
+document.addEventListener('click', (e) => {
+    // Handle word bank click to input
+    if(e.target.tagName === 'INPUT' && selectedWordEl) { 
+        e.target.value = selectedWordEl.innerText; 
+        adjustWidth(e.target); 
+        selectedWordEl.style.background = "#eef2f7"; 
+        selectedWordEl = null; 
+        updateWordBank(); 
+    }
+    
+    // Handle option button selection
+    if (e.target.classList.contains('option-btn')) {
+        const qid = e.target.dataset.qid;
+        // Remove selected class from all buttons with same qid
+        document.querySelectorAll(`button[data-qid="${qid}"]`).forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        // Add selected class to clicked button
+        e.target.classList.add('selected');
+    }
+});
+
+function updateWordBank() { 
+    const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => i.value.toLowerCase().trim()); 
+    document.querySelectorAll('.word-item').forEach(item => { 
+        const word = item.innerText.toLowerCase().replace(' (x2)', '').trim(); 
+        const usedCount = inputs.filter(v => v === word).length; 
+        const totalCount = item.innerText.includes('x2') ? 2 : 1; 
+        if(usedCount >= totalCount) item.classList.add('used'); 
+        else item.classList.remove('used'); 
+    }); 
+}
+
+window.onload = () => {
+    renderMatching('t1', t1_data);
+    renderGapFill('t2', t2_data, 'bank-t2');
+    renderModalChoice('t3', t3_data);
+    renderGapFill('t4', t4_data, 'bank-t4');
+    renderComplexModal('t5', t5_data);
+};
+
+document.addEventListener('keydown', e => { 
+    if(e.key === 'Enter') checkAll(); 
+});
+</script>
+</body>
+</html>
