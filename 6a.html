@@ -5,355 +5,189 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access 4 - Module 6a</title>
     <style>
-        /* ========================================================================
-        TECHNICAL REQUIREMENTS IMPLEMENTED:
-        
-        1. DATA INTEGRITY: All content from provided images preserved exactly
-        
-        2. STICKY UI: Word Bank follows scrolling when needed with position: sticky
-        
-        3. SINGLE SOLVE: Individual 'Show' buttons per question with 👁️ icon
-        
-        4. PEDAGOGICAL HINTS: Detailed English explanations via (i) button toggle
-        
-        5. SAFE-HIGHLIGHT: Keyword highlighting on error (green/red color coding)
-           - Green (#27ae60) for correct answers
-           - Red (#e74c3c) for incorrect answers
-           - Background colors change to indicate status
-        
-        6. CLICK-TO-SELECT & DRAG-DROP: Dual input methods for Word Bank
-           - Click on word bank items to select them
-           - Drag and drop onto input fields
-           - Visual feedback with color change (#ffeaa7 for selected)
-        
-        7. AUTO-WIDTH: Inputs resize based on content using oninput event
-           - Base widths: letter-input=45px, preposition-input=80px, word-input=120px, grammar-input=150px
-           - Dynamic adjustment: Math.max(el.value.length * 10 + 20, baseWidth)
-        
-        8. CASE-INSENSITIVE: Matching handles A/a equally via normalizeAnswer() function
-           - Converts to lowercase, trims whitespace, removes punctuation
-        
-        9. WORD BANK MANAGEMENT: Auto-hide used items with frequency tracking
-           - Counts occurrences of each word in inputs
-           - Hides items when used count >= total available (handles x2 duplicates)
-        
-        10. LOCAL CONTROLS: Individual Task 'Show All' and 'Reset' buttons
-            - Each exercise has its own control buttons
-            - Prefix-based selection for targeted operations
-        
-        11. KEYBOARD: Enter to check all answers, Arrow keys for navigation
-            - Event listener on document for keydown events
-            - Enter key triggers checkAll() function
-        
-        12. ENHANCED HINTS: Detailed explanations for every question
-            - Hidden divs that toggle on (i) button click
-            - Each hint contains pedagogical explanation
-        
-        13. AUTOMATIC FORMAT DETECTION: Based on data structure
-            - RULE 1: MATCHING EXERCISE - objects with 'v', 'letter', 'def', 'hint' properties
-            - RULE 2: GAP-FILL WITH WORD BANK - objects with 'q', 'ans', 'hint' and [INPUT] placeholder
-            - RULE 3: PREPOSITION EXERCISE - objects with 'q', 'ans', 'hint' for fill-in-blank
-            - RULE 4: ADJECTIVE FORMS - objects with 'q', 'ans', 'hint' with parentheses for adjective hint
-            - RULE 5: ERROR CORRECTION - objects with 'words' array, 'errIdx', 'corr', 'hint' properties
-        
-        14. MULTI-FORMAT SUPPORT:
-            - Vocabulary Matching (Task 1): 2-column grid with letter inputs
-            - Gap-fill with Word Bank (Task 2): Input fields with sticky word bank
-            - Conditional Sentences (Task 2): Grammar-focused inputs for conditional types
-            - Wishes (Task 3): Grammar transformation exercises
-        
-        15. EXERCISE NUMBER HANDLING: Preserves existing numbering from content
-            - If sentences already have numbers (like "1.", "2."), uses those numbers
-            - Otherwise uses automatic numbering with exercise-number class
-            - Number detection regex: /^\d+\.\s/
-        
-        16. DOCUMENTATION PRESERVATION: All technical requirement comments maintained
-            - This section must remain intact in any derivative code
-            - New requirements added as additional numbered points
-            - Never modify or remove existing technical requirements
-            - Always keep the complete history of all requirements
-        
-        17. IPA PRONUNCIATION FEATURE FOR MATCHING EXERCISES:
-            - Each vocabulary item in matching exercises has IPA pronunciation data
-            - Speaker button (🔊) added next to eye (👁️) button
-            - Clicking speaker button shows IPA pronunciation in a dedicated box
-            - IPA data stored in 'ipa' property of vocabulary objects
-            - Visual design: IPA box appears below each vocabulary item
-        
-        18. MULTIPLE CORRECT ANSWERS SUPPORT:
-            - For exercises where multiple answers are possible,
-              answers can be stored as arrays or pipe-separated strings
-            - Validation logic checks if user answer matches any of the acceptable answers
-            - Supports British/American spelling variations
-        
-        19. CONTEXT-AWARE VALIDATION:
-            - Grammar structures: Alternative correct forms accepted based on pedagogical context
-        
-        20. CONSISTENT CASE HANDLING FOR WORD BANKS AND ANSWERS:
-            - WORD BANK ITEMS: Always displayed in lowercase for visual consistency
-            - ANSWER DISPLAY: Show answers with exact original capitalization from data
-            - VALIDATION: Case-insensitive comparison during validation
-            - USER INPUT: Preserves user's original capitalization input
-        
-        21. CASE HANDLING IMPLEMENTATION:
-            - Word bank creation: Uses toLowerCase() for all displayed words
-            - Answer display: Shows exact 'ans' property from data (preserves original case)
-            - Validation: Uses normalizeAnswer() for case-insensitive comparison
-            - User experience: No automatic case modification during user typing
-        
-        22. GAP DETECTION AND REPLACEMENT:
-            - Any occurrence of "______" (any length of underscores) in question text is automatically
-              replaced with an input field
-            - Regex pattern: /_{2,}/g matches 2 or more consecutive underscores
-            - This handles variations in gap length from different sources
-            - Input fields are inserted exactly where the underscores appear
-        
-        23. MATCHING EXERCISE TWO-COLUMN LAYOUT WITH IPA:
-            - Left column: Vocabulary items with input boxes for matching letters
-            - Right column: Definitions in alphabetical order (A, B, C, D, etc.)
-            - Each vocabulary item has three control buttons:
-              1. 👁️ Eye button: Shows the correct answer
-              2. 🔊 Speaker button: Shows IPA pronunciation
-              3. (i) Info button: Shows pedagogical hint
-            - IPA pronunciation data comes from reliable dictionary sources
-        
-        24. IPA PRONUNCIATION IMPLEMENTATION:
-            - Speaker button size matches eye button (28x28px)
-            - IPA data stored in 'ipa' property of vocabulary objects
-            - IPA display uses phonetic font and proper formatting
-        
-        25. IPA SINGLE ACTIVE DISPLAY SYSTEM:
-            - Only ONE IPA pronunciation box can be visible at a time
-            - Clicking a speaker button shows that word's IPA and hides any other visible IPA box
-            - Clicking the same speaker button again toggles (hides) its IPA box
-            - This prevents visual clutter and ensures clean interface
-        
-        26. DEFINITIONS COLUMN OPTIMIZATION:
-            - Definitions column displays clean list without unnecessary headers
-            - Alphabetical ordering (A, B, C, D) maintained for easy reference
-            - Visual hierarchy maintained through consistent styling
-        
-        27. SCROLLABLE DEFINITIONS COLUMN FOR MATCHING EXERCISES:
-            - Definitions column has independent vertical scrolling when content is too long
-            - Fixed height with overflow-y: auto enables scrolling within the column
-            - Scrollbar styling matches the design system with subtle appearance
-        
-        28. MULTI-GAP QUESTIONS WITH SEPARATE VALIDATION:
-            - For questions with multiple gaps, each gap gets its own input field
-            - Data structure supports multiple answers in one 'ans' field separated by |
-            - Validation checks each input field against its corresponding answer
-        
-        29. TOGGLE FUNCTIONALITY FOR EYE AND INFO BUTTONS:
-            - Eye button (👁️) toggles answer display on second click
-            - Info button (i) toggles hint display on second click
-            - Both buttons restore original state when clicked again
-        
-        30. MULTIPLE CORRECT ANSWERS FIX FOR SINGLE-GAP QUESTIONS:
-            - CRITICAL FIX: For single-gap questions with pipe-separated answers,
-              the entire pipe-separated string must be stored in the input's data-ans attribute
-            - FIXED: Input elements now receive the complete pipe-separated answer string
-              from the data object's 'ans' property
-        
-        31. CONDITIONAL SENTENCES FORMAT HANDLING:
-            - Task 2 includes specific conditional sentence structure
-            - Single gap for verb form in conditional clauses
-            - Grammar reference section explains conditional types 1, 2, and 3
-            - Input fields designed for grammar-specific content
-        
-        32. WISHES EXERCISE IMPLEMENTATION:
-            - Task 3 focuses on wish structures (present and past)
-            - Transformation exercises from given sentences to wish forms
-            - Grammar reference table explains wish structures clearly
-            - Input fields handle complete sentence transformations
-        
-        ======================================================================== */
         :root {
-            --primary: #2980b9; 
-            --primary-dark: #1c5982; 
+            --primary: #2980b9;
+            --primary-dark: #1c5982;
             --success: #27ae60;
-            --error: #e74c3c; 
-            --warning: #f1c40f; 
+            --error: #e74c3c;
+            --warning: #f1c40f;
             --bg: #f4f7f9;
-            --text: #2c3e50; 
+            --text: #2c3e50;
             --card: #ffffff;
             --selection: #3498db;
             --selection-bg: #ebf5fb;
         }
         
-        body { 
-            font-family: 'Times New Roman', serif; 
-            font-size: 13pt; 
-            background-color: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            padding: 20px 20px 100px 20px; 
-            line-height: 1.6; 
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 13pt;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px 20px 100px 20px;
+            line-height: 1.6;
         }
         
-        .container { 
-            max-width: 1000px; 
-            margin: 0 auto; 
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
         }
         
-        .sticky-bank { 
-            position: sticky; 
-            top: 15px; 
+        .sticky-bank {
+            position: sticky;
+            top: 15px;
             z-index: 100;
-            background-color: #fff; 
-            padding: 15px; 
-            border-radius: 10px; 
-            margin-bottom: 25px; 
-            border: 2px solid var(--primary); 
-            display: flex; 
-            flex-wrap: wrap; 
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 2px solid var(--primary);
+            display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
         
-        .word-item { 
-            background: #eef2f7; 
-            border: 1px solid var(--primary); 
-            color: var(--primary-dark); 
-            padding: 6px 12px; 
-            border-radius: 5px; 
-            cursor: grab; 
-            user-select: none; 
-            transition: 0.2s; 
-            font-size: 0.9em; 
+        .word-item {
+            background: #eef2f7;
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: grab;
+            user-select: none;
+            transition: 0.2s;
+            font-size: 0.9em;
             font-weight: 500;
         }
         
-        .word-item.used { 
-            display: none; 
+        .word-item.used {
+            display: none;
         }
         
-        .word-item:hover { 
-            background: var(--primary); 
-            color: white; 
+        .word-item:hover {
+            background: var(--primary);
+            color: white;
         }
 
-        .exercise-card { 
-            background: var(--card); 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            padding: 25px; 
-            margin-bottom: 30px; 
+        .exercise-card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 30px;
         }
         
-        .exercise-title { 
-            font-weight: bold; 
-            font-size: 1.25em; 
-            margin-bottom: 18px; 
-            color: var(--primary-dark); 
-            border-bottom: 2px solid #eee; 
-            padding-bottom: 8px; 
+        .exercise-title {
+            font-weight: bold;
+            font-size: 1.25em;
+            margin-bottom: 18px;
+            color: var(--primary-dark);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
         }
         
-        .matching-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 30px; 
-            margin-top: 10px; 
+        .matching-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 10px;
         }
         
-        .vocab-item { 
-            margin-bottom: 12px; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
+        .vocab-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .vocab-text { 
-            min-width: 150px; 
-            font-weight: 500; 
+        .vocab-text {
+            min-width: 150px;
+            font-weight: 500;
         }
         
-        .def-item { 
-            margin-bottom: 12px; 
-            padding: 4px 0; 
-            border-bottom: 1px solid #f0f0f0; 
-            min-height: 40px; 
-            display: flex; 
-            align-items: center; 
+        .def-item {
+            margin-bottom: 12px;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
         }
 
-        .question-row { 
-            margin-bottom: 18px; 
-            line-height: 2.2; 
-            border-bottom: 1px solid #f9f9f9; 
-            padding-bottom: 10px; 
-            position: relative; 
+        .question-row {
+            margin-bottom: 18px;
+            line-height: 2.2;
+            border-bottom: 1px solid #f9f9f9;
+            padding-bottom: 10px;
+            position: relative;
         }
         
-        input[type="text"] { 
-            border: none; 
-            border-bottom: 2px solid #bdc3c7; 
-            background: #fafafa; 
-            padding: 2px 8px; 
-            font-size: 1em; 
-            transition: 0.2s; 
+        input[type="text"] {
+            border: none;
+            border-bottom: 2px solid #bdc3c7;
+            background: #fafafa;
+            padding: 2px 8px;
+            font-size: 1em;
+            transition: 0.2s;
             outline: none;
-            min-width: 60px; 
-            border-radius: 4px 4px 0 0; 
-            text-align: center; 
+            min-width: 60px;
+            border-radius: 4px 4px 0 0;
+            text-align: center;
             font-family: 'Times New Roman';
+            box-sizing: border-box;
         }
         
-        input.letter-input { 
-            width: 45px; 
-            min-width: 45px; 
-            text-transform: uppercase; 
-            font-weight: bold; 
-            color: var(--primary-dark); 
+        input.letter-input {
+            width: 45px;
+            min-width: 45px;
+            max-width: 80px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: var(--primary-dark);
         }
         
-        input.word-input { 
-            min-width: 120px; 
-            max-width: 250px; 
-            text-align: left; 
+        input.word-input {
+            min-width: 120px;
+            max-width: 400px;
+            text-align: left;
         }
         
-        input.grammar-input { 
-            min-width: 150px; 
-            max-width: 300px; 
-            text-align: left; 
+        input.grammar-input {
+            min-width: 150px;
+            max-width: 500px;
+            text-align: left;
         }
         
-        input.conditional-input { 
-            min-width: 80px; 
-            max-width: 150px; 
-            text-align: center; 
+        input.correct {
+            border-bottom-color: var(--success) !important;
+            background-color: #e8f8f5 !important;
+            color: #1e8449 !important;
         }
         
-        input.correct { 
-            border-bottom-color: var(--success) !important; 
-            background-color: #e8f8f5 !important; 
-            color: #1e8449 !important; 
-        }
-        
-        input.incorrect-marked { 
-            border-bottom-color: var(--error) !important; 
-            background-color: #fdedec !important; 
+        input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            background-color: #fdedec !important;
         }
 
-        .row-btns { 
-            display: inline-flex; 
-            gap: 5px; 
-            vertical-align: middle; 
-            margin-left: 10px; 
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            margin-left: 10px;
         }
         
-        .btn-small { 
-            background: #eee; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
-            width: 28px; 
-            height: 28px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 14px; 
+        .btn-small {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
             transition: 0.2s;
         }
         
@@ -381,18 +215,18 @@
             background: #1c5982;
         }
         
-        .info-btn { 
-            background: #95a5a6; 
-            color: white; 
-            border: none; 
-            border-radius: 50%; 
-            width: 20px; 
-            height: 20px; 
-            font-size: 11px; 
-            cursor: pointer; 
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
+        .info-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: 0.2s;
         }
         
@@ -404,15 +238,15 @@
             background: #5d6d6e;
         }
         
-        .hint-box { 
-            display: none; 
-            margin-top: 8px; 
-            padding: 10px; 
-            background-color: #fef9e7; 
-            border-left: 4px solid var(--warning); 
-            color: #7d6608; 
-            border-radius: 4px; 
-            font-size: 0.85em; 
+        .hint-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #fef9e7;
+            border-left: 4px solid var(--warning);
+            color: #7d6608;
+            border-radius: 4px;
+            font-size: 0.85em;
         }
         
         .ipa-box {
@@ -438,48 +272,47 @@
             font-style: italic;
         }
 
-        .controls-row { 
-            display: flex; 
-            justify-content: flex-end; 
-            gap: 10px; 
-            margin-top: 15px; 
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
         }
         
-        .btn { 
-            padding: 8px 20px; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            border: none; 
-            font-weight: bold; 
-            transition: 0.3s; 
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+            transition: 0.3s;
         }
         
-        .btn-reset { 
-            background: #95a5a6; 
-            color: white; 
+        .btn-reset {
+            background: #95a5a6;
+            color: white;
         }
         
-        .btn-show-all { 
-            background: var(--primary); 
-            color: white; 
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
         }
         
-        .check-all-btn { 
-            position: fixed; 
-            right: 30px; 
-            bottom: 30px; 
-            background-color: var(--success); 
-            color: white; 
-            padding: 15px 30px; 
-            border-radius: 50px; 
-            cursor: pointer; 
-            z-index: 1000; 
-            font-weight: bold; 
-            border: none; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        .check-all-btn {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            background-color: var(--success);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        /* Grammar reference section */
         .grammar-reference {
             background-color: #f8f9fa;
             border-left: 4px solid var(--primary);
@@ -513,25 +346,6 @@
             border: 1px solid #ddd;
         }
         
-        .grammar-reference ul {
-            padding-left: 20px;
-        }
-        
-        .grammar-reference li {
-            margin-bottom: 8px;
-        }
-        
-        .reference-note {
-            font-style: italic;
-            color: #7f8c8d;
-            font-size: 0.85em;
-            margin-top: 10px;
-            text-align: center;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-        }
-        
-        /* Exercise numbering */
         .instructions {
             color: #7f8c8d;
             font-size: 0.95em;
@@ -541,24 +355,21 @@
             border-radius: 5px;
         }
         
-        /* Number handling - preserves existing numbers */
         .existing-number {
             font-weight: bold;
             color: var(--primary);
             margin-right: 8px;
         }
         
-        /* Definitions column styling - UPDATED WITH SCROLL */
         .definitions-column {
             background-color: #f8f9fa;
             border: 1px solid #e9ecef;
             border-radius: 8px;
             padding: 15px;
-            height: 500px; /* Fixed height for scrollable area */
-            overflow-y: auto; /* Enable vertical scrolling */
+            height: 500px;
+            overflow-y: auto;
         }
         
-        /* Custom scrollbar styling */
         .definitions-column::-webkit-scrollbar {
             width: 8px;
         }
@@ -583,7 +394,7 @@
             border-bottom: 1px solid #eee;
             background-color: white;
             border-radius: 4px;
-            min-height: 40px; /* Ensure consistent height */
+            min-height: 40px;
         }
         
         .definition-letter {
@@ -598,46 +409,85 @@
             display: inline;
         }
         
-        /* Wishes exercise specific styling */
-        .wish-exercise {
-            margin-bottom: 20px;
-        }
-        
-        .original-sentence {
-            font-style: italic;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .transformation {
-            display: flex;
-            align-items: center;
+        .option-container {
+            display: inline-flex;
             gap: 10px;
-            margin-top: 10px;
+            margin-left: 10px;
+            margin-right: 10px;
+            flex-wrap: wrap;
         }
         
-        .transformation-arrow {
-            color: var(--primary);
-            font-weight: bold;
-            margin: 0 10px;
-        }
-        
-        /* Conditional sentence specific styling */
-        .conditional-sentence {
-            font-family: 'Times New Roman', serif;
-        }
-        
-        .conditional-gap {
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            padding: 0 4px;
-        }
-        
-        .verb-hint {
-            font-style: italic;
-            color: #7f8c8d;
+        .option-btn {
+            background: #eef2f7;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            padding: 6px 15px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+            min-width: 80px;
+            text-align: center;
             font-size: 0.9em;
-            margin-left: 5px;
+        }
+        
+        .option-btn:hover {
+            background: #dfe6f0;
+            border-color: #95a5a6;
+        }
+        
+        .option-btn.selected {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .option-btn.correct-option {
+            background: #27ae60;
+            color: white;
+            border-color: #219653;
+        }
+        
+        .option-btn.incorrect-option {
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+        
+        .long-answer {
+            font-size: 0.95em;
+            letter-spacing: 0.3px;
+        }
+        
+        .verb-input {
+            min-width: 80px;
+            max-width: 200px;
+            text-align: center;
+        }
+        
+        .bold-option {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+        
+        .future-form-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        
+        .future-form-table th {
+            background-color: #e3f2fd;
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+            color: var(--primary-dark);
+        }
+        
+        .future-form-table td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            vertical-align: top;
         }
     </style>
 </head>
@@ -646,100 +496,127 @@
 <div class="container">
     <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">Access 4 - Module 6a</h1>
     
-    <!-- Grammar Reference Section -->
-    <div class="exercise-card">
-        <div class="exercise-title">Grammar Reference & Study Notes</div>
-        <div class="grammar-reference">
-            <h3>Conditional Sentences (Types 1, 2 and 3):</h3>
-            <table>
-                <tr>
-                    <th>Type</th>
-                    <th>Use</th>
-                    <th>Structure</th>
-                    <th>Example</th>
-                </tr>
-                <tr>
-                    <td><strong>Type 1</strong></td>
-                    <td>Real possibility in the present/future</td>
-                    <td>If + present simple, will + base verb</td>
-                    <td>If it rains, we will stay home.</td>
-                </tr>
-                <tr>
-                    <td><strong>Type 2</strong></td>
-                    <td>Unreal/hypothetical in the present</td>
-                    <td>If + past simple, would + base verb</td>
-                    <td>If I had money, I would buy a car.</td>
-                </tr>
-                <tr>
-                    <td><strong>Type 3</strong></td>
-                    <td>Unreal situation in the past</td>
-                    <td>If + past perfect, would have + past participle</td>
-                    <td>If I had studied, I would have passed.</td>
-                </tr>
-            </table>
-            
-            <h3>Wishes (Present & Past):</h3>
-            <table>
-                <tr>
-                    <th>Type of wish</th>
-                    <th>When to use</th>
-                    <th>Formula</th>
-                    <th>Example</th>
-                </tr>
-                <tr>
-                    <td><strong>Wish about present</strong></td>
-                    <td>Dissatisfaction with current situation</td>
-                    <td>S + wish/wishes + S + V2/were</td>
-                    <td>I wish I had more time.</td>
-                </tr>
-                <tr>
-                    <td><strong>Regret about past</strong></td>
-                    <td>Regret about something that happened/didn't happen</td>
-                    <td>S + wish/wishes + S + had + V3</td>
-                    <td>She wishes she had studied harder.</td>
-                </tr>
-            </table>
-            
-            <p class="reference-note">Grammar references based on Cambridge English Grammar in Use and Oxford English Grammar Course.</p>
-        </div>
-    </div>
-
-    <!-- TASK 1: Vocabulary Matching -->
-    <div class="exercise-card" id="card-t1">
-        <div class="exercise-title">Task 1: Vocabulary Matching – Match the word to its meaning</div>
-        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-K) in the box.</div>
+    <!-- PART 1 -->
+    <!-- Task 1: Vocabulary Matching -->
+    <div class="exercise-card" id="card-p1t1">
+        <div class="exercise-title">PART 1 - Task 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-H) in the box.</div>
         
         <div class="matching-grid">
-            <div id="vocab-t1"></div>
+            <div id="vocab-p1t1"></div>
             <div class="definitions-column">
-                <div id="def-t1"></div>
+                <div id="def-p1t1"></div>
             </div>
         </div>
         <div class="controls-row">
-            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
-            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+            <button class="btn btn-show-all" onclick="showAnswers('p1t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p1t1')">Reset</button>
         </div>
     </div>
 
-    <!-- TASK 2: Conditional Sentences -->
-    <div class="exercise-card" id="card-t2">
-        <div class="exercise-title">Task 2: Conditional Sentences (Types 1, 2 and 3)</div>
-        <div class="instructions">Complete each conditional sentence with the correct verb form. Pay attention to whether it's Type 1, 2, or 3 conditional. The verb in parentheses shows the base form you need to use.</div>
-        <div id="questions-t2"></div>
+    <!-- Task 2: Gap-fill with Word Bank -->
+    <div class="exercise-card" id="card-p1t2">
+        <div class="exercise-title">PART 1 - Task 2: Filling in the Gaps</div>
+        <div class="instructions">Complete each sentence by dragging and dropping the correct word from the word bank or typing it in the gap.</div>
+        
+        <div class="sticky-bank" id="bank-p1t2"></div>
+        
+        <div id="questions-p1t2"></div>
         <div class="controls-row">
-            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
-            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+            <button class="btn btn-show-all" onclick="showAnswers('p1t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p1t2')">Reset</button>
         </div>
     </div>
 
-    <!-- TASK 3: Wishes -->
-    <div class="exercise-card" id="card-t3">
-        <div class="exercise-title">Task 3: Wishes (Present & Past)</div>
-        <div class="instructions">Transform each sentence into a wish sentence. Use the correct wish structure based on whether it's about the present or past.</div>
-        <div id="questions-t3"></div>
+    <!-- PART 2 -->
+    <!-- Task 1: Vocabulary Matching -->
+    <div class="exercise-card" id="card-p2t1">
+        <div class="exercise-title">PART 2 - Task 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-H) in the box.</div>
+        
+        <div class="matching-grid">
+            <div id="vocab-p2t1"></div>
+            <div class="definitions-column">
+                <div id="def-p2t1"></div>
+            </div>
+        </div>
         <div class="controls-row">
-            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
-            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+            <button class="btn btn-show-all" onclick="showAnswers('p2t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p2t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Task 2: Gap-fill with Word Bank -->
+    <div class="exercise-card" id="card-p2t2">
+        <div class="exercise-title">PART 2 - Task 2: Filling in the Gaps</div>
+        <div class="instructions">Complete each sentence by dragging and dropping the correct word from the word bank or typing it in the gap.</div>
+        
+        <div class="sticky-bank" id="bank-p2t2"></div>
+        
+        <div id="questions-p2t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('p2t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p2t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- PART 3 -->
+    <!-- Grammar Reference -->
+    <div class="exercise-card">
+        <div class="exercise-title">PART 3 - Future Forms Reference</div>
+        <div class="grammar-reference">
+            <h3>Future Forms – Comparison Table</h3>
+            <table class="future-form-table">
+                <tr>
+                    <th>Form</th>
+                    <th>Cách dùng chính</th>
+                    <th>Ví dụ</th>
+                </tr>
+                <tr>
+                    <td><strong>will + V</strong></td>
+                    <td>Quyết định đưa ra ngay lúc nói; dự đoán chủ quan; lời hứa, đề nghị</td>
+                    <td>I think people <strong>will use</strong> more renewable energy.</td>
+                </tr>
+                <tr>
+                    <td><strong>be going to + V</strong></td>
+                    <td>Kế hoạch đã có ý định trước; dự đoán dựa trên bằng chứng rõ ràng</td>
+                    <td>Look at those clouds! It <strong>is going to rain</strong>.</td>
+                </tr>
+                <tr>
+                    <td><strong>present continuous<br>(am/is/are + V-ing)</strong></td>
+                    <td>Kế hoạch đã sắp xếp chắc chắn trong tương lai gần</td>
+                    <td>We <strong>are visiting</strong> the museum tomorrow.</td>
+                </tr>
+            </table>
+            
+            <h3>Future Continuous & Future Perfect</h3>
+            <p><strong>Future Continuous:</strong> will + be + V-ing<br>
+            Example: At this time tomorrow, I <strong>will be studying</strong> for my exam.</p>
+            
+            <p><strong>Future Perfect:</strong> will + have + past participle<br>
+            Example: By 2030, we <strong>will have reduced</strong> carbon emissions significantly.</p>
+        </div>
+    </div>
+
+    <!-- Task 1: Future Forms -->
+    <div class="exercise-card" id="card-p3t1">
+        <div class="exercise-title">PART 3 - Task 1: Future Forms – will / be going to / present continuous</div>
+        <div class="instructions">Complete each sentence with the correct future form of the verb in brackets.</div>
+        <div id="questions-p3t1"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('p3t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p3t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Task 4: Future Perfect & Future Continuous -->
+    <div class="exercise-card" id="card-p3t4">
+        <div class="exercise-title">PART 3 - Task 4: Future Perfect & Future Continuous</div>
+        <div class="instructions">Complete each sentence with the correct future form (Future Perfect or Future Continuous) of the verb in brackets.</div>
+        <div id="questions-p3t4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('p3t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('p3t4')">Reset</button>
         </div>
     </div>
 </div>
@@ -747,139 +624,283 @@
 <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
 <script>
-/* --- DATA --- */
-// Task 1: Vocabulary Matching – Match the word to its meaning - STRUCTURE PATTERN: { v, letter, def, hint, ipa }
-const t1_data = [
-    { v: "1. gulp down", letter: "F", def: "to eat or drink something very quickly", hint: "Often used when someone is very thirsty or hungry.", ipa: "/ɡʌlp daʊn/" },
-    { v: "2. allowance", letter: "I", def: "money given regularly by parents, often to children", hint: "Weekly or monthly money that children receive from parents.", ipa: "/əˈlaʊəns/" },
-    { v: "3. frown", letter: "K", def: "to show displeasure or worry by moving your eyebrows down", hint: "Opposite of smiling. Shows unhappiness or concentration.", ipa: "/fraʊn/" },
-    { v: "4. orphan", letter: "C", def: "a child whose parents have died", hint: "A child without living parents.", ipa: "/ˈɔːrfən/" },
-    { v: "5. orphanage", letter: "G", def: "a building where children without parents are cared for", hint: "An institution that takes care of orphans.", ipa: "/ˈɔːrfənɪdʒ/" },
-    { v: "6. starvation", letter: "H", def: "a lack of food that causes serious weakness or death", hint: "Extreme hunger that can lead to death.", ipa: "/stɑːrˈveɪʃən/" },
-    { v: "7. suffer from", letter: "D", def: "to experience pain, illness, or problems because of something", hint: "To have a difficult time because of a problem.", ipa: "/ˈsʌfər frəm/" },
-    { v: "8. hunger", letter: "E", def: "a strong feeling of needing food", hint: "The physical need for food.", ipa: "/ˈhʌŋɡər/" },
-    { v: "9. weapon", letter: "J", def: "an object used to fight or harm others", hint: "Can be a gun, knife, or any tool used for fighting.", ipa: "/ˈwepən/" },
-    { v: "10. roam", letter: "A", def: "to move around without a clear destination, especially on the streets", hint: "To wander or walk without a specific purpose.", ipa: "/roʊm/" },
-    { v: "11. shelter", letter: "B", def: "a place that provides protection or a place to live, especially from danger or weather", hint: "A safe place from danger, bad weather, or homelessness.", ipa: "/ˈʃeltər/" }
+// PART 1 - Task 1 Data
+const p1t1_data = [
+    { v: "1. generation", letter: "E", def: "a group of people born and living around the same time", hint: "A generation refers to people born and living during the same time period. Example: Millennials are a generation born between 1981-1996.", ipa: "/ˌdʒɛnəˈreɪʃən/" },
+    { v: "2. dump pit", letter: "C", def: "a place where large amounts of rubbish are thrown away", hint: "A dump pit is a designated area for waste disposal. It can cause environmental problems if not managed properly.", ipa: "/dʌmp pɪt/" },
+    { v: "3. birth rate", letter: "F", def: "the number of babies born in a population", hint: "Birth rate measures how many babies are born per 1,000 people in a population each year.", ipa: "/bɜːθ reɪt/" },
+    { v: "4. pace", letter: "A", def: "the speed at which something happens or develops", hint: "Pace refers to how fast something happens. Example: The pace of technological change is very fast.", ipa: "/peɪs/" },
+    { v: "5. developing country", letter: "G", def: "a country that is still improving its economy and living conditions", hint: "Developing countries are working to improve their economies, infrastructure, and living standards.", ipa: "/dɪˈvɛləpɪŋ ˈkʌntri/" },
+    { v: "6. developed country", letter: "D", def: "a country with a high level of economic and industrial development", hint: "Developed countries have advanced economies, good infrastructure, and high living standards.", ipa: "/dɪˈvɛləpt ˈkʌntri/" },
+    { v: "7. shelter (v)", letter: "H", def: "to protect someone by providing a place to live", hint: "To shelter means to give protection or a safe place to stay. Example: The government sheltered people during the storm.", ipa: "/ˈʃɛltər/" },
+    { v: "8. starving", letter: "B", def: "suffering from extreme hunger", hint: "Starving means suffering from severe lack of food. Many people in poor areas are starving due to food shortages.", ipa: "/ˈstɑːrvɪŋ/" }
 ];
 
-// Task 2: Conditional Sentences - CẬP NHẬT THEO FILE ẢNH MỚI
-const t2_data = [
+// PART 1 - Task 2 Data
+const p1t2_data = [
     { 
-        q: "1. We will stay at home if it ______ (rain) this evening.", 
-        ans: "rains", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. 'Rain' needs 's' for third person singular with 'it'." 
+        q: "1. Many children in poor areas are ______ because they lack food.", 
+        ans: "starving", 
+        hint: "Starving means suffering from extreme hunger. The sentence describes children without enough food.",
+        wordBankIndex: 7
     },
     { 
-        q: "2. If she ______ (be) more careful, she wouldn't make so many mistakes.", 
-        ans: "were", 
-        hint: "Type 2 conditional: if + past simple, would + base verb. 'Be' becomes 'were' for all persons in formal conditionals (subjunctive mood)." 
+        q: "2. The government is trying to control the ______ of population growth.", 
+        ans: "pace", 
+        hint: "Pace means speed or rate. The government wants to control how fast the population grows.",
+        wordBankIndex: 3
     },
     { 
-        q: "3. He would have arrived on time if he ______ (leave) earlier.", 
-        ans: "had left", 
-        hint: "Type 3 conditional: if + past perfect, would have + past participle. Shows regret about a past situation." 
+        q: "3. A ______ usually has better healthcare and education systems.", 
+        ans: "developed country", 
+        hint: "Developed countries have advanced systems for healthcare, education, and infrastructure.",
+        wordBankIndex: 5
     },
     { 
-        q: "4. You ______ (feel) better if you drink more water.", 
-        ans: "will feel", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. General advice about health." 
+        q: "4. This problem will affect the next ______ if it is not solved now.", 
+        ans: "generation", 
+        hint: "A generation is a group of people born around the same time. Environmental problems can affect future generations.",
+        wordBankIndex: 0
     },
     { 
-        q: "5. If I ______ (have) more free time, I would learn another language.", 
-        ans: "had", 
-        hint: "Type 2 conditional: if + past simple, would + base verb. Unreal/hypothetical situation about the present." 
+        q: "5. Families were given a place to ______ during the storm.", 
+        ans: "shelter", 
+        hint: "To shelter means to provide protection or a safe place. During storms, people need safe shelter.",
+        wordBankIndex: 6
     },
     { 
-        q: "6. They wouldn't have failed the exam if they ______ (revise) properly.", 
-        ans: "had revised", 
-        hint: "Type 3 conditional: if + past perfect, would have + past participle. Regret about past study habits." 
+        q: "6. A huge ______ near the city causes serious environmental problems.", 
+        ans: "dump pit", 
+        hint: "A dump pit is a place for waste disposal. Large dump pits can pollute the environment.",
+        wordBankIndex: 1
     },
     { 
-        q: "7. If the weather is nice tomorrow, we ______ (go) for a picnic.", 
-        ans: "will go", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. Future possibility based on weather." 
+        q: "7. The ______ has increased due to better medical care.", 
+        ans: "birth rate", 
+        hint: "Birth rate is the number of babies born. Better medical care often leads to higher birth rates.",
+        wordBankIndex: 2
     },
     { 
-        q: "8. She would be happier if she ______ (live) closer to her family.", 
-        ans: "lived", 
-        hint: "Type 2 conditional: if + past simple, would + base verb. Unreal present situation about location." 
-    },
-    { 
-        q: "9. We will miss the train if you ______ (not / hurry).", 
-        ans: "don't hurry", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. Negative form 'don't hurry' with 'you'." 
-    },
-    { 
-        q: "10. If he ______ (listen) to the teacher, he wouldn't have been punished.", 
-        ans: "had listened", 
-        hint: "Type 3 conditional: if + past perfect, would have + past participle. Passive voice in result clause." 
-    },
-    { 
-        q: "11. You ______ (understand) the rules if you read them carefully.", 
-        ans: "will understand", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. General truth about learning." 
-    },
-    { 
-        q: "12. If I ______ (be) you, I would talk to her honestly.", 
-        ans: "were", 
-        hint: "Type 2 conditional: if + past simple, would + base verb. Fixed expression 'if I were you' for giving advice." 
-    },
-    { 
-        q: "13. The match would have been cancelled if it ______ (snow) heavily.", 
-        ans: "had snowed", 
-        hint: "Type 3 conditional: if + past perfect, would have + past participle. Passive voice in result clause about past event." 
-    },
-    { 
-        q: "14. She ______ (call) you if she has any news.", 
-        ans: "will call", 
-        hint: "Type 1 conditional: if + present simple, will + base verb. Future promise or intention." 
-    },
-    { 
-        q: "15. If they ______ (save) more money last year, they would have bought a house.", 
-        ans: "had saved", 
-        hint: "Type 3 conditional: if + past perfect, would have + past participle. Regret about past financial decisions with time marker 'last year'." 
+        q: "8. A ______ often struggles with poverty and limited resources.", 
+        ans: "developing country", 
+        hint: "Developing countries frequently face challenges like poverty and limited resources.",
+        wordBankIndex: 4
     }
 ];
 
-// Task 3: Wishes - STRUCTURE PATTERN: { q, ans, hint }
-const t3_data = [
-    { q: "1. Andy wanted to call John, but he didn't have his phone number.<br>→ Andy wishes ______.", ans: "he had had John's phone number|he had John's phone number", hint: "Past regret: wish + past perfect. Andy regrets not having the number in the past." },
-    { q: "2. Al didn't go to Ann's party. Now he regrets it.<br>→ Al wishes ______.", ans: "he had gone to Ann's party", hint: "Past regret: wish + past perfect. Al regrets not going to the party." },
-    { q: "3. She wants to buy a new car, but she can't afford it.<br>→ She wishes ______.", ans: "she could afford to buy a new car|she had enough money to buy a new car", hint: "Present wish: wish + could/would/past simple. She's unhappy about current financial situation." },
-    { q: "4. Helen didn't visit Steve in the hospital because she didn't know he was ill.<br>→ Helen wishes ______.", ans: "she had known Steve was ill|she had visited Steve in the hospital", hint: "Past regret: wish + past perfect. Helen regrets not knowing about Steve's illness." },
-    { q: "5. Betty lives in the country, but she doesn't like it.<br>→ Betty wishes ______.", ans: "she didn't live in the country|she lived somewhere else", hint: "Present wish: wish + past simple. Betty is unhappy with her current living situation." },
-    { q: "6. Tom failed the exam because he didn't study hard enough.<br>→ Tom wishes ______.", ans: "he had studied harder|he had studied hard enough", hint: "Past regret: wish + past perfect. Tom regrets not studying more." },
-    { q: "7. I don't have enough time to finish this project today.<br>→ I wish ______.", ans: "I had enough time to finish this project today|I had more time", hint: "Present wish: wish + past simple. The speaker wants more time now." },
-    { q: "8. They shouted at the teacher, and now they feel sorry.<br>→ They wish ______.", ans: "they hadn't shouted at the teacher", hint: "Past regret: wish + past perfect. They regret shouting at the teacher." },
-    { q: "9. She doesn't speak English well, so she is nervous when talking to foreigners.<br>→ She wishes ______.", ans: "she spoke English well|she could speak English well", hint: "Present wish: wish + past simple/could. She wants to be better at English now." },
-    { q: "10. He ate too much fast food and now feels unhealthy.<br>→ He wishes ______.", ans: "he hadn't eaten so much fast food|he had eaten less fast food", hint: "Past regret: wish + past perfect. He regrets eating too much fast food." },
-    { q: "11. We missed the train because we left the house too late.<br>→ We wish ______.", ans: "we hadn't left the house so late|we had left earlier", hint: "Past regret: wish + past perfect. Regret about past timing." },
-    { q: "12. She has to work on Sunday, but she wants to go on a picnic.<br>→ She wishes ______.", ans: "she didn't have to work on Sunday|she could go on a picnic", hint: "Present wish: wish + past simple/could. Unhappy about current Sunday work." },
-    { q: "13. I forgot to bring my umbrella and got wet.<br>→ I wish ______.", ans: "I hadn't forgotten to bring my umbrella|I had brought my umbrella", hint: "Past regret: wish + past perfect. Regret about forgetting the umbrella." }
+// PART 1 - Task 2 Word Bank
+const p1t2_wordBank = [
+    "generation", "dump pit", "birth rate", "pace", "developing country", 
+    "developed country", "shelter", "starving"
+];
+
+// PART 2 - Task 1 Data
+const p2t1_data = [
+    { v: "1. pesticide", letter: "F", def: "a chemical used to kill insects that damage crops", hint: "Pesticides are chemicals that protect plants from harmful insects. However, they can also harm the environment.", ipa: "/ˈpɛstɪsaɪd/" },
+    { v: "2. fertilizer", letter: "C", def: "a substance added to soil to help plants grow", hint: "Fertilizers provide nutrients to plants to help them grow better. They can be natural or chemical.", ipa: "/ˈfɜːrtəlaɪzər/" },
+    { v: "3. deforestation", letter: "G", def: "the process of cutting down large areas of forest", hint: "Deforestation is the large-scale removal of trees. It causes habitat loss and climate change.", ipa: "/ˌdiːˌfɒrɪˈsteɪʃən/" },
+    { v: "4. bare", letter: "B", def: "without any plants, trees, or covering", hint: "Bare land has no vegetation or covering. Deforestation often leaves land bare and vulnerable to erosion.", ipa: "/beər/" },
+    { v: "5. advancing technology", letter: "H", def: "the use of modern science and machines to improve life", hint: "Advancing technology refers to the development of new tools and machines that make life better.", ipa: "/ədˈvænsɪŋ tɛkˈnɒlədʒi/" },
+    { v: "6. run out", letter: "D", def: "to use something until there is none left", hint: "To run out means to use all of something so that none remains. Example: We will run out of resources if we waste them.", ipa: "/rʌn aʊt/" },
+    { v: "7. smog", letter: "A", def: "polluted air caused mainly by traffic and factories", hint: "Smog is air pollution that looks like fog. It's common in big cities with lots of traffic and industry.", ipa: "/smɒɡ/" },
+    { v: "8. alternative (adj)", letter: "E", def: "a different choice that can be used instead of another", hint: "Alternative means another option. Example: Solar power is an alternative energy source to fossil fuels.", ipa: "/ɔːlˈtɜːnətɪv/" }
+];
+
+// PART 2 - Task 2 Data
+const p2t2_data = [
+    { 
+        q: "1. Farmers use ______ to protect crops from insects.", 
+        ans: "pesticide", 
+        hint: "Pesticides are chemicals that kill insects that damage crops. Farmers use them to protect their plants.",
+        wordBankIndex: 0
+    },
+    { 
+        q: "2. After years of logging, the land became ______ and dry.", 
+        ans: "bare", 
+        hint: "Bare means without plants or trees. Logging (cutting down trees) can leave land bare and dry.",
+        wordBankIndex: 3
+    },
+    { 
+        q: "3. Thick ______ makes it difficult to breathe in big cities.", 
+        ans: "smog", 
+        hint: "Smog is air pollution that looks like fog. It's common in big cities with lots of traffic.",
+        wordBankIndex: 6
+    },
+    { 
+        q: "4. We must find an ______ energy source to protect the environment.", 
+        ans: "alternative", 
+        hint: "Alternative means another option. We need alternative energy sources like solar or wind power.",
+        wordBankIndex: 7
+    },
+    { 
+        q: "5. The soil is poor, so ______ is added to help plants grow.", 
+        ans: "fertilizer", 
+        hint: "Fertilizer provides nutrients to plants. Poor soil needs fertilizer to help plants grow well.",
+        wordBankIndex: 1
+    },
+    { 
+        q: "6. Natural resources will ______ if people continue wasting them.", 
+        ans: "run out", 
+        hint: "To run out means to use all of something. If we waste natural resources, we will have none left.",
+        wordBankIndex: 5
+    },
+    { 
+        q: "7. ______ is a major cause of climate change and habitat loss.", 
+        ans: "Deforestation", 
+        hint: "Deforestation (cutting down forests) contributes to climate change and destroys animal habitats.",
+        wordBankIndex: 2
+    },
+    { 
+        q: "8. ______ plays an important role in reducing pollution.", 
+        ans: "Advancing technology", 
+        hint: "Advancing technology helps create cleaner solutions that can reduce pollution.",
+        wordBankIndex: 4
+    }
+];
+
+// PART 2 - Task 2 Word Bank
+const p2t2_wordBank = [
+    "pesticide", "fertilizer", "deforestation", "bare", "advancing technology", 
+    "run out", "smog", "alternative"
+];
+
+// PART 3 - Task 1 Data
+const p3t1_data = [
+    { 
+        q: "1. Look at those dark clouds! It ______ (rain) very soon.", 
+        ans: "is going to rain", 
+        hint: "Use 'be going to' for predictions based on clear evidence. The dark clouds are evidence that rain is coming." 
+    },
+    { 
+        q: "2. I think people ______ (use) more renewable energy in the future.", 
+        ans: "will use", 
+        hint: "Use 'will' for general predictions or opinions about the future." 
+    },
+    { 
+        q: "3. We ______ (visit) the science museum tomorrow morning; everything is already planned.", 
+        ans: "are visiting", 
+        hint: "Use present continuous for definite future plans that have been arranged." 
+    },
+    { 
+        q: "4. Don't worry, I ______ (help) you carry those heavy bags.", 
+        ans: "will help", 
+        hint: "Use 'will' for spontaneous decisions made at the moment of speaking." 
+    },
+    { 
+        q: "5. They ______ (build) a new recycling centre next year according to the city's plan.", 
+        ans: "are going to build", 
+        hint: "Use 'be going to' for plans or intentions that have already been decided." 
+    },
+    { 
+        q: "6. My parents ______ (fly) to Singapore this Friday evening. The tickets are booked.", 
+        ans: "are flying", 
+        hint: "Use present continuous for definite arrangements with evidence (booked tickets)." 
+    },
+    { 
+        q: "7. If we continue wasting water, we ______ (face) serious shortages in the future.", 
+        ans: "will face", 
+        hint: "Use 'will' for predictions based on a condition (if we continue...)." 
+    },
+    { 
+        q: "8. She has decided that she ______ (study) environmental science at university.", 
+        ans: "is going to study", 
+        hint: "Use 'be going to' for plans or decisions that have already been made." 
+    },
+    { 
+        q: "9. Hurry up! The bus ______ (leave) in five minutes.", 
+        ans: "is leaving", 
+        hint: "Use present continuous for scheduled events (bus timetable) in the near future." 
+    },
+    { 
+        q: "10. I'm sure technology ______ (change) the way we live in the next few decades.", 
+        ans: "will change", 
+        hint: "Use 'will' for general predictions about the distant future." 
+    }
+];
+
+// PART 3 - Task 4 Data
+const p3t4_data = [
+    { 
+        q: "1. At this time tomorrow, scientists ______ (test) the new environmental equipment.", 
+        ans: "will be testing", 
+        hint: "Use Future Continuous (will be + V-ing) for actions in progress at a specific future time." 
+    },
+    { 
+        q: "2. By 2030, many countries ______ (reduce) their carbon emissions significantly.", 
+        ans: "will have reduced", 
+        hint: "Use Future Perfect (will have + past participle) for actions completed before a future time point." 
+    },
+    { 
+        q: "3. At 8 p.m. tonight, we ______ (watch) a documentary about climate change.", 
+        ans: "will be watching", 
+        hint: "Use Future Continuous for actions happening at a specific future time (8 p.m. tonight)." 
+    },
+    { 
+        q: "4. By the end of this month, the school ______ (finish) the recycling project.", 
+        ans: "will have finished", 
+        hint: "Use Future Perfect for actions that will be completed before a future deadline (end of month)." 
+    },
+    { 
+        q: "5. This time next week, she ______ (work) on her science presentation.", 
+        ans: "will be working", 
+        hint: "Use Future Continuous for actions in progress at a specific future time (this time next week)." 
+    },
+    { 
+        q: "6. By the time the guests arrive, the volunteers ______ (prepare) all the food.", 
+        ans: "will have prepared", 
+        hint: "Use Future Perfect for actions completed before another future action (guests arriving)." 
+    },
+    { 
+        q: "7. At this time tomorrow morning, the students ______ (take) an important exam.", 
+        ans: "will be taking", 
+        hint: "Use Future Continuous for actions happening at a specific future time (tomorrow morning)." 
+    },
+    { 
+        q: "8. By the end of the lesson, you ______ (learn) how to use future tenses correctly.", 
+        ans: "will have learned", 
+        hint: "Use Future Perfect for knowledge/skills acquired before a future time point (end of lesson)." 
+    },
+    { 
+        q: "9. At this time next year, the city ______ (build) a new waste treatment centre.", 
+        ans: "will be building", 
+        hint: "Use Future Continuous for actions in progress at a specific future time (this time next year)." 
+    },
+    { 
+        q: "10. By this weekend, the factory ______ (release) less smoke due to new rules.", 
+        ans: "will have released", 
+        hint: "Use Future Perfect for changes that will be completed before a future time (this weekend)." 
+    },
+    { 
+        q: "11. This time next month, my family ______ (live) in a different neighbourhood.", 
+        ans: "will be living", 
+        hint: "Use Future Continuous for temporary situations in progress at a specific future time." 
+    },
+    { 
+        q: "12. By midnight, the storm ______ (pass) and the roads will be safe again.", 
+        ans: "will have passed", 
+        hint: "Use Future Perfect for natural events completed before a future time (midnight)." 
+    }
 ];
 
 /* --- GLOBAL STATE --- */
 let currentActiveIPA = null;
-let answerStates = new Map(); // Track answer states for toggling
+let answerStates = new Map();
+let wordUsageCount = {};
 
 /* --- RENDERING FUNCTIONS --- */
 
 function renderMatching(id, data) {
-    const v = document.getElementById(`vocab-${id}`); 
+    const v = document.getElementById(`vocab-${id}`);
     const d = document.getElementById(`def-${id}`);
     
-    // Clear existing content
     v.innerHTML = '';
     d.innerHTML = '';
     
-    // Create definitions list in alphabetical order (A, B, C, D, etc.)
     const definitions = {};
     data.forEach(item => {
         definitions[item.letter] = item.def;
     });
     
-    // Sort definitions by letter (A, B, C, D, etc.)
     const sortedLetters = Object.keys(definitions).sort();
     sortedLetters.forEach(letter => {
         d.innerHTML += `
@@ -889,7 +910,6 @@ function renderMatching(id, data) {
             </div>`;
     });
     
-    // Render vocabulary items in numerical order with IPA support
     data.forEach((item, i) => {
         const qid = `${id}-q${i}`;
         
@@ -911,53 +931,48 @@ function renderMatching(id, data) {
     });
 }
 
-function renderConditionalSentences(id, data) {
+function renderGapFillWithWordBank(id, data, wordBank) {
     const container = document.getElementById(`questions-${id}`);
+    const bankContainer = document.getElementById(`bank-${id}`);
     
-    // Clear existing content
     container.innerHTML = '';
+    bankContainer.innerHTML = '';
     
-    // Render conditional sentences with special formatting
+    wordUsageCount[id] = {};
+    wordBank.forEach(word => {
+        wordUsageCount[id][word] = 0;
+    });
+    
+    wordBank.forEach((word, i) => {
+        const wordId = `${id}-word-${i}`;
+        bankContainer.innerHTML += `
+            <div class="word-item" id="${wordId}" data-word="${word}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${wordId}')">
+                ${word.toLowerCase()}
+            </div>`;
+    });
+    
     data.forEach((it, i) => {
         const qid = `${id}-q${i}`;
         
-        // Check if sentence already has a number
         let sentence = it.q;
         let numberHtml = '';
         const numberMatch = sentence.match(/^(\d+)\.\s+/);
         
         if (numberMatch) {
-            // Remove the number from the sentence and use it
             sentence = sentence.replace(/^\d+\.\s+/, '');
             numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
         } else {
-            // Use automatic numbering
             numberHtml = `<span class="exercise-number">${i+1}</span>`;
         }
         
-        // Extract verb hint from parentheses
-        const verbHintMatch = sentence.match(/\(([^)]+)\)/);
-        let displaySentence = sentence;
-        let verbHint = '';
-        
-        if (verbHintMatch) {
-            verbHint = verbHintMatch[1];
-            // Remove the parentheses from display
-            displaySentence = sentence.replace(/\(([^)]+)\)/, '');
-        }
-        
-        // Replace the single gap with input field
-        const parts = displaySentence.split('______');
+        const parts = sentence.split('______');
         
         container.innerHTML += `
-            <div class="question-row">
+            <div class="question-row" id="${qid}-row">
                 ${numberHtml} 
-                <span class="conditional-sentence">
-                    ${parts[0]}
-                    <input type="text" class="conditional-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">
-                    ${parts[1]}
-                    ${verbHint ? `<span class="verb-hint">(${verbHint})</span>` : ''}
-                </span>
+                ${parts[0]}
+                <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" data-word-bank-index="${it.wordBankIndex}" oninput="adjustWidth(this); updateWordBank('${id}')" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)" onclick="this.select()">
+                ${parts[1]}
                 <div class="row-btns">
                     <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
@@ -965,71 +980,107 @@ function renderConditionalSentences(id, data) {
                 <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
             </div>`;
     });
+    
+    addWordBankEventListeners(id);
 }
 
-function renderWishes(id, data) {
+function renderFutureForms(id, data) {
     const container = document.getElementById(`questions-${id}`);
     
-    // Clear existing content
     container.innerHTML = '';
     
-    // Render wish transformation exercises
     data.forEach((it, i) => {
         const qid = `${id}-q${i}`;
         
-        // Check if sentence already has a number
         let sentence = it.q;
         let numberHtml = '';
         const numberMatch = sentence.match(/^(\d+)\.\s+/);
         
         if (numberMatch) {
-            // Remove the number from the sentence and use it
             sentence = sentence.replace(/^\d+\.\s+/, '');
             numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
         } else {
-            // Use automatic numbering
             numberHtml = `<span class="exercise-number">${i+1}</span>`;
         }
         
-        // Split the sentence into original and transformation parts
-        const parts = sentence.split('<br>→ ');
-        const original = parts[0];
-        const transformation = parts[1] || '';
-        
-        container.innerHTML += `
-            <div class="wish-exercise">
+        const gapIndex = sentence.indexOf('______');
+        if (gapIndex !== -1) {
+            const beforeGap = sentence.substring(0, gapIndex);
+            const afterGap = sentence.substring(gapIndex + 7);
+            
+            container.innerHTML += `
                 <div class="question-row">
                     ${numberHtml} 
-                    <div class="original-sentence">${original}</div>
-                    <div class="transformation">
-                        <span class="transformation-arrow">→</span>
-                        ${transformation.replace('______', '<input type="text" class="grammar-input" id="' + qid + '" data-type="input" data-ans="' + it.ans + '" oninput="adjustWidth(this)">')}
-                        <div class="row-btns">
-                            <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
-                            <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
-                        </div>
+                    <span class="tense-sentence">
+                        ${beforeGap}
+                        <input type="text" class="grammar-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">
+                        ${afterGap}
+                    </span>
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
                     </div>
-                </div>
-                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
-            </div>`;
+                    <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                </div>`;
+        } else {
+            container.innerHTML += `
+                <div class="question-row">
+                    ${numberHtml} 
+                    <span class="tense-sentence">${sentence}</span>
+                    <input type="text" class="grammar-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                </div>`;
+        }
     });
 }
 
 /* --- UTILITY FUNCTIONS --- */
 
-function adjustWidth(el) { 
-    const baseWidth = el.classList.contains('letter-input') ? 45 : 
-                     el.classList.contains('conditional-input') ? 80 :
-                     el.classList.contains('word-input') ? 120 :
-                     el.classList.contains('grammar-input') ? 150 : 60;
+function adjustWidth(el) {
+    let baseWidth;
+    if (el.classList.contains('letter-input')) {
+        baseWidth = 45;
+    } else if (el.classList.contains('verb-input')) {
+        baseWidth = 80;
+    } else if (el.classList.contains('word-input')) {
+        baseWidth = 120;
+    } else if (el.classList.contains('grammar-input')) {
+        baseWidth = 150;
+    } else {
+        baseWidth = 60;
+    }
     
-    // Calculate width based on content
-    const newWidth = Math.max(el.value.length * 10 + 20, baseWidth);
-    el.style.width = newWidth + "px"; 
+    let charWidth;
+    if (el.classList.contains('word-input') || el.classList.contains('grammar-input')) {
+        charWidth = 9;
+    } else {
+        charWidth = 10;
+    }
+    
+    const newWidth = Math.max(el.value.length * charWidth + 20, baseWidth);
+    
+    let maxWidth;
+    if (el.classList.contains('letter-input')) {
+        maxWidth = 80;
+    } else if (el.classList.contains('verb-input')) {
+        maxWidth = 200;
+    } else if (el.classList.contains('word-input')) {
+        maxWidth = 400;
+    } else if (el.classList.contains('grammar-input')) {
+        maxWidth = 500;
+    } else {
+        maxWidth = 300;
+    }
+    
+    el.style.width = Math.min(newWidth, maxWidth) + "px";
 }
 
-function toggleHint(id) { 
-    const h = document.getElementById(id + '-hint'); 
+function toggleHint(id) {
+    const h = document.getElementById(id + '-hint');
     const infoBtn = document.getElementById(id + '-info');
     
     if (h) {
@@ -1043,11 +1094,10 @@ function toggleHint(id) {
     }
 }
 
-function toggleIPA(id) { 
-    const ipaBox = document.getElementById(id + '-ipa'); 
+function toggleIPA(id) {
+    const ipaBox = document.getElementById(id + '-ipa');
     const speakerBtn = document.querySelector(`button[onclick="toggleIPA('${id}')"]`);
     
-    // If clicking the same IPA box that's currently active, hide it
     if (currentActiveIPA === ipaBox) {
         ipaBox.style.display = 'none';
         currentActiveIPA = null;
@@ -1055,14 +1105,12 @@ function toggleIPA(id) {
         return;
     }
     
-    // Hide previously active IPA box if exists
     if (currentActiveIPA) {
         const prevSpeakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
         if (prevSpeakerBtn) prevSpeakerBtn.classList.remove('active');
         currentActiveIPA.style.display = 'none';
     }
     
-    // Show the clicked IPA box
     if (ipaBox) {
         ipaBox.style.display = 'block';
         currentActiveIPA = ipaBox;
@@ -1070,34 +1118,28 @@ function toggleIPA(id) {
     }
 }
 
-function toggleSingleAns(id) { 
+function toggleSingleAns(id) {
     const el = document.getElementById(id);
-    const eyeBtn = document.getElementById(id + '-eye');
-    
     if (!el) return;
     
     const ans = el.dataset.ans;
+    const eyeBtn = document.getElementById(id + '-eye');
     const stateKey = `${id}-state`;
-    
-    // Check if answer is currently shown
     const isCurrentlyShown = answerStates.get(stateKey) || false;
     
     if (isCurrentlyShown) {
-        // Hide the answer
         el.value = "";
-        el.classList.remove('correct', 'incorrect-marked');
+        el.classList.remove('correct', 'incorrect-marked', 'long-answer');
         adjustWidth(el);
         if (eyeBtn) eyeBtn.classList.remove('active');
         answerStates.set(stateKey, false);
     } else {
-        // Show the answer
         if (ans) {
-            // For multiple answers separated by |, show the first one with exact case
             const firstAns = ans.split('|')[0];
-            // IMPORTANT: Show answer with exact original capitalization
             el.value = firstAns;
             el.classList.add('correct');
             el.classList.remove('incorrect-marked');
+            
             adjustWidth(el);
             if (eyeBtn) eyeBtn.classList.add('active');
             answerStates.set(stateKey, true);
@@ -1105,8 +1147,7 @@ function toggleSingleAns(id) {
     }
 }
 
-function showAnswers(prefix) { 
-    // Handle regular single-gap questions
+function showAnswers(prefix) {
     document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
         if (el.dataset.type === 'input') {
             const stateKey = `${el.id}-state`;
@@ -1118,6 +1159,7 @@ function showAnswers(prefix) {
                 el.value = firstAns;
                 el.classList.add('correct');
                 el.classList.remove('incorrect-marked');
+                
                 adjustWidth(el);
                 if (eyeBtn) eyeBtn.classList.add('active');
                 answerStates.set(stateKey, true);
@@ -1126,44 +1168,53 @@ function showAnswers(prefix) {
     });
 }
 
-function resetSection(prefix) { 
-    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { 
-        if(i.tagName === 'INPUT') { 
-            i.value = ""; 
-            i.classList.remove('correct', 'incorrect-marked'); 
-            adjustWidth(i); 
-        } 
-        const hBox = document.getElementById(i.id + '-hint'); 
-        if(hBox) hBox.style.display = 'none'; 
+function resetSection(prefix) {
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
+        if(i.tagName === 'INPUT') {
+            i.value = "";
+            i.classList.remove('correct', 'incorrect-marked', 'long-answer');
+            adjustWidth(i);
+        }
+        const hBox = document.getElementById(i.id + '-hint');
+        if(hBox) hBox.style.display = 'none';
         const ipaBox = document.getElementById(i.id + '-ipa');
         if(ipaBox) ipaBox.style.display = 'none';
     });
     
-    // Reset button states
     document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
         if (btn.id.includes(prefix)) {
             btn.classList.remove('active');
         }
     });
     
-    // Reset global IPA state
     if (currentActiveIPA) {
         const speakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
         if (speakerBtn) speakerBtn.classList.remove('active');
         currentActiveIPA = null;
     }
     
-    // Clear answer states for this section
     for (const [key, value] of answerStates.entries()) {
         if (key.startsWith(`${prefix}-`)) {
             answerStates.delete(key);
         }
     }
+    
+    if (prefix === 'p1t2' || prefix === 'p2t2') {
+        const wordItems = document.querySelectorAll(`#bank-${prefix} .word-item`);
+        wordItems.forEach(item => {
+            item.classList.remove('used');
+            item.style.display = 'flex';
+        });
+        
+        if (wordUsageCount[prefix]) {
+            Object.keys(wordUsageCount[prefix]).forEach(word => {
+                wordUsageCount[prefix][word] = 0;
+            });
+        }
+    }
 }
 
 function normalizeAnswer(answer) {
-    // Remove extra spaces, convert to lowercase, remove punctuation
-    // IMPORTANT: Case-insensitive comparison
     return answer.toLowerCase()
         .trim()
         .replace(/\s+/g, ' ')
@@ -1171,28 +1222,23 @@ function normalizeAnswer(answer) {
 }
 
 function validateMultipleAnswers(userAnswer, correctAnswers) {
-    // Split multiple answers by | and check if user answer matches any
-    // IMPORTANT: Case-insensitive comparison
     const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
     const normalizedUser = normalizeAnswer(userAnswer);
     
     return answers.some(ans => ans === normalizedUser);
 }
 
-function checkAll() { 
-    // Check text inputs
-    document.querySelectorAll('[data-type="input"]').forEach(el => { 
+function checkAll() {
+    document.querySelectorAll('[data-type="input"]').forEach(el => {
         const correctAnswers = el.dataset.ans;
         const userAnswer = el.value;
         
-        el.classList.remove('correct', 'incorrect-marked'); 
+        el.classList.remove('correct', 'incorrect-marked');
         
         if(!userAnswer.trim()) {
-            // Empty answer, do nothing
             return;
         }
         
-        // IMPORTANT: Case-insensitive validation
         if(validateMultipleAnswers(userAnswer, correctAnswers)) {
             el.classList.add('correct');
         } else {
@@ -1201,43 +1247,170 @@ function checkAll() {
     });
 }
 
+/* --- WORD BANK FUNCTIONS --- */
+
+function addWordBankEventListeners(id) {
+    const wordItems = document.querySelectorAll(`#bank-${id} .word-item`);
+    const inputs = document.querySelectorAll(`#questions-${id} input.word-input`);
+    
+    wordItems.forEach(item => {
+        item.addEventListener('click', function() {
+            selectWordFromBank(this.id);
+        });
+        
+        item.addEventListener('dragstart', function(e) {
+            dragWord(e);
+        });
+    });
+    
+    inputs.forEach(input => {
+        input.addEventListener('dragover', function(e) {
+            allowDrop(e);
+        });
+        
+        input.addEventListener('drop', function(e) {
+            dropWord(e, this.id);
+        });
+    });
+}
+
+function dragWord(event) {
+    event.dataTransfer.setData("text/plain", event.target.dataset.word);
+    event.dataTransfer.setData("wordId", event.target.id);
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+}
+
+function dropWord(event, inputId) {
+    event.preventDefault();
+    const word = event.dataTransfer.getData("text/plain");
+    const wordId = event.dataTransfer.getData("wordId");
+    
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = word;
+        adjustWidth(input);
+        
+        updateWordBankUsage(word, inputId.split('-')[0]);
+    }
+}
+
+function selectWordFromBank(wordId) {
+    const wordItem = document.getElementById(wordId);
+    if (!wordItem) return;
+    
+    const word = wordItem.dataset.word;
+    const parts = wordId.split('-');
+    const taskId = parts[1] + '-' + parts[2];
+    
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    let emptyInput = null;
+    
+    for (const input of inputs) {
+        if (!input.value.trim()) {
+            emptyInput = input;
+            break;
+        }
+    }
+    
+    if (emptyInput) {
+        emptyInput.value = word;
+        adjustWidth(emptyInput);
+        
+        updateWordBankUsage(word, taskId);
+    } else {
+        alert('All gaps are filled. You can click on a gap to replace its content.');
+    }
+}
+
+function updateWordBankUsage(word, taskId) {
+    if (!wordUsageCount[taskId]) {
+        wordUsageCount[taskId] = {};
+    }
+    
+    if (!wordUsageCount[taskId][word]) {
+        wordUsageCount[taskId][word] = 0;
+    }
+    
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    let count = 0;
+    
+    inputs.forEach(input => {
+        if (normalizeAnswer(input.value) === normalizeAnswer(word)) {
+            count++;
+        }
+    });
+    
+    wordUsageCount[taskId][word] = count;
+    
+    updateWordBankDisplay(taskId);
+}
+
+function updateWordBankDisplay(taskId) {
+    const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`);
+    
+    wordItems.forEach(item => {
+        const word = item.dataset.word;
+        const count = wordUsageCount[taskId][word] || 0;
+        
+        if (count > 0) {
+            item.classList.add('used');
+        } else {
+            item.classList.remove('used');
+        }
+    });
+}
+
+function updateWordBank(taskId) {
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    
+    if (wordUsageCount[taskId]) {
+        Object.keys(wordUsageCount[taskId]).forEach(word => {
+            wordUsageCount[taskId][word] = 0;
+        });
+    }
+    
+    inputs.forEach(input => {
+        const word = input.value.trim();
+        if (word) {
+            const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`);
+            let foundWord = null;
+            
+            wordItems.forEach(item => {
+                if (normalizeAnswer(item.dataset.word) === normalizeAnswer(word)) {
+                    foundWord = item.dataset.word;
+                }
+            });
+            
+            if (foundWord && wordUsageCount[taskId][foundWord] !== undefined) {
+                wordUsageCount[taskId][foundWord]++;
+            }
+        }
+    });
+    
+    updateWordBankDisplay(taskId);
+}
+
 /* --- INITIALIZATION --- */
 
 window.onload = () => {
-    renderMatching('t1', t1_data);
-    renderConditionalSentences('t2', t2_data);
-    renderWishes('t3', t3_data);
+    renderMatching('p1t1', p1t1_data);
+    renderGapFillWithWordBank('p1t2', p1t2_data, p1t2_wordBank);
+    renderMatching('p2t1', p2t1_data);
+    renderGapFillWithWordBank('p2t2', p2t2_data, p2t2_wordBank);
+    renderFutureForms('p3t1', p3t1_data);
+    renderFutureForms('p3t4', p3t4_data);
 };
 
 /* --- KEYBOARD SUPPORT --- */
 
-document.addEventListener('keydown', e => { 
+document.addEventListener('keydown', e => {
     if(e.key === 'Enter') {
-        checkAll(); 
+        checkAll();
     }
 });
-
-/* --- ADDITIONAL NOTES --- */
-
-// IMPORTANT: This Module 6a implementation includes:
-// 1. Task 1: Vocabulary matching with IPA pronunciation support
-// 2. Task 2: Conditional sentences (Types 1, 2, 3) - ĐÃ CẬP NHẬT theo file ảnh mới
-// 3. Task 3: Wishes transformation exercises
-
-// CẬP NHẬT TASK 2 THEO FILE ẢNH MỚI:
-// 1. Mỗi câu chỉ có MỘT chỗ trống (single gap)
-// 2. Verb trong ngoặc đơn cho biết dạng gốc cần sử dụng
-// 3. Chỗ trống nhỏ hơn (conditional-input class: 80-150px)
-// 4. Answers là verb forms đơn giản (không pipe-separated pairs)
-// 5. Hiển thị verb hint trong ngoặc đơn màu xám
-
-// WISHES EXERCISE IMPLEMENTATION:
-// 1. Transformation exercises from given situations to wish sentences
-// 2. Complete sentence input for the wish part
-// 3. Multiple correct answers accepted for flexibility
-// 4. Hints explain whether it's a present wish or past regret
-
-// ALL TECHNICAL REQUIREMENTS from the original template are preserved
 </script>
 </body>
 </html>
