@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Module 10a</title>
+    <style>
+        :root {
+            --primary: #2980b9;
+            --primary-dark: #1c5982;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --warning: #f1c40f;
+            --bg: #f4f7f9;
+            --text: #2c3e50;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 13pt;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px 20px 100px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .sticky-bank {
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 2px solid var(--primary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .word-item {
+            background: #eef2f7;
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: grab;
+            user-select: none;
+            transition: 0.2s;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .word-item:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .exercise-card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .exercise-title {
+            font-weight: bold;
+            font-size: 1.25em;
+            margin-bottom: 18px;
+            color: var(--primary-dark);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        .matching-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .vocab-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .vocab-text {
+            min-width: 150px;
+            font-weight: 500;
+        }
+
+        .question-row {
+            margin-bottom: 18px;
+            line-height: 2.2;
+            border-bottom: 1px solid #f9f9f9;
+            padding-bottom: 10px;
+            position: relative;
+        }
+
+        input[type="text"] {
+            border: none;
+            border-bottom: 2px solid #bdc3c7;
+            background: #fafafa;
+            padding: 2px 8px;
+            font-size: 1em;
+            transition: 0.2s;
+            outline: none;
+            min-width: 60px;
+            border-radius: 4px 4px 0 0;
+            text-align: center;
+            font-family: 'Times New Roman';
+            box-sizing: border-box;
+        }
+
+        input.letter-input {
+            width: 45px;
+            min-width: 45px;
+            max-width: 80px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        input.word-input {
+            min-width: 120px;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        input.grammar-input {
+            min-width: 150px;
+            max-width: 500px;
+            text-align: left;
+        }
+
+        input.correct {
+            border-bottom-color: var(--success) !important;
+            background-color: #e8f8f5 !important;
+            color: #1e8449 !important;
+        }
+
+        input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            background-color: #fdedec !important;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        .btn-small {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-small:hover {
+            background: #ddd;
+        }
+
+        .btn-small.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .speaker-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+        }
+
+        .speaker-btn:hover {
+            background: #2980b9;
+        }
+
+        .speaker-btn.active {
+            background: #1c5982;
+        }
+
+        .info-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .info-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .info-btn.active {
+            background: #5d6d6e;
+        }
+
+        .hint-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #fef9e7;
+            border-left: 4px solid var(--warning);
+            color: #7d6608;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        .ipa-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            color: #2c3e50;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .ipa-label {
+            font-weight: bold;
+            color: #3498db;
+            margin-right: 5px;
+        }
+
+        .ipa-text {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-reset {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            background-color: var(--success);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .grammar-reference {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+        }
+
+        .grammar-reference h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1em;
+        }
+
+        .grammar-reference ul {
+            padding-left: 20px;
+        }
+
+        .grammar-reference li {
+            margin-bottom: 8px;
+        }
+
+        .instructions {
+            color: #7f8c8d;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .existing-number {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 8px;
+        }
+
+        .definitions-column {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+        }
+
+        .definitions-column::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .definitions-column::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .definitions-column::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        .definitions-column::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .definition-item {
+            margin-bottom: 12px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            background-color: white;
+            border-radius: 4px;
+            min-height: 40px;
+        }
+
+        .definition-letter {
+            font-weight: bold;
+            color: var(--primary);
+            margin-right: 10px;
+            min-width: 20px;
+            display: inline-block;
+        }
+
+        .definition-text {
+            display: inline;
+        }
+
+        .long-answer {
+            font-size: 0.95em;
+            letter-spacing: 0.3px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark); margin-bottom: 30px;">Access 4 - Module 10a</h1>
+
+    <!-- Vocabulary & Grammar Reference - No answers, just explanations in Vietnamese -->
+    <div class="exercise-card">
+        <div class="exercise-title">Vocabulary & Grammar Reference</div>
+        <div class="grammar-reference">
+            <h3>Task 1 Vocabulary</h3>
+            <ul>
+                <li><strong>off the beaten path:</strong> Nơi không nổi tiếng, ít người lui tới, không phải điểm du lịch.</li>
+                <li><strong>dare:</strong> Dám làm điều gì đó mạo hiểm hoặc táo bạo.</li>
+                <li><strong>inhabitant:</strong> Cư dân, người sống ở một nơi cụ thể.</li>
+                <li><strong>curse (v):</strong> Chửi rủa, nguyền rủa ai đó.</li>
+                <li><strong>wander:</strong> Đi lang thang, dạo chơi không mục đích.</li>
+                <li><strong>authority:</strong> Chính quyền, nhà chức trách, người có thẩm quyền.</li>
+                <li><strong>prohibit:</strong> Cấm (thường do luật hoặc quy định).</li>
+                <li><strong>not someone's cup of tea:</strong> Không phải sở thích của ai đó.</li>
+                <li><strong>absence:</strong> Sự vắng mặt.</li>
+                <li><strong>make someone's head spin:</strong> Làm ai đó hoa mắt, chóng mặt, bối rối.</li>
+                <li><strong>baffled:</strong> Bối rối, hoang mang, không hiểu gì.</li>
+            </ul>
+
+            <h3>Relative Pronouns (Tasks 3-5)</h3>
+            <ul>
+                <li><strong>who:</strong> Dùng cho người (làm chủ ngữ).</li>
+                <li><strong>whom:</strong> Dùng cho người (làm tân ngữ, trang trọng).</li>
+                <li><strong>which:</strong> Dùng cho vật, sự việc.</li>
+                <li><strong>that:</strong> Dùng cho cả người và vật (trong mệnh đề xác định).</li>
+                <li><strong>whose:</strong> Chỉ sở hữu (của ai, của cái gì).</li>
+                <li><strong>where:</strong> Dùng cho nơi chốn.</li>
+                <li><strong>when:</strong> Dùng cho thời gian.</li>
+                <li><strong>why:</strong> Dùng cho lý do (thường sau "reason").</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Task 1: Vocabulary Matching -->
+    <div class="exercise-card" id="card-t1">
+        <div class="exercise-title">Task 1: Vocabulary Matching – Match the word to its meaning</div>
+        <div class="instructions">Match the vocabulary word on the left with its definition on the right by entering the correct letter (A-K) in the box.</div>
+
+        <div class="matching-grid">
+            <div id="vocab-t1"></div>
+            <div class="definitions-column">
+                <div id="def-t1"></div>
+            </div>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Task 2: Gap-fill -->
+    <div class="exercise-card" id="card-t2">
+        <div class="exercise-title">Task 2: Filling in the gaps – Complete the sentences</div>
+        <div class="instructions">Complete each sentence by dragging and dropping the correct word from the word bank or typing it in the gap.</div>
+
+        <div class="sticky-bank" id="bank-t2"></div>
+
+        <div id="questions-t2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Task 3: Relative Pronouns – Choose the correct word -->
+    <div class="exercise-card" id="card-t3">
+        <div class="exercise-title">Task 3: Relative Pronouns – Choose the correct word</div>
+        <div class="instructions">Choose the correct relative pronoun to complete each sentence. (who, which, that, whose, where, when, why)</div>
+        <div id="questions-t3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Task 4 & 5: Rewrite sentences -->
+    <div class="exercise-card" id="card-t4">
+        <div class="exercise-title">Task 4 & 5: Rewrite the sentences using relative pronouns</div>
+        <div class="instructions">Combine the two sentences into one using an appropriate relative pronoun (who, which, that, whose, where).</div>
+        <div id="questions-t4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('t4')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL (ENTER)</button>
+
+<script>
+// TASK 1 DATA - Definitions without letters (code adds them automatically)
+const t1_data = [
+    { v: "1. off the beaten path", letter: "F", def: "not popular or not often visited", hint: "'Off the beaten path' chỉ những nơi không nổi tiếng, ít người biết đến. 'Beaten path' = con đường mòn, lối mòn du lịch.", ipa: "/ɒf ðə ˈbiːtn pɑːθ/" },
+    { v: "2. dare", letter: "H", def: "to do something risky or brave", hint: "'Dare' = dám làm gì đó. Cấu trúc: dare + (to) do something. Thường dùng trong câu phủ định: didn't dare (to) speak.", ipa: "/deər/" },
+    { v: "3. inhabitant", letter: "A", def: "a person who lives in a particular place", hint: "'Inhabitant' = cư dân. Liên quan: 'habitat' (môi trường sống), 'inhabit' (sống ở).", ipa: "/ɪnˈhæbɪtənt/" },
+    { v: "4. curse (v)", letter: "B", def: "to say bad words to someone or wish bad things to happen", hint: "'Curse' = chửi rủa, nguyền rủa. 'Under his breath' = lẩm bẩm → thường đi kèm với chửi thề.", ipa: "/kɜːrs/" },
+    { v: "5. wander", letter: "E", def: "to move around without a clear plan", hint: "'Wander' = đi lang thang. Dễ nhầm với 'wonder' (tự hỏi).", ipa: "/ˈwɒndər/" },
+    { v: "6. authority", letter: "D", def: "a person or group that has official power", hint: "'Authority' = chính quyền, nhà chức trách. 'Local authority' = chính quyền địa phương.", ipa: "/ɔːˈθɒrəti/" },
+    { v: "7. prohibit", letter: "G", def: "to stop something from being allowed", hint: "'Prohibit' = cấm. Cấu trúc: prohibit someone FROM doing something. Đồng nghĩa: forbid, ban.", ipa: "/prəˈhɪbɪt/" },
+    { v: "8. not someone’s cup of tea", letter: "K", def: "not something that someone likes or enjoys", hint: "Thành ngữ: 'not my cup of tea' = không phải sở thích của tôi. Dùng để nói về sở thích cá nhân.", ipa: "/nɒt ˈsʌmwʌnz kʌp əv tiː/" },
+    { v: "9. absence", letter: "J", def: "the state of not being present", hint: "'Absence' = sự vắng mặt. Tính từ: 'absent' (vắng mặt). Trái nghĩa: 'presence'.", ipa: "/ˈæbsəns/" },
+    { v: "10. make someone’s head spin", letter: "I", def: "to make someone feel confused or shocked", hint: "Thành ngữ: 'make someone's head spin' = làm ai đó hoa mắt, chóng mặt. Thường dùng khi có quá nhiều thông tin hoặc tiếng ồn.", ipa: "/meɪk ˈsʌmwʌnz hed spɪn/" },
+    { v: "11. baffled", letter: "C", def: "completely confused or unable to understand", hint: "'Baffled' = bối rối, hoang mang. Đồng nghĩa: perplexed, bewildered. 'Complicated instructions' = hướng dẫn phức tạp gây baffled.", ipa: "/ˈbæfld/" }
+];
+
+// TASK 2 DATA
+const t2_data = [
+    { q: "1. The small village is ______, so very few tourists know about it.", ans: "off the beaten path", wordBankIndex: 0, hint: "'Very few tourists know' → ít du khách biết → nơi đó không nổi tiếng, ít người lui tới = off the beaten path." },
+    { q: "2. Only one ______ still remembers how the town looked fifty years ago.", ans: "inhabitant", wordBankIndex: 2, hint: "'Only one' (chỉ một) và động từ 'remembers' → chỉ một người nhớ → inhabitant (cư dân)." },
+    { q: "3. The child didn’t ______ to speak when the teacher looked angry.", ans: "dare", wordBankIndex: 1, hint: "'Didn't ______ to speak' → không dám nói. 'Teacher looked angry' → giáo viên giận → không dám = didn't dare." },
+    { q: "4. The local ______ decided that cars were not allowed in the old street.", ans: "authority", wordBankIndex: 5, hint: "'Decided that cars were not allowed' → quyết định cấm xe → đây là quyết định của chính quyền = local authority." },
+    { q: "5. His sudden ______ from work worried his manager.", ans: "absence", wordBankIndex: 8, hint: "'Sudden ______ from work' → đột ngột vắng mặt ở chỗ làm → absence. 'Worried his manager' → quản lý lo lắng vì vắng mặt." },
+    { q: "6. The guide warned us not to ______ too far from the main road.", ans: "wander", wordBankIndex: 4, hint: "'Warned us not to' → cảnh báo không được. 'Too far from the main road' → đi quá xa đường chính → wander (đi lang thang, đi lạc)." },
+    { q: "7. The rules clearly ______ students from using phones during exams.", ans: "prohibit", wordBankIndex: 6, hint: "'Rules' (nội quy) có chức năng 'cấm' học sinh dùng điện thoại. Cấu trúc: prohibit someone FROM doing something." },
+    { q: "8. She was completely ______ by the complicated instructions.", ans: "baffled", wordBankIndex: 10, hint: "'Complicated instructions' (hướng dẫn phức tạp) làm cô ấy 'bối rối, hoang mang' = baffled." },
+    { q: "9. The loud noise made her ______, and she had to sit down.", ans: "head spin", wordBankIndex: 9, hint: "'Made her ______' → làm cô ấy ... 'Loud noise' (tiếng ồn lớn) → làm cô ấy chóng mặt, hoa mắt = made her head spin." },
+    { q: "10. Horror movies are ______, so I usually avoid them.", ans: "not my cup of tea", wordBankIndex: 7, hint: "'I usually avoid them' → tôi thường tránh → vì tôi không thích. 'Not my cup of tea' = không phải sở thích của tôi." },
+    { q: "11. He began to ______ under his breath when the computer stopped working.", ans: "curse", wordBankIndex: 3, hint: "'Under his breath' (lẩm bẩm). 'Computer stopped working' → máy tính hỏng → người ta thường chửi thề = curse." }
+];
+
+const t2_wordBank = [
+    "off the beaten path", "dare", "inhabitant", "curse", "wander",
+    "authority", "prohibit", "not my cup of tea", "absence", "head spin", "baffled"
+];
+
+// TASK 3 DATA
+const t3_data = [
+    { q: "1. This is the teacher ______ explains the lesson very clearly.", ans: "who|that", hint: "Giáo viên (teacher) là người, làm chủ ngữ → dùng who hoặc that." },
+    { q: "2. I remember the day ______ we first met at secondary school.", ans: "when", hint: "The day (ngày) chỉ thời gian → dùng when." },
+    { q: "3. She showed me the house ______ she grew up as a child.", ans: "where", hint: "The house (ngôi nhà) là nơi chốn → dùng where." },
+    { q: "4. That is the reason ______ he left the company last year.", ans: "why|that", hint: "The reason (lý do) → dùng why hoặc that." },
+    { q: "5. That is the café ______ we usually meet after class.", ans: "where", hint: "The café (quán cà phê) là nơi chốn → dùng where." },
+    { q: "6. The boy ______ bike was stolen reported it to the police.", ans: "whose", hint: "Bike của the boy → quan hệ sở hữu → dùng whose." },
+    { q: "7. She is the only student ______ knows the answer to this question.", ans: "who|that", hint: "The only student (người) → dùng who hoặc that." },
+    { q: "8. We visited a small village ______ very few tourists ever go.", ans: "where", hint: "A small village (ngôi làng) là nơi chốn → dùng where." },
+    { q: "9. Everything ______ happens in this room is recorded by cameras.", ans: "that", hint: "Sau đại từ bất định (everything) chỉ dùng that, không dùng which." },
+    { q: "10. She is the best player ______ has ever played for this team.", ans: "that", hint: "Sau so sánh nhất (the best) thường dùng that." },
+    { q: "11. There is nothing ______ can stop him from trying again.", ans: "that", hint: "Sau đại từ bất định (nothing) chỉ dùng that." },
+    { q: "12. This is the first movie ______ made me cry in the cinema.", ans: "that", hint: "Sau the first (thứ tự) thường dùng that." }
+];
+
+// TASK 4 DATA - Answers with capital letters
+const t4_data = [
+    { q: "1. That’s the house. We lived there 10 years ago.", ans: "That's the house where we lived 10 years ago|That's the house that we lived in 10 years ago", hint: "Dùng 'where' cho nơi chốn. Hoặc dùng 'that' + giới từ 'in'." },
+    { q: "2. I met John. He knows my uncle.", ans: "I met John who knows my uncle|I met John that knows my uncle", hint: "Nối bằng 'who' hoặc 'that' cho người (John)." },
+    { q: "3. This is the CD. It contains the group’s greatest hits.", ans: "This is the CD which contains the group's greatest hits|This is the CD that contains the group's greatest hits", hint: "Nối bằng 'which' hoặc 'that' cho vật (the CD)." },
+    { q: "4. That’s Jane. She is my sister’s best friend.", ans: "That's Jane who is my sister's best friend|That's Jane that is my sister's best friend", hint: "Nối bằng 'who' hoặc 'that' cho người (Jane)." },
+    { q: "5. Rajasthan is a state. Most of the population is Hindu there.", ans: "Rajasthan is a state where most of the population is Hindu", hint: "Dùng 'where' cho nơi chốn (in Rajasthan)." },
+    { q: "6. They conduct guided tours. They last about thirty minutes.", ans: "They conduct guided tours which last about thirty minutes|They conduct guided tours that last about thirty minutes", hint: "Nối bằng 'which' hoặc 'that' cho vật (guided tours)." },
+    { q: "7. This is the student. His project won first prize.", ans: "This is the student whose project won first prize", hint: "Dùng 'whose' cho quan hệ sở hữu (project của student)." },
+    { q: "8. I visited a museum. It was built over a hundred years ago.", ans: "I visited a museum which was built over a hundred years ago|I visited a museum that was built over a hundred years ago", hint: "Nối bằng 'which' hoặc 'that' cho vật (a museum)." },
+    { q: "9. She is the only person. She understands the problem.", ans: "She is the only person who understands the problem|She is the only person that understands the problem", hint: "Nối bằng 'who' hoặc 'that' cho người." },
+    { q: "10. We stayed at a hotel. The rooms were very small.", ans: "We stayed at a hotel whose rooms were very small|We stayed at a hotel where the rooms were very small", hint: "Dùng 'whose' (phòng của khách sạn) hoặc 'where' (ở khách sạn, các phòng thì nhỏ)." }
+];
+
+let currentActiveIPA = null;
+let answerStates = new Map();
+let wordUsageCount = {};
+
+function renderMatching(id, data) {
+    const v = document.getElementById(`vocab-${id}`);
+    const d = document.getElementById(`def-${id}`);
+    v.innerHTML = '';
+    d.innerHTML = '';
+
+    // Show definitions in order A, B, C...
+    const sortedByLetter = [...data].sort((a, b) => a.letter.localeCompare(b.letter));
+    sortedByLetter.forEach(item => {
+        d.innerHTML += `<div class="definition-item"><span class="definition-letter">${item.letter}.</span><span class="definition-text">${item.def}</span></div>`;
+    });
+
+    data.forEach((item, i) => {
+        const qid = `${id}-q${i}`;
+        v.innerHTML += `
+            <div class="vocab-item">
+                <span class="vocab-text">${item.v}</span>
+                <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show answer">👁️</button>
+                    <button class="btn-small speaker-btn" onclick="toggleIPA('${qid}')" title="Pronunciation">🔊</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" title="Hint">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+                <div class="ipa-box" id="${qid}-ipa"><span class="ipa-label">IPA:</span><span class="ipa-text">${item.ipa}</span></div>
+            </div>`;
+    });
+}
+
+function renderGapFillWithWordBank(id, data, wordBank) {
+    const container = document.getElementById(`questions-${id}`);
+    const bankContainer = document.getElementById(`bank-${id}`);
+    container.innerHTML = '';
+    bankContainer.innerHTML = '';
+
+    wordUsageCount[id] = {};
+    wordBank.forEach(word => wordUsageCount[id][word] = 0);
+
+    wordBank.forEach((word, i) => {
+        const wordId = `${id}-word-${i}`;
+        bankContainer.innerHTML += `<div class="word-item" id="${wordId}" data-word="${word}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${wordId}')">${word.toLowerCase()}</div>`;
+    });
+
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        let sentence = it.q;
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        const numberHtml = numberMatch ? `<span class="existing-number">${numberMatch[1]}.</span>` : `<span class="exercise-number">${i+1}.</span>`;
+        sentence = sentence.replace(/^\d+\.\s+/, '');
+        const parts = sentence.split('______');
+
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml}
+                ${parts[0]}
+                <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this); updateWordBank('${id}')" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)" onclick="this.select()">
+                ${parts[1] || ''}
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+    });
+    addWordBankEventListeners(id);
+}
+
+function renderReportedSpeech(id, data) {
+    const container = document.getElementById(`questions-${id}`);
+    container.innerHTML = '';
+    data.forEach((it, i) => {
+        const qid = `${id}-q${i}`;
+        let sentence = it.q;
+        const numberMatch = sentence.match(/^(\d+)\.\s+/);
+        const numberHtml = numberMatch ? `<span class="existing-number">${numberMatch[1]}.</span>` : `<span class="exercise-number">${i+1}.</span>`;
+        sentence = sentence.replace(/^\d+\.\s+/, '');
+
+        container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml}
+                ${sentence}
+                <input type="text" class="grammar-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+            </div>`;
+    });
+}
+
+function adjustWidth(el) {
+    let baseWidth = el.classList.contains('letter-input') ? 45 : (el.classList.contains('word-input') ? 120 : 150);
+    let charWidth = (el.classList.contains('word-input') || el.classList.contains('grammar-input')) ? 9 : 10;
+    let maxWidth = el.classList.contains('letter-input') ? 80 : (el.classList.contains('word-input') ? 400 : 500);
+    el.style.width = Math.min(Math.max(el.value.length * charWidth + 20, baseWidth), maxWidth) + "px";
+}
+
+function toggleHint(id) {
+    const h = document.getElementById(id + '-hint');
+    const btn = document.getElementById(id + '-info');
+    if (h) {
+        h.style.display = h.style.display === 'block' ? 'none' : 'block';
+        if (btn) btn.classList.toggle('active', h.style.display === 'block');
+    }
+}
+
+function toggleIPA(id) {
+    const ipaBox = document.getElementById(id + '-ipa');
+    const speakerBtn = document.querySelector(`button[onclick="toggleIPA('${id}')"]`);
+    if (currentActiveIPA === ipaBox) {
+        ipaBox.style.display = 'none';
+        currentActiveIPA = null;
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        return;
+    }
+    if (currentActiveIPA) {
+        const prevBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (prevBtn) prevBtn.classList.remove('active');
+        currentActiveIPA.style.display = 'none';
+    }
+    if (ipaBox) {
+        ipaBox.style.display = 'block';
+        currentActiveIPA = ipaBox;
+        if (speakerBtn) speakerBtn.classList.add('active');
+    }
+}
+
+function toggleSingleAns(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const ans = el.dataset.ans;
+    const eyeBtn = document.getElementById(id + '-eye');
+    const stateKey = `${id}-state`;
+    const isShown = answerStates.get(stateKey) || false;
+
+    if (isShown) {
+        el.value = "";
+        el.classList.remove('correct', 'incorrect-marked', 'long-answer');
+        adjustWidth(el);
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        answerStates.set(stateKey, false);
+    } else if (ans) {
+        const firstAns = ans.split('|')[0];
+        el.value = firstAns;
+        el.classList.add('correct');
+        el.classList.remove('incorrect-marked');
+        if (firstAns.length > 30) el.classList.add('long-answer');
+        adjustWidth(el);
+        if (eyeBtn) eyeBtn.classList.add('active');
+        answerStates.set(stateKey, true);
+    }
+}
+
+function showAnswers(prefix) {
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input') {
+            const ans = el.dataset.ans;
+            const eyeBtn = document.getElementById(el.id + '-eye');
+            if (ans) {
+                const firstAns = ans.split('|')[0];
+                el.value = firstAns;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+                if (firstAns.length > 30) el.classList.add('long-answer');
+                adjustWidth(el);
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(`${el.id}-state`, true);
+            }
+        }
+    });
+}
+
+function resetSection(prefix) {
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
+        if (i.tagName === 'INPUT') {
+            i.value = "";
+            i.classList.remove('correct', 'incorrect-marked', 'long-answer');
+            adjustWidth(i);
+        }
+        const hBox = document.getElementById(i.id + '-hint');
+        if (hBox) hBox.style.display = 'none';
+        const ipaBox = document.getElementById(i.id + '-ipa');
+        if (ipaBox) ipaBox.style.display = 'none';
+    });
+    document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
+        if (btn.id.includes(prefix)) btn.classList.remove('active');
+    });
+    if (currentActiveIPA) {
+        document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`)?.classList.remove('active');
+        currentActiveIPA = null;
+    }
+    for (const [key] of answerStates.entries()) {
+        if (key.startsWith(`${prefix}-`)) answerStates.delete(key);
+    }
+    if (prefix === 't2') {
+        document.querySelectorAll('#bank-t2 .word-item').forEach(item => {
+            item.classList.remove('used');
+            item.style.display = 'flex';
+        });
+        if (wordUsageCount['t2']) Object.keys(wordUsageCount['t2']).forEach(word => wordUsageCount['t2'][word] = 0);
+    }
+}
+
+function normalizeAnswer(answer) {
+    return answer.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, '').replace(/[‘’'"]/g, '');
+}
+
+function validateMultipleAnswers(userAnswer, correctAnswers) {
+    const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
+    const normalizedUser = normalizeAnswer(userAnswer);
+    return answers.some(ans => ans === normalizedUser);
+}
+
+function checkAll() {
+    document.querySelectorAll('[data-type="input"]').forEach(el => {
+        const correctAnswers = el.dataset.ans;
+        const userAnswer = el.value;
+        el.classList.remove('correct', 'incorrect-marked');
+        if (!userAnswer.trim()) return;
+        if (validateMultipleAnswers(userAnswer, correctAnswers)) {
+            el.classList.add('correct');
+        } else {
+            el.classList.add('incorrect-marked');
+        }
+    });
+}
+
+function addWordBankEventListeners(id) {
+    document.querySelectorAll(`#bank-${id} .word-item`).forEach(item => {
+        item.addEventListener('click', () => selectWordFromBank(item.id));
+        item.addEventListener('dragstart', dragWord);
+    });
+    document.querySelectorAll(`#questions-${id} input.word-input`).forEach(input => {
+        input.addEventListener('dragover', allowDrop);
+        input.addEventListener('drop', (e) => dropWord(e, input.id));
+    });
+}
+
+function dragWord(event) {
+    event.dataTransfer.setData("text/plain", event.target.dataset.word);
+    event.dataTransfer.setData("wordId", event.target.id);
+}
+
+function allowDrop(event) { event.preventDefault(); }
+
+function dropWord(event, inputId) {
+    event.preventDefault();
+    const word = event.dataTransfer.getData("text/plain");
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = word;
+        adjustWidth(input);
+        updateWordBankUsage(word, inputId.split('-')[0]);
+    }
+}
+
+function selectWordFromBank(wordId) {
+    const wordItem = document.getElementById(wordId);
+    if (!wordItem) return;
+    const word = wordItem.dataset.word;
+    const taskId = wordId.split('-')[1];
+    const inputs = document.querySelectorAll(`#questions-t${taskId} input.word-input`);
+    for (const input of inputs) {
+        if (!input.value.trim()) {
+            input.value = word;
+            adjustWidth(input);
+            updateWordBankUsage(word, `t${taskId}`);
+            return;
+        }
+    }
+    alert('All gaps are filled. You can click on a gap to replace its content.');
+}
+
+function updateWordBankUsage(word, taskId) {
+    if (!wordUsageCount[taskId]) wordUsageCount[taskId] = {};
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    let count = 0;
+    inputs.forEach(input => { if (normalizeAnswer(input.value) === normalizeAnswer(word)) count++; });
+    wordUsageCount[taskId][word] = count;
+    updateWordBankDisplay(taskId);
+}
+
+function updateWordBankDisplay(taskId) {
+    document.querySelectorAll(`#bank-${taskId} .word-item`).forEach(item => {
+        item.classList.toggle('used', (wordUsageCount[taskId][item.dataset.word] || 0) > 0);
+    });
+}
+
+function updateWordBank(taskId) {
+    if (wordUsageCount[taskId]) Object.keys(wordUsageCount[taskId]).forEach(word => wordUsageCount[taskId][word] = 0);
+    document.querySelectorAll(`#questions-${taskId} input.word-input`).forEach(input => {
+        const word = input.value.trim();
+        if (word) {
+            const found = Array.from(document.querySelectorAll(`#bank-${taskId} .word-item`)).find(item => normalizeAnswer(item.dataset.word) === normalizeAnswer(word));
+            if (found && wordUsageCount[taskId][found.dataset.word] !== undefined) wordUsageCount[taskId][found.dataset.word]++;
+        }
+    });
+    updateWordBankDisplay(taskId);
+}
+
+window.onload = () => {
+    renderMatching('t1', t1_data);
+    renderGapFillWithWordBank('t2', t2_data, t2_wordBank);
+    renderReportedSpeech('t3', t3_data);
+    renderReportedSpeech('t4', t4_data);
+};
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+</script>
+</body>
+</html>
