@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access 4 - Review Module 9</title>
+    <style>
+        :root {
+            --primary: #2980b9; 
+            --primary-dark: #1c5982; 
+            --success: #27ae60;
+            --error: #e74c3c; 
+            --warning: #f1c40f; 
+            --bg: #f4f7f9;
+            --text: #2c3e50; 
+            --card: #ffffff;
+        }
+        body { 
+            font-family: 'Times New Roman', serif; 
+            font-size: 13pt; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px 20px 150px 20px;
+            line-height: 1.6; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .sticky-bank { 
+            position: sticky; top: 15px; z-index: 100;
+            background-color: #fff; padding: 15px; border-radius: 10px; 
+            margin-bottom: 25px; border: 2px solid var(--primary); 
+            display: flex; flex-wrap: wrap; gap: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .word-item { 
+            background: #eef2f7; border: 1px solid var(--primary); 
+            color: var(--primary-dark); padding: 6px 12px; border-radius: 5px; 
+            cursor: grab; user-select: none; transition: 0.2s; 
+            font-size: 0.9em; font-weight: 500;
+        }
+        .word-item.used { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+        .word-item:hover:not(.used) { background: var(--primary); color: white; }
+
+        .exercise-card { 
+            background: var(--card); border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 25px; 
+            margin-bottom: 30px; 
+        }
+        .exercise-title { 
+            font-weight: bold; font-size: 1.25em; margin-bottom: 18px; 
+            color: var(--primary-dark); border-bottom: 2px solid #eee; 
+            padding-bottom: 8px; 
+        }
+        .question-row { 
+            margin-bottom: 18px; line-height: 2.2; 
+            border-bottom: 1px solid #f9f9f9; padding-bottom: 10px; 
+            position: relative; 
+        }
+        input[type="text"] { 
+            border: none; border-bottom: 2px solid #bdc3c7; 
+            background: #fafafa; padding: 2px 8px; font-size: 1em; 
+            transition: 0.2s; outline: none;
+            min-width: 60px; border-radius: 4px 4px 0 0; 
+            text-align: center; font-family: 'Times New Roman';
+            box-sizing: border-box;
+        }
+        input.letter-input { width: 45px; min-width: 45px; max-width: 80px; text-transform: uppercase; }
+        input.word-input { min-width: 120px; max-width: 400px; text-align: left; }
+        input.correct { border-bottom-color: var(--success) !important; background-color: #e8f8f5 !important; color: #1e8449 !important; }
+        input.incorrect-marked { border-bottom-color: var(--error) !important; background-color: #fdedec !important; }
+
+        .row-btns { display: inline-flex; gap: 5px; vertical-align: middle; margin-left: 10px; }
+        .btn-small { 
+            background: #eee; border: 1px solid #ccc; border-radius: 4px; 
+            width: 28px; height: 28px; cursor: pointer; 
+            display: inline-flex; align-items: center; justify-content: center; 
+            font-size: 14px; transition: 0.2s;
+        }
+        .btn-small:hover { background: #ddd; }
+        .btn-small.active { background: #3498db; color: white; border-color: #2980b9; }
+        .info-btn { 
+            background: #95a5a6; color: white; border: none; border-radius: 50%; 
+            width: 20px; height: 20px; font-size: 11px; cursor: pointer; 
+            display: inline-flex; align-items: center; justify-content: center; 
+            transition: 0.2s;
+        }
+        .info-btn:hover { background: #7f8c8d; }
+        .info-btn.active { background: #5d6d6e; }
+        
+        .hint-box { 
+            display: none; margin-top: 8px; padding: 10px; 
+            background-color: #fef9e7; border-left: 4px solid var(--warning); 
+            color: #7d6608; border-radius: 4px; font-size: 0.9em; 
+            line-height: 1.6;
+        }
+        .hint-detail { margin-bottom: 8px; border-bottom: 1px dashed #f1c40f; padding-bottom: 5px; }
+        .key-word { display: inline-block; background: #e8f4fd; border: 1px solid #3498db; border-radius: 3px; padding: 2px 6px; margin: 2px 4px 2px 0; font-size: 0.9em; color: #1c5982; }
+        
+        .controls-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+        .btn { padding: 8px 20px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
+        .btn-reset { background: #95a5a6; color: white; }
+        .btn-show-all { background: var(--primary); color: white; }
+        
+        .check-all-btn { 
+            position: fixed; right: 45px; bottom: 30px; 
+            background-color: var(--success); color: white; 
+            padding: 15px 30px; border-radius: 50px; cursor: pointer; 
+            z-index: 10000; font-weight: bold; border: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        }
+        
+        /* READING split panel */
+        .reading-container {
+            display: flex;
+            margin: 20px 0;
+            position: relative;
+            min-height: 600px;
+            height: 700px;
+        }
+        .text-panel, .questions-panel {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+            overflow-y: auto;
+            position: relative;
+            height: 100%;
+            flex: 1;
+        }
+        .text-panel { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .questions-panel { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .text-panel h3, .questions-panel h3 { margin-top: 0; color: var(--primary-dark); text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .reading-text { line-height: 1.8; text-align: justify; }
+        .reading-gap { display: inline-block; width: 30px; text-align: center; font-weight: bold; color: var(--primary); border-bottom: 2px solid var(--primary); margin: 0 2px; }
+        
+        .resizer { position: relative; width: 10px; background-color: #ddd; cursor: col-resize; z-index: 10; flex-shrink: 0; margin: 0; }
+        .resizer:hover { background-color: var(--primary); }
+        .resizer::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 40px; background-color: #95a5a6; border-radius: 1px; }
+        
+        /* Simple MCQ style */
+        .option-container {
+            display: inline-flex;
+            gap: 10px;
+            margin-left: 10px;
+            margin-right: 10px;
+            flex-wrap: wrap;
+        }
+        .option-btn {
+            background: #eef2f7;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            padding: 6px 15px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+            min-width: 80px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .option-btn:hover {
+            background: #dfe6f0;
+            border-color: #95a5a6;
+        }
+        .option-btn.selected {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        .option-btn.correct-option {
+            background: #27ae60;
+            color: white;
+            border-color: #219653;
+        }
+        .option-btn.incorrect-option {
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+        
+        @media (max-width: 768px) {
+            .check-all-btn { right: 15px; bottom: 20px; padding: 12px 20px; font-size: 0.9em; }
+            body { padding: 15px 15px 120px 15px; }
+            .reading-container { flex-direction: column; height: 1000px; }
+            .text-panel, .questions-panel { width: 100% !important; height: 50% !important; margin: 0; border-radius: 10px; margin-bottom: 10px; }
+            .resizer { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 style="text-align: center; color: var(--primary-dark);">Access 4 - Review Module 9</h1>
+
+    <!-- Exercise 1: Crossword with letter hints -->
+    <div class="exercise-card">
+        <div class="exercise-title">1. Read the descriptions and write the word (the first letter and number of letters are given).</div>
+        <div id="questions-ex1"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 2: Fill in: barriers, lost, quench, dawn, reveal, set, eruption, against -->
+    <div class="exercise-card">
+        <div class="exercise-title">2. Fill in: barriers, lost, quench, dawn, reveal, set, eruption, against.</div>
+        <div class="sticky-bank" id="bank-ex2"></div>
+        <div id="questions-ex2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 3: Choose the correct word (simple MCQ) -->
+    <div class="exercise-card">
+        <div class="exercise-title">3. Choose the correct word.</div>
+        <div id="questions-ex3"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 4: Reported speech (direct) -->
+    <div class="exercise-card">
+        <div class="exercise-title">4. Turn the following into reported speech.</div>
+        <div id="questions-ex4"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 5: Reported speech with verbs -->
+    <div class="exercise-card">
+        <div class="exercise-title">5. Rewrite in reported speech using the verbs in parentheses.</div>
+        <div id="questions-ex5"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 6: Prepositions (to/on/from/after) -->
+    <div class="exercise-card">
+        <div class="exercise-title">6. Fill in: to, on, from, after.</div>
+        <div id="questions-ex6"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 7: Grammar multiple choice (simple MCQ) -->
+    <div class="exercise-card">
+        <div class="exercise-title">7. Circle the correct item.</div>
+        <div id="questions-ex7"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex7')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex7')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 8: Reading cloze (The heroic sacrifice) - 2 panel + simple MCQ -->
+    <div class="exercise-card">
+        <div class="exercise-title">8. Read the text. For each gap choose the correct answer (A, B, C or D).</div>
+        <div class="reading-container" id="reading-ex8">
+            <div class="text-panel" id="text-panel-ex8">
+                <h3>The heroic sacrifice of a small English village</h3>
+                <div class="reading-text">
+                    <p>The summer of 1665 was a very difficult <strong>0</strong> <span class="reading-gap" id="gap0">(0)</span> for London. A terrible disease was killing thousands of people <strong>1</strong> <span class="reading-gap" id="gap1">(1)</span> week. <strong>2</strong> <span class="reading-gap" id="gap2">(2)</span> had a cure. It was called the Black Death because it caused black lumps on people’s skin and nearly always ended <strong>3</strong> <span class="reading-gap" id="gap3">(3)</span> death. The mayor finally shut the city gates <strong>4</strong> <span class="reading-gap" id="gap4">(4)</span> stop the horror from spreading.</p>
+                    <p>The countryside was <strong>5</strong> <span class="reading-gap" id="gap5">(5)</span> of the plague until it broke <strong>6</strong> <span class="reading-gap" id="gap6">(6)</span> in the unfortunate rural village of Eyam. A shipment of old clothes <strong>7</strong> <span class="reading-gap" id="gap7">(7)</span> the plague over from London. Although terrified, the 300 villagers bravely agreed that the only <strong>8</strong> <span class="reading-gap" id="gap8">(8)</span> to save the surrounding area was for them all to remain in the village.</p>
+                    <p>The <strong>9</strong> <span class="reading-gap" id="gap9">(9)</span> of villagers who survived was 30. Their amazing heroism, however, saved <strong>10</strong> <span class="reading-gap" id="gap10">(10)</span> thousands of lives and it is solemnly remembered every year on Plague Sunday.</p>
+                </div>
+            </div>
+            <div class="resizer" id="resizer-ex8"></div>
+            <div class="questions-panel" id="questions-panel-ex8">
+                <h3>Questions</h3>
+                <div id="questions-ex8"></div>
+            </div>
+        </div>
+        <div class="controls-row" style="margin-top: 20px;">
+            <button class="btn btn-show-all" onclick="showAnswers('ex8')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex8')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 9: Word formation (nouns from adjectives) -->
+    <div class="exercise-card">
+        <div class="exercise-title">9. Fill in with a noun derived from the word in capitals.</div>
+        <div id="questions-ex9"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex9')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex9')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 10: Phrasal verbs: break -->
+    <div class="exercise-card">
+        <div class="exercise-title">10. Fill in the blanks with the correct particle: into, off, out, up, down, through.</div>
+        <div class="sticky-bank" id="bank-ex10"></div>
+        <div id="questions-ex10"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex10')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex10')">Reset</button>
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+    // ==================== DATA MODULE 9 ====================
+    const ex1_data = [
+        { clue: "a violent wind with a circular movement", hint: "t_ _ _ _ _ _", ans: "tornado" },
+        { clue: "when oil has come out of a ship", hint: "o_ _   s_ _ _ _ _", ans: "oil spills" },
+        { clue: "a tropical storm with strong winds and rain", hint: "h_ _ _ _ _ _ _", ans: "hurricane" },
+        { clue: "sudden violent movements of the Earth’s surface", hint: "e_ _ _ _ _ _ _ _ _", ans: "earthquakes" },
+        { clue: "a volcano throwing up smoke, fire, and molten rock", hint: "e_ _ _ _ _ _ _", ans: "eruption" },
+        { clue: "ice, snow, or rocks falling down the side of a mountain", hint: "a_ _ _ _ _ _ _", ans: "avalanche" },
+        { clue: "a long period with no rain and a shortage of water", hint: "d_ _ _ _ _ _", ans: "drought" },
+        { clue: "when something explodes", hint: "e_ _ _ _ _ _ _ _", ans: "explosion" }
+    ];
+
+    const ex2_wordBank = ["barriers", "lost", "quench", "dawn", "reveal", "set", "eruption", "against"];
+    const ex2_data = [
+        { q: "The teacher has ............... high standards for the project.", ans: "set", hint: "<div class='hint-detail'><span class='key-word'>set standards</span>: đặt ra tiêu chuẩn</div><div class='hint-detail'>'Set' có nghĩa là thiết lập, đặt ra. 'Set high standards' = đề ra tiêu chuẩn cao.</div>" },
+        { q: "Mike tried hard not to ............... her secret.", ans: "reveal", hint: "<div class='hint-detail'><span class='key-word'>reveal a secret</span>: tiết lộ bí mật</div><div class='hint-detail'>'Reveal' = làm lộ ra điều gì đó từng được giấu kín.</div>" },
+        { q: "The massive volcanic ............... caused a great deal of damage to the town.", ans: "eruption", hint: "<div class='hint-detail'><span class='key-word'>volcanic eruption</span>: núi lửa phun trào</div><div class='hint-detail'>'Eruption' là danh từ của động từ 'erupt' (phun trào).</div>" },
+        { q: "After the long hike we stopped at a beautiful lake to ............... our thirst.", ans: "quench", hint: "<div class='hint-detail'><span class='key-word'>quench thirst</span>: giải khát</div><div class='hint-detail'>'Quench' có nghĩa là làm dịu cơn khát bằng cách uống nước.</div>" },
+        { q: "The children were so excited about going on a boat that they woke up at ............... .", ans: "dawn", hint: "<div class='hint-detail'><span class='key-word'>at dawn</span>: lúc bình minh</div><div class='hint-detail'>'Dawn' = thời điểm mặt trời mọc. Trẻ con thức dậy rất sớm vì háo hức.</div>" },
+        { q: "The team played fiercely and won the game ............... the odds.", ans: "against", hint: "<div class='hint-detail'><span class='key-word'>against the odds</span>: bất chấp khó khăn</div><div class='hint-detail'>Thành ngữ: làm điều gì đó thành công dù tình huống bất lợi.</div>" },
+        { q: "Getting the two opposing sides together will help break down the ............... between them.", ans: "barriers", hint: "<div class='hint-detail'><span class='key-word'>break down barriers</span>: phá bỏ rào cản</div><div class='hint-detail'>'Barriers' = rào cản (vật lý hoặc tinh thần).</div>" },
+        { q: "No one could remember the real reasons for the argument; they had been ............... in time.", ans: "lost", hint: "<div class='hint-detail'><span class='key-word'>lost in time</span>: bị lãng quên theo thời gian</div><div class='hint-detail'>Cụm từ chỉ những điều đã bị quên lãng vì đã quá lâu.</div>" }
+    ];
+
+    const ex3_data = [
+        { q: "Extreme climate change has <strong>disastrous/awful</strong> effects on the Earth.", ans: "disastrous", options: ["disastrous", "awful"], hint: "<div class='hint-detail'><span class='key-word'>disastrous</span> = thảm khốc, gây họa</div><div class='hint-detail'><span class='key-word'>awful</span> = tồi tệ (thường dùng trong ngữ cảnh thông thường). 'Disastrous' mạnh hơn và phù hợp với 'extreme climate change'.</div>" },
+        { q: "Mary looked absolutely <strong>stunned/stunning</strong> in her new dress.", ans: "stunning", options: ["stunned", "stunning"], hint: "<div class='hint-detail'><span class='key-word'>stunning</span> = lộng lẫy (tính chủ động)</div><div class='hint-detail'><span class='key-word'>stunned</span> = sững sờ (tính bị động). Mary trông rất lộng lẫy, vậy phải dùng stunning.</div>" },
+        { q: "The way the male ballet dancer lifted his partner was <strong>impressive/interesting</strong>.", ans: "impressive", options: ["impressive", "interesting"], hint: "<div class='hint-detail'><span class='key-word'>impressive</span> = ấn tượng, gây cảm xúc mạnh</div><div class='hint-detail'><span class='key-word'>interesting</span> = thú vị, thu hút sự chú ý. Hành động nâng bạn nhảy đẹp mắt thường được khen là 'impressive'.</div>" },
+        { q: "The news of the earthquake was rather <strong>cruel/shocking</strong>.", ans: "shocking", options: ["cruel", "shocking"], hint: "<div class='hint-detail'><span class='key-word'>shocking</span> = gây sốc, làm kinh ngạc</div><div class='hint-detail'><span class='key-word'>cruel</span> = độc ác (nói về tính cách con người). Tin tức về động đất gây sốc, không phải 'độc ác'.</div>" },
+        { q: "We visited some of the most <strong>interesting/horrifying</strong> sights in the city.", ans: "interesting", options: ["interesting", "horrifying"], hint: "<div class='hint-detail'><span class='key-word'>interesting sights</span>: cảnh đẹp thú vị</div><div class='hint-detail'><span class='key-word'>horrifying</span> = kinh dị. Trong ngữ cảnh tham quan thành phố, 'interesting' phù hợp hơn.</div>" },
+        { q: "It is <strong>believable/incredible</strong> that no one noticed the terrible mistakes he had made.", ans: "incredible", options: ["believable", "incredible"], hint: "<div class='hint-detail'><span class='key-word'>incredible</span> = khó tin</div><div class='hint-detail'><span class='key-word'>believable</span> = có thể tin được. Việc không ai phát hiện lỗi sai khủng khiếp thật khó tin.</div>" },
+        { q: "Sam scratched his head and had a <strong>puzzled/tired</strong> look on his face.", ans: "puzzled", options: ["puzzled", "tired"], hint: "<div class='hint-detail'><span class='key-word'>puzzled</span> = bối rối, không hiểu</div><div class='hint-detail'>Gãi đầu là hành động thường đi kèm với vẻ mặt 'bối rối' (puzzled), không phải 'mệt mỏi' (tired).</div>" },
+        { q: "This theory has been <strong>thickly/widely</strong> accepted by everyone.", ans: "widely", options: ["thickly", "widely"], hint: "<div class='hint-detail'><span class='key-word'>widely accepted</span>: được chấp nhận rộng rãi</div><div class='hint-detail'>'Widely' = rộng khắp; 'thickly' = dày (không dùng với 'accepted').</div>" }
+    ];
+
+    const ex4_data = [
+        { q: "“You must answer all the questions on the test,” he said.", ans: "He said I must answer all the questions on the test.|He said I had to answer all the questions on the test.", hint: "<div class='hint-detail'><span class='key-word'>must</span> trong câu tường thuật có thể giữ nguyên (mệnh lệnh) hoặc đổi thành <span class='key-word'>had to</span>.</div><div class='hint-detail'>Động từ 'said' không thay đổi. Tân ngữ 'I' (người nói) giữ nguyên.</div>" },
+        { q: "“The Nile is the longest river in the world,” said the teacher.", ans: "The teacher said the Nile was the longest river in the world.", hint: "<div class='hint-detail'>Lùi thì: <span class='key-word'>is → was</span>.</div><div class='hint-detail'>Sự thật hiển nhiên vẫn có thể giữ nguyên 'is', nhưng trong bài tập này yêu cầu lùi thì.</div>" },
+        { q: "“Please water the flowers while I’m gone,” Susan told to Terry.", ans: "Susan told Terry to water the flowers while she was gone.", hint: "<div class='hint-detail'>Cấu trúc: <span class='key-word'>told + O + to V</span>.</div><div class='hint-detail'><span class='key-word'>I → she</span> ; <span class='key-word'>I’m gone → she was gone</span> (lùi thì).</div>" },
+        { q: "“OK, we can go to the beach tomorrow,” said mom.", ans: "Mom said we could go to the beach the next day.", hint: "<div class='hint-detail'><span class='key-word'>can → could</span> ; <span class='key-word'>tomorrow → the next day</span>.</div><div class='hint-detail'>'we' giữ nguyên vì người nói vẫn bao gồm chính mình.</div>" },
+        { q: "“How long have you been studying here?” asked the student.", ans: "The student asked how long I had been studying there.", hint: "<div class='hint-detail'>Câu hỏi Wh- giữ từ để hỏi <span class='key-word'>how long</span>.</div><div class='hint-detail'>Lùi thì: <span class='key-word'>have you been → I had been</span> ; <span class='key-word'>here → there</span>.</div>" },
+        { q: "“I’m going to get my film developed tomorrow,” he said.", ans: "He said he was going to get his film developed the next day.", hint: "<div class='hint-detail'><span class='key-word'>I → he</span> ; <span class='key-word'>am going to → was going to</span> ; <span class='key-word'>tomorrow → the next day</span>.</div><div class='hint-detail'>'get my film developed' là causative (have something done) giữ nguyên.</div>" },
+        { q: "“The children didn’t like the food,” mother said.", ans: "Mother said the children had not liked the food.", hint: "<div class='hint-detail'>Lùi thì: <span class='key-word'>didn’t like → had not liked</span> (quá khứ đơn → quá khứ hoàn thành).</div>" },
+        { q: "“I have forgotten my car keys at home,” said dad.", ans: "Dad said he had forgotten his car keys at home.", hint: "<div class='hint-detail'>Lùi thì: <span class='key-word'>have forgotten → had forgotten</span> (hiện tại hoàn thành → quá khứ hoàn thành).</div><div class='hint-detail'>Đại từ: <span class='key-word'>I → he ; my → his</span>.</div>" }
+    ];
+
+    const ex5_data = [
+        { q: "“Don’t touch this!” David said to Sarah. (warn)", ans: "David warned Sarah not to touch it.", hint: "<div class='hint-detail'>Cấu trúc <span class='key-word'>warn + O + (not) to V</span>.</div><div class='hint-detail'>'Don’t touch' → 'not to touch'.</div>" },
+        { q: "“Stop talking or I’ll call the principal,” the teacher said to Philip. (threaten)", ans: "The teacher threatened Philip that she would call the principal if he didn't stop talking.|The teacher threatened to call the principal if Philip didn't stop talking.", hint: "<div class='hint-detail'><span class='key-word'>threaten to V</span> hoặc <span class='key-word'>threaten that + clause</span>.</div><div class='hint-detail'>Lùi thì: <span class='key-word'>I’ll → she would ; Stop talking → didn't stop</span>.</div>" },
+        { q: "“Would you like me to help you with your assignment?” Tony said. (offer)", ans: "Tony offered to help me with my assignment.", hint: "<div class='hint-detail'><span class='key-word'>offer to V</span> = đề nghị làm gì.</div><div class='hint-detail'>'Would you like me to help' → 'offered to help'.</div>" },
+        { q: "“Turn off the computer before you leave the room,” Tom said. (remind)", ans: "Tom reminded me to turn off the computer before I left the room.", hint: "<div class='hint-detail'><span class='key-word'>remind + O + to V</span> = nhắc nhở ai làm gì.</div><div class='hint-detail'>Lùi thì: <span class='key-word'>you leave → I left</span>.</div>" },
+        { q: "“You’re always coming in late,” Paul said to me. (complain)", ans: "Paul complained that I was always coming in late.", hint: "<div class='hint-detail'><span class='key-word'>complain that + clause</span> = phàn nàn rằng.</div><div class='hint-detail'>'You’re always coming' giữ nguyên thì tiếp diễn vì diễn tả thói quen lặp đi lặp lại.</div>" },
+        { q: "“I won’t be late for dinner,” Ann said. (promise)", ans: "Ann promised not to be late for dinner.|Ann promised that she wouldn't be late for dinner.", hint: "<div class='hint-detail'><span class='key-word'>promise (not) to V</span> hoặc <span class='key-word'>promise that + clause</span>.</div><div class='hint-detail'><span class='key-word'>won’t → wouldn't</span>.</div>" },
+        { q: "“Ok, we can continue with the project tomorrow,” Jonathan said. (agree)", ans: "Jonathan agreed to continue with the project the next day.", hint: "<div class='hint-detail'><span class='key-word'>agree to V</span> = đồng ý làm gì.</div><div class='hint-detail'><span class='key-word'>tomorrow → the next day</span>.</div>" },
+        { q: "“I’ll do the dishes,” Sue said. (insist)", ans: "Sue insisted on doing the dishes.", hint: "<div class='hint-detail'><span class='key-word'>insist on V-ing</span> = khăng khăng đòi làm gì.</div><div class='hint-detail'>'I’ll do' → 'insisted on doing'.</div>" }
+    ];
+
+    const ex6_data = [
+        { q: "They had been waiting ............... the platform for the train for over an hour.", ans: "on", hint: "<div class='hint-detail'><span class='key-word'>on the platform</span>: trên sân ga</div><div class='hint-detail'>Giới từ 'on' dùng với bề mặt (platform).</div>" },
+        { q: "Energy ............... the wind can be turned into electricity.", ans: "from", hint: "<div class='hint-detail'><span class='key-word'>from the wind</span>: từ gió</div><div class='hint-detail'>'From' chỉ nguồn gốc, xuất xứ.</div>" },
+        { q: "Last Christmas we went ............... vacation ............... Paris.", ans: "on, to", hint: "<div class='hint-detail'><span class='key-word'>on vacation</span>: đi nghỉ</div><div class='hint-detail'><span class='key-word'>to Paris</span>: đến Paris (chỉ hướng đến).</div>" },
+        { q: "The children fell asleep immediately ............... a lovely day at the beach.", ans: "after", hint: "<div class='hint-detail'><span class='key-word'>after a lovely day</span>: sau một ngày tuyệt vời</div><div class='hint-detail'>'After' chỉ thời gian: sau khi trải qua một ngày vui, bọn trẻ ngủ thiếp đi.</div>" }
+    ];
+
+    const ex7_data = [
+        { num: "1", q: "Michael makes ______ money than his brother.", options: ["A much", "B more", "C most"], ans: "B", hint: "<div class='hint-detail'><span class='key-word'>more + noun + than</span>: so sánh hơn với danh từ.</div><div class='hint-detail'>'Than' là dấu hiệu của so sánh hơn. 'Much' không phải so sánh, 'most' là so sánh nhất.</div>" },
+        { num: "2", q: "Susan ______ a picture while her brother ______ computer games.", options: ["A drew, played", "B draws, plays", "C was drawing, was playing"], ans: "C", hint: "<div class='hint-detail'><span class='key-word'>while + past continuous</span>: diễn tả hai hành động song song trong quá khứ.</div><div class='hint-detail'>Cấu trúc: was/were V-ing (cho cả hai vế).</div>" },
+        { num: "3", q: "______ any houses ______ by the hurricane?", options: ["A Did, destroy", "B Do, destroy", "C Were, destroyed"], ans: "C", hint: "<div class='hint-detail'>Câu hỏi bị động thì quá khứ đơn: <span class='key-word'>Were + houses + destroyed?</span></div><div class='hint-detail'>'Destroy' ở dạng quá khứ phân từ 'destroyed'.</div>" },
+        { num: "4", q: "A: When ______ the new library ______? B: Next month.", options: ["A is, opened", "B will, be opened", "C was, opened"], ans: "B", hint: "<div class='hint-detail'>Tương lai bị động với <span class='key-word'>next month</span>: will be opened.</div><div class='hint-detail'>'Will be + past participle' chỉ hành động sẽ được thực hiện trong tương lai.</div>" },
+        { num: "5", q: "This dress is so colorful! You have ______ nice dresses!", options: ["A so", "B such", "C too"], ans: "B", hint: "<div class='hint-detail'>Cấu trúc: <span class='key-word'>such + adjective + plural noun</span>.</div><div class='hint-detail'>'So' + adj (không có danh từ); 'too' mang nghĩa quá mức.</div>" },
+        { num: "6", q: "Mark ______ solve a difficult crossword puzzle without help yesterday.", options: ["A could", "B might", "C was able to"], ans: "C", hint: "<div class='hint-detail'><span class='key-word'>was able to</span> = đã có thể (khả năng cụ thể trong quá khứ).</div><div class='hint-detail'>'Could' thường dùng cho khả năng chung chung, không dùng cho một sự việc cụ thể đã xảy ra.</div>" },
+        { num: "7", q: "Mom ______ shopping. She will be back soon.", options: ["A has been", "B has gone", "C went"], ans: "B", hint: "<div class='hint-detail'><span class='key-word'>has gone</span>: đã đi và chưa về</div><div class='hint-detail'><span class='key-word'>has been</span>: đã đi và đã về. 'Went' chỉ sự kiện trong quá khứ không liên quan hiện tại.</div>" },
+        { num: "8", q: "Unless you ______, you will miss the flight.", options: ["A do not hurry up", "B will hurry up", "C hurry up"], ans: "C", hint: "<div class='hint-detail'><span class='key-word'>unless</span> = if not. Mệnh đề theo sau 'unless' dùng thì hiện tại đơn.</div><div class='hint-detail'>'Unless you hurry up' = nếu bạn không nhanh lên.</div>" },
+        { num: "9", q: "The baby ______ many times by people going in and out.", options: ["A woke up", "B wakes up", "C was woken up"], ans: "C", hint: "<div class='hint-detail'>Bị động thì quá khứ đơn: <span class='key-word'>was woken up</span> (bị đánh thức).</div><div class='hint-detail'>Chủ ngữ 'the baby' chịu tác động của hành động.</div>" },
+        { num: "10", q: "Marion does not have ______ furniture. She only has a bed and a bedside table.", options: ["A much", "B many", "C any"], ans: "A", hint: "<div class='hint-detail'><span class='key-word'>furniture</span> là danh từ không đếm được → dùng <span class='key-word'>much</span> trong câu phủ định.</div><div class='hint-detail'>'Many' dùng với danh từ đếm được, 'any' thường dùng trong câu hỏi/phủ định nhưng 'much' nhấn mạnh số lượng ít.</div>" },
+        { num: "11", q: "Have you ever considered ______ to a bigger house?", options: ["A moving", "B to move", "C move"], ans: "A", hint: "<div class='hint-detail'><span class='key-word'>consider + V-ing</span> = cân nhắc làm việc gì.</div><div class='hint-detail'>Động từ theo sau 'consider' luôn ở dạng danh động từ.</div>" },
+        { num: "12", q: "You ______ ask your brother to go to the concert with you. He likes concerts.", options: ["A may", "B could", "C will"], ans: "B", hint: "<div class='hint-detail'><span class='key-word'>could</span> dùng để đưa ra gợi ý (suggestion).</div><div class='hint-detail'>'May' là xin phép, 'will' là thì tương lai.</div>" },
+        { num: "13", q: "You look very tired! What ______ you ______ all day?", options: ["A did, do", "B are, doing", "C have, been doing"], ans: "C", hint: "<div class='hint-detail'><span class='key-word'>hiện tại hoàn thành tiếp diễn</span>: have been V-ing</div><div class='hint-detail'>Nhấn mạnh hành động kéo dài suốt cả ngày (và có kết quả ở hiện tại: mệt).</div>" },
+        { num: "14", q: "Taking the bus is much ______ than driving to work.", options: ["A cheaper", "B cheap", "C cheapest"], ans: "A", hint: "<div class='hint-detail'>So sánh hơn với <span class='key-word'>than</span> → dùng cheaper.</div><div class='hint-detail'>'Much' + so sánh hơn để nhấn mạnh.</div>" },
+        { num: "15", q: "Our area could ______ by planting trees at the sides of the road.", options: ["A transform", "B be transformed", "C is transformed"], ans: "B", hint: "<div class='hint-detail'><span class='key-word'>could + be + V3/ed</span> (bị động với động từ khuyết thiếu).</div><div class='hint-detail'>Khu vực có thể được biến đổi (transform → transformed).</div>" },
+        { num: "16", q: "Peter and Zoe ______ for an hour before it started raining.", options: ["A had been jogging", "B were jogging", "C jogged"], ans: "A", hint: "<div class='hint-detail'><span class='key-word'>quá khứ hoàn thành tiếp diễn</span>: had been V-ing</div><div class='hint-detail'>Hành động đã xảy ra và kéo dài (1 giờ) trước một hành động khác trong quá khứ (it started raining).</div>" },
+        { num: "17", q: "My glasses must be ______ in the house, but I do not know where.", options: ["A anywhere", "B everywhere", "C somewhere"], ans: "C", hint: "<div class='hint-detail'><span class='key-word'>somewhere</span> = ở đâu đó (trong nhà).</div><div class='hint-detail'>'Anywhere' = bất cứ đâu (thường dùng trong câu phủ định), 'everywhere' = mọi nơi.</div>" },
+        { num: "18", q: "Her bracelet ______ be made of gold. It looks so fake!", options: ["A cannot", "B must", "C may"], ans: "A", hint: "<div class='hint-detail'><span class='key-word'>cannot</span> diễn tả suy luận phủ định: không thể nào.</div><div class='hint-detail'>Dựa vào bằng chứng (nhìn rất giả) → kết luận nó không thể làm bằng vàng.</div>" },
+        { num: "19", q: "When ______ Mark ______ to a private hospital?", options: ["A did, transferred", "B was, transferred", "C does, transfer"], ans: "B", hint: "<div class='hint-detail'>Câu hỏi bị động thì quá khứ đơn: <span class='key-word'>was Mark transferred</span>.</div><div class='hint-detail'>Mark được chuyển đến bệnh viện (bị động).</div>" },
+        { num: "20", q: "A: Where ______ silk fabric first ______? B: I think in ancient China.", options: ["A will, produced", "B was, produced", "C is, produced"], ans: "B", hint: "<div class='hint-detail'>Câu hỏi bị động thì quá khứ đơn: <span class='key-word'>was silk produced</span>.</div><div class='hint-detail'>Vải lụa được sản xuất lần đầu tiên ở đâu (sự kiện trong quá khứ).</div>" },
+        { num: "21", q: "The train for Connecticut ______ at 10 am.", options: ["A leaves", "B is leaving", "C will leave"], ans: "A", hint: "<div class='hint-detail'>Thì hiện tại đơn dùng cho lịch trình cố định (tàu, xe).</div><div class='hint-detail'>'Leaves' = khởi hành (theo lịch trình).</div>" }
+    ];
+
+    // Reading cloze options & answers (0-10)
+    const ex8_options = [
+        ["A time", "B hour", "C age", "D moment"], // 0
+        ["A the", "B all", "C a", "D one"],        // 1
+        ["A Nobody", "B Anybody", "C Somebody", "D None"], // 2
+        ["A in", "B to", "C for", "D by"],          // 3
+        ["A so", "B to", "C for", "D in"],          // 4
+        ["A free", "B clean", "C empty", "D pure"], // 5
+        ["A up", "B off", "C out", "D down"],       // 6
+        ["A brought", "B traveled", "C made", "D caught"], // 7
+        ["A practice", "B action", "C road", "D way"],     // 8
+        ["A number", "B amount", "C size", "D sum"],       // 9
+        ["A many", "B much", "C lots", "D great"]          // 10
+    ];
+    const ex8_correct = [0, 2, 0, 0, 1, 0, 2, 0, 3, 0, 0]; // indices of correct answers (A=0,B=1,C=2,D=3)
+    const ex8_hints = [
+        "<div class='hint-detail'><span class='key-word'>time</span> = thời gian nói chung; <span class='key-word'>hour</span> = 60 phút; <span class='key-word'>age</span> = thời đại; <span class='key-word'>moment</span> = khoảnh khắc. 'A very difficult time' = một thời kỳ rất khó khăn.</div>",
+        "<div class='hint-detail'>Cần mạo từ không xác định <span class='key-word'>a</span> trước 'week' (mỗi tuần). 'A week' = mỗi tuần.</div>",
+        "<div class='hint-detail'><span class='key-word'>Nobody</span> = không ai. 'Nobody had a cure' = không ai có phương thuốc chữa.</div>",
+        "<div class='hint-detail'><span class='key-word'>ended in death</span>: kết thúc bằng cái chết. Giới từ 'in' chỉ kết quả cuối cùng.</div>",
+        "<div class='hint-detail'><span class='key-word'>to stop</span> = để ngăn chặn (chỉ mục đích). Các phương án khác không phù hợp.</div>",
+        "<div class='hint-detail'><span class='key-word'>free of the plague</span>: không có dịch bệnh. 'Free of' = không bị ảnh hưởng bởi.</div>",
+        "<div class='hint-detail'><span class='key-word'>broke out</span> = bùng phát (dịch bệnh). 'Broke off' = cắt đứt, 'broke up' = tan vỡ, 'broke down' = hỏng hóc.</div>",
+        "<div class='hint-detail'><span class='key-word'>brought</span> = mang đến. Hàng quần áo cũ đã mang bệnh dịch từ London đến.</div>",
+        "<div class='hint-detail'><span class='key-word'>the only way</span> = cách duy nhất. 'Way' = cách thức, giải pháp.</div>",
+        "<div class='hint-detail'><span class='key-word'>the number of</span> + số nhiều + động từ số ít: số lượng. 'A number of' + số nhiều + động từ số nhiều.</div>",
+        "<div class='hint-detail'><span class='key-word'>saved many thousands</span>: cứu hàng ngàn người. 'Many' + danh từ đếm được số nhiều.</div>"
+    ];
+
+    const ex9_data = [
+        { q: "The government is concerned about the significant rise in ............... . <strong>HOMELESS</strong>", ans: "homelessness", hint: "<div class='hint-detail'><span class='key-word'>homelessness</span> = tình trạng vô gia cư (danh từ).</div><div class='hint-detail'>Tính từ 'homeless' + hậu tố -ness tạo danh từ.</div>" },
+        { q: "Sharks take ten years to reach ............... . <strong>MATURE</strong>", ans: "maturity", hint: "<div class='hint-detail'><span class='key-word'>maturity</span> = sự trưởng thành (danh từ).</div><div class='hint-detail'>'Mature' (tính từ) → 'maturity' (danh từ).</div>" },
+        { q: "There is no ............... of life on Mars. <strong>EVIDENT</strong>", ans: "evidence", hint: "<div class='hint-detail'><span class='key-word'>evidence</span> = bằng chứng (danh từ).</div><div class='hint-detail'>'Evident' (tính từ) → 'evidence' (danh từ).</div>" },
+        { q: "They are building new roads to increase ............... to the center. <strong>ACCESSIBLE</strong>", ans: "accessibility", hint: "<div class='hint-detail'><span class='key-word'>accessibility</span> = sự tiếp cận được (danh từ).</div><div class='hint-detail'>'Accessible' (tính từ) → 'accessibility' (danh từ).</div>" },
+        { q: "Fast food restaurants are popular because of their ............... . <strong>CONVENIENT</strong>", ans: "convenience", hint: "<div class='hint-detail'><span class='key-word'>convenience</span> = sự tiện lợi (danh từ).</div><div class='hint-detail'>'Convenient' (tính từ) → 'convenience' (danh từ).</div>" },
+        { q: "She found peace and ............... in a quiet little village in the mountains. <strong>HAPPY</strong>", ans: "happiness", hint: "<div class='hint-detail'><span class='key-word'>happiness</span> = hạnh phúc (danh từ).</div><div class='hint-detail'>'Happy' (tính từ) → 'happiness' (danh từ).</div>" },
+        { q: "You shouldn’t question the ............... of his findings. <strong>ACCURATE</strong>", ans: "accuracy", hint: "<div class='hint-detail'><span class='key-word'>accuracy</span> = độ chính xác (danh từ).</div><div class='hint-detail'>'Accurate' (tính từ) → 'accuracy' (danh từ).</div>" },
+        { q: "The student’s main ............... in school is math. <strong>WEAK</strong>", ans: "weakness", hint: "<div class='hint-detail'><span class='key-word'>weakness</span> = điểm yếu (danh từ).</div><div class='hint-detail'>'Weak' (tính từ) → 'weakness' (danh từ).</div>" }
+    ];
+
+    const ex10_wordBank = ["into", "off", "out", "up", "down", "through"];
+    const ex10_data = [
+        { q: "A dangerous criminal had broken ............... of prison, but the police arrested him soon after.", ans: "out", hint: "<div class='hint-detail'><span class='key-word'>broke out of prison</span> = vượt ngục.</div><div class='hint-detail'>'Break out' = thoát ra (khỏi nơi giam giữ).</div>" },
+        { q: "Their car has broken ............... so many times that they decided to buy a new one.", ans: "down", hint: "<div class='hint-detail'><span class='key-word'>broken down</span> = hỏng hóc, ngừng hoạt động.</div><div class='hint-detail'>Thường dùng cho xe cộ, máy móc.</div>" },
+        { q: "Burglars broke ............... my grandmother’s house last week.", ans: "into", hint: "<div class='hint-detail'><span class='key-word'>broke into</span> = đột nhập vào (nhà).</div><div class='hint-detail'>'Break into' = vào bằng cách phá khóa, cửa.</div>" },
+        { q: "A herd of cattle have broken ............... the fence of the farm.", ans: "through", hint: "<div class='hint-detail'><span class='key-word'>broke through</span> = phá vỡ, xuyên qua.</div><div class='hint-detail'>Đàn gia súc đã phá vỡ hàng rào để ra ngoài.</div>" },
+        { q: "Suddenly, a terrible thunderstorm broke ............... .", ans: "out", hint: "<div class='hint-detail'><span class='key-word'>broke out</span> = bất ngờ xảy ra (bão, chiến tranh, hỏa hoạn).</div><div class='hint-detail'>Dùng cho sự kiện đột ngột.</div>" },
+        { q: "The police tried to break ............... the riot before it got out of control.", ans: "up", hint: "<div class='hint-detail'><span class='key-word'>break up</span> = giải tán (cuộc bạo loạn).</div><div class='hint-detail'>'Break up' = làm cho kết thúc, tan rã.</div>" }
+    ];
+
+    // Word banks for drag & drop
+    const ex2_bank = ex2_wordBank;
+    const ex10_bank = ex10_wordBank;
+
+    // ==================== STATE ====================
+    let answerStates = new Map();
+    let wordUsageCount = { ex2: {}, ex10: {} };
+    let optionSelections = new Map();  // for MCQ (stores the selected option text)
+
+    // ==================== RENDER FUNCTIONS ====================
+    function renderEx1() {
+        const container = document.getElementById('questions-ex1');
+        container.innerHTML = '';
+        ex1_data.forEach((item, i) => {
+            const qid = `ex1-q${i}`;
+            container.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.clue} <em>${item.hint}</em> 
+                    <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" onclick="this.select()">
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">💡 Đáp án: ${item.ans}.</div>
+                </div>`;
+        });
+    }
+
+    function renderEx2() {
+        const bank = document.getElementById('bank-ex2');
+        bank.innerHTML = '';
+        wordUsageCount.ex2 = {};
+        ex2_bank.forEach((w, idx) => {
+            let id = `ex2-word-${idx}`;
+            bank.innerHTML += `<div class="word-item" id="${id}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${id}')">${w}</div>`;
+            wordUsageCount.ex2[w] = 0;
+        });
+        const qContainer = document.getElementById('questions-ex2');
+        qContainer.innerHTML = '';
+        ex2_data.forEach((item, i) => {
+            const qid = `ex2-q${i}`;
+            qContainer.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q.replace('...............', `<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this); updateWordBank('ex2')" ondrop="dropWord(event,'${qid}')" ondragover="allowDrop(event)" onclick="this.select()">`)}
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+        addWordBankEventListeners('ex2');
+    }
+
+    function renderEx3() {
+        const container = document.getElementById('questions-ex3');
+        container.innerHTML = '';
+        ex3_data.forEach((item, i) => {
+            const qid = `ex3-q${i}`;
+            let optionsHtml = '';
+            item.options.forEach((opt, optIdx) => {
+                optionsHtml += `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${optIdx}">${opt}</button> `;
+            });
+            container.innerHTML += `
+                <div class="question-row" id="${qid}-container">
+                    <strong>${i+1}.</strong> ${item.q}
+                    <div class="option-container">${optionsHtml}</div>
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        container.innerHTML = '';
+        ex4_data.forEach((item, i) => {
+            const qid = `ex4-q${i}`;
+            container.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q}<br>
+                    <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" onclick="this.select()" style="width:90%; margin-top:5px;">
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx5() {
+        const container = document.getElementById('questions-ex5');
+        container.innerHTML = '';
+        ex5_data.forEach((item, i) => {
+            const qid = `ex5-q${i}`;
+            container.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q}<br>
+                    <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" onclick="this.select()" style="width:90%; margin-top:5px;">
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx6() {
+        const container = document.getElementById('questions-ex6');
+        container.innerHTML = '';
+        ex6_data.forEach((item, i) => {
+            const qid = `ex6-q${i}`;
+            container.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q.replace('...............', `<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" onclick="this.select()">`)}
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx7() {
+        const container = document.getElementById('questions-ex7');
+        container.innerHTML = '';
+        ex7_data.forEach((item, i) => {
+            const qid = `ex7-q${i}`;
+            let optionsHtml = '';
+            item.options.forEach((opt, optIdx) => {
+                optionsHtml += `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${optIdx}">${opt}</button> `;
+            });
+            container.innerHTML += `
+                <div class="question-row" id="${qid}-container">
+                    <strong>${item.num}.</strong> ${item.q}
+                    <div class="option-container">${optionsHtml}</div>
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx8() {
+        const qContainer = document.getElementById('questions-ex8');
+        qContainer.innerHTML = '';
+        for (let i = 0; i <= 10; i++) {
+            const qid = `ex8-q${i}`;
+            let optionsHtml = '';
+            ex8_options[i].forEach((opt, optIdx) => {
+                optionsHtml += `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${optIdx}">${opt}</button> `;
+            });
+            qContainer.innerHTML += `
+                <div class="mcq-question" id="${qid}-container">
+                    <p><strong>${i}.</strong></p>
+                    <div class="option-container">${optionsHtml}</div>
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${ex8_hints[i]}</div>
+                </div>`;
+        }
+    }
+
+    function renderEx9() {
+        const container = document.getElementById('questions-ex9');
+        container.innerHTML = '';
+        ex9_data.forEach((item, i) => {
+            const qid = `ex9-q${i}`;
+            container.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q.replace('...............', `<input type="text" class="word-formation-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" onclick="this.select()">`)}
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx10() {
+        const bank = document.getElementById('bank-ex10');
+        bank.innerHTML = '';
+        wordUsageCount.ex10 = {};
+        ex10_bank.forEach((w, idx) => {
+            let id = `ex10-word-${idx}`;
+            bank.innerHTML += `<div class="word-item" id="${id}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${id}')">${w}</div>`;
+            wordUsageCount.ex10[w] = 0;
+        });
+        const qContainer = document.getElementById('questions-ex10');
+        qContainer.innerHTML = '';
+        ex10_data.forEach((item, i) => {
+            const qid = `ex10-q${i}`;
+            qContainer.innerHTML += `
+                <div class="question-row">
+                    <strong>${i+1}.</strong> ${item.q.replace('...............', `<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this); updateWordBank('ex10')" ondrop="dropWord(event,'${qid}')" ondragover="allowDrop(event)" onclick="this.select()">`)}
+                    <div class="row-btns">
+                        <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                </div>`;
+        });
+        addWordBankEventListeners('ex10');
+    }
+
+    // ==================== HELPER FUNCTIONS ====================
+    function adjustWidth(el) {
+        let base = el.classList.contains('letter-input') ? 45 : 120;
+        let charW = el.classList.contains('letter-input') ? 10 : 9;
+        let newW = Math.max(el.value.length * charW + 40, base);
+        el.style.width = Math.min(newW, 400) + "px";
+    }
+
+    function toggleHint(id) {
+        let h = document.getElementById(id + '-hint');
+        let btn = document.getElementById(id + '-info');
+        if (h) {
+            h.style.display = h.style.display === 'block' ? 'none' : 'block';
+            if (btn) btn.classList.toggle('active', h.style.display === 'block');
+        }
+    }
+
+    function selectOption(qid, opt) {
+        // remove selected from all options in this question
+        let container = document.getElementById(qid + '-container');
+        if (container) {
+            container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+            let selectedBtn = Array.from(container.querySelectorAll('.option-btn')).find(btn => btn.textContent === opt);
+            if (selectedBtn) selectedBtn.classList.add('selected');
+        }
+        optionSelections.set(qid, opt);
+    }
+
+    function toggleSingleAns(id) {
+        let qid = id.replace('-eye', '');
+        // ex8 reading
+        if (qid.startsWith('ex8-q')) {
+            let idx = parseInt(qid.split('-q')[1]);
+            let correct = ex8_correct[idx];
+            let container = document.getElementById(qid + '-container');
+            if (container) {
+                let btns = container.querySelectorAll('.option-btn');
+                btns.forEach((btn, i) => {
+                    btn.classList.remove('correct-option', 'incorrect-option', 'selected');
+                    if (i === correct) btn.classList.add('correct-option');
+                });
+            }
+            let eye = document.getElementById(id);
+            if (eye) eye.classList.add('active');
+            answerStates.set(qid + '-state', true);
+            return;
+        }
+        // ex3, ex7
+        if (qid.startsWith('ex3-q') || qid.startsWith('ex7-q')) {
+            let data = qid.startsWith('ex3-q') ? ex3_data : ex7_data;
+            let idx = parseInt(qid.split('-q')[1]);
+            let correct = data[idx].ans;
+            let container = document.getElementById(qid + '-container');
+            if (container) {
+                let btns = container.querySelectorAll('.option-btn');
+                btns.forEach(btn => {
+                    btn.classList.remove('correct-option', 'incorrect-option', 'selected');
+                    if (btn.textContent === correct || (qid.startsWith('ex7-q') && btn.textContent.startsWith(correct + ' '))) {
+                        btn.classList.add('correct-option');
+                    }
+                });
+            }
+            let eye = document.getElementById(id);
+            if (eye) eye.classList.add('active');
+            answerStates.set(qid + '-state', true);
+            return;
+        }
+        // regular inputs
+        let inp = document.getElementById(qid);
+        if (!inp) return;
+        let ans = inp.dataset.ans;
+        let eye = document.getElementById(id);
+        let state = answerStates.get(qid + '-state') || false;
+        if (state) {
+            inp.value = '';
+            inp.classList.remove('correct', 'incorrect-marked');
+            adjustWidth(inp);
+            eye.classList.remove('active');
+            answerStates.set(qid + '-state', false);
+        } else {
+            inp.value = ans;
+            inp.classList.add('correct');
+            adjustWidth(inp);
+            eye.classList.add('active');
+            answerStates.set(qid + '-state', true);
+        }
+    }
+
+    function showAnswers(prefix) {
+        if (prefix === 'ex8') {
+            for (let i=0; i<=10; i++) {
+                let qid = `ex8-q${i}`;
+                let correct = ex8_correct[i];
+                let container = document.getElementById(qid+'-container');
+                if (container) {
+                    let btns = container.querySelectorAll('.option-btn');
+                    btns.forEach((btn, idx) => {
+                        btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+                        if (idx === correct) btn.classList.add('correct-option');
+                    });
+                }
+                let eye = document.getElementById(qid+'-eye');
+                if (eye) eye.classList.add('active');
+                answerStates.set(qid+'-state', true);
+            }
+            return;
+        }
+        if (prefix === 'ex3' || prefix === 'ex7') {
+            let data = prefix === 'ex3' ? ex3_data : ex7_data;
+            data.forEach((item, i) => {
+                let qid = prefix + '-q' + i;
+                let correct = item.ans;
+                let container = document.getElementById(qid+'-container');
+                if (container) {
+                    let btns = container.querySelectorAll('.option-btn');
+                    btns.forEach(btn => {
+                        btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+                        if (btn.textContent === correct || (prefix==='ex7' && btn.textContent.startsWith(correct+' '))) {
+                            btn.classList.add('correct-option');
+                        }
+                    });
+                }
+                let eye = document.getElementById(qid+'-eye');
+                if (eye) eye.classList.add('active');
+                answerStates.set(qid+'-state', true);
+            });
+            return;
+        }
+        // all input-based
+        document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => {
+            if (el.tagName === 'INPUT' && el.dataset.ans) {
+                let eye = document.getElementById(el.id + '-eye');
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                adjustWidth(el);
+                if (eye) eye.classList.add('active');
+                answerStates.set(el.id + '-state', true);
+            }
+        });
+        if (prefix === 'ex2' || prefix === 'ex10') updateWordBank(prefix);
+    }
+
+    function resetSection(prefix) {
+        document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+                answerStates.delete(el.id + '-state');
+            }
+            if (el.classList.contains('option-btn')) {
+                el.classList.remove('selected', 'correct-option', 'incorrect-option');
+            }
+            let hint = document.getElementById(el.id + '-hint');
+            if (hint) hint.style.display = 'none';
+            let eye = document.getElementById(el.id + '-eye');
+            if (eye) eye.classList.remove('active');
+            let info = document.getElementById(el.id + '-info');
+            if (info) info.classList.remove('active');
+        });
+        if (prefix === 'ex2' || prefix === 'ex10') {
+            if (wordUsageCount[prefix]) {
+                let bank = prefix === 'ex2' ? ex2_bank : ex10_bank;
+                bank.forEach(w => wordUsageCount[prefix][w] = 0);
+            }
+            updateWordBankDisplay(prefix);
+        }
+        // clear selections
+        for (let [key,val] of optionSelections.entries()) {
+            if (key.startsWith(prefix)) optionSelections.delete(key);
+        }
+        for (let [key,val] of answerStates.entries()) {
+            if (key.startsWith(prefix)) answerStates.delete(key);
+        }
+    }
+
+    function normalizeAnswer(s) { return s.trim().toLowerCase().replace(/\s+/g,' '); }
+    function validateMultiple(user, correct) {
+        let corrects = correct.split('|').map(c => normalizeAnswer(c));
+        return corrects.includes(normalizeAnswer(user));
+    }
+
+    function checkAll() {
+        document.querySelectorAll('[data-type="input"]').forEach(inp => {
+            let correct = inp.dataset.ans;
+            let user = inp.value;
+            inp.classList.remove('correct', 'incorrect-marked');
+            if (user.trim() === '') return;
+            if (validateMultiple(user, correct)) inp.classList.add('correct');
+            else inp.classList.add('incorrect-marked');
+        });
+        // ex3, ex7
+        [ex3_data, ex7_data].forEach((data, idx) => {
+            let prefix = idx===0 ? 'ex3' : 'ex7';
+            data.forEach((item, i) => {
+                let qid = prefix + '-q' + i;
+                let selected = optionSelections.get(qid);
+                if (!selected) return;
+                let container = document.getElementById(qid+'-container');
+                if (container) {
+                    let btns = container.querySelectorAll('.option-btn');
+                    btns.forEach(btn => {
+                        btn.classList.remove('correct-option', 'incorrect-option');
+                        if (btn.textContent === selected) {
+                            if (selected === item.ans || (prefix==='ex7' && selected.startsWith(item.ans+' '))) {
+                                btn.classList.add('correct-option');
+                            } else btn.classList.add('incorrect-option');
+                        }
+                    });
+                }
+            });
+        });
+        // ex8
+        for (let i=0; i<=10; i++) {
+            let qid = `ex8-q${i}`;
+            let selected = optionSelections.get(qid);
+            if (selected === undefined) continue;
+            let container = document.getElementById(qid+'-container');
+            if (container) {
+                let btns = container.querySelectorAll('.option-btn');
+                btns.forEach((btn, idx) => {
+                    btn.classList.remove('correct-option', 'incorrect-option');
+                    if (btn.textContent === selected) {
+                        if (idx === ex8_correct[i]) btn.classList.add('correct-option');
+                        else btn.classList.add('incorrect-option');
+                    }
+                });
+            }
+        }
+    }
+
+    // Drag & drop for word banks
+    function dragWord(e) {
+        e.dataTransfer.setData('text/plain', e.target.dataset.word);
+        e.dataTransfer.setData('wordId', e.target.id);
+    }
+    function allowDrop(e) { e.preventDefault(); }
+    function dropWord(e, inputId) {
+        e.preventDefault();
+        let word = e.dataTransfer.getData('text/plain');
+        let inp = document.getElementById(inputId);
+        if (inp) {
+            inp.value = word;
+            adjustWidth(inp);
+            let task = inputId.split('-')[0];
+            updateWordBankUsage(word, task);
+        }
+    }
+    function selectWordFromBank(wordId) {
+        let item = document.getElementById(wordId);
+        if (!item || item.classList.contains('used')) return;
+        let word = item.dataset.word;
+        let task = wordId.split('-')[1];
+        let inputs = document.querySelectorAll(`#questions-${task} input.word-input`);
+        let empty = Array.from(inputs).find(inp => !inp.value.trim());
+        if (empty) {
+            empty.value = word;
+            adjustWidth(empty);
+            updateWordBankUsage(word, task);
+        } else alert('All gaps are filled. Click on a gap to replace.');
+    }
+    function updateWordBankUsage(word, task) {
+        if (!wordUsageCount[task]) wordUsageCount[task] = {};
+        wordUsageCount[task][word] = (wordUsageCount[task][word] || 0) + 1;
+        updateWordBankDisplay(task);
+    }
+    function updateWordBankDisplay(task) {
+        document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => {
+            let w = item.dataset.word;
+            let count = wordUsageCount[task]?.[w] || 0;
+            if (count > 0) item.classList.add('used');
+            else item.classList.remove('used');
+        });
+    }
+    function updateWordBank(task) {
+        let inputs = document.querySelectorAll(`#questions-${task} input.word-input`);
+        if (!wordUsageCount[task]) wordUsageCount[task] = {};
+        let bank = task === 'ex2' ? ex2_bank : ex10_bank;
+        bank.forEach(w => wordUsageCount[task][w] = 0);
+        inputs.forEach(inp => {
+            let w = inp.value.trim();
+            if (w && wordUsageCount[task][w] !== undefined) wordUsageCount[task][w]++;
+        });
+        updateWordBankDisplay(task);
+    }
+    function addWordBankEventListeners(task) {
+        document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => {
+            item.removeEventListener('click', handleWordClick);
+            item.addEventListener('click', handleWordClick);
+            item.removeEventListener('dragstart', dragWord);
+            item.addEventListener('dragstart', dragWord);
+        });
+        document.querySelectorAll(`#questions-${task} input.word-input`).forEach(inp => {
+            inp.removeEventListener('dragover', allowDrop);
+            inp.addEventListener('dragover', allowDrop);
+            inp.removeEventListener('drop', handleDrop);
+            inp.addEventListener('drop', handleDrop);
+            inp.removeEventListener('input', ()=>updateWordBank(task));
+            inp.addEventListener('input', ()=>updateWordBank(task));
+        });
+    }
+    function handleWordClick(e) { selectWordFromBank(e.currentTarget.id); }
+    function handleDrop(e) { dropWord(e, e.currentTarget.id); }
+
+    // Resizer for reading
+    function initResizer() {
+        let resizer = document.getElementById('resizer-ex8');
+        let left = document.getElementById('text-panel-ex8');
+        let right = document.getElementById('questions-panel-ex8');
+        if (!resizer || !left || !right) return;
+        left.style.width = '50%';
+        right.style.flex = '1';
+        let isResizing = false, startX, startWidth;
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = left.offsetWidth;
+            document.body.style.cursor = 'col-resize';
+            document.addEventListener('mousemove', mouseMove);
+            document.addEventListener('mouseup', mouseUp);
+        });
+        function mouseMove(e) {
+            if (!isResizing) return;
+            let dx = e.clientX - startX;
+            let newW = startWidth + dx;
+            let containerW = left.parentElement.offsetWidth;
+            let min = 200, max = containerW - min - resizer.offsetWidth;
+            if (newW >= min && newW <= max) {
+                left.style.width = newW + 'px';
+                right.style.flex = '1';
+            }
+        }
+        function mouseUp() {
+            isResizing = false;
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', mouseMove);
+            document.removeEventListener('mouseup', mouseUp);
+        }
+    }
+
+    window.onload = () => {
+        renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5();
+        renderEx6(); renderEx7(); renderEx8(); renderEx9(); renderEx10();
+        initResizer();
+    };
+    document.addEventListener('keydown', e => { if(e.key === 'Enter') checkAll(); });
+</script>
+</body>
+</html>
