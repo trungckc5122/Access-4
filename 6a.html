@@ -816,14 +816,16 @@
 <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
 <script>
+// ==================== TOGGLE GRAMMAR SECTIONS ====================
 function toggleGrammarSection(section) {
     const content = document.getElementById('content' + section.charAt(0).toUpperCase() + section.slice(1));
     const icon = document.getElementById('icon' + section.charAt(0).toUpperCase() + section.slice(1));
+    
     content.classList.toggle('active');
     icon.classList.toggle('active');
 }
 
-// ==================== DATA WITH VIETNAMESE HINTS (enhanced like 5a) ====================
+// ==================== ENHANCED DATA WITH VIETNAMESE HINTS ====================
 
 const p1t1_data = [
     { v: "1. generation", letter: "E", def: "a group of people born and living around the same time", hint: "<div class='hint-detail'><span class='key-word'>generation</span> /ˌdʒɛnəˈreɪʃən/ (n): thế hệ</div><div class='hint-detail'>Một thế hệ là nhóm người sinh ra và sống trong cùng một khoảng thời gian. Ví dụ: Thế hệ Millennials (sinh 1981-1996) là một thế hệ.</div>", ipa: "/ˌdʒɛnəˈreɪʃən/" },
@@ -907,7 +909,7 @@ const p3t4_data = [
     { q: "12. By midnight, the storm ______ (pass) and the roads will be safe again.", ans: "will have passed", hint: "<div class='hint-detail'><span class='key-word'>will have passed</span> (sẽ đã qua)</div><div class='hint-detail'>Dùng tương lai hoàn thành cho sự kiện tự nhiên hoàn tất trước nửa đêm.</div>" }
 ];
 
-// ==================== RENDERING & UTILITY FUNCTIONS (unchanged, except hint handling) ====================
+// ==================== RENDERING FUNCTIONS (identical to original) ====================
 
 let currentActiveIPA = null;
 let answerStates = new Map();
@@ -1062,11 +1064,371 @@ function renderFutureForms(id, data) {
     });
 }
 
-// Utility functions (adjustWidth, toggleHint, toggleIPA, toggleSingleAns, showAnswers, resetSection, normalize, checkAll, word bank helpers) remain exactly the same as original 6a.html
-// They are omitted here for brevity but must be included in the final file.
-// For the final answer, we include the full script with all original functions unchanged.
-// Below is a placeholder to indicate that all original JS functions (adjustWidth, toggleHint, toggleIPA, etc.) are present.
-// In the actual implementation, copy the entire script from the original 6a.html, replacing only the data arrays.
+function adjustWidth(el) {
+    let baseWidth;
+    if (el.classList.contains('letter-input')) {
+        baseWidth = 45;
+    } else if (el.classList.contains('verb-input')) {
+        baseWidth = 80;
+    } else if (el.classList.contains('word-input')) {
+        baseWidth = 120;
+    } else if (el.classList.contains('grammar-input')) {
+        baseWidth = 150;
+    } else {
+        baseWidth = 60;
+    }
+    
+    let charWidth;
+    if (el.classList.contains('word-input') || el.classList.contains('grammar-input')) {
+        charWidth = 9;
+    } else {
+        charWidth = 10;
+    }
+    
+    const newWidth = Math.max(el.value.length * charWidth + 20, baseWidth);
+    
+    let maxWidth;
+    if (el.classList.contains('letter-input')) {
+        maxWidth = 80;
+    } else if (el.classList.contains('verb-input')) {
+        maxWidth = 200;
+    } else if (el.classList.contains('word-input')) {
+        maxWidth = 400;
+    } else if (el.classList.contains('grammar-input')) {
+        maxWidth = 500;
+    } else {
+        maxWidth = 300;
+    }
+    
+    el.style.width = Math.min(newWidth, maxWidth) + "px";
+}
+
+function toggleHint(id) {
+    const h = document.getElementById(id + '-hint');
+    const infoBtn = document.getElementById(id + '-info');
+    
+    if (h) {
+        if (h.style.display === 'block') {
+            h.style.display = 'none';
+            if (infoBtn) infoBtn.classList.remove('active');
+        } else {
+            h.style.display = 'block';
+            if (infoBtn) infoBtn.classList.add('active');
+        }
+    }
+}
+
+function toggleIPA(id) {
+    const ipaBox = document.getElementById(id + '-ipa');
+    const speakerBtn = document.querySelector(`button[onclick="toggleIPA('${id}')"]`);
+    
+    if (currentActiveIPA === ipaBox) {
+        ipaBox.style.display = 'none';
+        currentActiveIPA = null;
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        return;
+    }
+    
+    if (currentActiveIPA) {
+        const prevSpeakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (prevSpeakerBtn) prevSpeakerBtn.classList.remove('active');
+        currentActiveIPA.style.display = 'none';
+    }
+    
+    if (ipaBox) {
+        ipaBox.style.display = 'block';
+        currentActiveIPA = ipaBox;
+        if (speakerBtn) speakerBtn.classList.add('active');
+    }
+}
+
+function toggleSingleAns(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const ans = el.dataset.ans;
+    const eyeBtn = document.getElementById(id + '-eye');
+    const stateKey = `${id}-state`;
+    const isCurrentlyShown = answerStates.get(stateKey) || false;
+    
+    if (isCurrentlyShown) {
+        el.value = "";
+        el.classList.remove('correct', 'incorrect-marked', 'long-answer');
+        adjustWidth(el);
+        if (eyeBtn) eyeBtn.classList.remove('active');
+        answerStates.set(stateKey, false);
+    } else {
+        if (ans) {
+            const firstAns = ans.split('|')[0];
+            el.value = firstAns;
+            el.classList.add('correct');
+            el.classList.remove('incorrect-marked');
+            
+            adjustWidth(el);
+            if (eyeBtn) eyeBtn.classList.add('active');
+            answerStates.set(stateKey, true);
+        }
+    }
+}
+
+function showAnswers(prefix) {
+    document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+        if (el.dataset.type === 'input') {
+            const stateKey = `${el.id}-state`;
+            const ans = el.dataset.ans;
+            const eyeBtn = document.getElementById(el.id + '-eye');
+            
+            if (ans) {
+                const firstAns = ans.split('|')[0];
+                el.value = firstAns;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+                
+                adjustWidth(el);
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(stateKey, true);
+            }
+        }
+    });
+}
+
+function resetSection(prefix) {
+    document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
+        if(i.tagName === 'INPUT') {
+            i.value = "";
+            i.classList.remove('correct', 'incorrect-marked', 'long-answer');
+            adjustWidth(i);
+        }
+        const hBox = document.getElementById(i.id + '-hint');
+        if(hBox) hBox.style.display = 'none';
+        const ipaBox = document.getElementById(i.id + '-ipa');
+        if(ipaBox) ipaBox.style.display = 'none';
+    });
+    
+    document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
+        if (btn.id.includes(prefix)) {
+            btn.classList.remove('active');
+        }
+    });
+    
+    if (currentActiveIPA) {
+        const speakerBtn = document.querySelector(`button[onclick*="${currentActiveIPA.id.replace('-ipa', '')}"]`);
+        if (speakerBtn) speakerBtn.classList.remove('active');
+        currentActiveIPA = null;
+    }
+    
+    for (const [key, value] of answerStates.entries()) {
+        if (key.startsWith(`${prefix}-`)) {
+            answerStates.delete(key);
+        }
+    }
+    
+    if (prefix === 'p1t2' || prefix === 'p2t2') {
+        const wordItems = document.querySelectorAll(`#bank-${prefix} .word-item`);
+        wordItems.forEach(item => {
+            item.classList.remove('used');
+            item.style.display = 'flex';
+        });
+        
+        if (wordUsageCount[prefix]) {
+            Object.keys(wordUsageCount[prefix]).forEach(word => {
+                wordUsageCount[prefix][word] = 0;
+            });
+        }
+    }
+}
+
+function normalizeAnswer(answer) {
+    return answer.toLowerCase()
+        .trim()
+        .replace(/\s+/g, ' ')
+        .replace(/[.,;:!?]$/, '');
+}
+
+function validateMultipleAnswers(userAnswer, correctAnswers) {
+    const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans));
+    const normalizedUser = normalizeAnswer(userAnswer);
+    
+    return answers.some(ans => ans === normalizedUser);
+}
+
+function checkAll() {
+    document.querySelectorAll('[data-type="input"]').forEach(el => {
+        const correctAnswers = el.dataset.ans;
+        const userAnswer = el.value;
+        
+        el.classList.remove('correct', 'incorrect-marked');
+        
+        if(!userAnswer.trim()) {
+            return;
+        }
+        
+        if(validateMultipleAnswers(userAnswer, correctAnswers)) {
+            el.classList.add('correct');
+        } else {
+            el.classList.add('incorrect-marked');
+        }
+    });
+}
+
+function addWordBankEventListeners(id) {
+    const wordItems = document.querySelectorAll(`#bank-${id} .word-item`);
+    const inputs = document.querySelectorAll(`#questions-${id} input.word-input`);
+    
+    wordItems.forEach(item => {
+        item.addEventListener('click', function() {
+            selectWordFromBank(this.id);
+        });
+        
+        item.addEventListener('dragstart', function(e) {
+            dragWord(e);
+        });
+    });
+    
+    inputs.forEach(input => {
+        input.addEventListener('dragover', function(e) {
+            allowDrop(e);
+        });
+        
+        input.addEventListener('drop', function(e) {
+            dropWord(e, this.id);
+        });
+    });
+}
+
+function dragWord(event) {
+    event.dataTransfer.setData("text/plain", event.target.dataset.word);
+    event.dataTransfer.setData("wordId", event.target.id);
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+}
+
+function dropWord(event, inputId) {
+    event.preventDefault();
+    const word = event.dataTransfer.getData("text/plain");
+    const wordId = event.dataTransfer.getData("wordId");
+    
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.value = word;
+        adjustWidth(input);
+        
+        updateWordBankUsage(word, inputId.split('-')[0]);
+    }
+}
+
+function selectWordFromBank(wordId) {
+    const wordItem = document.getElementById(wordId);
+    if (!wordItem) return;
+    
+    const word = wordItem.dataset.word;
+    const parts = wordId.split('-');
+    const taskId = parts[1] + '-' + parts[2];
+    
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    let emptyInput = null;
+    
+    for (const input of inputs) {
+        if (!input.value.trim()) {
+            emptyInput = input;
+            break;
+        }
+    }
+    
+    if (emptyInput) {
+        emptyInput.value = word;
+        adjustWidth(emptyInput);
+        
+        updateWordBankUsage(word, taskId);
+    } else {
+        alert('All gaps are filled. You can click on a gap to replace its content.');
+    }
+}
+
+function updateWordBankUsage(word, taskId) {
+    if (!wordUsageCount[taskId]) {
+        wordUsageCount[taskId] = {};
+    }
+    
+    if (!wordUsageCount[taskId][word]) {
+        wordUsageCount[taskId][word] = 0;
+    }
+    
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    let count = 0;
+    
+    inputs.forEach(input => {
+        if (normalizeAnswer(input.value) === normalizeAnswer(word)) {
+            count++;
+        }
+    });
+    
+    wordUsageCount[taskId][word] = count;
+    
+    updateWordBankDisplay(taskId);
+}
+
+function updateWordBankDisplay(taskId) {
+    const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`);
+    
+    wordItems.forEach(item => {
+        const word = item.dataset.word;
+        const count = wordUsageCount[taskId][word] || 0;
+        
+        if (count > 0) {
+            item.classList.add('used');
+        } else {
+            item.classList.remove('used');
+        }
+    });
+}
+
+function updateWordBank(taskId) {
+    const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
+    
+    if (wordUsageCount[taskId]) {
+        Object.keys(wordUsageCount[taskId]).forEach(word => {
+            wordUsageCount[taskId][word] = 0;
+        });
+    }
+    
+    inputs.forEach(input => {
+        const word = input.value.trim();
+        if (word) {
+            const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`);
+            let foundWord = null;
+            
+            wordItems.forEach(item => {
+                if (normalizeAnswer(item.dataset.word) === normalizeAnswer(word)) {
+                    foundWord = item.dataset.word;
+                }
+            });
+            
+            if (foundWord && wordUsageCount[taskId][foundWord] !== undefined) {
+                wordUsageCount[taskId][foundWord]++;
+            }
+        }
+    });
+    
+    updateWordBankDisplay(taskId);
+}
+
+window.onload = () => {
+    renderMatching('p1t1', p1t1_data);
+    renderGapFillWithWordBank('p1t2', p1t2_data, p1t2_wordBank);
+    renderMatching('p2t1', p2t1_data);
+    renderGapFillWithWordBank('p2t2', p2t2_data, p2t2_wordBank);
+    renderFutureForms('p3t1', p3t1_data);
+    renderFutureForms('p3t4', p3t4_data);
+};
+
+document.addEventListener('keydown', e => {
+    if(e.key === 'Enter') {
+        checkAll();
+    }
+});
 </script>
 </body>
 </html>
