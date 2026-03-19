@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 1 - Test 1 - Part 1</title>
+    <style>
+        /* Giữ nguyên style từ mẫu, chỉ điều chỉnh nhỏ cho phù hợp */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header with audio player */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #0f2a44;
+            padding: 6px 18px;
+            border-radius: 40px;
+            border: 1px solid #e6b422;
+        }
+        .audio-controls audio {
+            height: 40px;
+            width: 400px;
+            border-radius: 20px;
+        }
+        .speed-select {
+            background: #1e3a5f;
+            color: white;
+            border: 1px solid #e6b422;
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+        .speed-select option {
+            background: #1e3a5f;
+        }
+        .volume-icon {
+            font-size: 20px;
+            cursor: pointer;
+            color: #e6b422;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question navigator (1-7) */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+
+        /* Main area */
+        .main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .transcript-panel {
+            width: 0;
+            background: #fffcf5;
+            border-right: 2px solid #b0aa9a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.2s ease;
+        }
+        .questions-panel {
+            width: 100%;
+            background: #f8f6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.2s ease;
+        }
+        .main-area.show-transcript .transcript-panel {
+            width: 45%;
+        }
+        .main-area.show-transcript .questions-panel {
+            width: 55%;
+        }
+        .resizer {
+            width: 8px;
+            background: #b0aa9a;
+            cursor: col-resize;
+            display: none;
+        }
+        .main-area.show-transcript .resizer {
+            display: block;
+        }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .transcript-content, .questions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            line-height: 1.7;
+        }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        .questions-list.centered {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100%;
+        }
+        .questions-list.centered > div {
+            width: 100%;
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        .notes-box {
+            background: #f0ebe0;
+            border-left: 4px solid #e6b422;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .question-item {
+            margin-bottom: 25px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f9f7f2;
+            border: 1px solid #e0d6c8;
+            position: relative;
+        }
+        .question-item.correct {
+            background: #e8f5e8;
+            border-color: #4CAF50;
+        }
+        .question-item.incorrect {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e3a5f;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-left: 15px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .option input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .option label {
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .eye-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.7;
+            display: none; /* ẩn cho đến khi nộp bài */
+        }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+
+        .correct-answer-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 15px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 20px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:hover { background: #2d4b77; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; color: #1e3a5f; }
+
+        .explanation-panel {
+            background: #fffef9; border-left: 4px solid #e6b422; padding: 12px 20px; margin: 0 20px 12px 20px; border-radius: 8px; display: none;
+        }
+        .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; }
+        .close-btn { cursor: pointer; }
+
+        .transcript-highlight {
+            background-color: #f9e79f !important;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .keyword-highlight {
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 3px;
+            background-color: #fff3cd;
+            font-weight: 600;
+        }
+        .scroll-highlight {
+            animation: highlightFlash 1s ease;
+        }
+        @keyframes highlightFlash {
+            0% { background-color: #f9e79f; }
+            50% { background-color: #f1c40f; }
+            100% { background-color: #f9e79f; }
+        }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <!-- Header -->
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 1 · Part 1</div>
+            <div class="audio-controls">
+                <audio id="listeningAudio" controls>
+                    <source src="B1 Preliminary 1 - Test 1 Part 1.mp3" type="audio/mpeg">
+                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg"> <!-- fallback -->
+                </audio>
+                <select class="speed-select" id="speedSelect">
+                    <option value="0.7">0.7x</option>
+                    <option value="0.9">0.9x</option>
+                    <option value="1.0" selected>1x</option>
+                    <option value="1.1">1.1x</option>
+                    <option value="1.25">1.25x</option>
+                </select>
+                <span class="volume-icon">🔊</span>
+            </div>
+        </div>
+        <div class="font-controls">
+            <button class="font-btn" id="fontSmall">A-</button>
+            <button class="font-btn" id="fontMedium">A</button>
+            <button class="font-btn active" id="fontLarge">A+</button>
+        </div>
+    </div>
+
+    <!-- Question navigator (1-7) -->
+    <div class="question-nav">
+        <span style="font-weight:600; color:#1e3a5f;">Câu 1-7:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area" id="mainArea">
+        <!-- Transcript panel (ẩn ban đầu) -->
+        <div class="transcript-panel" id="transcriptPanel">
+            <div class="panel-header">
+                <span>TRANSCRIPT</span>
+            </div>
+            <div class="transcript-content font-large" id="transcriptContent"></div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+
+        <!-- Questions panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 1-7</span>
+                <span class="answer-badge" id="answeredCount">0/7 answered</span>
+            </div>
+            <div class="questions-list font-large centered" id="questionsContent">
+                <div>
+                    <h3>PART 1 Questions 1-7</h3>
+                    <p><em>Choose the correct answer (A, B or C).</em></p>
+
+                    <div class="notes-box" id="questionsContainer">
+                        <!-- Các câu hỏi sẽ được tạo bằng JavaScript để dễ quản lý -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/7</div>
+    </div>
+
+    <!-- Explanation panel -->
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- ANSWER KEY (chữ cái) ----------
+        // Ghi chú: Các hình ảnh được thay thế bằng mô tả từ vựng dựa trên script.
+        const answerKey = {
+            q1: 'B',
+            q2: 'B',
+            q3: 'A',
+            q4: 'C',
+            q5: 'A',
+            q6: 'A',
+            q7: 'B'
+        };
+
+        // ---------- Đáp án hiển thị (dạng chữ cái) ----------
+        const displayAnswers = {
+            q1: 'B',
+            q2: 'B',
+            q3: 'A',
+            q4: 'C',
+            q5: 'A',
+            q6: 'A',
+            q7: 'B'
+        };
+
+        // ---------- GIẢI THÍCH CHI TIẾT (dựa theo ảnh) ----------
+        const detailedExplanations = {
+            q1: `<strong>Đáp án: B</strong><br>
+                  Người đàn ông nói: "I remember putting my wallet down. I probably left it there" – "there" là phòng chờ (waiting room). Anh ấy có ví khi mua sandwich (không để ở đó) và không nói về việc để trên tàu.`,
+            q2: `<strong>Đáp án: B</strong><br>
+                  Người phụ nữ nói: "This one’ll deal with something closer to home – wild flowers in parks and gardens." Đây là bài nói ngày mai. Rừng nhiệt đới là tháng sau, sông ngòi là bài trước.`,
+            q3: `<strong>Đáp án: A</strong><br>
+                  Người phụ nữ thường ăn salad và khi biết mọi món đều có bánh mì, cô ấy chọn "my usual choice" – salad. Người đàn ông chọn soup.`,
+            q4: `<strong>Đáp án: C</strong><br>
+                  Cô ấy nói: "according to what I heard on the radio, it's only on for a couple of days". Cô ấy không thấy trên website hay áp phích.`,
+            q5: `<strong>Đáp án: A</strong><br>
+                  Anh trai cô ấy được nhận làm bảo vệ (security guard) mặc dù muốn làm nhân viên bán hàng. Không phải nhà thiết kế.`,
+            q6: `<strong>Đáp án: A</strong><br>
+                  Tàu bị hủy, xếp hàng taxi dài, cô ấy sẽ về nhà lấy xe hơi riêng: "It'll be quicker to rush home and get my own car".`,
+            q7: `<strong>Đáp án: B</strong><br>
+                  Anh ấy nói về ice-hockey: "I gave it up in the end". Snow-boarding thì mới học và thích, skiing thì vẫn tiếp tục.`
+        };
+
+        // ---------- TRANSCRIPT với các span highlight ----------
+        const transcriptHTML = `
+            <p><strong>Question 1</strong><br>
+            <strong>Man:</strong> Hello, my name's Joe Smith. I'm ringing because I lost my black leather wallet on Monday. I got off the eleven twenty train from Reading and went to the shop at the end of platform two. I bought some sandwiches so I had my wallet then. Afterwards I went to sit in the waiting room. <span class="highlightable" data-q="1">I remember putting my wallet down. I probably left it there</span> because my next train arrived, so I hurried off to get it. If it’s handed in, please can you contact me on 07577886.</p>
+
+            <p><strong>Question 2</strong><br>
+            <strong>Woman:</strong> Do you fancy coming along to tomorrow’s Nature Society talk?<br>
+            <strong>Man:</strong> Yeah, the last one on rivers and the plants around them was very good, wasn’t it?<br>
+            <strong>Woman:</strong> Well, you’ll like the next topic too. It’s something you’re interested in.<br>
+            <strong>Man:</strong> Ah – so it’s about rainforests then?<br>
+            <strong>Woman:</strong> I knew you’d think that – actually there’s a talk on that next month. <span class="highlightable" data-q="2">This one’ll deal with something closer to home – wild flowers in parks and gardens.</span><br>
+            <strong>Man:</strong> Oh, OK. Not as interesting as jungle wildlife but it still sounds worth going to.</p>
+
+            <p><strong>Question 3</strong><br>
+            <strong>Woman:</strong> The menu looks good, doesn’t it?<br>
+            <strong>Man:</strong> Yes. Have you decided what you’re going to order? <span class="highlightable" data-q="3">You normally have salad for lunch, don’t you?</span><br>
+            <strong>Woman:</strong> Yes, I was thinking I might have the tomato soup, or maybe a toasted cheese and tomato sandwich. They both sound nice and I’ve heard the bread here’s really good. They bake it themselves.<br>
+            <strong>Man:</strong> Look, it says everything on the lunchtime menu comes with fresh bread.<br>
+            <strong>Woman:</strong> In that case, <span class="highlightable" data-q="3">I'll go for my usual choice.</span><br>
+            <strong>Man:</strong> OK, well, I'm going to try the soup.</p>
+
+            <p><strong>Question 4</strong><br>
+            <strong>Woman:</strong> Hi Jack. Did you know there's an interesting new exhibition on at the local art gallery? I was looking at the gallery's website recently and I didn't see anything about it. I'm surprised they haven't advertised it more on posters around town either. Anyway, <span class="highlightable" data-q="4">according to what I heard on the radio, it's only on for a couple of days</span> and I think it'll be really popular. I can book tickets online, if you're interested. Let me know as soon as you can.</p>
+
+            <p><strong>Question 5</strong><br>
+            <strong>Woman:</strong> Did I tell you my brother's working at Scooter – that new designer clothes place in town? You know, the one that sells really original jeans and T-shirts?<br>
+            <strong>Man:</strong> I'm quite jealous! I'd like to work there as a shop assistant myself.<br>
+            <strong>Woman:</strong> Well, in fact, he wanted to do that, but they only needed a security guard for the shop. So <span class="highlightable" data-q="5">he was given that job instead.</span> He's pleased – and he gets a great discount on all those amazing designer clothes!<br>
+            <strong>Man:</strong> Cool!</p>
+
+            <p><strong>Question 6</strong><br>
+            <strong>Woman:</strong> Hi Brian. This is Amanda, Amanda Smith. I'm calling to let you know that I might be a little late for our meeting. They've cancelled my train. It's really annoying actually as the train's the fastest way to get into town. I tried to get a cab, but the queue at the station was so long. <span class="highlightable" data-q="6">It'll be quicker to rush home and get my own car rather than wait for a taxi.</span> So I'll see you soon, hopefully.</p>
+
+            <p><strong>Question 7</strong><br>
+            <strong>Woman:</strong> You're doing lots of winter sports this year, aren't you?<br>
+            <strong>Man:</strong> That's right. Snow-boarding's been a first-time experience for me. It's taken me a while to learn, but now I find it hard to stop!<br>
+            <strong>Woman:</strong> What else have you tried?<br>
+            <strong>Man:</strong> Ice-hockey too – I’ve always enjoyed watching it. It’s too fast, though, and <span class="highlightable" data-q="7">I gave it up in the end.</span> Skiing’s a bit scary but it’s so exciting that I just can’t get enough of it. It’s a shame it’s such an expensive sport to do.<br>
+            <strong>Woman:</strong> Yes, I know.</p>
+
+            <p><em>Now listen again.</em></p>
+            <p style="color:#666;">That is the end of Part One.</p>
+        `;
+
+        // ---------- Dữ liệu câu hỏi (các lựa chọn A, B, C là mô tả bằng từ vựng thay cho hình ảnh) ----------
+        const questionsData = [
+            { num: 1, text: "Where does the man think he left his wallet?", options: ["on the train", "in the waiting room", "at the sandwich shop"] },
+            { num: 2, text: "What is tomorrow’s talk at the Nature Society about?", options: ["rainforests", "wild flowers in parks and gardens", "rivers and plants"] },
+            { num: 3, text: "What will the woman order for lunch?", options: ["salad", "tomato soup", "cheese and tomato sandwich"] },
+            { num: 4, text: "How did the woman find out about the exhibition?", options: ["on the gallery's website", "from posters", "on the radio"] },
+            { num: 5, text: "What is the woman's brother doing?", options: ["security guard", "shop assistant", "designer"] },
+            { num: 6, text: "How will the woman travel to her meeting?", options: ["by car", "by taxi", "by train"] },
+            { num: 7, text: "Which sport has the man stopped doing?", options: ["skiing", "ice-hockey", "snow-boarding"] }
+        ];
+
+        // ---------- STATE ----------
+        let examSubmitted = false;
+        let explanationMode = false;
+        const audio = document.getElementById('listeningAudio');
+        const speedSelect = document.getElementById('speedSelect');
+
+        speedSelect.addEventListener('change', function() {
+            audio.playbackRate = parseFloat(this.value);
+        });
+
+        // Helper: lấy câu trả lời của người dùng (chữ cái A, B, C hoặc null)
+        function getUserAnswer(q) {
+            const radios = document.getElementsByName(`q${q}`);
+            for (let radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return null;
+        }
+
+        // Kiểm tra một câu có đúng không
+        function isAnswerCorrect(q, userAnswer) {
+            return userAnswer === answerKey[`q${q}`];
+        }
+
+        // Cập nhật số câu đã làm và màu nav
+        function updateAnswerCount() {
+            let answered = 0;
+            for (let i = 1; i <= 7; i++) if (getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/7 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/7`;
+            for (let i = 1; i <= 7; i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if (btn) {
+                    btn.classList.remove('answered', 'unanswered');
+                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                }
+            }
+        }
+
+        // Tạo nút điều hướng từ 1 đến 7
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for (let i = 1; i <= 7; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', function() {
+                    const q = this.dataset.question;
+                    document.getElementById(`question-${q}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+
+        // Tạo HTML cho các câu hỏi
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questionsData.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="options">
+                        ${q.options.map((opt, index) => `
+                            <div class="option">
+                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
+                                <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Đánh dấu đúng/sai và hiển thị badge
+        function markAnswers() {
+            for (let i = 1; i <= 7; i++) {
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (!questionDiv) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                questionDiv.classList.remove('correct', 'incorrect');
+                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (correct) {
+                    questionDiv.classList.add('correct');
+                } else {
+                    questionDiv.classList.add('incorrect');
+                    // Hiển thị badge đáp án đúng
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    questionDiv.appendChild(badge);
+                }
+            }
+        }
+
+        // Hiển thị giải thích cho câu hỏi
+        function showExplanation(questionNum) {
+            if (!explanationMode && !examSubmitted) return;
+
+            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+
+            const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
+            highlightSpans.forEach(span => {
+                const parentP = span.closest('p');
+                if (parentP) parentP.classList.add('transcript-highlight');
+                span.classList.add('keyword-highlight');
+                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                span.classList.add('scroll-highlight');
+                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
+            });
+
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
+            if (examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa chọn)';
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `<strong>✅ Đúng!</strong>`;
+                html += `</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+
+        // Reset tất cả
+        function resetAll() {
+            examSubmitted = false;
+            explanationMode = false;
+            for (let i = 1; i <= 7; i++) {
+                const radios = document.getElementsByName(`q${i}`);
+                radios.forEach(r => r.checked = false);
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (questionDiv) {
+                    questionDiv.classList.remove('correct', 'incorrect');
+                    const badge = questionDiv.querySelector('.correct-answer-badge');
+                    if (badge) badge.remove();
+                }
+            }
+            const mainArea = document.getElementById('mainArea');
+            mainArea.classList.remove('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = '';
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        // ---------- EVENT LISTENERS ----------
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', updateAnswerCount);
+        });
+
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            if (examSubmitted) return;
+            let unanswered = [];
+            for (let i = 1; i <= 7; i++) if (!getUserAnswer(i)) unanswered.push(i);
+            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
+
+            examSubmitted = true;
+            const mainArea = document.getElementById('mainArea');
+            mainArea.classList.add('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+
+            let correctCount = 0;
+            for (let i = 1; i <= 7; i++) {
+                if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            }
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `
+                <h4>Bạn đã nộp bài</h4>
+                <p><strong>Đúng:</strong> ${correctCount}/7</p>
+                <p>Nhấn vào biểu tượng 👁️ để xem vị trí đáp án trong transcript.</p>
+            `;
+        });
+
+        document.getElementById('explainBtn').addEventListener('click', function() {
+            if (!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            this.disabled = true;
+            this.textContent = 'Đang xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            if (confirm('Reset tất cả câu trả lời?')) resetAll();
+        });
+
+        document.getElementById('closeExplanation').addEventListener('click', function() {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('eye-icon')) {
+                const q = e.target.dataset.question;
+                showExplanation(q);
+            }
+        });
+
+        // Font size
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
+                el.className = `transcript-content font-${size}`;
+                if (el.classList.contains('questions-list')) {
+                    el.classList.add('centered');
+                }
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        // Resizer
+        const transcriptPanel = document.getElementById('transcriptPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const mainArea = document.getElementById('mainArea');
+            const rect = mainArea.getBoundingClientRect();
+            let leftWidth = e.clientX - rect.left - 4;
+            if (leftWidth < 250) leftWidth = 250;
+            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
+            transcriptPanel.style.width = leftWidth + 'px';
+            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        // Khởi tạo
+        createNavButtons();
+        renderQuestions();
+        updateAnswerCount();
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        setFontSize('large');
+    })();
+</script>
+</body>
+</html>
