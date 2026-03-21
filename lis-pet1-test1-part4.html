@@ -330,6 +330,46 @@
             50% { background-color: #f1c40f; }
             100% { background-color: #f9e79f; }
         }
+
+        /* ===== THÊM CSS CHO HIGHLIGHT THỦ CÔNG ===== */
+        .highlight-yellow {
+            background-color: #f9e79f;
+            border-radius: 3px;
+            padding: 0 2px;
+            display: inline;
+        }
+        .highlight-green {
+            background-color: #a9d6b0;
+            border-radius: 3px;
+            padding: 0 2px;
+            display: inline;
+        }
+        .highlight-pink {
+            background-color: #fbb9c0;
+            border-radius: 3px;
+            padding: 0 2px;
+            display: inline;
+        }
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            padding: 5px 0;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            min-width: 150px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .context-menu div:hover {
+            background: #1e3a5f;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -413,6 +453,14 @@
         </div>
         <div class="explanation-content" id="explanationText"></div>
     </div>
+</div>
+
+<!-- ===== THÊM CONTEXT MENU CHO HIGHLIGHT THỦ CÔNG ===== -->
+<div class="context-menu" id="contextMenu">
+    <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+    <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+    <div onclick="applyHighlight('pink')">Highlight hồng</div>
+    <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
 <script>
@@ -747,6 +795,77 @@
         document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
         setFontSize('large');
     })();
+
+    // ========== THÊM CHỨC NĂNG HIGHLIGHT THỦ CÔNG ==========
+    let selectedRange = null;
+    const contextMenu = document.getElementById('contextMenu');
+
+    // Bắt sự kiện chuột phải trên transcript và phần câu hỏi
+    document.getElementById('transcriptContent')?.addEventListener('contextmenu', handleRightClick);
+    document.getElementById('questionsContent')?.addEventListener('contextmenu', handleRightClick);
+
+    function handleRightClick(e) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection.toString().trim()) {
+            selectedRange = selection.getRangeAt(0);
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+            contextMenu.style.display = 'block';
+        }
+    }
+
+    // Ẩn menu khi click ra ngoài
+    document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+        selectedRange = null;
+    });
+
+    // Hàm áp dụng highlight (được gọi từ onclick trong menu)
+    window.applyHighlight = function(color) {
+        if (!selectedRange) return;
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            span.appendChild(selectedRange.extractContents());
+            selectedRange.insertNode(span);
+        } catch (e) {
+            console.warn('Không thể highlight đoạn này');
+        }
+        contextMenu.style.display = 'none';
+        selectedRange = null;
+    };
+
+    // Hàm xoá highlight (chỉ xoá trong vùng được chọn)
+    window.removeHighlight = function() {
+        if (!selectedRange) return;
+        try {
+            // Tìm các thẻ highlight nằm trong vùng chọn và thay bằng nội dung gốc
+            const selectedNodes = [];
+            const iterator = document.createNodeIterator(
+                selectedRange.commonAncestorContainer,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: function(node) {
+                        if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) {
+                            if (selectedRange.intersectsNode(node)) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                        }
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                }
+            );
+            let node;
+            while (node = iterator.nextNode()) {
+                node.replaceWith(...node.childNodes); // xoá thẻ span, giữ lại text
+            }
+        } catch (e) {
+            console.warn('Không thể xoá highlight');
+        }
+        contextMenu.style.display = 'none';
+        selectedRange = null;
+    };
 </script>
 </body>
 </html>
