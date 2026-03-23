@@ -100,7 +100,7 @@
         .text-panel { background: #fffcf5; border-right: 2px solid #b0aa9a; }
         .questions-panel { background: #f8f6f0; }
         .text-panel h3, .questions-panel h3 { margin-top: 0; color: var(--primary-dark); border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .reading-text { line-height: 1.8; text-align: justify; }
+        .reading-text { line-height: 1.8; text-align: justify; user-select: text; }
         .resizer {
             width: 10px; background-color: #b0aa9a; cursor: col-resize; z-index: 10; flex-shrink: 0;
             transition: 0.1s;
@@ -125,7 +125,38 @@
         }
         .reading-nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
         .reading-nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+        /* Highlight styles for automatic answer location */
+        .dynamic-highlight {
+            background-color: #f9e79f;
+            display: inline;
+            border-radius: 3px;
+            padding: 0 2px;
+            animation: highlightFadeIn 0.5s ease;
+        }
+        .keyword-highlight {
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 2px;
+            font-weight: 600;
+            background-color: #fff3cd;
+            display: inline;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        /* Manual highlight styles (right‑click) - from IELTS reading template */
         .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; transition: 0.3s; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; transition: 0.3s; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; transition: 0.3s; }
+        @keyframes highlightFadeIn {
+            from { background-color: #fff; }
+            to { background-color: #f9e79f; }
+        }
+        .context-menu {
+            position: fixed; background: white; border: 1px solid #9a8c7a; box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            padding: 5px 0; border-radius: 8px; z-index: 1000; display: none; min-width: 150px;
+        }
+        .context-menu div { padding: 8px 20px; cursor: pointer; transition: 0.2s; }
+        .context-menu div:hover { background: var(--primary); color: white; }
         @media (max-width: 768px) {
             .reading-container { flex-direction: column; height: 1000px; }
             .text-panel, .questions-panel { width: 100% !important; height: 50% !important; }
@@ -235,13 +266,13 @@
         </div>
     </div>
 
-    <!-- EX9: READING (Himalayan) với True/False -->
+    <!-- EX9: READING (Himalayan) với True/False + advanced answer highlighting -->
     <div class="exercise-card">
         <div class="exercise-title">9. Read the text. Are the sentences TRUE or FALSE?</div>
         <div class="reading-container" id="reading-ex9">
             <div class="text-panel" id="text-panel-ex9">
                 <h3>Himalayan Multi‑Activity Adventure</h3>
-                <div class="reading-text">
+                <div class="reading-text" id="readingTextForHighlight">
                     <p>Why settle for only one activity per vacation when you can now enjoy a variety on one trip? Our latest Himalayan multi-activity vacation combines three excitingly different activities into one stunning adventure.</p>
                     <p>First, travelers enjoy a four-day trek through some of the most beautiful scenery in Nepal. Setting out from Kathmandu, we hike along the northern slopes of the Himalayas, following the Annapurna Circuit. Passing through pine forests and wonderful rice paddies, the group makes its way up to the left to Thorong La (17,769 ft.). Regular stops will be made each day so that hikers get used to the steady change in height. We spend one morning exploring Muktinath, an important site for both Hindu and Buddhist pilgrims.</p>
                     <p>The second stage of the journey is an exhilarating white-water rafting ride all the way back down the mountain. The rafting begins on the Marsyandi, famous as one of the best white-water rivers in the world, and finishes with the somewhat calmer waters of the Trisuli.</p>
@@ -297,23 +328,31 @@
 
 <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
+<!-- Context Menu for manual highlighting (right‑click) -->
+<div class="context-menu" id="highlightContextMenu">
+    <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+    <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+    <div onclick="applyHighlight('pink')">Highlight hồng</div>
+    <div onclick="removeHighlight()">Xóa highlight</div>
+</div>
+
 <script>
 (function() {
-    // ==================== DATA ====================
-const ex1_data = [
-    { clue: "A place where people go for vacation", hint: "r_ _ _ _  _", ans: "resort",
-      detailHint: "<div class='hint-detail'><span class='key-word'>resort</span>: khu nghỉ dưỡng</div><div class='hint-detail'>Là nơi mọi người đến để thư giãn, nghỉ ngơi, thường có nhiều tiện nghi như khách sạn, nhà hàng, bãi biển. Từ có 6 chữ cái, bắt đầu bằng 'r'.</div>" },
-    { clue: "Lack of something", hint: "a_ _ _ _ _ _", ans: "absence",
-      detailHint: "<div class='hint-detail'><span class='key-word'>absence</span>: sự vắng mặt, thiếu hụt</div><div class='hint-detail'>Chỉ tình trạng không có mặt hoặc không tồn tại của một vật/người. Từ có 7 chữ cái, bắt đầu bằng 'a'.</div>" },
-    { clue: "Beautiful", hint: "c_ _ _ _ _ _ _", ans: "charming",
-      detailHint: "<div class='hint-detail'><span class='key-word'>charming</span>: quyến rũ, duyên dáng</div><div class='hint-detail'>Mang vẻ đẹp thu hút, dễ mến. Từ có 7 chữ cái, bắt đầu bằng 'c'.</div>" },
-    { clue: "To help", hint: "a_ _ _ _ _", ans: "assist",
-      detailHint: "<div class='hint-detail'><span class='key-word'>assist</span>: hỗ trợ, giúp đỡ</div><div class='hint-detail'>Động từ chỉ hành động giúp ai đó làm việc gì. Từ có 6 chữ cái, bắt đầu bằng 'a'.</div>" },
-    { clue: "Elegant", hint: "g_ _ _ _ _ _ _", ans: "graceful",
-      detailHint: "<div class='hint-detail'><span class='key-word'>graceful</span>: duyên dáng, thanh lịch</div><div class='hint-detail'>Miêu tả vẻ đẹp uyển chuyển, nhã nhặn. Từ có 7 chữ cái, bắt đầu bằng 'g'.</div>" },
-    { clue: "To take part in an activity", hint: "p_ _ _ _ _ _ _ _ _ _", ans: "participate",
-      detailHint: "<div class='hint-detail'><span class='key-word'>participate</span>: tham gia</div><div class='hint-detail'>Động từ chỉ việc tham dự vào một hoạt động, sự kiện. Từ có 10 chữ cái, bắt đầu bằng 'p'.</div>" }
-];
+    // ==================== DATA (unchanged from original Review10) ====================
+    const ex1_data = [
+        { clue: "A place where people go for vacation", hint: "r_ _ _ _  _", ans: "resort",
+          detailHint: "<div class='hint-detail'><span class='key-word'>resort</span>: khu nghỉ dưỡng</div><div class='hint-detail'>Là nơi mọi người đến để thư giãn, nghỉ ngơi, thường có nhiều tiện nghi như khách sạn, nhà hàng, bãi biển. Từ có 6 chữ cái, bắt đầu bằng 'r'.</div>" },
+        { clue: "Lack of something", hint: "a_ _ _ _ _ _", ans: "absence",
+          detailHint: "<div class='hint-detail'><span class='key-word'>absence</span>: sự vắng mặt, thiếu hụt</div><div class='hint-detail'>Chỉ tình trạng không có mặt hoặc không tồn tại của một vật/người. Từ có 7 chữ cái, bắt đầu bằng 'a'.</div>" },
+        { clue: "Beautiful", hint: "c_ _ _ _ _ _ _", ans: "charming",
+          detailHint: "<div class='hint-detail'><span class='key-word'>charming</span>: quyến rũ, duyên dáng</div><div class='hint-detail'>Mang vẻ đẹp thu hút, dễ mến. Từ có 7 chữ cái, bắt đầu bằng 'c'.</div>" },
+        { clue: "To help", hint: "a_ _ _ _ _", ans: "assist",
+          detailHint: "<div class='hint-detail'><span class='key-word'>assist</span>: hỗ trợ, giúp đỡ</div><div class='hint-detail'>Động từ chỉ hành động giúp ai đó làm việc gì. Từ có 6 chữ cái, bắt đầu bằng 'a'.</div>" },
+        { clue: "Elegant", hint: "g_ _ _ _ _ _ _", ans: "graceful",
+          detailHint: "<div class='hint-detail'><span class='key-word'>graceful</span>: duyên dáng, thanh lịch</div><div class='hint-detail'>Miêu tả vẻ đẹp uyển chuyển, nhã nhặn. Từ có 7 chữ cái, bắt đầu bằng 'g'.</div>" },
+        { clue: "To take part in an activity", hint: "p_ _ _ _ _ _ _ _ _ _", ans: "participate",
+          detailHint: "<div class='hint-detail'><span class='key-word'>participate</span>: tham gia</div><div class='hint-detail'>Động từ chỉ việc tham dự vào một hoạt động, sự kiện. Từ có 10 chữ cái, bắt đầu bằng 'p'.</div>" }
+    ];
 
     const ex2_bank = ["contribution","inhabitants","prohibited","survival","conservation","hospitality"];
     const ex2_data = [
@@ -405,7 +444,7 @@ const ex1_data = [
         "All treks follow the same schedule.",
         "The shortest possible trip is two weeks."
     ];
-    const ex9_answers = ["F","T","T","F","F","T","F","T","F","F"]; // T = TRUE, F = FALSE
+    const ex9_answers = ["F","T","T","F","F","T","F","T","F","F"];
     const ex9_hints = [
         "<div class='hint-detail'><span class='key-word'>FALSE</span></div><div class='hint-detail'>Bài đọc có 3 hoạt động chính (trek, rafting, safari), không phải mỗi ngày một hoạt động mới. Mỗi hoạt động kéo dài vài ngày.</div>",
         "<div class='hint-detail'><span class='key-word'>TRUE</span></div><div class='hint-detail'>Đoạn 2: 'Setting out from Kathmandu' – chuyến đi bộ bắt đầu từ Kathmandu.</div>",
@@ -442,389 +481,173 @@ const ex1_data = [
         { q: "The surface of the sun throws ............... various particles.", ans: "off", hint: "<div class='hint-detail'><span class='key-word'>throw off</span>: phát ra, tỏa ra (ánh sáng, nhiệt, hạt)</div><div class='hint-detail'>Bề mặt mặt trời phát ra các hạt khác nhau.</div>" }
     ];
 
-    // ========== STATE & HELPER FUNCTIONS ==========
+    // ========== STATE & HELPER FUNCTIONS (unchanged) ==========
     let answerStates = new Map();
     let wordUsageCount = { ex2: {}, ex6: {}, ex10: {}, ex12: {} };
     let optionSelections = new Map();
 
-    window.adjustWidth = function(el) {
-        if (!el) return;
-        let base = 120, charW = 9;
-        let newW = Math.max(el.value.length * charW + 40, base);
-        el.style.width = Math.min(newW, 600) + "px";
-    };
-
-    window.toggleHint = function(id) {
-        let hint = document.getElementById(id+'-hint');
-        let btn = document.getElementById(id+'-info');
-        if (hint) {
-            hint.style.display = hint.style.display === 'block' ? 'none' : 'block';
-            if (btn) btn.classList.toggle('active', hint.style.display === 'block');
-        }
-    };
-
-    window.selectOption = function(qid, opt) {
-        let container = document.getElementById(qid+'-container');
-        if (container) {
-            container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-            let btn = Array.from(container.querySelectorAll('.option-btn')).find(b => b.textContent === opt);
-            if (btn) btn.classList.add('selected');
-        }
-        optionSelections.set(qid, opt);
-    };
-
-    window.toggleSingleAns = function(id) {
-        let qid = id.replace('-eye','');
-        if (qid.startsWith('ex9')) {
-            let idx = parseInt(qid.split('-q')[1]);
-            let ans = ex9_answers[idx-1] === 'T' ? 'TRUE' : 'FALSE';
-            let eye = document.getElementById(id);
-            eye.classList.toggle('active');
-            let hint = document.getElementById(qid+'-hint');
-            if (hint) hint.style.display = hint.style.display === 'block' ? 'none' : 'block';
-            let item = document.getElementById(qid+'-item');
-            if (item) {
-                item.style.backgroundColor = '#fef9e7';
-                setTimeout(() => item.style.backgroundColor = '', 1500);
-            }
-            let paragraphs = document.querySelectorAll('#text-panel-ex9 p');
-            let pIndex = Math.min(idx, paragraphs.length) - 1;
-            if (paragraphs[pIndex]) {
-                paragraphs[pIndex].classList.add('highlight-yellow');
-                setTimeout(() => paragraphs[pIndex].classList.remove('highlight-yellow'), 2000);
-                paragraphs[pIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            return;
-        }
-        if (qid.startsWith('ex4') || qid.startsWith('ex8')) {
-            let data = qid.startsWith('ex4') ? ex4_data : ex8_data;
-            let idx, correct;
-            if (qid.startsWith('ex4')) {
-                idx = parseInt(qid.split('-q')[1]);
-                correct = data[idx].ans;
-            } else {
-                let num = parseInt(qid.split('-q')[1]);
-                correct = data.find(d => d.num == num).ans;
-            }
-            let container = document.getElementById(qid+'-container');
-            if (container) {
-                container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('correct-option','incorrect-option','selected'));
-                container.querySelectorAll('.option-btn').forEach(btn => {
-                    if (btn.textContent.includes(correct) || btn.textContent.startsWith(correct+' '))
-                        btn.classList.add('correct-option');
-                });
-            }
-            let eye = document.getElementById(id);
-            if (eye) eye.classList.add('active');
-            answerStates.set(qid+'-state', true);
-            return;
-        }
-        let inp = document.getElementById(qid);
-        if (!inp) return;
-        let eye = document.getElementById(id);
-        let state = answerStates.get(qid+'-state') || false;
-        if (state) {
-            inp.value = '';
-            inp.classList.remove('correct','incorrect-marked');
-            adjustWidth(inp);
-            if (eye) eye.classList.remove('active');
-            answerStates.set(qid+'-state', false);
-        } else {
-            inp.value = inp.dataset.ans.split('|')[0];
-            inp.classList.add('correct');
-            adjustWidth(inp);
-            if (eye) eye.classList.add('active');
-            answerStates.set(qid+'-state', true);
-        }
-    };
-
-    window.showAnswers = function(prefix) {
-        if (prefix === 'ex9') {
-            for (let i = 1; i <= 10; i++) {
-                let radios = document.getElementsByName(`ex9-q${i}`);
-                let correct = ex9_answers[i-1] === 'T' ? 'TRUE' : 'FALSE';
-                for (let r of radios) if (r.value === correct) r.checked = true;
-                let eye = document.querySelector(`#ex9-q${i}-item .eye-icon`);
-                if (eye) eye.classList.add('active');
-            }
-            return;
-        }
-        if (prefix === 'ex4' || prefix === 'ex8') {
-            let data = prefix === 'ex4' ? ex4_data : ex8_data;
-            data.forEach(item => {
-                let qid = prefix + '-q' + (prefix==='ex4' ? ex4_data.indexOf(item) : item.num);
-                let container = document.getElementById(qid+'-container');
-                if (container) {
-                    container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected','correct-option','incorrect-option'));
-                    container.querySelectorAll('.option-btn').forEach(btn => {
-                        if (btn.textContent.includes(item.ans) || btn.textContent.startsWith(item.ans+' '))
-                            btn.classList.add('correct-option');
-                    });
-                }
-                let eye = document.getElementById(qid+'-eye');
-                if (eye) eye.classList.add('active');
-                answerStates.set(qid+'-state', true);
-            });
-            return;
-        }
-        document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => {
-            if (el.tagName === 'INPUT' && el.dataset.ans) {
-                let eye = document.getElementById(el.id + '-eye');
-                el.value = el.dataset.ans.split('|')[0];
-                el.classList.add('correct');
-                adjustWidth(el);
-                if (eye) eye.classList.add('active');
-                answerStates.set(el.id + '-state', true);
-            }
-        });
-        if (prefix === 'ex2' || prefix === 'ex6' || prefix === 'ex10' || prefix === 'ex12')
-            updateWordBank(prefix);
-    };
-
-    window.resetSection = function(prefix) {
-        document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => {
-            if (el.tagName === 'INPUT') {
-                el.value = '';
-                el.classList.remove('correct','incorrect-marked');
-                adjustWidth(el);
-                answerStates.delete(el.id+'-state');
-            }
-            if (el.classList.contains('option-btn')) el.classList.remove('selected','correct-option','incorrect-option');
-            if (el.classList.contains('eye-icon')) el.classList.remove('active');
-            let hint = document.getElementById(el.id+'-hint'); if (hint) hint.style.display = 'none';
-            let eye = document.getElementById(el.id+'-eye'); if (eye) eye.classList.remove('active');
-            let info = document.getElementById(el.id+'-info'); if (info) info.classList.remove('active');
-        });
-        if (prefix === 'ex2' || prefix === 'ex6' || prefix === 'ex10' || prefix === 'ex12') {
-            let bank = prefix==='ex2'? ex2_bank : prefix==='ex6'? ex6_bank : prefix==='ex10'? ex10_bank : ex12_bank;
-            bank.forEach(w => wordUsageCount[prefix][w] = 0);
-            updateWordBankDisplay(prefix);
-        }
-        if (prefix === 'ex9') {
-            for (let i = 1; i <= 10; i++) {
-                let radios = document.getElementsByName(`ex9-q${i}`);
-                for (let r of radios) r.checked = false;
-            }
-            document.querySelectorAll('#reading-ex9 .eye-icon').forEach(ic => ic.classList.remove('active'));
-        }
-    };
-
-    window.checkAll = function() {
-        document.querySelectorAll('[data-type="input"]').forEach(inp => {
-            let correct = inp.dataset.ans.split('|');
-            let user = inp.value.trim().toLowerCase().replace(/\s+/g, ' ');
-            inp.classList.remove('correct','incorrect-marked');
-            if (!user) return;
-            if (correct.some(c => c.toLowerCase().replace(/\s+/g, ' ') === user))
-                inp.classList.add('correct');
-            else inp.classList.add('incorrect-marked');
-        });
-        [...ex4_data, ...ex8_data].forEach(item => {
-            let qid = item.hasOwnProperty('num') ? `ex8-q${item.num}` : `ex4-q${ex4_data.indexOf(item)}`;
-            let selected = optionSelections.get(qid);
-            if (!selected) return;
-            let container = document.getElementById(qid+'-container');
-            if (container) {
-                container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('correct-option','incorrect-option'));
-                container.querySelectorAll('.option-btn').forEach(btn => {
-                    if (btn.textContent === selected) {
-                        if (selected.includes(item.ans) || selected.startsWith(item.ans+' '))
-                            btn.classList.add('correct-option');
-                        else btn.classList.add('incorrect-option');
-                    }
-                });
-            }
-        });
-        for (let i = 1; i <= 10; i++) {
-            let selected = document.querySelector(`input[name="ex9-q${i}"]:checked`)?.value;
-            if (!selected) continue;
-            let container = document.getElementById(`ex9-q${i}-item`);
-            let options = container.querySelectorAll('.tf-option');
-            options.forEach(opt => opt.classList.remove('correct','incorrect'));
-            let correctAns = ex9_answers[i-1] === 'T' ? 'TRUE' : 'FALSE';
-            options.forEach(opt => {
-                let radio = opt.querySelector('input');
-                if (radio.value === correctAns) opt.classList.add('correct');
-                if (selected === radio.value && radio.value !== correctAns) opt.classList.add('incorrect');
-            });
-        }
-    };
-
+    window.adjustWidth = function(el) { if (!el) return; let base = 120, charW = 9; let newW = Math.max(el.value.length * charW + 40, base); el.style.width = Math.min(newW, 600) + "px"; };
+    window.toggleHint = function(id) { let hint = document.getElementById(id+'-hint'); let btn = document.getElementById(id+'-info'); if (hint) { hint.style.display = hint.style.display === 'block' ? 'none' : 'block'; if (btn) btn.classList.toggle('active', hint.style.display === 'block'); } };
+    window.selectOption = function(qid, opt) { let container = document.getElementById(qid+'-container'); if (container) { container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected')); let btn = Array.from(container.querySelectorAll('.option-btn')).find(b => b.textContent === opt); if (btn) btn.classList.add('selected'); } optionSelections.set(qid, opt); };
+    window.toggleSingleAns = function(id) { let qid = id.replace('-eye',''); if (qid.startsWith('ex9')) { let idx = parseInt(qid.split('-q')[1]); let ans = ex9_answers[idx-1] === 'T' ? 'TRUE' : 'FALSE'; let eye = document.getElementById(id); eye.classList.toggle('active'); let hint = document.getElementById(qid+'-hint'); if (hint) hint.style.display = hint.style.display === 'block' ? 'none' : 'block'; let item = document.getElementById(qid+'-item'); if (item) { item.style.backgroundColor = '#fef9e7'; setTimeout(() => item.style.backgroundColor = '', 1500); } let paragraphs = document.querySelectorAll('#text-panel-ex9 p'); let pIndex = Math.min(idx, paragraphs.length) - 1; if (paragraphs[pIndex]) { paragraphs[pIndex].classList.add('highlight-yellow'); setTimeout(() => paragraphs[pIndex].classList.remove('highlight-yellow'), 2000); paragraphs[pIndex].scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; } if (qid.startsWith('ex4') || qid.startsWith('ex8')) { let data = qid.startsWith('ex4') ? ex4_data : ex8_data; let idx, correct; if (qid.startsWith('ex4')) { idx = parseInt(qid.split('-q')[1]); correct = data[idx].ans; } else { let num = parseInt(qid.split('-q')[1]); correct = data.find(d => d.num == num).ans; } let container = document.getElementById(qid+'-container'); if (container) { container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('correct-option','incorrect-option','selected')); container.querySelectorAll('.option-btn').forEach(btn => { if (btn.textContent.includes(correct) || btn.textContent.startsWith(correct+' ')) btn.classList.add('correct-option'); }); } let eye = document.getElementById(id); if (eye) eye.classList.add('active'); answerStates.set(qid+'-state', true); return; } let inp = document.getElementById(qid); if (!inp) return; let eye = document.getElementById(id); let state = answerStates.get(qid+'-state') || false; if (state) { inp.value = ''; inp.classList.remove('correct','incorrect-marked'); adjustWidth(inp); if (eye) eye.classList.remove('active'); answerStates.set(qid+'-state', false); } else { inp.value = inp.dataset.ans.split('|')[0]; inp.classList.add('correct'); adjustWidth(inp); if (eye) eye.classList.add('active'); answerStates.set(qid+'-state', true); } };
+    window.showAnswers = function(prefix) { if (prefix === 'ex9') { for (let i = 1; i <= 10; i++) { let radios = document.getElementsByName(`ex9-q${i}`); let correct = ex9_answers[i-1] === 'T' ? 'TRUE' : 'FALSE'; for (let r of radios) if (r.value === correct) r.checked = true; let eye = document.querySelector(`#ex9-q${i}-item .eye-icon`); if (eye) eye.classList.add('active'); } return; } if (prefix === 'ex4' || prefix === 'ex8') { let data = prefix === 'ex4' ? ex4_data : ex8_data; data.forEach(item => { let qid = prefix + '-q' + (prefix==='ex4' ? ex4_data.indexOf(item) : item.num); let container = document.getElementById(qid+'-container'); if (container) { container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected','correct-option','incorrect-option')); container.querySelectorAll('.option-btn').forEach(btn => { if (btn.textContent.includes(item.ans) || btn.textContent.startsWith(item.ans+' ')) btn.classList.add('correct-option'); }); } let eye = document.getElementById(qid+'-eye'); if (eye) eye.classList.add('active'); answerStates.set(qid+'-state', true); }); return; } document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el => { if (el.tagName === 'INPUT' && el.dataset.ans) { let eye = document.getElementById(el.id + '-eye'); el.value = el.dataset.ans.split('|')[0]; el.classList.add('correct'); adjustWidth(el); if (eye) eye.classList.add('active'); answerStates.set(el.id + '-state', true); } }); if (prefix === 'ex2' || prefix === 'ex6' || prefix === 'ex10' || prefix === 'ex12') updateWordBank(prefix); };
+    window.resetSection = function(prefix) { document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => { if (el.tagName === 'INPUT') { el.value = ''; el.classList.remove('correct','incorrect-marked'); adjustWidth(el); answerStates.delete(el.id+'-state'); } if (el.classList.contains('option-btn')) el.classList.remove('selected','correct-option','incorrect-option'); if (el.classList.contains('eye-icon')) el.classList.remove('active'); let hint = document.getElementById(el.id+'-hint'); if (hint) hint.style.display = 'none'; let eye = document.getElementById(el.id+'-eye'); if (eye) eye.classList.remove('active'); let info = document.getElementById(el.id+'-info'); if (info) info.classList.remove('active'); }); if (prefix === 'ex2' || prefix === 'ex6' || prefix === 'ex10' || prefix === 'ex12') { let bank = prefix==='ex2'? ex2_bank : prefix==='ex6'? ex6_bank : prefix==='ex10'? ex10_bank : ex12_bank; bank.forEach(w => wordUsageCount[prefix][w] = 0); updateWordBankDisplay(prefix); } if (prefix === 'ex9') { for (let i = 1; i <= 10; i++) { let radios = document.getElementsByName(`ex9-q${i}`); for (let r of radios) r.checked = false; } document.querySelectorAll('#reading-ex9 .eye-icon').forEach(ic => ic.classList.remove('active')); } };
+    window.checkAll = function() { document.querySelectorAll('[data-type="input"]').forEach(inp => { let correct = inp.dataset.ans.split('|'); let user = inp.value.trim().toLowerCase().replace(/\s+/g, ' '); inp.classList.remove('correct','incorrect-marked'); if (!user) return; if (correct.some(c => c.toLowerCase().replace(/\s+/g, ' ') === user)) inp.classList.add('correct'); else inp.classList.add('incorrect-marked'); }); [...ex4_data, ...ex8_data].forEach(item => { let qid = item.hasOwnProperty('num') ? `ex8-q${item.num}` : `ex4-q${ex4_data.indexOf(item)}`; let selected = optionSelections.get(qid); if (!selected) return; let container = document.getElementById(qid+'-container'); if (container) { container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('correct-option','incorrect-option')); container.querySelectorAll('.option-btn').forEach(btn => { if (btn.textContent === selected) { if (selected.includes(item.ans) || selected.startsWith(item.ans+' ')) btn.classList.add('correct-option'); else btn.classList.add('incorrect-option'); } }); } }); for (let i = 1; i <= 10; i++) { let selected = document.querySelector(`input[name="ex9-q${i}"]:checked`)?.value; if (!selected) continue; let container = document.getElementById(`ex9-q${i}-item`); let options = container.querySelectorAll('.tf-option'); options.forEach(opt => opt.classList.remove('correct','incorrect')); let correctAns = ex9_answers[i-1] === 'T' ? 'TRUE' : 'FALSE'; options.forEach(opt => { let radio = opt.querySelector('input'); if (radio.value === correctAns) opt.classList.add('correct'); if (selected === radio.value && radio.value !== correctAns) opt.classList.add('incorrect'); }); } };
     window.dragWord = e => e.dataTransfer.setData('text/plain', e.target.dataset.word);
     window.allowDrop = e => e.preventDefault();
-    window.dropWord = (e, inputId) => {
-        e.preventDefault();
-        let word = e.dataTransfer.getData('text/plain');
-        let inp = document.getElementById(inputId);
-        if (inp) {
-            inp.value = word;
-            adjustWidth(inp);
-            let task = inputId.split('-')[0];
-            updateWordBankUsage(word, task);
+    window.dropWord = (e, inputId) => { e.preventDefault(); let word = e.dataTransfer.getData('text/plain'); let inp = document.getElementById(inputId); if (inp) { inp.value = word; adjustWidth(inp); let task = inputId.split('-')[0]; updateWordBankUsage(word, task); } };
+    window.selectWordFromBank = function(wordId) { let item = document.getElementById(wordId); if (!item || item.classList.contains('used')) return; let word = item.dataset.word; let task = wordId.split('-')[0]; let inputs = document.querySelectorAll(`#questions-${task} input.word-input`); let empty = Array.from(inputs).find(inp => !inp.value.trim()); if (empty) { empty.value = word; adjustWidth(empty); updateWordBankUsage(word, task); } else alert('All gaps filled. Click a gap to replace.'); };
+    window.updateWordBankUsage = function(word, task) { if (!wordUsageCount[task]) wordUsageCount[task] = {}; wordUsageCount[task][word] = (wordUsageCount[task][word] || 0) + 1; updateWordBankDisplay(task); };
+    window.updateWordBankDisplay = function(task) { document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => { let w = item.dataset.word; let cnt = wordUsageCount[task]?.[w] || 0; item.classList.toggle('used', cnt > 0); }); };
+    window.updateWordBank = function(task) { let inputs = document.querySelectorAll(`#questions-${task} input.word-input`); let bank = task==='ex2'? ex2_bank : task==='ex6'? ex6_bank : task==='ex10'? ex10_bank : ex12_bank; bank.forEach(w => wordUsageCount[task][w] = 0); inputs.forEach(inp => { let w = inp.value.trim(); if (w && wordUsageCount[task][w] !== undefined) wordUsageCount[task][w]++; }); updateWordBankDisplay(task); };
+    function addWordBankEventListeners(task) { document.querySelectorAll(`#bank-${task} .word-item`).forEach(it => { it.addEventListener('click', () => selectWordFromBank(it.id)); it.addEventListener('dragstart', dragWord); }); document.querySelectorAll(`#questions-${task} input.word-input`).forEach(inp => { inp.addEventListener('dragover', allowDrop); inp.addEventListener('drop', e => dropWord(e, inp.id)); inp.addEventListener('input', () => updateWordBank(task)); }); }
+    window.scrollToReadingQuestion = function(num) { let el = document.getElementById(`ex9-q${num}-item`); if (el) el.scrollIntoView({behavior:'smooth', block:'center'}); };
+    function updateReadingNav() { for (let i = 1; i <= 10; i++) { let btn = document.querySelector(`.reading-nav-btn[data-q="ex9-q${i}"]`); if (btn) btn.classList.toggle('answered', document.querySelector(`input[name="ex9-q${i}"]:checked`) !== null); } }
+
+    // ==================== ADVANCED ANSWER HIGHLIGHT (IELTS‑style) ====================
+    const answerLocations = {
+        1: { text: "combines three excitingly different activities into one stunning adventure", keywords: ["three excitingly different activities"] },
+        2: { text: "Setting out from Kathmandu", keywords: ["Setting out from Kathmandu"] },
+        3: { text: "Regular stops will be made each day so that hikers get used to the steady change in height", keywords: ["Regular stops will be made each day"] },
+        4: { text: "We spend one morning exploring Muktinath", keywords: ["one morning exploring Muktinath"] },
+        5: { text: "The rafting begins on the Marsyandi, famous as one of the best white-water rivers in the world, and finishes with the somewhat calmer waters of the Trisuli", keywords: ["begins on the Marsyandi", "finishes with the Trisuli"] },
+        6: { text: "after a highly energetic week, travelers can then enjoy a needed break with a safari", keywords: ["after a highly energetic week", "needed break"] },
+        7: { text: "explore the mysteries of the jungle on the backs of elephants", keywords: ["on the backs of elephants"] },
+        8: { text: "The expedition ends with the chance for some sightseeing and souvenir hunting", keywords: ["souvenir hunting"] },
+        9: { text: "multi-activity adventures are flexible and can be designed to meet your personal requirements", keywords: ["flexible", "can be designed"] },
+        10: { text: "anywhere between ten and thirty days", keywords: ["ten and thirty days"] }
+    };
+
+    function findNodeAndOffset(node, targetPos, currentPos = {value: 0}) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const len = node.textContent.length;
+            if (currentPos.value + len > targetPos) return { node, offset: targetPos - currentPos.value };
+            currentPos.value += len;
+        } else {
+            for (let child of node.childNodes) {
+                const result = findNodeAndOffset(child, targetPos, currentPos);
+                if (result) return result;
+            }
         }
-    };
-    window.selectWordFromBank = function(wordId) {
-        let item = document.getElementById(wordId);
-        if (!item || item.classList.contains('used')) return;
-        let word = item.dataset.word;
-        let task = wordId.split('-')[0];
-        let inputs = document.querySelectorAll(`#questions-${task} input.word-input`);
-        let empty = Array.from(inputs).find(inp => !inp.value.trim());
-        if (empty) {
-            empty.value = word;
-            adjustWidth(empty);
-            updateWordBankUsage(word, task);
-        } else alert('All gaps filled. Click a gap to replace.');
-    };
-    window.updateWordBankUsage = function(word, task) {
-        if (!wordUsageCount[task]) wordUsageCount[task] = {};
-        wordUsageCount[task][word] = (wordUsageCount[task][word] || 0) + 1;
-        updateWordBankDisplay(task);
-    };
-    window.updateWordBankDisplay = function(task) {
-        document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => {
-            let w = item.dataset.word;
-            let cnt = wordUsageCount[task]?.[w] || 0;
-            item.classList.toggle('used', cnt > 0);
-        });
-    };
-    window.updateWordBank = function(task) {
-        let inputs = document.querySelectorAll(`#questions-${task} input.word-input`);
-        let bank = task==='ex2'? ex2_bank : task==='ex6'? ex6_bank : task==='ex10'? ex10_bank : ex12_bank;
-        bank.forEach(w => wordUsageCount[task][w] = 0);
-        inputs.forEach(inp => {
-            let w = inp.value.trim();
-            if (w && wordUsageCount[task][w] !== undefined) wordUsageCount[task][w]++;
-        });
-        updateWordBankDisplay(task);
-    };
-    function addWordBankEventListeners(task) {
-        document.querySelectorAll(`#bank-${task} .word-item`).forEach(it => {
-            it.addEventListener('click', () => selectWordFromBank(it.id));
-            it.addEventListener('dragstart', dragWord);
-        });
-        document.querySelectorAll(`#questions-${task} input.word-input`).forEach(inp => {
-            inp.addEventListener('dragover', allowDrop);
-            inp.addEventListener('drop', e => dropWord(e, inp.id));
-            inp.addEventListener('input', () => updateWordBank(task));
+        return null;
+    }
+
+    function clearAllHighlights() {
+        const readingDiv = document.getElementById('readingTextForHighlight');
+        if (!readingDiv) return;
+        const highlights = readingDiv.querySelectorAll('.dynamic-highlight, .keyword-highlight, .highlight-yellow, .highlight-green, .highlight-pink');
+        highlights.forEach(el => {
+            const parent = el.parentNode;
+            if (parent) {
+                while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                parent.removeChild(el);
+            }
         });
     }
 
-    window.scrollToReadingQuestion = function(num) {
-        let el = document.getElementById(`ex9-q${num}-item`);
-        if (el) el.scrollIntoView({behavior:'smooth', block:'center'});
-    };
-    window.showReadingHint = function(num) {
-        let eye = document.querySelector(`.eye-icon[data-q="ex9-q${num}"]`);
-        if (eye) eye.classList.toggle('active');
-        let hint = document.getElementById(`ex9-q${num}-hint`);
-        if (hint) hint.style.display = hint.style.display === 'block' ? 'none' : 'block';
-        let paragraphs = document.querySelectorAll('#text-panel-ex9 p');
-        let pIndex = Math.min(num, paragraphs.length) - 1;
-        if (paragraphs[pIndex]) {
-            paragraphs[pIndex].classList.add('highlight-yellow');
-            setTimeout(() => paragraphs[pIndex].classList.remove('highlight-yellow'), 2000);
-            paragraphs[pIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function highlightAnswerLocation(questionNum) {
+        clearAllHighlights();
+        const loc = answerLocations[questionNum];
+        if (!loc) return false;
+
+        const readingDiv = document.getElementById('readingTextForHighlight');
+        const paragraphs = readingDiv.getElementsByTagName('p');
+        for (let p of paragraphs) {
+            if (p.textContent.includes(loc.text)) {
+                try {
+                    const text = p.textContent;
+                    const startIdx = text.indexOf(loc.text);
+                    let currentPos = {value: 0};
+                    const startNodeInfo = findNodeAndOffset(p, startIdx, currentPos);
+                    currentPos = {value: 0};
+                    const endNodeInfo = findNodeAndOffset(p, startIdx + loc.text.length, currentPos);
+                    if (startNodeInfo && endNodeInfo) {
+                        const range = document.createRange();
+                        range.setStart(startNodeInfo.node, startNodeInfo.offset);
+                        range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+                        const span = document.createElement('span');
+                        span.className = 'dynamic-highlight';
+                        const contents = range.extractContents();
+                        span.appendChild(contents);
+                        range.insertNode(span);
+                        setTimeout(() => {
+                            const highlightSpan = document.querySelector('.dynamic-highlight');
+                            if (highlightSpan && loc.keywords) {
+                                let html = highlightSpan.innerHTML;
+                                loc.keywords.forEach(keyword => {
+                                    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    const regex = new RegExp(`(${escaped})`, 'gi');
+                                    html = html.replace(regex, '<span class="keyword-highlight">$1</span>');
+                                });
+                                highlightSpan.innerHTML = html;
+                            }
+                        }, 50);
+                        setTimeout(() => {
+                            const highlighted = document.querySelector('.dynamic-highlight');
+                            if (highlighted) highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                        return true;
+                    }
+                } catch (e) { console.log('Lỗi highlight:', e); }
+                break;
+            }
         }
-    };
-    function updateReadingNav() {
-        for (let i = 1; i <= 10; i++) {
-            let btn = document.querySelector(`.reading-nav-btn[data-q="ex9-q${i}"]`);
-            if (btn) btn.classList.toggle('answered', document.querySelector(`input[name="ex9-q${i}"]:checked`) !== null);
+        // fallback: try to find any keyword and highlight the whole paragraph
+        for (let p of paragraphs) {
+            for (let keyword of loc.keywords) {
+                if (p.textContent.includes(keyword)) {
+                    try {
+                        const range = document.createRange();
+                        range.selectNodeContents(p);
+                        const span = document.createElement('span');
+                        span.className = 'dynamic-highlight';
+                        const contents = range.extractContents();
+                        span.appendChild(contents);
+                        range.insertNode(span);
+                        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return true;
+                    } catch (e) {}
+                }
+            }
         }
+        return false;
     }
 
-    function renderEx1() {
-        let html = ''; ex1_data.forEach((item,i) => {
-       html += `<div class="question-row"><strong>${i+1}.</strong> ${item.clue} <em>${item.hint}</em> <input type="text" class="word-input" id="ex1-q${i}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex1-q${i}-eye" onclick="toggleSingleAns('ex1-q${i}')">👁️</button><button class="info-btn" id="ex1-q${i}-info" onclick="toggleHint('ex1-q${i}')">i</button></div><div class="hint-box" id="ex1-q${i}-hint">${item.detailHint}</div></div>`;
-        }); document.getElementById('questions-ex1').innerHTML = html;
-    }
-    function renderEx2() {
-        let bankHtml = '', qHtml = '';
-        ex2_bank.forEach((w,i) => { wordUsageCount.ex2[w]=0; bankHtml += `<div class="word-item" id="ex2-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex2-word-${i}')">${w}</div>`; });
-        ex2_data.forEach((item,i) => {
-            qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex2-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex2\')" ondrop="dropWord(event,\'ex2-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex2-q${i}-eye" onclick="toggleSingleAns('ex2-q${i}')">👁️</button><button class="info-btn" id="ex2-q${i}-info" onclick="toggleHint('ex2-q${i}')">i</button></div><div class="hint-box" id="ex2-q${i}-hint">${item.hint}</div></div>`;
-        });
-        document.getElementById('bank-ex2').innerHTML = bankHtml;
-        document.getElementById('questions-ex2').innerHTML = qHtml;
-        addWordBankEventListeners('ex2');
-    }
-    function renderEx3() {
-        let html = ''; ex3_data.forEach((item,i) => {
-            html += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex3-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this)">')}<div class="row-btns"><button class="btn-small" id="ex3-q${i}-eye" onclick="toggleSingleAns('ex3-q${i}')">👁️</button><button class="info-btn" id="ex3-q${i}-info" onclick="toggleHint('ex3-q${i}')">i</button></div><div class="hint-box" id="ex3-q${i}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex3').innerHTML = html;
-    }
-    function renderEx4() {
-        let html = ''; ex4_data.forEach((item,i) => {
-            let opts = item.options.map(o => `<button class="option-btn" onclick="selectOption('ex4-q${i}','${o}')" id="ex4-q${i}-opt${o}">${o}</button>`).join('');
-            html += `<div class="question-row" id="ex4-q${i}-container"><strong>${i+1}.</strong> ${item.q} <div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="ex4-q${i}-eye" onclick="toggleSingleAns('ex4-q${i}')">👁️</button><button class="info-btn" id="ex4-q${i}-info" onclick="toggleHint('ex4-q${i}')">i</button></div><div class="hint-box" id="ex4-q${i}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex4').innerHTML = html;
-    }
-    function renderEx5() {
-        let html = ''; ex5_data.forEach(item => {
-            html += `<div class="question-row"><strong>${item.num}.</strong> ${item.q}<br><input type="text" class="word-input" style="width:90%" id="ex5-q${item.num}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex5-q${item.num}-eye" onclick="toggleSingleAns('ex5-q${item.num}')">👁️</button><button class="info-btn" id="ex5-q${item.num}-info" onclick="toggleHint('ex5-q${item.num}')">i</button></div><div class="hint-box" id="ex5-q${item.num}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex5').innerHTML = html;
-    }
-    function renderEx6() {
-        let bankHtml = '', qHtml = '';
-        ex6_bank.forEach((w,i) => { wordUsageCount.ex6[w]=0; bankHtml += `<div class="word-item" id="ex6-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex6-word-${i}')">${w}</div>`; });
-        ex6_data.forEach((item,i) => {
-            qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex6-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex6\')" ondrop="dropWord(event,\'ex6-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex6-q${i}-eye" onclick="toggleSingleAns('ex6-q${i}')">👁️</button><button class="info-btn" id="ex6-q${i}-info" onclick="toggleHint('ex6-q${i}')">i</button></div><div class="hint-box" id="ex6-q${i}-hint">${item.hint}</div></div>`;
-        });
-        document.getElementById('bank-ex6').innerHTML = bankHtml;
-        document.getElementById('questions-ex6').innerHTML = qHtml;
-        addWordBankEventListeners('ex6');
-    }
-    function renderEx7() {
-        let html = ''; ex7_data.forEach((item,i) => {
-            let inpId = `ex7-q${i}`;
-            let qWithInput = item.q.replace('...............', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:150px;">`);
-            html += `<div class="question-row"><strong>${i+3}.</strong> ${qWithInput}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex7').innerHTML = html;
-    }
-    function renderEx8() {
-        let html = ''; ex8_data.forEach(item => {
-            let opts = item.options.map(o => `<button class="option-btn" onclick="selectOption('ex8-q${item.num}','${o}')" id="ex8-q${item.num}-opt${o}">${o}</button>`).join('');
-            html += `<div class="question-row" id="ex8-q${item.num}-container"><strong>${item.num}.</strong> ${item.q} <div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="ex8-q${item.num}-eye" onclick="toggleSingleAns('ex8-q${item.num}')">👁️</button><button class="info-btn" id="ex8-q${item.num}-info" onclick="toggleHint('ex8-q${item.num}')">i</button></div><div class="hint-box" id="ex8-q${item.num}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex8').innerHTML = html;
-    }
+    // Modified eye‑icon handler: shows hint + scrolls & highlights exact answer location
+    window.showReadingHintWithHighlight = function(questionNum) {
+        // toggle hint box (original behaviour)
+        const hint = document.getElementById(`ex9-q${questionNum}-hint`);
+        const eye = document.querySelector(`.eye-icon[data-q="ex9-q${questionNum}"]`);
+        if (hint) {
+            hint.style.display = hint.style.display === 'block' ? 'none' : 'block';
+            if (eye) eye.classList.toggle('active', hint.style.display === 'block');
+        }
+        // scroll & highlight answer location
+        highlightAnswerLocation(questionNum);
+    };
+
+    // ==================== RENDER FUNCTIONS (unchanged except eye icon onclick) ====================
+    function renderEx1() { let html = ''; ex1_data.forEach((item,i) => { html += `<div class="question-row"><strong>${i+1}.</strong> ${item.clue} <em>${item.hint}</em> <input type="text" class="word-input" id="ex1-q${i}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex1-q${i}-eye" onclick="toggleSingleAns('ex1-q${i}')">👁️</button><button class="info-btn" id="ex1-q${i}-info" onclick="toggleHint('ex1-q${i}')">i</button></div><div class="hint-box" id="ex1-q${i}-hint">${item.detailHint}</div></div>`; }); document.getElementById('questions-ex1').innerHTML = html; }
+    function renderEx2() { let bankHtml = '', qHtml = ''; ex2_bank.forEach((w,i) => { wordUsageCount.ex2[w]=0; bankHtml += `<div class="word-item" id="ex2-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex2-word-${i}')">${w}</div>`; }); ex2_data.forEach((item,i) => { qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex2-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex2\')" ondrop="dropWord(event,\'ex2-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex2-q${i}-eye" onclick="toggleSingleAns('ex2-q${i}')">👁️</button><button class="info-btn" id="ex2-q${i}-info" onclick="toggleHint('ex2-q${i}')">i</button></div><div class="hint-box" id="ex2-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex2').innerHTML = bankHtml; document.getElementById('questions-ex2').innerHTML = qHtml; addWordBankEventListeners('ex2'); }
+    function renderEx3() { let html = ''; ex3_data.forEach((item,i) => { html += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex3-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this)">')}<div class="row-btns"><button class="btn-small" id="ex3-q${i}-eye" onclick="toggleSingleAns('ex3-q${i}')">👁️</button><button class="info-btn" id="ex3-q${i}-info" onclick="toggleHint('ex3-q${i}')">i</button></div><div class="hint-box" id="ex3-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex3').innerHTML = html; }
+    function renderEx4() { let html = ''; ex4_data.forEach((item,i) => { let opts = item.options.map(o => `<button class="option-btn" onclick="selectOption('ex4-q${i}','${o}')" id="ex4-q${i}-opt${o}">${o}</button>`).join(''); html += `<div class="question-row" id="ex4-q${i}-container"><strong>${i+1}.</strong> ${item.q} <div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="ex4-q${i}-eye" onclick="toggleSingleAns('ex4-q${i}')">👁️</button><button class="info-btn" id="ex4-q${i}-info" onclick="toggleHint('ex4-q${i}')">i</button></div><div class="hint-box" id="ex4-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex4').innerHTML = html; }
+    function renderEx5() { let html = ''; ex5_data.forEach(item => { html += `<div class="question-row"><strong>${item.num}.</strong> ${item.q}<br><input type="text" class="word-input" style="width:90%" id="ex5-q${item.num}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex5-q${item.num}-eye" onclick="toggleSingleAns('ex5-q${item.num}')">👁️</button><button class="info-btn" id="ex5-q${item.num}-info" onclick="toggleHint('ex5-q${item.num}')">i</button></div><div class="hint-box" id="ex5-q${item.num}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex5').innerHTML = html; }
+    function renderEx6() { let bankHtml = '', qHtml = ''; ex6_bank.forEach((w,i) => { wordUsageCount.ex6[w]=0; bankHtml += `<div class="word-item" id="ex6-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex6-word-${i}')">${w}</div>`; }); ex6_data.forEach((item,i) => { qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex6-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex6\')" ondrop="dropWord(event,\'ex6-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex6-q${i}-eye" onclick="toggleSingleAns('ex6-q${i}')">👁️</button><button class="info-btn" id="ex6-q${i}-info" onclick="toggleHint('ex6-q${i}')">i</button></div><div class="hint-box" id="ex6-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex6').innerHTML = bankHtml; document.getElementById('questions-ex6').innerHTML = qHtml; addWordBankEventListeners('ex6'); }
+    function renderEx7() { let html = ''; ex7_data.forEach((item,i) => { let inpId = `ex7-q${i}`; let qWithInput = item.q.replace('...............', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:150px;">`); html += `<div class="question-row"><strong>${i+3}.</strong> ${qWithInput}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex7').innerHTML = html; }
+    function renderEx8() { let html = ''; ex8_data.forEach(item => { let opts = item.options.map(o => `<button class="option-btn" onclick="selectOption('ex8-q${item.num}','${o}')" id="ex8-q${item.num}-opt${o}">${o}</button>`).join(''); html += `<div class="question-row" id="ex8-q${item.num}-container"><strong>${item.num}.</strong> ${item.q} <div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="ex8-q${item.num}-eye" onclick="toggleSingleAns('ex8-q${item.num}')">👁️</button><button class="info-btn" id="ex8-q${item.num}-info" onclick="toggleHint('ex8-q${item.num}')">i</button></div><div class="hint-box" id="ex8-q${item.num}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex8').innerHTML = html; }
     function renderEx9() {
         let navHtml = '', qHtml = '';
         for (let i = 1; i <= 10; i++) navHtml += `<button class="reading-nav-btn" data-q="ex9-q${i}" onclick="scrollToReadingQuestion(${i})">${i}</button>`;
         document.getElementById('readingNav-ex9').innerHTML = navHtml;
         for (let i = 1; i <= 10; i++) {
-            qHtml += `<div class="question-item" id="ex9-q${i}-item"><div class="question-wrapper"><span class="question-number">${i}.</span><span>${ex9_statements[i-1]}</span><span class="eye-icon" data-q="ex9-q${i}" onclick="showReadingHint(${i})">👁️</span></div><div class="tf-group" id="ex9-q${i}"><label class="tf-option"><input type="radio" name="ex9-q${i}" value="TRUE"> <span class="tf-text">TRUE</span></label><label class="tf-option"><input type="radio" name="ex9-q${i}" value="FALSE"> <span class="tf-text">FALSE</span></label></div><div class="hint-box" id="ex9-q${i}-hint">${ex9_hints[i-1]}</div></div>`;
+            qHtml += `<div class="question-item" id="ex9-q${i}-item"><div class="question-wrapper"><span class="question-number">${i}.</span><span>${ex9_statements[i-1]}</span><span class="eye-icon" data-q="ex9-q${i}" onclick="showReadingHintWithHighlight(${i})">👁️</span></div><div class="tf-group" id="ex9-q${i}"><label class="tf-option"><input type="radio" name="ex9-q${i}" value="TRUE"> <span class="tf-text">TRUE</span></label><label class="tf-option"><input type="radio" name="ex9-q${i}" value="FALSE"> <span class="tf-text">FALSE</span></label></div><div class="hint-box" id="ex9-q${i}-hint">${ex9_hints[i-1]}</div></div>`;
         }
         document.getElementById('questions-ex9').innerHTML = qHtml;
         document.querySelectorAll('[name^="ex9-q"]').forEach(r => r.addEventListener('change', updateReadingNav));
     }
-    function renderEx10() {
-        let bankHtml = '', qHtml = '';
-        ex10_bank.forEach((w,i) => { wordUsageCount.ex10[w]=0; bankHtml += `<div class="word-item" id="ex10-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex10-word-${i}')">${w}</div>`; });
-        ex10_data.forEach((item,i) => {
-            qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex10-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex10\')" ondrop="dropWord(event,\'ex10-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex10-q${i}-eye" onclick="toggleSingleAns('ex10-q${i}')">👁️</button><button class="info-btn" id="ex10-q${i}-info" onclick="toggleHint('ex10-q${i}')">i</button></div><div class="hint-box" id="ex10-q${i}-hint">${item.hint}</div></div>`;
-        });
-        document.getElementById('bank-ex10').innerHTML = bankHtml;
-        document.getElementById('questions-ex10').innerHTML = qHtml;
-        addWordBankEventListeners('ex10');
-    }
-    function renderEx11() {
-        let html = ''; ex11_data.forEach((item,i) => {
-            let inpId = `ex11-q${i}`;
-            let qWithBlank = item.q.replace('______', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:100px;">`);
-            html += `<div class="question-row"><strong>${i+1}.</strong> ${qWithBlank}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`;
-        }); document.getElementById('questions-ex11').innerHTML = html;
-    }
-    function renderEx12() {
-        let bankHtml = '', qHtml = '';
-        ex12_bank.forEach((w,i) => { wordUsageCount.ex12[w]=0; bankHtml += `<div class="word-item" id="ex12-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex12-word-${i}')">${w}</div>`; });
-        ex12_data.forEach((item,i) => {
-            qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex12-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex12\')" ondrop="dropWord(event,\'ex12-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex12-q${i}-eye" onclick="toggleSingleAns('ex12-q${i}')">👁️</button><button class="info-btn" id="ex12-q${i}-info" onclick="toggleHint('ex12-q${i}')">i</button></div><div class="hint-box" id="ex12-q${i}-hint">${item.hint}</div></div>`;
-        });
-        document.getElementById('bank-ex12').innerHTML = bankHtml;
-        document.getElementById('questions-ex12').innerHTML = qHtml;
-        addWordBankEventListeners('ex12');
-    }
+    function renderEx10() { let bankHtml = '', qHtml = ''; ex10_bank.forEach((w,i) => { wordUsageCount.ex10[w]=0; bankHtml += `<div class="word-item" id="ex10-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex10-word-${i}')">${w}</div>`; }); ex10_data.forEach((item,i) => { qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex10-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex10\')" ondrop="dropWord(event,\'ex10-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex10-q${i}-eye" onclick="toggleSingleAns('ex10-q${i}')">👁️</button><button class="info-btn" id="ex10-q${i}-info" onclick="toggleHint('ex10-q${i}')">i</button></div><div class="hint-box" id="ex10-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex10').innerHTML = bankHtml; document.getElementById('questions-ex10').innerHTML = qHtml; addWordBankEventListeners('ex10'); }
+    function renderEx11() { let html = ''; ex11_data.forEach((item,i) => { let inpId = `ex11-q${i}`; let qWithBlank = item.q.replace('______', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:100px;">`); html += `<div class="question-row"><strong>${i+1}.</strong> ${qWithBlank}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex11').innerHTML = html; }
+    function renderEx12() { let bankHtml = '', qHtml = ''; ex12_bank.forEach((w,i) => { wordUsageCount.ex12[w]=0; bankHtml += `<div class="word-item" id="ex12-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex12-word-${i}')">${w}</div>`; }); ex12_data.forEach((item,i) => { qHtml += `<div class="question-row"><strong>${i+1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex12-q'+i+'" data-type="input" data-ans="'+item.ans+'" oninput="adjustWidth(this); updateWordBank(\'ex12\')" ondrop="dropWord(event,\'ex12-q'+i+'\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex12-q${i}-eye" onclick="toggleSingleAns('ex12-q${i}')">👁️</button><button class="info-btn" id="ex12-q${i}-info" onclick="toggleHint('ex12-q${i}')">i</button></div><div class="hint-box" id="ex12-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex12').innerHTML = bankHtml; document.getElementById('questions-ex12').innerHTML = qHtml; addWordBankEventListeners('ex12'); }
 
     function initResizer() {
         let resizer = document.getElementById('resizer-ex9');
@@ -842,24 +665,61 @@ const ex1_data = [
             document.addEventListener('mousemove', mouseMove);
             document.addEventListener('mouseup', mouseUp);
         });
-        function mouseMove(e) {
-            if (!isResizing) return;
-            let dx = e.clientX - startX;
-            let newW = startWidth + dx;
-            let containerW = left.parentElement.offsetWidth;
-            let min = 200, max = containerW - min - resizer.offsetWidth;
-            if (newW >= min && newW <= max) {
-                left.style.width = newW + 'px';
-                right.style.flex = '1';
-            }
-        }
-        function mouseUp() {
-            isResizing = false;
-            document.body.style.cursor = '';
-            document.removeEventListener('mousemove', mouseMove);
-            document.removeEventListener('mouseup', mouseUp);
-        }
+        function mouseMove(e) { if (!isResizing) return; let dx = e.clientX - startX; let newW = startWidth + dx; let containerW = left.parentElement.offsetWidth; let min = 200, max = containerW - min - resizer.offsetWidth; if (newW >= min && newW <= max) { left.style.width = newW + 'px'; right.style.flex = '1'; } }
+        function mouseUp() { isResizing = false; document.body.style.cursor = ''; document.removeEventListener('mousemove', mouseMove); document.removeEventListener('mouseup', mouseUp); }
     }
+
+    // ==================== MANUAL HIGHLIGHT (right‑click) - from IELTS template ====================
+    let selectedRange = null;
+    const contextMenu = document.getElementById('highlightContextMenu');
+    const readingTextDiv = document.getElementById('readingTextForHighlight');
+    window.applyHighlight = function(color) {
+        if (!selectedRange) return;
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            const range = selectedRange.cloneRange();
+            window.getSelection().removeAllRanges();
+            const contents = range.extractContents();
+            span.appendChild(contents);
+            range.insertNode(span);
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        } catch (e) {
+            console.log('Không thể highlight', e);
+        }
+    };
+    window.removeHighlight = function() {
+        if (!selectedRange) return;
+        try {
+            const parentContainer = selectedRange.commonAncestorContainer.parentNode;
+            const highlights = parentContainer.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+            highlights.forEach(highlight => {
+                if (selectedRange.intersectsNode(highlight)) {
+                    const parent = highlight.parentNode;
+                    while (highlight.firstChild) parent.insertBefore(highlight.firstChild, highlight);
+                    parent.removeChild(highlight);
+                }
+            });
+            window.getSelection().removeAllRanges();
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        } catch (e) {}
+    };
+    if (readingTextDiv) {
+        readingTextDiv.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const sel = window.getSelection();
+            if (sel.toString().trim() === '') return;
+            selectedRange = sel.getRangeAt(0);
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+        });
+    }
+    document.addEventListener('click', () => {
+        if (contextMenu) contextMenu.style.display = 'none';
+    });
 
     window.onload = function() {
         renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6(); renderEx7(); renderEx8(); renderEx9(); renderEx10(); renderEx11(); renderEx12();
