@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 1 - Test 2 - Part 1 (Reading)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #1a1a2a; display: flex; justify-content: center; min-height: 100vh; }
+        .test-wrapper { width: 100%; max-width: 1600px; background: #f5f3ee; display: flex; flex-direction: column; height: 100vh; }
+        .test-wrapper.reading-mode { background: #f8f5e6; }
+        .test-wrapper.reading-mode .reading-panel { background: #fffaf0; }
+        .test-wrapper.reading-mode .questions-panel { background: #fffaf0; }
+        .test-wrapper.reading-mode .panel-header { background: #d6cdb8; }
+
+        .ielts-header { background: #1e3a5f; color: white; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #e6b422; flex-wrap: wrap; }
+        .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .ielts-logo { background: #e6b422; color: #1e3a5f; font-weight: 800; font-size: 24px; padding: 4px 18px; border-radius: 40px; }
+        .candidate { background: #2d4b77; padding: 4px 16px; border-radius: 30px; font-size: 14px; }
+        .reading-mode-toggle { display: flex; align-items: center; gap: 5px; background: #2d4b77; padding: 3px 8px; border-radius: 30px; cursor: pointer; }
+        .toggle-switch { width: 40px; height: 20px; background: #0f2a44; border-radius: 20px; position: relative; transition: 0.3s; border: 1px solid #e6b422; }
+        .toggle-switch.active { background: #e6b422; }
+        .toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+        .toggle-switch.active::after { left: 22px; }
+        .toggle-label { font-size: 11px; font-weight: 500; }
+        .font-controls { display: flex; gap: 5px; background: #2d4b77; padding: 3px; border-radius: 30px; }
+        .font-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: white; font-weight: bold; cursor: pointer; }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        .question-nav { background: #d2cbbc; padding: 6px 20px; border-bottom: 2px solid #b0aa9a; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn { width: 32px; height: 32px; border-radius: 6px; border: 2px solid #1e3a5f; background: white; color: #1e3a5f; font-weight: bold; cursor: pointer; }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+
+        .main-area { display: flex; flex: 1; overflow: hidden; }
+        .reading-panel { width: 45%; background: #fffcf5; border-right: 2px solid #b0aa9a; display: flex; flex-direction: column; overflow: hidden; }
+        .questions-panel { width: 55%; background: #f8f6f0; display: flex; flex-direction: column; overflow: hidden; }
+        .resizer { width: 8px; background: #b0aa9a; cursor: col-resize; }
+        .resizer:hover { background: #e6b422; }
+        .panel-header { background: #d2cbbc; padding: 8px 15px; font-weight: 600; color: #1e3a5f; border-bottom: 1px solid #b0aa9a; display: flex; justify-content: space-between; }
+        .reading-content { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.7; }
+        .questions-list { flex: 1; overflow-y: auto; padding: 20px; }
+        .font-small { font-size: 13px; } .font-medium { font-size: 15px; } .font-large { font-size: 17px; }
+
+        .reading-card { background: #fefcf7; border-left: 4px solid #e6b422; padding: 15px 20px; margin-bottom: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .reading-card p { margin: 5px 0; }
+        .card-num { font-size: 11px; font-weight: 700; color: #e6b422; background: #1e3a5f; display: inline-block; padding: 1px 8px; border-radius: 10px; margin-bottom: 8px; }
+
+        .question-item { margin-bottom: 28px; padding: 12px; border-radius: 8px; background: #f9f7f2; border: 1px solid #e0d6c8; position: relative; }
+        .question-item.correct { background: #e8f5e8; border-color: #4CAF50; }
+        .question-item.incorrect { background: #ffebee; border-color: #f44336; }
+        .question-intro { font-weight: 600; margin-bottom: 10px; color: #1e3a5f; }
+        .question-num-only { font-weight: 700; color: #1e3a5f; margin-bottom: 10px; }
+        .options { display: flex; flex-direction: column; gap: 8px; margin-left: 15px; }
+        .option { display: flex; align-items: center; gap: 8px; }
+        .option input { width: 16px; height: 16px; cursor: pointer; }
+        .option label { cursor: pointer; }
+        .eye-icon { margin-left: 10px; cursor: pointer; font-size: 18px; opacity: 0.7; display: none; }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .correct-answer-badge { display: inline-block; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 15px; font-weight: bold; }
+
+        .bottom-bar { background: #d2cbbc; padding: 10px 20px; display: flex; gap: 15px; border-top: 1px solid #b0aa9a; align-items: center; }
+        .btn { padding: 6px 20px; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; }
+
+        .explanation-panel { background: #fffef9; border-left: 4px solid #e6b422; padding: 12px 20px; margin: 0 20px 12px 20px; border-radius: 8px; display: none; }
+        .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; }
+        .close-btn { cursor: pointer; }
+
+        .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; }
+        .dynamic-highlight { background-color: #ffe082; text-decoration: underline; text-decoration-color: #e67e22; text-decoration-thickness: 2px; font-weight: 700; display: inline; transition: 0.2s; }
+        .question-item.highlight-question { border-left: 3px solid #f1c40f; background-color: #fef9e7; }
+        .context-menu { position: fixed; background: white; border: 1px solid #9a8c7a; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); padding: 5px 0; border-radius: 8px; z-index: 1000; display: none; min-width: 150px; }
+        .context-menu div { padding: 8px 20px; cursor: pointer; }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 2 · Part 1 (Reading)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 1-5:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <div class="main-area" id="mainArea">
+        <!-- Reading panel -->
+        <div class="reading-panel" id="readingPanel">
+            <div class="panel-header"><span>READING PASSAGE</span></div>
+            <div class="reading-content font-large" id="readingContent">
+
+                <div class="reading-card" data-text-id="1">
+                    <div class="card-num">1</div>
+                    <p><strong>From: Jenny</strong><br>
+                    <strong>To: Lara</strong><br><br>
+                    Lara,<br>
+                    Try www.deals4trains.com for some great ticket discounts. I remember you said you wanted to visit a few interesting cities in the UK. This might be a good way to do it!<br>
+                    Jenny</p>
+                </div>
+
+                <div class="reading-card" data-text-id="2">
+                    <div class="card-num">2</div>
+                    <p><strong>Sweet Memories</strong><br><br>
+                    Can you remember your candy store favourites?<br>
+                    Lecture by historical expert:<br>
+                    <em>The unusual story behind candy</em><br>
+                    Everyone welcome!</p>
+                </div>
+
+                <div class="reading-card" data-text-id="3">
+                    <div class="card-num">3</div>
+                    <p>Dan<br><br>
+                    That wildlife book you borrowed from the library sounds perfect for my next project. Text me when you're going to return it, and I'll go and take it out myself.<br>
+                    Jack</p>
+                </div>
+
+                <div class="reading-card" data-text-id="4">
+                    <div class="card-num">4</div>
+                    <p><strong>Tomato sauce</strong><br><br>
+                    Store in cool, dry place. After opening, keep in fridge and use within six weeks, and not after date shown.</p>
+                </div>
+
+                <div class="reading-card" data-text-id="5">
+                    <div class="card-num">5</div>
+                    <p><strong>DRUM TUTOR</strong><br><br>
+                    All abilities &amp; styles covered<br>
+                    Adults only (18+)<br>
+                    First lesson costs absolutely nothing when signing up for two months!</p>
+                </div>
+
+            </div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+
+        <!-- Questions panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 1-5</span>
+                <span class="answer-badge" id="answeredCount">0/5 answered</span>
+            </div>
+            <div class="questions-list font-large" id="questionsContent">
+                <h3 style="font-size:1.1em;color:#1e3a5f;margin-bottom:4px;">Part 1</h3>
+                <p style="margin-bottom:16px;"><em>For each question, choose the correct answer (A, B or C).</em></p>
+                <div id="questionsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/5</div>
+    </div>
+
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+
+    <script>
+        const answerKey = { q1: 'A', q2: 'C', q3: 'B', q4: 'A', q5: 'B' };
+        const displayAnswers = { q1: 'A', q2: 'C', q3: 'B', q4: 'A', q5: 'B' };
+
+        const detailedExplanations = {
+            q1: `<strong>Đáp án: A</strong><br>Jenny gợi ý website mua vé tàu giảm giá để Lara có thể đi thăm các thành phố thú vị ở UK – đó là cách gợi ý cho Lara đi tham quan. B sai vì Lara đã có ý định đó rồi, Jenny không nhắc nhở. C sai vì Jenny không nói sẽ đi cùng Lara.`,
+            q2: `<strong>Đáp án: C</strong><br>"The unusual story behind candy" tương ứng với "surprising facts about sweets". A sai vì chuyên gia lịch sử sẽ nói chứ không phải khán giả thảo luận. B sai vì chủ đề là lịch sử kẹo, không phải sự thay đổi của cửa hàng kẹo.`,
+            q3: `<strong>Đáp án: B</strong><br>Jack muốn Dan nhắn tin khi trả sách để Jack đến mượn – tức là hỏi khi nào sách về thư viện. A sai vì Jack đã biết sách phù hợp dự án, không hỏi ý kiến. C sai vì Jack chưa mượn sách và muốn tự mượn, không phải gợi ý cho Dan.`,
+            q4: `<strong>Đáp án: A</strong><br>"use within six weeks" sau khi mở tức là tối đa sáu tuần sau khi bắt đầu dùng. B sai vì nhãn nói phải để tủ lạnh SAU KHI mở, không phải ngay khi mua về. C sai vì không cần ghi ngày mua, chỉ cần biết ngày mở.`,
+            q5: `<strong>Đáp án: B</strong><br>"two months" = "a certain period" – buổi học đầu tiên miễn phí nếu đăng ký hai tháng. A sai vì chỉ dành cho người lớn (18+), không phải "anyone". C sai vì "all abilities" nghĩa là người mới bắt đầu cũng được chào đón.`
+        };
+
+        const highlightMap = {
+            q1: { cardId: 1, keywords: ["visit a few interesting cities in the UK", "good way to do it"] },
+            q2: { cardId: 2, keywords: ["unusual story behind candy"] },
+            q3: { cardId: 3, keywords: ["Text me when you're going to return it"] },
+            q4: { cardId: 4, keywords: ["use within six weeks"] },
+            q5: { cardId: 5, keywords: ["nothing when signing up for two months"] }
+        };
+
+        let examSubmitted = false;
+        let explanationMode = false;
+        let selectedRange = null;
+
+        const questionsData = [
+            {
+                num: 1,
+                intro: "Jenny is emailing to",
+                options: [
+                    "suggest how Lara could do some sightseeing.",
+                    "remind Lara that she needs to book some cheap train tickets.",
+                    "invite Lara to visit some different places around the UK with her."
+                ]
+            },
+            {
+                num: 2,
+                intro: null,
+                options: [
+                    "People will be asked to discuss their favourite childhood sweets at the lecture.",
+                    "The lecture will be about how sweet shops have changed over the last century.",
+                    "The lecture will cover some surprising facts about sweets."
+                ]
+            },
+            {
+                num: 3,
+                intro: "Jack is writing to",
+                options: [
+                    "ask Dan's opinion about whether a book is suitable for his project.",
+                    "let Dan know when a library book will be available.",
+                    "recommend to Dan a useful library book he has recently borrowed."
+                ]
+            },
+            {
+                num: 4,
+                intro: null,
+                options: [
+                    "Eat the sauce a maximum of six weeks after you start using it.",
+                    "Put the sauce in your refrigerator as soon as you bring it home.",
+                    "Make a note of the date when you bought the sauce."
+                ]
+            },
+            {
+                num: 5,
+                intro: null,
+                options: [
+                    "The teacher is offering lessons to anyone interested in trying the drums.",
+                    "You must intend to study for a certain period to have the free session.",
+                    "To attend these classes, students must already be at a certain level."
+                ]
+            }
+        ];
+
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questionsData.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                const introHtml = q.intro
+                    ? `<div class="question-intro">${q.num}. ${q.intro}</div>`
+                    : `<div class="question-num-only">${q.num}.</div>`;
+                div.innerHTML = `
+                    ${introHtml}
+                    <div class="options">
+                        ${q.options.map((opt, idx) => {
+                            const letter = String.fromCharCode(65+idx);
+                            return `<div class="option"><input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}"><label for="q${q.num}${letter}">${letter}  ${opt}</label></div>`;
+                        }).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getUserAnswer(qNum) {
+            const selected = document.querySelector(`input[name="q${qNum}"]:checked`);
+            return selected ? selected.value : null;
+        }
+
+        function isAnswerCorrect(qNum, answer) {
+            return answer === answerKey[`q${qNum}`];
+        }
+
+        function updateAnswerCount() {
+            let answered = 0;
+            for (let i=1; i<=5; i++) if (getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/5 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/5`;
+            for (let i=1; i<=5; i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if (btn) {
+                    btn.classList.remove('answered','unanswered');
+                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                }
+            }
+        }
+
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for (let i=1; i<=5; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', () => {
+                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+
+        function markAnswers() {
+            for (let i=1; i<=5; i++) {
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (!questionDiv) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                questionDiv.classList.remove('correct','incorrect');
+                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (correct) {
+                    questionDiv.classList.add('correct');
+                } else {
+                    questionDiv.classList.add('incorrect');
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    questionDiv.appendChild(badge);
+                }
+            }
+        }
+
+        function highlightAnswerInReading(questionNum) {
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) { while (el.firstChild) parent.insertBefore(el.firstChild, el); parent.removeChild(el); }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+
+            const info = highlightMap[`q${questionNum}`];
+            if (!info) return;
+            const card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
+            if (!card) return;
+
+            const qItem = document.getElementById(`question-${questionNum}`);
+            if (qItem) qItem.classList.add('highlight-question');
+
+            let firstSpan = null;
+            (info.keywords || []).forEach(keyword => {
+                const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    const idx = node.textContent.indexOf(keyword);
+                    if (idx !== -1) {
+                        const range = document.createRange();
+                        range.setStart(node, idx);
+                        range.setEnd(node, idx + keyword.length);
+                        const span = document.createElement('span');
+                        span.className = 'dynamic-highlight';
+                        try { range.surroundContents(span); if (!firstSpan) firstSpan = span; } catch(e) { console.log(e); }
+                        break;
+                    }
+                }
+            });
+            if (firstSpan) firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showExplanation(questionNum) {
+            if (!explanationMode && !examSubmitted) return;
+            highlightAnswerInReading(questionNum);
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
+            if (examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa chọn)';
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:8px;background:${isCorrect?'#e8f5e8':'#ffebee'};border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `✅ Đúng!`;
+                html += `</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+
+        function resetAll() {
+            examSubmitted = false; explanationMode = false;
+            for (let i=1; i<=5; i++) {
+                document.getElementsByName(`q${i}`).forEach(r => r.checked = false);
+                const div = document.getElementById(`question-${i}`);
+                if (div) { div.classList.remove('correct','incorrect'); const b = div.querySelector('.correct-answer-badge'); if (b) b.remove(); }
+            }
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) { while (el.firstChild) parent.insertBefore(el.firstChild, el); parent.removeChild(el); }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            if (examSubmitted) return;
+            let unanswered = [];
+            for (let i=1; i<=5; i++) if (!getUserAnswer(i)) unanswered.push(i);
+            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
+            examSubmitted = true; markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            let correctCount = 0;
+            for (let i=1; i<=5; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/5</p><p>Nhấn vào biểu tượng 👁️ để xem giải thích và vị trí đáp án trong bài đọc.</p>`;
+        });
+
+        document.getElementById('explainBtn').addEventListener('click', () => {
+            if (!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => { if (confirm('Reset tất cả câu trả lời?')) resetAll(); });
+
+        document.getElementById('closeExplanation').addEventListener('click', () => {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) { while (el.firstChild) parent.insertBefore(el.firstChild, el); parent.removeChild(el); }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+        });
+
+        document.addEventListener('change', (e) => { if (e.target && e.target.type === 'radio') updateAnswerCount(); });
+        document.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question);
+        });
+
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.reading-content, .questions-list').forEach(el => {
+                el.classList.remove('font-small','font-medium','font-large');
+                el.classList.add(`font-${size}`);
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        const readingPanel = document.getElementById('readingPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const main = document.getElementById('mainArea');
+            const rect = main.getBoundingClientRect();
+            let leftW = e.clientX - rect.left - 4;
+            if (leftW < 250) leftW = 250;
+            if (leftW > rect.width - 250) leftW = rect.width - 250;
+            readingPanel.style.width = leftW + 'px';
+            questionsPanel.style.width = (rect.width - leftW - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        const testWrapper = document.getElementById('testWrapper');
+        const toggleSwitch = document.getElementById('toggleSwitch');
+        document.getElementById('readingModeToggle').addEventListener('click', () => {
+            testWrapper.classList.toggle('reading-mode');
+            toggleSwitch.classList.toggle('active');
+        });
+
+        const readingContent = document.getElementById('readingContent');
+        const questionsContent = document.getElementById('questionsContent');
+        const contextMenu = document.getElementById('contextMenu');
+        function showContextMenu(e) {
+            const sel = window.getSelection();
+            if (sel.toString().trim()) {
+                e.preventDefault();
+                selectedRange = sel.getRangeAt(0);
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.style.display = 'block';
+            }
+        }
+        readingContent.addEventListener('contextmenu', showContextMenu);
+        questionsContent.addEventListener('contextmenu', showContextMenu);
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
+
+        window.applyHighlight = (color) => {
+            if (!selectedRange) return;
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(selectedRange.extractContents());
+                selectedRange.insertNode(span);
+            } catch(e) { console.log(e); }
+            contextMenu.style.display = 'none'; selectedRange = null;
+        };
+        window.removeHighlight = () => {
+            if (!selectedRange) return;
+            document.querySelectorAll('.highlight-yellow,.highlight-green,.highlight-pink').forEach(h => {
+                if (selectedRange.intersectsNode(h)) {
+                    const parent = h.parentNode;
+                    while (h.firstChild) parent.insertBefore(h.firstChild, h);
+                    parent.removeChild(h);
+                }
+            });
+            contextMenu.style.display = 'none'; selectedRange = null;
+        };
+
+        createNavButtons();
+        renderQuestions();
+        updateAnswerCount();
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        setFontSize('large');
+    </script>
+</body>
+</html>
