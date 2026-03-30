@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PET 1 - Test 2 - Part 1 (Reading)</title>
+    <title>PET 1 - Test 2 - Part 1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
         body { background: #1a1a2a; display: flex; justify-content: center; min-height: 100vh; }
@@ -426,12 +426,58 @@
             updateAnswerCount();
         }
 
+        // ==================== LƯU DỮ LIỆU VÀO DASHBOARD (GIỐNG TEST 1 PART 1) ====================
+        function getPetInfo() {
+            const candidateText = document.querySelector('.candidate')?.textContent || '';
+            let book = 1, test = 1, part = 1;
+            const bookMatch = candidateText.match(/Preliminary\s+(\d+)/i);
+            if (bookMatch) book = parseInt(bookMatch[1]);
+            const testMatch = candidateText.match(/Test\s+(\d+)/i);
+            if (testMatch) test = parseInt(testMatch[1]);
+            const partMatch = candidateText.match(/Part\s+(\d+)/i);
+            if (partMatch) part = parseInt(partMatch[1]);
+            return { book, test, part };
+        }
+
+        function saveToDashboard() {
+            if (!examSubmitted) return;
+            const { book, test, part } = getPetInfo();
+            const skill = 'reading';
+            const details = [];
+            let correctCount = 0;
+            for (let i = 1; i <= 5; i++) {
+                const user = getUserAnswer(i);
+                const correct = answerKey[`q${i}`];
+                const isCorrect = user === correct;
+                if (isCorrect) correctCount++;
+                details.push({
+                    question: i,
+                    user: user || '(trống)',
+                    correct: displayAnswers[`q${i}`] || correct,
+                    isCorrect: isCorrect
+                });
+            }
+            const partData = {
+                partId: part,
+                name: `Part ${part}`,
+                totalQuestions: details.length,
+                correctCount: correctCount,
+                details: details
+            };
+            const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+            localStorage.setItem(key, JSON.stringify(partData));
+            console.log(`Đã lưu ${skill} với key: ${key}`);
+        }
+        // ===================================================
+
+        // Submit listener (kết hợp cả chức năng nộp bài và lưu dashboard)
         document.getElementById('submitBtn').addEventListener('click', () => {
             if (examSubmitted) return;
             let unanswered = [];
             for (let i=1; i<=5; i++) if (!getUserAnswer(i)) unanswered.push(i);
             if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
-            examSubmitted = true; markAnswers();
+            examSubmitted = true;
+            markAnswers();
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').textContent = 'Đã nộp bài';
             document.getElementById('explainBtn').disabled = false;
@@ -441,6 +487,8 @@
             document.getElementById('explanationPanel').classList.add('show');
             document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
             document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/5</p><p>Nhấn vào biểu tượng 👁️ để xem giải thích và vị trí đáp án trong bài đọc.</p>`;
+            // Lưu dữ liệu ngay sau khi nộp bài (theo cách test 1 part 1)
+            saveToDashboard();
         });
 
         document.getElementById('explainBtn').addEventListener('click', () => {
@@ -548,68 +596,6 @@
         updateAnswerCount();
         document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
         setFontSize('large');
-    </script>
-
-    <!-- ==================== THÊM ĐOẠN SCRIPT LƯU DỮ LIỆU ==================== -->
-    <script>
-    // ==================== LƯU DỮ LIỆU VÀO DASHBOARD ====================
-    function getPetInfo() {
-        const candidateText = document.querySelector('.candidate')?.textContent || '';
-        let book = 1, test = 2, part = 1;
-        const bookMatch = candidateText.match(/Preliminary\s+(\d+)/i);
-        if (bookMatch) book = parseInt(bookMatch[1]);
-        const testMatch = candidateText.match(/Test\s+(\d+)/i);
-        if (testMatch) test = parseInt(testMatch[1]);
-        const partMatch = candidateText.match(/Part\s+(\d+)/i);
-        if (partMatch) part = parseInt(partMatch[1]);
-        return { book, test, part };
-    }
-
-    function saveToDashboard() {
-        if (!examSubmitted) return;
-
-        const { book, test, part } = getPetInfo();
-        const skill = 'reading';
-        
-        const details = [];
-        let correctCount = 0;
-        
-        // Xác định số câu hỏi từ answerKey
-        const keys = Object.keys(answerKey);
-        const numbers = keys.map(k => parseInt(k.slice(1))).filter(n => !isNaN(n));
-        const minQ = Math.min(...numbers);
-        const maxQ = Math.max(...numbers);
-        
-        for (let i = minQ; i <= maxQ; i++) {
-            const user = getUserAnswer(i);
-            const correct = answerKey[`q${i}`];
-            const isCorrect = user === correct;
-            if (isCorrect) correctCount++;
-            details.push({
-                question: i,
-                user: user || '(trống)',
-                correct: displayAnswers[`q${i}`] || correct,
-                isCorrect: isCorrect
-            });
-        }
-        
-        const partData = {
-            partId: part,
-            name: `Part ${part}`,
-            totalQuestions: details.length,
-            correctCount: correctCount,
-            details: details
-        };
-        
-        const key = `pet_${skill}_book${book}_test${test}_part${part}`;
-        localStorage.setItem(key, JSON.stringify(partData));
-        console.log(`Đã lưu ${skill} với key: ${key}`);
-    }
-
-    // Thêm listener để lưu sau khi nộp bài
-    document.getElementById('submitBtn').addEventListener('click', () => {
-        setTimeout(saveToDashboard, 500);
-    });
     </script>
 </body>
 </html>
