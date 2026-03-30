@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PET 1 - Test 1 - Reading Part 2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Reading mode */
+        .test-wrapper.reading-mode {
+            background: #f8f5e6;
+        }
+        .test-wrapper.reading-mode .reading-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .questions-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .panel-header {
+            background: #d6cdb8;
+        }
+
+        /* Header */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .reading-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px 8px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #0f2a44;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+            border: 1px solid #e6b422;
+        }
+        .toggle-switch.active {
+            background: #e6b422;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+        .toggle-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question navigator */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.02); }
+
+        /* Main area */
+        .main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .reading-panel {
+            width: 45%;
+            background: #fffcf5;
+            border-right: 2px solid #b0aa9a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .questions-panel {
+            width: 55%;
+            background: #f8f6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .resizer {
+            width: 8px;
+            background: #b0aa9a;
+            cursor: col-resize;
+        }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .reading-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .questions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        /* Book review cards - no badges, clean */
+        .reading-card {
+            background: #fefcf7;
+            border-left: 5px solid #e6b422;
+            padding: 16px 20px;
+            margin-bottom: 25px;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .reading-card .review-title {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            letter-spacing: -0.2px;
+        }
+        .reading-card p {
+            margin: 8px 0;
+        }
+
+        /* Question items - fill-in style */
+        .question-item {
+            margin-bottom: 32px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #f9f7f2;
+            border: 1px solid #e0d6c8;
+            position: relative;
+        }
+        .question-item.correct { background: #e8f5e8; border-color: #4CAF50; }
+        .question-item.incorrect { background: #ffebee; border-color: #f44336; }
+        .question-text {
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #1e3a5f;
+            font-size: 1rem;
+            border-left: 3px solid #e6b422;
+            padding-left: 12px;
+        }
+        .answer-input-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 10px 0 5px 12px;
+        }
+        .answer-input-area label {
+            font-weight: 600;
+            color: #2c3e4e;
+        }
+        .answer-input {
+            width: 70px;
+            padding: 8px 10px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            text-align: center;
+            border: 1px solid #b0aa9a;
+            border-radius: 30px;
+            background: white;
+            font-weight: 500;
+        }
+        .answer-input:focus {
+            outline: none;
+            border-color: #e6b422;
+            box-shadow: 0 0 0 2px rgba(230,180,34,0.2);
+        }
+        .eye-icon {
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            display: none;
+            font-weight: normal;
+        }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .correct-answer-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 6px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 30px; padding: 4px 16px; font-weight: 600; }
+
+        /* Explanation panel */
+        .explanation-panel {
+            background: #fffef9;
+            border-left: 4px solid #e6b422;
+            padding: 12px 20px;
+            margin: 0 20px 12px 20px;
+            border-radius: 12px;
+            display: none;
+        }
+        .explanation-panel.show { display: block; }
+        .explanation-header {
+            font-weight: 700;
+            color: #1e3a5f;
+            display: flex;
+            justify-content: space-between;
+        }
+        .close-btn { cursor: pointer; }
+
+        /* Highlight styles */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 4px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 4px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 4px; padding: 0 2px; }
+        .dynamic-highlight {
+            background-color: #ffe082;
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 2px;
+            font-weight: 600;
+            display: inline;
+        }
+        .question-item.highlight-question {
+            border-left: 5px solid #f1c40f;
+            background-color: #fef9e3;
+        }
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+            padding: 6px 0;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary · Test 1 · Part 2 (Matching)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question navigation (câu 6-10) -->
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 6 – 10</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <div class="main-area" id="mainArea">
+        <!-- Reading panel: 8 book reviews (clean, no badges) -->
+        <div class="reading-panel" id="readingPanel">
+            <div class="panel-header"><span>READING PASSAGE · BOOK REVIEWS A–H</span></div>
+            <div class="reading-content font-large" id="readingContent">
+                <div class="reading-card" data-review-id="A">
+                    <div class="review-title">Being Me</div>
+                    <p>This book is full of practical advice for anyone who wants to be fit and healthy. Famous sportspeople have contributed their favourite recipes, and you’ll also find instructions for a daily exercise routine.</p>
+                </div>
+                <div class="reading-card" data-review-id="B">
+                    <div class="review-title">Endless Days</div>
+                    <p>In this book, the novelist tells the true story of the first pilots to fly across the Atlantic. With plenty of photographs and a detailed discussion of the importance of these events for the modern world, the book successfully brings history to life for readers everywhere.</p>
+                </div>
+                <div class="reading-card" data-review-id="C">
+                    <div class="review-title">Action Plan</div>
+                    <p><em>Action Plan</em> is all about famous athletes, and there are some amazing photos of them competing. There are also lots of interviews about what they’ve done to succeed in their careers. You’ll find out about things like the food they eat, the number of hours they train, and what they do to prepare for important competitions.</p>
+                </div>
+                <div class="reading-card" data-review-id="D">
+                    <div class="review-title">Memories</div>
+                    <p>The prize-winning author of <em>Memories</em> is famous for his unusual writing style and exciting adventure stories. In this book, he takes us on a journey around the world and teaches us a lot about other cultures and their histories. He describes some of the world’s most beautiful nature, as well as the many interesting people he has met.</p>
+                </div>
+                <div class="reading-card" data-review-id="E">
+                    <div class="review-title">Days in the Sun</div>
+                    <p>In this book, a well-known author describes his happy early life growing up on a small Irish farm and how travelling around the countryside inspired him to become an author. He describes in detail how he improved his style, and his experiences will interest anyone who is hoping to get their own work published.</p>
+                </div>
+                <div class="reading-card" data-review-id="F">
+                    <div class="review-title">Parrots in Paradise</div>
+                    <p>This newly published adventure story is about a young girl who’s lost on a beautiful island with only birds and animals for company. The story deals with some of the difficulties she has, but there’s also lots of excitement. If you love well-written fiction, this book’s for you!</p>
+                </div>
+                <div class="reading-card" data-review-id="G">
+                    <div class="review-title">Night Light</div>
+                    <p>In <em>Night Light</em>, the writer tells us how he became a world-class athlete. He talks about his life as a blind person, and describes the challenges he faced on his way to the top in the world of sports. The book is written in an entertaining and amusing style, which makes it a very enjoyable read.</p>
+                </div>
+                <div class="reading-card" data-review-id="H">
+                    <div class="review-title">Our Lives</div>
+                    <p>This is the perfect book if you’re interested in how people live in different parts of the world. It also includes recipes for traditional meals from these places. There are wonderful photos, not only of the people, but also of the wildlife and scenery in each location.</p>
+                </div>
+            </div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <!-- Questions panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 6–10 (write the letter A–H)</span>
+                <span class="answer-badge" id="answeredCount">0/5 answered</span>
+            </div>
+            <div class="questions-list font-large" id="questionsContent">
+                <h3 style="margin-bottom:8px;">Part 2 · Matching</h3>
+                <p><em>For each person, write the correct book letter (A, B, C, D, E, F, G or H).</em></p>
+                <div id="questionsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/5</div>
+    </div>
+
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+
+    <script>
+        // ---------- ANSWER KEY (Part 2) ----------
+        const answerKey = { q6: 'G', q7: 'C', q8: 'E', q9: 'B', q10: 'H' };
+        const displayAnswers = { q6: 'G (Night Light)', q7: 'C (Action Plan)', q8: 'E (Days in the Sun)', q9: 'B (Endless Days)', q10: 'H (Our Lives)' };
+
+        const detailedExplanations = {
+            q6: `<strong>Dap an: G (Night Light)</strong><br>Ahmed thich doc ve nguoi that ke chuyen doi minh. <em>Night Light</em> ke ve hanh trinh cua van dong vien khiem thi, vuot qua kho khan. Phu hop voi "real people" va "difficulties".`,
+            q7: `<strong>Dap an: C (Action Plan)</strong><br>Pritti muon biet ve cac van dong vien hang dau va cach ho dat duoc muc tieu. <em>Action Plan</em> co phong van ve che do tap luyen, an uong, thanh cong – dap ung day du.`,
+            q8: `<strong>Dap an: E (Days in the Sun)</strong><br>Conal yeu thien nhien va muon phat trien ky nang viet. <em>Days in the Sun</em> ke ve tac gia cai thien phong cach viet, truyen cam hung cho nguoi muon xuat ban sach.`,
+            q9: `<strong>Dap an: B (Endless Days)</strong><br>Elif thich phieu luu va hanh dong dung cam trong qua khu. <em>Endless Days</em> ke ve cac phi cong vuot Dai Tay Duong va tam anh huong den the gioi hien dai.`,
+            q10: `<strong>Dap an: H (Our Lives)</strong><br>Stefan muon kham pha van hoa va hoc nau mon truyen thong. <em>Our Lives</em> co anh ve doi song cac vung mien va cong thuc nau an dac trung.`
+        };
+
+        // Highlight mapping: review & keywords
+        const highlightMap = {
+            q6: { reviewId: 'G', keywords: ["world-class athlete", "life as a blind person", "challenges he faced"] },
+            q7: { reviewId: 'C', keywords: ["famous athletes", "succeed in their careers", "food they eat", "hours they train"] },
+            q8: { reviewId: 'E', keywords: ["improved his style", "hoping to get their own work published", "countryside"] },
+            q9: { reviewId: 'B', keywords: ["first pilots to fly across the Atlantic", "importance of these events for the modern world"] },
+            q10: { reviewId: 'H', keywords: ["how people live in different parts of the world", "recipes for traditional meals"] }
+        };
+
+        // Person descriptions
+        const peopleData = [
+            { num: 6, text: "Ahmed enjoys reading about real people, especially if they tell their own story. He’d like to read a book by someone who’s had to deal with difficulties in their life." },
+            { num: 7, text: "Pritti loves doing all kinds of sport. She’d like to learn as much as possible about top sportspeople from all over the world and how they’ve managed to achieve their goals." },
+            { num: 8, text: "Conal loves nature and enjoys writing about it. He wants ideas to help him further develop his writing skills and would love to have a career as a writer." },
+            { num: 9, text: "Elif likes reading books about adventures. She loves learning about people who did brave things in the past, and how their actions have influenced the way we live today." },
+            { num: 10, text: "Stefan enjoys travelling and is keen to discover more about other cultures. He also wants to learn how to make typical dishes from a variety of countries." }
+        ];
+
+        let examSubmitted = false;
+        let explanationMode = false;
+        let selectedRange = null;
+
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            peopleData.forEach(person => {
+                const qDiv = document.createElement('div');
+                qDiv.className = 'question-item';
+                qDiv.id = `question-${person.num}`;
+                qDiv.innerHTML = `
+                    <div class="question-text">${person.num}. ${person.text}</div>
+                    <div class="answer-input-area">
+                        <label for="answer-${person.num}">Your answer (letter A–H):</label>
+                        <input type="text" id="answer-${person.num}" class="answer-input" maxlength="1" placeholder="A–H" autocomplete="off">
+                        <span class="eye-icon" data-question="${person.num}">👁️</span>
+                    </div>
+                `;
+                container.appendChild(qDiv);
+                const input = document.getElementById(`answer-${person.num}`);
+                input.addEventListener('input', function(e) {
+                    this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
+                    updateAnswerCount();
+                });
+            });
+        }
+
+        function getUserAnswer(qNum) {
+            const input = document.getElementById(`answer-${qNum}`);
+            if (!input) return null;
+            let val = input.value.trim().toUpperCase();
+            return val.length === 1 && /[A-H]/.test(val) ? val : null;
+        }
+
+        function isAnswerCorrect(qNum, answer) {
+            return answer === answerKey[`q${qNum}`];
+        }
+
+        function updateAnswerCount() {
+            let answered = 0;
+            for (let i = 6; i <= 10; i++) if (getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/5 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/5`;
+            for (let i = 6; i <= 10; i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if (btn) {
+                    btn.classList.remove('answered','unanswered');
+                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                }
+            }
+        }
+
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for (let i = 6; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', () => {
+                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+
+        function markAnswers() {
+            for (let i = 6; i <= 10; i++) {
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (!questionDiv) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                questionDiv.classList.remove('correct','incorrect');
+                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (correct) {
+                    questionDiv.classList.add('correct');
+                } else {
+                    questionDiv.classList.add('incorrect');
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    questionDiv.appendChild(badge);
+                }
+            }
+        }
+
+        function highlightAnswerInReading(questionNum) {
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+
+            const info = highlightMap[`q${questionNum}`];
+            if (!info) return;
+            const card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
+            if (!card) return;
+
+            const qItem = document.getElementById(`question-${questionNum}`);
+            if (qItem) qItem.classList.add('highlight-question');
+
+            const keywords = info.keywords || [];
+            keywords.forEach(keyword => {
+                const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
+                    if (idx !== -1) {
+                        const range = document.createRange();
+                        range.setStart(node, idx);
+                        range.setEnd(node, idx + keyword.length);
+                        const span = document.createElement('span');
+                        span.className = 'dynamic-highlight';
+                        try {
+                            range.surroundContents(span);
+                        } catch(e) { console.log(e); }
+                        break;
+                    }
+                }
+            });
+            const firstHighlight = document.querySelector('.dynamic-highlight');
+            if (firstHighlight) firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showExplanation(questionNum) {
+            if (!explanationMode && !examSubmitted) return;
+            highlightAnswerInReading(questionNum);
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
+            if (examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa điền)';
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:12px;padding:10px; background:${isCorrect ? '#e0f2e0' : '#ffe0e0'}; border-radius:12px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user} ${user ? (isCorrect ? '✓' : '✗') : ''}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `Chính xác!`;
+                html += `</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+
+        function resetAll() {
+            examSubmitted = false;
+            explanationMode = false;
+            for (let i = 6; i <= 10; i++) {
+                const input = document.getElementById(`answer-${i}`);
+                if (input) input.value = '';
+                const div = document.getElementById(`question-${i}`);
+                if (div) {
+                    div.classList.remove('correct','incorrect');
+                    const badge = div.querySelector('.correct-answer-badge');
+                    if (badge) badge.remove();
+                }
+            }
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        // Event listeners
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            if (examSubmitted) return;
+            let unanswered = [];
+            for (let i = 6; i <= 10; i++) if (!getUserAnswer(i)) unanswered.push(i);
+            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
+            examSubmitted = true;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            let correctCount = 0;
+            for (let i = 6; i <= 10; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/5</p><p>Nhấn vào biểu tượng 👁️ bên cạnh mỗi câu để xem giải thích và vị trí đáp án trong bài đọc.</p>`;
+        });
+
+        document.getElementById('explainBtn').addEventListener('click', () => {
+            if (!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            if (confirm('Reset tất cả câu trả lời?')) resetAll();
+        });
+
+        document.getElementById('closeExplanation').addEventListener('click', () => {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('eye-icon')) {
+                const q = parseInt(e.target.dataset.question);
+                showExplanation(q);
+            }
+        });
+
+        // Font size
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.reading-content, .questions-list').forEach(el => {
+                el.classList.remove('font-small','font-medium','font-large');
+                el.classList.add(`font-${size}`);
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        // Resizer
+        const readingPanel = document.getElementById('readingPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const main = document.getElementById('mainArea');
+            const rect = main.getBoundingClientRect();
+            let leftW = e.clientX - rect.left - 4;
+            if (leftW < 280) leftW = 280;
+            if (leftW > rect.width - 300) leftW = rect.width - 300;
+            readingPanel.style.width = leftW + 'px';
+            questionsPanel.style.width = (rect.width - leftW - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        // Reading mode toggle
+        const testWrapper = document.getElementById('testWrapper');
+        const toggleSwitch = document.getElementById('toggleSwitch');
+        document.getElementById('readingModeToggle').addEventListener('click', () => {
+            testWrapper.classList.toggle('reading-mode');
+            toggleSwitch.classList.toggle('active');
+        });
+
+        // Context menu highlight (still works)
+        const readingContent = document.getElementById('readingContent');
+        const questionsContentDiv = document.getElementById('questionsContent');
+        const contextMenu = document.getElementById('contextMenu');
+        function showContextMenu(e) {
+            const sel = window.getSelection();
+            if (sel.toString().trim()) {
+                e.preventDefault();
+                selectedRange = sel.getRangeAt(0);
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.style.display = 'block';
+            }
+        }
+        readingContent.addEventListener('contextmenu', showContextMenu);
+        questionsContentDiv.addEventListener('contextmenu', showContextMenu);
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
+        window.applyHighlight = (color) => {
+            if (!selectedRange) return;
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(selectedRange.extractContents());
+                selectedRange.insertNode(span);
+            } catch(e) { console.log(e); }
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+        window.removeHighlight = () => {
+            if (!selectedRange) return;
+            const highlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+            highlights.forEach(h => {
+                if (selectedRange.intersectsNode(h)) {
+                    const parent = h.parentNode;
+                    while (h.firstChild) parent.insertBefore(h.firstChild, h);
+                    parent.removeChild(h);
+                }
+            });
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+
+        // Initialize
+        createNavButtons();
+        renderQuestions();
+        updateAnswerCount();
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        setFontSize('large');
+    </script>
+</body>
+</html>
