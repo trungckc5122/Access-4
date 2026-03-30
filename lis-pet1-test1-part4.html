@@ -695,12 +695,71 @@
             updateAnswerCount();
         }
 
+        // ========== CHỨC NĂNG LƯU VÀO DASHBOARD (LOCALSTORAGE) ==========
+        function getPetInfo() {
+            const candidateText = document.querySelector('.candidate')?.textContent || '';
+            let book = 1, test = 1, part = 4;
+            const bookMatch = candidateText.match(/Preliminary\s+(\d+)/i);
+            if (bookMatch) book = parseInt(bookMatch[1]);
+            const testMatch = candidateText.match(/Test\s+(\d+)/i);
+            if (testMatch) test = parseInt(testMatch[1]);
+            const partMatch = candidateText.match(/Part\s+(\d+)/i);
+            if (partMatch) part = parseInt(partMatch[1]);
+            return { book, test, part };
+        }
+
+        function saveToDashboard() {
+            if (!examSubmitted) return;
+
+            const { book, test, part } = getPetInfo();
+            const skill = 'listening'; // Part 4 always listening (PET Listening)
+            
+            const details = [];
+            let correctCount = 0;
+            
+            // Xác định số câu hỏi từ answerKey (20-25)
+            const keys = Object.keys(answerKey);
+            const numbers = keys.map(k => parseInt(k.slice(1))).filter(n => !isNaN(n));
+            const minQ = Math.min(...numbers);
+            const maxQ = Math.max(...numbers);
+            
+            for (let i = minQ; i <= maxQ; i++) {
+                const user = getUserAnswer(i);
+                const correct = answerKey[`q${i}`];
+                const isCorrect = user === correct;
+                if (isCorrect) correctCount++;
+                details.push({
+                    question: i,
+                    user: user || '(trống)',
+                    correct: displayAnswers[`q${i}`] || correct,
+                    isCorrect: isCorrect
+                });
+            }
+            
+            const partData = {
+                partId: part,
+                name: `Part ${part}`,
+                totalQuestions: details.length,
+                correctCount: correctCount,
+                details: details
+            };
+            
+            const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+            localStorage.setItem(key, JSON.stringify(partData));
+            console.log(`✅ Đã lưu kết quả ${skill} với key: ${key}`);
+        }
+
         // ---------- EVENT LISTENERS ----------
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', updateAnswerCount);
+        // Gắn sự kiện change cho radio để cập nhật số lượng đã làm
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.matches('input[type="radio"]')) {
+                updateAnswerCount();
+            }
         });
 
-        document.getElementById('submitBtn').addEventListener('click', function() {
+        // Xử lý nộp bài và lưu kết quả
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.addEventListener('click', function() {
             if (examSubmitted) return;
             let unanswered = [];
             for (let i = 20; i <= 25; i++) if (!getUserAnswer(i)) unanswered.push(i);
@@ -711,8 +770,8 @@
             mainArea.classList.add('show-transcript');
             document.getElementById('transcriptContent').innerHTML = transcriptHTML;
             markAnswers();
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đã nộp bài';
             document.getElementById('explainBtn').disabled = false;
             document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
 
@@ -727,6 +786,9 @@
                 <p><strong>Đúng:</strong> ${correctCount}/6</p>
                 <p>Nhấn vào biểu tượng 👁️ để xem vị trí đáp án trong transcript.</p>
             `;
+            
+            // Lưu kết quả vào localStorage
+            saveToDashboard();
         });
 
         document.getElementById('explainBtn').addEventListener('click', function() {
