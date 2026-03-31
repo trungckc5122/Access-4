@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PET 1 - Test 1 - Reading Part 4</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+
+        body { background: #1a1a2a; display: flex; justify-content: center; min-height: 100vh; }
+
+        .test-wrapper {
+            width: 100%; max-width: 1600px; background: #f5f3ee;
+            display: flex; flex-direction: column; height: 100vh;
+        }
+        .test-wrapper.reading-mode { background: #f8f5e6; }
+        .test-wrapper.reading-mode .reading-panel { background: #fffaf0; }
+        .test-wrapper.reading-mode .questions-panel { background: #fffaf0; }
+        .test-wrapper.reading-mode .panel-header { background: #d6cdb8; }
+
+        /* Header */
+        .ielts-header {
+            background: #1e3a5f; color: white; padding: 8px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 3px solid #e6b422; flex-wrap: wrap;
+        }
+        .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .ielts-logo {
+            background: #e6b422; color: #1e3a5f; font-weight: 800; font-size: 24px;
+            padding: 4px 18px; border-radius: 40px;
+        }
+        .candidate { background: #2d4b77; padding: 4px 16px; border-radius: 30px; font-size: 14px; }
+        .reading-mode-toggle {
+            display: flex; align-items: center; gap: 5px; background: #2d4b77;
+            padding: 3px 8px; border-radius: 30px; cursor: pointer;
+        }
+        .toggle-switch {
+            width: 40px; height: 20px; background: #0f2a44; border-radius: 20px;
+            position: relative; transition: 0.3s; border: 1px solid #e6b422;
+        }
+        .toggle-switch.active { background: #e6b422; }
+        .toggle-switch::after {
+            content: ''; position: absolute; width: 16px; height: 16px; background: white;
+            border-radius: 50%; top: 2px; left: 2px; transition: 0.3s;
+        }
+        .toggle-switch.active::after { left: 22px; }
+        .toggle-label { font-size: 11px; font-weight: 500; }
+        .font-controls { display: flex; gap: 5px; background: #2d4b77; padding: 3px; border-radius: 30px; }
+        .font-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: white; font-weight: bold; cursor: pointer; }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question Navigator */
+        .question-nav {
+            background: #d2cbbc; padding: 6px 20px; border-bottom: 2px solid #b0aa9a;
+            display: flex; align-items: center; gap: 15px; flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 36px; height: 36px; border-radius: 8px; border: 2px solid #1e3a5f;
+            background: white; color: #1e3a5f; font-weight: bold; font-size: 1rem; cursor: pointer;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.02); }
+
+        /* Main area */
+        .main-area { display: flex; flex: 1; overflow: hidden; }
+        .reading-panel {
+            width: 55%; background: #fffcf5; border-right: 2px solid #b0aa9a;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .questions-panel {
+            width: 45%; background: #f8f6f0;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .resizer { width: 8px; background: #b0aa9a; cursor: col-resize; }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc; padding: 8px 15px; font-weight: 600; color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a; display: flex; justify-content: space-between;
+        }
+        .reading-content { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.7; }
+        .questions-list { flex: 1; overflow-y: auto; padding: 20px; }
+        .font-small { font-size: 13px; } .font-medium { font-size: 15px; } .font-large { font-size: 17px; }
+
+        /* Reading passage card */
+        .reading-card {
+            background: #fefcf7; border: 1px solid #d0c8b8;
+            padding: 20px 24px; border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .reading-card .passage-title {
+            font-weight: 800; font-size: 1.3rem; color: #1e3a5f;
+            margin-bottom: 16px; text-align: center;
+            border-bottom: 2px solid #e6b422; padding-bottom: 8px;
+        }
+        .reading-card p { margin: 12px 0; }
+
+        /* Inline drop zone in reading text */
+        .inline-drop-zone {
+            display: inline-flex; align-items: center;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+        .inline-drop-slot {
+            min-width: 100px; min-height: 28px;
+            background: white; border: 2px dashed #9a8c7a;
+            border-radius: 6px; padding: 3px 10px;
+            display: inline-flex; align-items: center; gap: 6px;
+            cursor: default; transition: border-color 0.2s, background 0.2s;
+            vertical-align: middle;
+        }
+        .inline-drop-slot.drag-over {
+            border-color: #1e3a5f; background: #eef2f8;
+        }
+        .inline-drop-slot .slot-content {
+            font-weight: 500; font-size: 0.9em; color: #1e3a5f; flex: 1;
+        }
+        .inline-drop-slot .remove-chip {
+            color: #f44336; cursor: pointer; font-weight: bold;
+            font-size: 14px; padding: 0 2px; display: none;
+        }
+        .inline-drop-slot .remove-chip:hover { color: #b71c1c; }
+
+        /* Sentence bank */
+        .sentence-bank {
+            background: #eae6df; border-radius: 12px; padding: 12px 14px;
+            margin-bottom: 16px; border: 1px solid #c8c0b0;
+        }
+        .sentence-bank-title { display: none; }
+        .sentence-items { display: flex; flex-direction: column; gap: 6px; }
+        .sentence-item {
+            background: #ffffff; color: #1e3a5f;
+            padding: 9px 14px; border-radius: 8px; font-size: 0.88rem;
+            cursor: grab; user-select: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.15s;
+            border: 1px solid #c8c0b0;
+            display: flex; align-items: flex-start; gap: 10px;
+        }
+        .sentence-item:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); border-color: #9a8c7a; }
+        .sentence-item.dragging { opacity: 0.4; transform: scale(0.98); }
+        .sentence-item.hidden { display: none; }
+        .sentence-letter {
+            background: #1e3a5f; color: white; border-radius: 50%;
+            width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.82rem; flex-shrink: 0; margin-top: 1px;
+        }
+        .sentence-text { flex: 1; line-height: 1.4; color: #2c3e50; }
+
+        /* Drop rows in questions panel */
+        .drop-rows { margin: 0; }
+        .drop-row {
+            display: flex; align-items: center; gap: 10px;
+            margin: 10px 0; padding: 9px 12px;
+            background: #f0ebe0; border-radius: 8px; border: 1px solid #b0aa9a;
+            flex-wrap: nowrap;
+        }
+        .drop-label {
+            font-weight: 700; color: #1e3a5f; font-size: 1rem;
+            min-width: 32px;
+        }
+        .drop-slot-panel {
+            flex: 1; min-height: 36px; background: white;
+            border: 2px dashed #b0aa9a; border-radius: 6px;
+            padding: 4px 10px; display: flex; align-items: center; gap: 8px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .drop-slot-panel.drag-over { border-color: #1e3a5f; background: #eef2f8; }
+        .drop-slot-panel .slot-content { flex: 1; font-size: 0.85rem; color: #1e3a5f; font-weight: 500; }
+        .drop-slot-panel .slot-content:empty::before { content: ''; }
+        .drop-slot-panel .remove-chip {
+            color: #f44336; cursor: pointer; font-weight: bold;
+            font-size: 14px; display: none;
+        }
+
+        .eye-icon { cursor: pointer; font-size: 1.2rem; opacity: 0.7; display: none; }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+
+        /* Correct/incorrect states */
+        .drop-slot-panel.correct { border-color: #4CAF50; background: #e8f5e8; }
+        .drop-slot-panel.incorrect { border-color: #f44336; background: #ffebee; }
+        .inline-drop-slot.correct { border-color: #4CAF50; background: #e8f5e8; }
+        .inline-drop-slot.incorrect { border-color: #f44336; background: #ffebee; }
+        .correct-answer-badge {
+            display: inline-block; background: #4CAF50; color: white;
+            padding: 2px 8px; border-radius: 12px; font-size: 11px;
+            font-weight: bold; margin-left: 6px; white-space: nowrap;
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #d2cbbc; padding: 10px 20px; display: flex;
+            gap: 15px; border-top: 1px solid #b0aa9a; align-items: center; flex-wrap: wrap;
+        }
+        .btn { padding: 6px 24px; border: none; border-radius: 40px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; cursor: not-allowed; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 30px; padding: 4px 16px; font-weight: 600; }
+
+        /* Explanation panel */
+        .explanation-panel {
+            background: #fffef9; border-left: 4px solid #e6b422;
+            padding: 12px 20px; margin: 0 20px 12px 20px;
+            border-radius: 12px; display: none;
+            max-height: 220px; overflow-y: auto;
+        }
+        .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .close-btn { cursor: pointer; flex-shrink: 0; }
+        #explanationText { font-size: 0.92rem; line-height: 1.65; color: #2c3e50; }
+        #explanationText strong { color: #1e3a5f; }
+        #explanationText em { color: #555; }
+
+        /* Highlights */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 4px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 4px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 4px; padding: 0 2px; }
+        .dynamic-highlight {
+            background-color: #ffe082; text-decoration: underline;
+            text-decoration-color: #e67e22; text-decoration-thickness: 2px;
+            font-weight: 600; display: inline; border-radius: 3px;
+        }
+        .question-item.highlight-question { border-left: 5px solid #f1c40f; background-color: #fef9e3; }
+
+        .context-menu {
+            position: fixed; background: white; border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.2); padding: 6px 0;
+            border-radius: 10px; z-index: 1000; display: none; min-width: 160px;
+        }
+        .context-menu div { padding: 8px 20px; cursor: pointer; font-size: 14px; }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+
+        /* Question header */
+        .q-header { font-size: 1.1rem; font-weight: 800; color: #1e3a5f; margin-bottom: 6px; }
+        .q-instruction { font-size: 0.9rem; color: #555; margin-bottom: 16px; font-style: italic; border-left: 3px solid #e6b422; padding-left: 10px; }
+
+        /* Mobile touch hint */
+        .touch-hint {
+            font-size: 0.78rem; color: #888; text-align: center;
+            margin-bottom: 8px; display: none;
+        }
+        @media (pointer: coarse) { .touch-hint { display: block; } }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+
+    <!-- Header -->
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 1 · Part 4 (Reading)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question Navigator -->
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 16 – 20</span>
+        <div class="nav-buttons" id="navButtons"></div>
+        <span id="answeredCount" style="font-size:13px; color:#555;">0/5 answered</span>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area" id="mainArea">
+
+        <!-- Reading Panel -->
+        <div class="reading-panel" id="readingPanel">
+            <div class="panel-header"><span>READING PASSAGE · Part 4</span></div>
+            <div class="reading-content font-large" id="readingContent">
+                <div class="reading-card" id="passageCard">
+                    <div class="passage-title">At home together</div>
+
+                    <p>Taimi Taskinen is an 83-year-old woman who lives in a care home called Rudolf House in Helsinki, Finland. A care home is a place where old people can live and be looked after if they don't live with their families. At Rudolf House, there are lots of stairs, so there are some rooms which elderly people can't access easily. As a result, the city council decided to rent these spare rooms to young people. They called this new housing programme 'The House that Fits'.</p>
+
+                    <p>When Taimi heard about the council's plan, she wondered how it was going to work.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot16" data-q="16">
+                                <span class="slot-content">[ 16 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        She couldn't imagine what she'd have in common with young people who weren't family members. Then, one morning a few days later, a young man appeared outside her room.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot17" data-q="17">
+                                <span class="slot-content">[ 17 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                    </p>
+
+                    <p>'Hi! I'm your new neighbour,' the young man said. 'My name's Jonatan Shaya. Mind if I come in?' 'Please do,' she replied, immediately curious. 'I'll make coffee,' he announced, going into her tiny kitchen. 'Why don't you tell me about yourself?' he asked, as he brought their drinks to the table.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot18" data-q="18">
+                                <span class="slot-content">[ 18 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        She also told him about her family and how much she loved making art.</p>
+
+                    <p>In turn, 20-year-old Jonatan told Taimi he'd been living in Helsinki with his mother and younger brother until they moved away. He was in the middle of a course in the city, training to become a chef.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot19" data-q="19">
+                                <span class="slot-content">[ 19 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        That's when he heard about 'The House that Fits' on social media. The council's post resulted in over 300 young people applying to live at Rudolf House. They had face-to-face interviews and wrote short essays about why they wanted to live there.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot20" data-q="20">
+                                <span class="slot-content">[ 20 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        And that's how the unlikely friendship between Taimi and Jonatan began.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer" id="resizer"></div>
+
+        <!-- Questions Panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 16–20</span>
+            </div>
+            <div class="questions-list font-large" id="questionsContent">
+                <div class="q-header">Part 4 · Questions 16–20</div>
+                <p class="q-instruction">Five sentences have been removed from the text. For each question, choose the correct answer. There are three extra sentences which you do not need to use.</p>
+                <p class="touch-hint">💡 Kéo câu từ ô bên dưới vào ô trống trong bài đọc (hoặc vào đây)</p>
+
+                <!-- Sentence Bank -->
+                <div class="sentence-bank" id="sentenceBank">
+                    <div class="sentence-bank-title">📋 Các câu cần điền (kéo vào ô trống):</div>
+                    <div class="sentence-items" id="sentenceItems">
+                        <div class="sentence-item" draggable="true" data-value="A" id="sent-A">
+                            <span class="sentence-letter">A</span>
+                            <span class="sentence-text">Surprising herself, she talked about growing up in a lakeside town in eastern Finland.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="B" id="sent-B">
+                            <span class="sentence-letter">B</span>
+                            <span class="sentence-text">Therefore, he needed to find somewhere to live.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="C" id="sent-C">
+                            <span class="sentence-letter">C</span>
+                            <span class="sentence-text">As a result, she wasn't sure whether the young people had arrived.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="D" id="sent-D">
+                            <span class="sentence-letter">D</span>
+                            <span class="sentence-text">She'd left the door open, as she always did in the morning.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="E" id="sent-E">
+                            <span class="sentence-letter">E</span>
+                            <span class="sentence-text">In the end, three of them, including Jonatan, were chosen.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="F" id="sent-F">
+                            <span class="sentence-letter">F</span>
+                            <span class="sentence-text">Because of this, Jonatan has to be a good neighbour and spend 30 hours a month with Taimi.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="G" id="sent-G">
+                            <span class="sentence-letter">G</span>
+                            <span class="sentence-text">It would be the first time that anything like this had happened at Rudolf House.</span>
+                        </div>
+                        <div class="sentence-item" draggable="true" data-value="H" id="sent-H">
+                            <span class="sentence-letter">H</span>
+                            <span class="sentence-text">Instead, they just talked, as if they'd known each other forever.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drop rows (synced with reading panel) -->
+                <div class="drop-rows" id="dropRows">
+                    <div class="drop-row" id="drop-row-16">
+                        <span class="drop-label">16</span>
+                        <div class="drop-slot-panel" id="panelSlot16" data-q="16">
+                            <span class="slot-content"></span>
+                            <span class="remove-chip">✕</span>
+                        </div>
+                        <span class="eye-icon" data-question="16">👁️</span>
+                    </div>
+                    <div class="drop-row" id="drop-row-17">
+                        <span class="drop-label">17</span>
+                        <div class="drop-slot-panel" id="panelSlot17" data-q="17">
+                            <span class="slot-content"></span>
+                            <span class="remove-chip">✕</span>
+                        </div>
+                        <span class="eye-icon" data-question="17">👁️</span>
+                    </div>
+                    <div class="drop-row" id="drop-row-18">
+                        <span class="drop-label">18</span>
+                        <div class="drop-slot-panel" id="panelSlot18" data-q="18">
+                            <span class="slot-content"></span>
+                            <span class="remove-chip">✕</span>
+                        </div>
+                        <span class="eye-icon" data-question="18">👁️</span>
+                    </div>
+                    <div class="drop-row" id="drop-row-19">
+                        <span class="drop-label">19</span>
+                        <div class="drop-slot-panel" id="panelSlot19" data-q="19">
+                            <span class="slot-content"></span>
+                            <span class="remove-chip">✕</span>
+                        </div>
+                        <span class="eye-icon" data-question="19">👁️</span>
+                    </div>
+                    <div class="drop-row" id="drop-row-20">
+                        <span class="drop-label">20</span>
+                        <div class="drop-slot-panel" id="panelSlot20" data-q="20">
+                            <span class="slot-content"></span>
+                            <span class="remove-chip">✕</span>
+                        </div>
+                        <span class="eye-icon" data-question="20">👁️</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/5</div>
+    </div>
+
+    <!-- Explanation panel -->
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div id="explanationText"></div>
+    </div>
+
+    <!-- Context menu -->
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ==================== DATA ====================
+    const answerKey = { q16: 'G', q17: 'D', q18: 'A', q19: 'B', q20: 'E' };
+
+    const sentenceTexts = {
+        A: 'A – Surprising herself, she talked about growing up in a lakeside town in eastern Finland.',
+        B: 'B – Therefore, he needed to find somewhere to live.',
+        C: 'C – As a result, she wasn\'t sure whether the young people had arrived.',
+        D: 'D – She\'d left the door open, as she always did in the morning.',
+        E: 'E – In the end, three of them, including Jonatan, were chosen.',
+        F: 'F – Because of this, Jonatan has to be a good neighbour and spend 30 hours a month with Taimi.',
+        G: 'G – It would be the first time that anything like this had happened at Rudolf House.',
+        H: 'H – Instead, they just talked, as if they\'d known each other forever.'
+    };
+
+    const detailedExplanations = {
+        q16: `<strong>Đáp án: G</strong> – <em>"It would be the first time that anything like this had happened at Rudolf House."</em>
+<br><br>
+<strong>Trước ô trống [16]:</strong> Taimi nghe về kế hoạch của hội đồng và <u><strong>wondered how it was going to work</strong></u> (tự hỏi liệu nó sẽ hoạt động thế nào).
+<br><br>
+<strong>Tại sao G đúng:</strong> Câu G giải thích nguyên nhân khiến Taimi băn khoăn — đây sẽ là <u>lần đầu tiên</u> điều này xảy ra tại Rudolf House. <u>"This"</u> ở câu G chỉ chương trình cho người trẻ vào ở cùng, điều chưa từng có tiền lệ ở đây.
+<br><br>
+<strong>Sau ô trống [16]:</strong> Taimi tiếp tục <em>"<u>She couldn't imagine</u> what she'd have in common with young people..."</em> → Câu G dẫn dắt tự nhiên sang sự hoài nghi này.`,
+
+        q17: `<strong>Đáp án: D</strong> – <em>"She'd left the door open, as she always did in the morning."</em>
+<br><br>
+<strong>Trước ô trống [17]:</strong> <u><strong>A young man appeared outside her room</strong></u> (một thanh niên xuất hiện ngoài cửa phòng Taimi).
+<br><br>
+<strong>Tại sao D đúng:</strong> Câu D giải thích tại sao người đọc có thể hình dung cảnh này rõ hơn — cô ấy <u>để cửa mở như thường lệ mỗi sáng</u>, nên Jonatan có thể thấy có người bên trong và dừng lại. Ta có thể hình dung cảnh này rõ ràng hơn khi thêm câu D vào.
+<br><br>
+<strong>Sau ô trống [17]:</strong> Jonatan nói <em>"<u>Hi! I'm your new neighbour</u>"</em> → Câu D chuẩn bị bối cảnh để cuộc gặp gỡ diễn ra tự nhiên.`,
+
+        q18: `<strong>Đáp án: A</strong> – <em>"Surprising herself, she talked about growing up in a lakeside town in eastern Finland."</em>
+<br><br>
+<strong>Trước ô trống [18]:</strong> Jonatan hỏi Taimi kể về bản thân — <u><strong>"Why don't you tell me about yourself?"</strong></u>
+<br><br>
+<strong>Tại sao A đúng:</strong> Câu A mô tả Taimi bắt đầu kể về <u>thời thơ ấu</u>, và quan trọng là cô ấy <u>tự bất ngờ với chính mình</u> (<em>surprising herself</em>) vì cởi mở như vậy với người mới quen. Điều này cho thấy cuộc trò chuyện diễn ra rất tự nhiên.
+<br><br>
+<strong>Sau ô trống [18]:</strong> <em>"She <u>also</u> told him about her family and how much she loved making art"</em> → <u>"also"</u> (cũng) nối tiếp tự nhiên với việc Taimi đã chia sẻ về thời thơ ấu ở câu A.`,
+
+        q19: `<strong>Đáp án: B</strong> – <em>"Therefore, he needed to find somewhere to live."</em>
+<br><br>
+<strong>Trước ô trống [19]:</strong> Jonatan kể rằng anh đang học ở Helsinki nhưng <u><strong>mẹ và em trai đã chuyển đi khỏi thành phố</strong></u> — <em>"<u>until they moved away</u>"</em>.
+<br><br>
+<strong>Tại sao B đúng:</strong> Từ <u><strong>"Therefore"</strong></u> (vì vậy) trong câu B là từ nối <u>nhân-quả</u> hoàn toàn phù hợp: vì gia đình đã chuyển đi → anh ấy <u>cần tìm chỗ ở mới</u>. Đây là lý do trực tiếp dẫn đến việc anh tìm hiểu chương trình 'The House that Fits'.
+<br><br>
+<strong>Sau ô trống [19]:</strong> <em>"<u>That's when he heard about 'The House that Fits'</u>"</em> → Câu B tạo cầu nối logic giữa hoàn cảnh của Jonatan và cách anh biết đến chương trình.`,
+
+        q20: `<strong>Đáp án: E</strong> – <em>"In the end, three of them, including Jonatan, were chosen."</em>
+<br><br>
+<strong>Trước ô trống [20]:</strong> Hơn <u><strong>300 người trẻ nộp đơn</strong></u>, phải <u>phỏng vấn trực tiếp</u> và <u>viết bài luận ngắn</u>.
+<br><br>
+<strong>Tại sao E đúng:</strong> Cụm <u><strong>"In the end"</strong></u> (cuối cùng) tổng kết quá trình tuyển chọn kéo dài. <u><strong>"Them"</strong></u> trong câu E chỉ lại <em>"over 300 young people"</em> đã ứng tuyển. Kết quả: chỉ <u>3 người được chọn</u>, trong đó có Jonatan.
+<br><br>
+<strong>Sau ô trống [20]:</strong> <em>"And that's how <u>the unlikely friendship between Taimi and Jonatan</u> began."</em> → Câu E kết thúc quá trình tuyển chọn và dẫn vào kết cục của câu chuyện một cách trọn vẹn.`
+    };
+
+    const highlightKeywords = {
+        q16: [
+            "wondered how it was going to work",
+            "She couldn't imagine what she'd have in common"
+        ],
+        q17: [
+            "a young man appeared outside her room",
+            "Hi! I'm your new neighbour"
+        ],
+        q18: [
+            "Why don't you tell me about yourself",
+            "She also told him about her family"
+        ],
+        q19: [
+            "until they moved away",
+            "That's when he heard about"
+        ],
+        q20: [
+            "over 300 young people applying to live at Rudolf House",
+            "the unlikely friendship between Taimi and Jonatan began"
+        ]
+    };
+
+    // ==================== STATE ====================
+    let examSubmitted = false;
+    let explanationMode = false;
+    let selectedRange = null;
+    let draggedItem = null;
+
+    // Map: q-number -> { value, text }
+    const slotState = { 16: null, 17: null, 18: null, 19: null, 20: null };
+
+    // ==================== HELPERS ====================
+    function getSlots(qNum) {
+        return {
+            reading: document.getElementById(`readingSlot${qNum}`),
+            panel: document.getElementById(`panelSlot${qNum}`)
+        };
+    }
+
+    function getSentenceEl(value) {
+        return document.getElementById(`sent-${value}`);
+    }
+
+    function setSlotContent(qNum, value, text) {
+        const { reading, panel } = getSlots(qNum);
+        const displayText = value ? `${value} – ${text}` : null;
+
+        [reading, panel].forEach(slot => {
+            if (!slot) return;
+            const contentEl = slot.querySelector('.slot-content');
+            const removeEl = slot.querySelector('.remove-chip');
+            if (value) {
+                contentEl.textContent = displayText;
+                slot.setAttribute('data-selected', value);
+                removeEl.style.display = 'inline';
+            } else {
+                contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
+                slot.removeAttribute('data-selected');
+                removeEl.style.display = 'none';
+            }
+        });
+
+        slotState[qNum] = value ? { value, text } : null;
+    }
+
+    function clearSlot(qNum) {
+        const prev = slotState[qNum];
+        if (prev) {
+            const el = getSentenceEl(prev.value);
+            if (el) el.classList.remove('hidden');
+        }
+        setSlotContent(qNum, null, null);
+        updateAnswerCount();
+    }
+
+    function placeInSlot(qNum, value) {
+        const sentEl = getSentenceEl(value);
+        const text = sentEl ? sentEl.querySelector('.sentence-text').textContent.trim() : value;
+
+        // If this sentence is already in another slot, clear that slot first
+        for (let q = 16; q <= 20; q++) {
+            if (slotState[q] && slotState[q].value === value && q !== qNum) {
+                setSlotContent(q, null, null);
+            }
+        }
+
+        // Clear current content of target slot (return old sentence to bank)
+        const prev = slotState[qNum];
+        if (prev && prev.value !== value) {
+            const prevEl = getSentenceEl(prev.value);
+            if (prevEl) prevEl.classList.remove('hidden');
+        }
+
+        setSlotContent(qNum, value, text);
+        if (sentEl) sentEl.classList.add('hidden');
+        updateAnswerCount();
+    }
+
+    // ==================== DRAG & DROP ====================
+    function setupDragDrop() {
+        const sentenceEls = document.querySelectorAll('.sentence-item');
+
+        sentenceEls.forEach(item => {
+            item.addEventListener('dragstart', e => {
+                draggedItem = item;
+                item.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', item.getAttribute('data-value'));
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+            });
+        });
+
+        // All drop targets: reading inline slots + panel drop slots
+        const allDropTargets = [
+            ...document.querySelectorAll('.inline-drop-slot'),
+            ...document.querySelectorAll('.drop-slot-panel')
+        ];
+
+        allDropTargets.forEach(slot => {
+            slot.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                slot.classList.add('drag-over');
+            });
+            slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                if (examSubmitted) return;
+                const value = e.dataTransfer.getData('text/plain');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) placeInSlot(qNum, value);
+            });
+        });
+
+        // Touch support (tap-to-select then tap-to-place)
+        let touchSelected = null;
+        sentenceEls.forEach(item => {
+            item.addEventListener('click', () => {
+                if (examSubmitted) return;
+                if (touchSelected === item) {
+                    touchSelected = null;
+                    item.style.outline = '';
+                    return;
+                }
+                if (touchSelected) touchSelected.style.outline = '';
+                touchSelected = item;
+                item.style.outline = '3px solid #e6b422';
+            });
+        });
+
+        allDropTargets.forEach(slot => {
+            slot.addEventListener('click', () => {
+                if (examSubmitted) return;
+                if (!touchSelected) return;
+                const value = touchSelected.getAttribute('data-value');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) {
+                    placeInSlot(qNum, value);
+                    touchSelected.style.outline = '';
+                    touchSelected = null;
+                }
+            });
+        });
+    }
+
+    // ==================== REMOVE CHIP ====================
+    function setupRemoveChips() {
+        document.querySelectorAll('.remove-chip').forEach(chip => {
+            chip.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (examSubmitted) return;
+                const slot = this.closest('[data-q]');
+                if (!slot) return;
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                clearSlot(qNum);
+            });
+        });
+    }
+
+    // ==================== NAV BUTTONS ====================
+    function createNavButtons() {
+        const nav = document.getElementById('navButtons');
+        nav.innerHTML = '';
+        for (let i = 16; i <= 20; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn unanswered';
+            btn.textContent = i;
+            btn.dataset.question = i;
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Scroll reading panel to the inline slot
+                const slot = document.getElementById(`readingSlot${i}`);
+                if (slot) slot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            nav.appendChild(btn);
+        }
+    }
+
+    function updateAnswerCount() {
+        let answered = 0;
+        for (let i = 16; i <= 20; i++) {
+            if (slotState[i]) answered++;
+            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+            if (btn) {
+                btn.classList.remove('answered', 'unanswered');
+                btn.classList.add(slotState[i] ? 'answered' : 'unanswered');
+            }
+        }
+        document.getElementById('answeredCount').textContent = `${answered}/5 answered`;
+        document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/5`;
+    }
+
+    // ==================== MARK ANSWERS ====================
+    function markAnswers() {
+        for (let i = 16; i <= 20; i++) {
+            const { reading, panel } = getSlots(i);
+            const selected = slotState[i] ? slotState[i].value : null;
+            const correct = answerKey[`q${i}`];
+            const isCorrect = selected === correct;
+
+            [reading, panel].forEach(slot => {
+                if (!slot) return;
+                slot.classList.remove('correct', 'incorrect');
+                const oldBadge = slot.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (selected) {
+                    slot.classList.add(isCorrect ? 'correct' : 'incorrect');
+                    if (!isCorrect) {
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        badge.textContent = `✓ ${correct}`;
+                        slot.appendChild(badge);
+                    }
+                }
+            });
+        }
+    }
+
+    // ==================== HIGHLIGHT ====================
+    function clearAllDynamicHighlights() {
+        document.querySelectorAll('.dynamic-highlight').forEach(el => {
+            const parent = el.parentNode;
+            if (parent) {
+                while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                parent.removeChild(el);
+            }
+        });
+        document.querySelectorAll('[data-q].highlight-question').forEach(el => el.classList.remove('highlight-question'));
+    }
+
+    function highlightInReading(qNum) {
+        clearAllDynamicHighlights();
+        const keywords = highlightKeywords[`q${qNum}`];
+        if (!keywords) return;
+
+        const card = document.getElementById('passageCard');
+        let firstHighlight = null;
+
+        keywords.forEach(keyword => {
+            // Re-create walker each time since DOM may have changed after wrapping
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while ((node = walker.nextNode())) {
+                const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
+                if (idx !== -1) {
+                    const range = document.createRange();
+                    range.setStart(node, idx);
+                    range.setEnd(node, idx + keyword.length);
+                    const span = document.createElement('span');
+                    span.className = 'dynamic-highlight';
+                    try {
+                        range.surroundContents(span);
+                        if (!firstHighlight) firstHighlight = span;
+                    } catch (e) { /* ignore crossing node boundaries */ }
+                    break;
+                }
+            }
+        });
+
+        if (firstHighlight) firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ==================== SHOW EXPLANATION ====================
+    function showExplanation(qNum) {
+        if (!examSubmitted && !explanationMode) return;
+        highlightInReading(qNum);
+
+        const panel = document.getElementById('explanationPanel');
+        panel.classList.add('show');
+        document.getElementById('explanationTitle').textContent = `Giải thích câu ${qNum}`;
+
+        const userVal = slotState[qNum] ? slotState[qNum].value : null;
+        const correct = answerKey[`q${qNum}`];
+        const isCorrect = userVal === correct;
+
+        let html = detailedExplanations[`q${qNum}`] || `<strong>Đáp án: ${correct}</strong>`;
+        if (examSubmitted) {
+            const userDisplay = userVal ? sentenceTexts[userVal] : '(chưa điền)';
+            html += `<div style="margin-top:12px;padding:10px;background:${isCorrect ? '#e0f2e0' : '#ffe0e0'};border-radius:10px;">`;
+            html += `<strong>Câu của bạn:</strong> ${userDisplay} ${userVal ? (isCorrect ? '✓' : '✗') : ''}<br>`;
+            if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${sentenceTexts[correct] || correct}`;
+            else html += `Chính xác!`;
+            html += `</div>`;
+        }
+        document.getElementById('explanationText').innerHTML = html;
+    }
+
+    // ==================== RESET ====================
+    function resetAll() {
+        examSubmitted = false;
+        explanationMode = false;
+
+        for (let i = 16; i <= 20; i++) {
+            setSlotContent(i, null, null);
+            const { reading, panel } = getSlots(i);
+            [reading, panel].forEach(slot => {
+                if (slot) slot.classList.remove('correct', 'incorrect');
+                const b = slot && slot.querySelector('.correct-answer-badge');
+                if (b) b.remove();
+            });
+        }
+
+        document.querySelectorAll('.sentence-item').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.eye-icon').forEach(icon => (icon.style.display = 'none'));
+        clearAllDynamicHighlights();
+
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').textContent = 'Nộp bài';
+        document.getElementById('explainBtn').disabled = true;
+        document.getElementById('explainBtn').textContent = 'Xem giải thích';
+        document.getElementById('explanationPanel').classList.remove('show');
+        updateAnswerCount();
+    }
+
+    // ==================== SAVE TO DASHBOARD ====================
+    function saveToDashboard() {
+        if (!examSubmitted) return;
+        const skill = 'reading';
+        const book = 1, test = 1, part = 4;
+        const details = [];
+        let correctCount = 0;
+        for (let i = 16; i <= 20; i++) {
+            const user = slotState[i] ? slotState[i].value : null;
+            const correct = answerKey[`q${i}`];
+            const isCorrect = user === correct;
+            if (isCorrect) correctCount++;
+            details.push({ question: i, user: user || '(trống)', correct, isCorrect });
+        }
+        const partData = { partId: part, name: `Part ${part}`, totalQuestions: 5, correctCount, details };
+        const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+        localStorage.setItem(key, JSON.stringify(partData));
+        console.log(`Đã lưu ${skill} key: ${key}`);
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        if (examSubmitted) return;
+        let unanswered = [];
+        for (let i = 16; i <= 20; i++) if (!slotState[i]) unanswered.push(i);
+        if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
+
+        examSubmitted = true;
+        markAnswers();
+
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+        document.getElementById('explainBtn').disabled = false;
+        document.querySelectorAll('.eye-icon').forEach(icon => (icon.style.display = 'inline-block'));
+
+        // Disable dragging
+        document.querySelectorAll('.sentence-item').forEach(el => {
+            el.setAttribute('draggable', 'false');
+            el.style.cursor = 'default';
+        });
+
+        let correctCount = 0;
+        for (let i = 16; i <= 20; i++) if (slotState[i] && slotState[i].value === answerKey[`q${i}`]) correctCount++;
+
+        document.getElementById('explanationPanel').classList.add('show');
+        document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+        document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/5</p><p>Nhấn vào biểu tượng 👁️ bên cạnh mỗi câu để xem giải thích và vị trí đáp án trong bài đọc.</p>`;
+        saveToDashboard();
+    });
+
+    document.getElementById('explainBtn').addEventListener('click', () => {
+        if (!examSubmitted) return;
+        explanationMode = true;
+        document.querySelectorAll('.eye-icon').forEach(icon => (icon.style.display = 'inline-block'));
+        document.getElementById('explainBtn').disabled = true;
+        document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+        document.getElementById('explanationPanel').classList.remove('show');
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Reset tất cả câu trả lời?')) resetAll();
+    });
+
+    document.getElementById('closeExplanation').addEventListener('click', () => {
+        document.getElementById('explanationPanel').classList.remove('show');
+        clearAllDynamicHighlights();
+    });
+
+    document.addEventListener('click', e => {
+        if (e.target.classList.contains('eye-icon')) {
+            const q = parseInt(e.target.dataset.question);
+            showExplanation(q);
+        }
+    });
+
+    // ==================== FONT SIZE ====================
+    function setFontSize(size) {
+        document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`).classList.add('active');
+        document.querySelectorAll('.reading-content, .questions-list').forEach(el => {
+            el.classList.remove('font-small', 'font-medium', 'font-large');
+            el.classList.add(`font-${size}`);
+        });
+    }
+    document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+    document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+    document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+    // ==================== RESIZER ====================
+    const readingPanel = document.getElementById('readingPanel');
+    const questionsPanel = document.getElementById('questionsPanel');
+    const resizer = document.getElementById('resizer');
+    let isResizing = false;
+    resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+    document.addEventListener('mousemove', e => {
+        if (!isResizing) return;
+        const main = document.getElementById('mainArea');
+        const rect = main.getBoundingClientRect();
+        let leftW = e.clientX - rect.left - 4;
+        if (leftW < 280) leftW = 280;
+        if (leftW > rect.width - 260) leftW = rect.width - 260;
+        readingPanel.style.width = leftW + 'px';
+        questionsPanel.style.width = (rect.width - leftW - 8) + 'px';
+    });
+    document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+    // ==================== READING MODE ====================
+    document.getElementById('readingModeToggle').addEventListener('click', () => {
+        document.getElementById('testWrapper').classList.toggle('reading-mode');
+        document.getElementById('toggleSwitch').classList.toggle('active');
+    });
+
+    // ==================== CONTEXT MENU HIGHLIGHT ====================
+    const contextMenu = document.getElementById('contextMenu');
+    function showContextMenu(e) {
+        const sel = window.getSelection();
+        if (sel.toString().trim()) {
+            e.preventDefault();
+            selectedRange = sel.getRangeAt(0);
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+            contextMenu.style.display = 'block';
+        }
+    }
+    document.getElementById('readingContent').addEventListener('contextmenu', showContextMenu);
+    document.getElementById('questionsContent').addEventListener('contextmenu', showContextMenu);
+    document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
+
+    window.applyHighlight = color => {
+        if (!selectedRange) return;
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            span.appendChild(selectedRange.extractContents());
+            selectedRange.insertNode(span);
+        } catch (e) { }
+        contextMenu.style.display = 'none';
+        selectedRange = null;
+    };
+    window.removeHighlight = () => {
+        if (!selectedRange) return;
+        document.querySelectorAll('.highlight-yellow,.highlight-green,.highlight-pink').forEach(h => {
+            if (selectedRange.intersectsNode(h)) {
+                const parent = h.parentNode;
+                while (h.firstChild) parent.insertBefore(h.firstChild, h);
+                parent.removeChild(h);
+            }
+        });
+        contextMenu.style.display = 'none';
+        selectedRange = null;
+    };
+
+    // ==================== INIT ====================
+    createNavButtons();
+    setupDragDrop();
+    setupRemoveChips();
+    updateAnswerCount();
+    document.querySelectorAll('.eye-icon').forEach(icon => (icon.style.display = 'none'));
+    setFontSize('large');
+
+})();
+</script>
+</body>
+</html>
