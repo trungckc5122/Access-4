@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 1 - Test 3 - Part 3 (Listening)</title>
+    <style>
+        /* Giữ nguyên style như file mẫu */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #1a1a2a; display: flex; justify-content: center; min-height: 100vh; }
+        .test-wrapper { width: 100%; max-width: 1600px; background: #f5f3ee; display: flex; flex-direction: column; height: 100vh; }
+        .ielts-header { background: #1e3a5f; color: white; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #e6b422; flex-wrap: wrap; }
+        .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .ielts-logo { background: #e6b422; color: #1e3a5f; font-weight: 800; font-size: 24px; padding: 4px 18px; border-radius: 40px; }
+        .candidate { background: #2d4b77; padding: 4px 16px; border-radius: 30px; font-size: 14px; }
+        .audio-controls { display: flex; align-items: center; gap: 15px; background: #0f2a44; padding: 6px 18px; border-radius: 40px; border: 1px solid #e6b422; }
+        .audio-controls audio { height: 40px; width: 400px; border-radius: 20px; }
+        .speed-select { background: #1e3a5f; color: white; border: 1px solid #e6b422; border-radius: 20px; padding: 4px 8px; font-size: 14px; cursor: pointer; }
+        .volume-icon { font-size: 20px; cursor: pointer; color: #e6b422; }
+        .font-controls { display: flex; gap: 5px; background: #2d4b77; padding: 3px; border-radius: 30px; }
+        .font-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: white; font-weight: bold; cursor: pointer; }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+        .question-nav { background: #d2cbbc; padding: 6px 20px; border-bottom: 2px solid #b0aa9a; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn { width: 32px; height: 32px; border-radius: 6px; border: 2px solid #1e3a5f; background: white; color: #1e3a5f; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+        .main-area { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .transcript-panel { width: 0; background: #fffcf5; border-right: 2px solid #b0aa9a; display: flex; flex-direction: column; overflow: hidden; transition: width 0.2s ease; }
+        .questions-panel { width: 100%; background: #f8f6f0; display: flex; flex-direction: column; overflow: hidden; transition: width 0.2s ease; }
+        .main-area.show-transcript .transcript-panel { width: 45%; }
+        .main-area.show-transcript .questions-panel { width: 55%; }
+        .resizer { width: 8px; background: #b0aa9a; cursor: col-resize; display: none; }
+        .main-area.show-transcript .resizer { display: block; }
+        .resizer:hover { background: #e6b422; }
+        .panel-header { background: #d2cbbc; padding: 8px 15px; font-weight: 600; color: #1e3a5f; border-bottom: 1px solid #b0aa9a; display: flex; justify-content: space-between; }
+        .transcript-content, .questions-list { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.7; }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+        .questions-list.centered { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100%; }
+        .questions-list.centered > div { width: 100%; max-width: 850px; margin: 0 auto; }
+        .notes-box { background: #f0ebe0; border-left: 4px solid #e6b422; padding: 20px 25px; border-radius: 12px; margin: 15px 0; }
+        .notes-box p { margin: 14px 0; line-height: 1.8; }
+        .blank-line { display: inline-flex; align-items: center; margin: 0 6px; position: relative; }
+        .fill-input { padding: 6px 12px; border: 1px solid #9a8c7a; border-radius: 8px; width: 170px; font-size: 14px; background: white; }
+        .fill-input.correct { border: 2px solid #4CAF50; background: #e8f5e8; }
+        .fill-input.incorrect { border: 2px solid #f44336; background: #ffebee; }
+        .correct-answer-badge { display: inline-block; background: #4CAF50; color: white; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-left: 10px; font-weight: bold; }
+        .eye-icon { display: none; margin-left: 8px; cursor: pointer; font-size: 18px; opacity: 0.7; }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .question-number { color: #1e88e5; font-weight: bold; margin-right: 4px; }
+        .bottom-bar { background: #d2cbbc; padding: 10px 20px; display: flex; gap: 15px; border-top: 1px solid #b0aa9a; align-items: center; }
+        .btn { padding: 6px 20px; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:hover { background: #2d4b77; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; color: #1e3a5f; }
+        .explanation-panel { background: #fffef9; border-left: 4px solid #e6b422; padding: 12px 20px; margin: 0 20px 12px 20px; border-radius: 8px; display: none; }
+        .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; }
+        .close-btn { cursor: pointer; }
+        .keyword-highlight { text-decoration: underline; text-decoration-color: #e67e22; text-decoration-thickness: 3px; background-color: #fff3cd; font-weight: 600; border-radius: 4px; padding: 0 2px; }
+        .scroll-highlight { animation: highlightFlash 1s ease; }
+        @keyframes highlightFlash { 0% { background-color: #f9e79f; } 50% { background-color: #f1c40f; } 100% { background-color: #f9e79f; } }
+        .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; }
+        .context-menu { position: fixed; background: white; border: 1px solid #9a8c7a; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); padding: 5px 0; border-radius: 8px; z-index: 1000; display: none; min-width: 150px; }
+        .context-menu div { padding: 8px 20px; cursor: pointer; }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 3 · Part 3</div>
+            <div class="audio-controls">
+                <audio id="listeningAudio" controls>
+                    <source src="B1 Preliminary 1 - Test 3 Part 3.mp3" type="audio/mpeg">
+                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg">
+                </audio>
+                <select class="speed-select" id="speedSelect">
+                    <option value="0.7">0.7x</option>
+                    <option value="0.9">0.9x</option>
+                    <option value="1.0" selected>1x</option>
+                    <option value="1.1">1.1x</option>
+                    <option value="1.25">1.25x</option>
+                </select>
+                <span class="volume-icon">🔊</span>
+            </div>
+        </div>
+        <div class="font-controls">
+            <button class="font-btn" id="fontSmall">A-</button>
+            <button class="font-btn" id="fontMedium">A</button>
+            <button class="font-btn active" id="fontLarge">A+</button>
+        </div>
+    </div>
+
+    <div class="question-nav">
+        <span style="font-weight:600; color:#1e3a5f;">Câu 14-19:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <div class="main-area" id="mainArea">
+        <div class="transcript-panel" id="transcriptPanel">
+            <div class="panel-header"><span>📄 TRANSCRIPT</span></div>
+            <div class="transcript-content font-large" id="transcriptContent"></div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 14-19</span>
+                <span class="answer-badge" id="answeredCount">0/6 answered</span>
+            </div>
+            <div class="questions-list font-large centered" id="questionsContent">
+                <div>
+                    <h3>PART 3 Questions 14–19</h3>
+                    <p><em>Write one or two words or a number or a date or a time.</em></p>
+                    <div class="notes-box">
+                        <p><strong>Day trip to Gulum</strong></p>
+                        <p>Bus leaves at: <span class="question-number">(14)</span> <span class="blank-line"><input class="fill-input" id="q14"> <span class="eye-icon" data-question="14">👁️</span></span> a.m.</p>
+                        <p>Meet before trip at: hotel <span class="question-number">(15)</span> <span class="blank-line"><input class="fill-input" id="q15"> <span class="eye-icon" data-question="15">👁️</span></span></p>
+                        <p>First stop: ruin of a <span class="question-number">(16)</span> <span class="blank-line"><input class="fill-input" id="q16"> <span class="eye-icon" data-question="16">👁️</span></span></p>
+                        <p>Lunch at: The <span class="question-number">(17)</span> <span class="blank-line"><input class="fill-input" id="q17"> <span class="eye-icon" data-question="17">👁️</span></span> Restaurant</p>
+                        <p>Afternoon activity: <span class="question-number">(18)</span> <span class="blank-line"><input class="fill-input" id="q18"> <span class="eye-icon" data-question="18">👁️</span></span> or beach volleyball</p>
+                        <p>Bring: <span class="question-number">(19)</span> <span class="blank-line"><input class="fill-input" id="q19"> <span class="eye-icon" data-question="19">👁️</span></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
+    </div>
+
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+</div>
+
+<div class="context-menu" id="contextMenu">
+    <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+    <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+    <div onclick="applyHighlight('pink')">Highlight hồng</div>
+    <div onclick="removeHighlight()">Xóa highlight</div>
+</div>
+
+<script>
+    (function() {
+        // ==================== ANSWER KEY ====================
+        const answerKey = {
+            q14: ['8.15', 'quarter past 8', 'quarter past eight', '8:15', 'quarter past eight'],
+            q15: ['entrance', 'the entrance', 'hotel entrance'],
+            q16: ['palace'],
+            q17: ['wakizi'],
+            q18: ['diving'],
+            q19: ['sun-cream', 'suncream', 'sun cream', 'sunscreen']
+        };
+        const displayAnswers = {
+            q14: '8.15 / quarter past eight',
+            q15: 'entrance',
+            q16: 'palace',
+            q17: 'Wakizi',
+            q18: 'diving',
+            q19: 'sun-cream'
+        };
+
+        // ==================== GIẢI THÍCH CHI TIẾT ====================
+        const detailedExplanations = {
+            q14: `<strong>Đáp án: 8.15 / quarter past eight</strong><br>
+                  Hướng dẫn viên nói: "We’re meeting at eight o’clock in the morning as the bus will go at exactly quarter past eight." → Xe buýt rời đi lúc 8:15 sáng. Đây là thời gian xuất phát, không phải 8:30 như thường lệ.`,
+            q15: `<strong>Đáp án: entrance</strong><br>
+                  "To get on the bus, please meet at the entrance to the hotel rather than at the reception desk" → Điểm tập trung là lối vào (entrance) của khách sạn, không phải quầy lễ tân.`,
+            q16: `<strong>Đáp án: palace</strong><br>
+                  "Our first stop will be at a magnificent ruin just outside Gulum. It used to be a palace." → Di tích đầu tiên là tàn tích của một cung điện (palace).`,
+            q17: `<strong>Đáp án: Wakizi</strong><br>
+                  "we’ll drive on to the Wakizi Restaurant on the Gulum River for lunch. That’s spelt W-A-K-I-Z-I" → Tên nhà hàng là Wakizi.`,
+            q18: `<strong>Đáp án: diving</strong><br>
+                  "One option is to go diving. The variety of fish species on this part of the coast is quite amazing. For those people who like volleyball, we’re organising a competition on the beach." → Hoạt động buổi chiều: lặn biển (diving) hoặc bóng chuyền bãi biển.`,
+            q19: `<strong>Đáp án: sun-cream</strong><br>
+                  "please don’t forget the sun-cream as the temperatures are very high" → Mang kem chống nắng (sun-cream) vì nhiệt độ cao.`
+        };
+
+        const transcriptHTML = `
+            <p><strong>Man:</strong> Good morning. You’ve all booked the trip to Gulum tomorrow, and I’d like to explain the arrangements for what will be a great day out. This is one of our most popular trips so you’re sure to enjoy it.</p>
+            <p>We’re meeting at eight o’clock in the morning as <span class="highlightable" data-q="14">the bus will go at exactly quarter past eight.</span> This is instead of the usual departure time of eight thirty. The reason for this is that, after picking you up, we’ve got to collect a number of passengers from other hotels. To get on the bus, <span class="highlightable" data-q="15">please meet at the entrance to the hotel</span> rather than at the reception desk, which gets quite crowded in the mornings.</p>
+            <p>So to the trip itself. <span class="highlightable" data-q="16">Our first stop will be at a magnificent ruin just outside Gulum. It used to be a palace.</span> I’m sure the guide mentioned it during the tour of the ancient theatre, if you went on that yesterday. The atmosphere there’s really special, as you’ll see for yourselves. Afterwards we’ll drive on to <span class="highlightable" data-q="17">the Wakizi Restaurant</span> on the Gulum River for lunch. That’s spelt W-A-K-I-Z-I, by the way – do check their menu online – it’s fantastic! There’ll be plenty of time to take photos while we’re there.</p>
+            <p>In the afternoon, we’ll stop at Gulum beach where there’s a choice of activities to do. <span class="highlightable" data-q="18">One option is to go diving.</span> The variety of fish species on this part of the coast is quite amazing. For those people who like volleyball, we’re organising a competition on the beach. Unfortunately, at this time of year, sailing isn’t possible, due to the lack of wind.</p>
+            <p>We’ll provide towels and beach chairs, but <span class="highlightable" data-q="19">please don’t forget the sun-cream</span> as the temperatures are very high – you’ll need it even on a cloudy day! The bus … (fade …)</p>
+            <p><em>Now listen again.</em><br><em>That is the end of Part Three.</em></p>
+        `;
+
+        // ---------- STATE ----------
+        let examSubmitted = false;
+        let explanationMode = false;
+        const audio = document.getElementById('listeningAudio');
+        const speedSelect = document.getElementById('speedSelect');
+        speedSelect.addEventListener('change', () => audio.playbackRate = parseFloat(speedSelect.value));
+
+        function normalizeAnswer(str) {
+            if (!str) return '';
+            return str.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '');
+        }
+        function isAnswerCorrect(q, raw) {
+            const norm = normalizeAnswer(raw);
+            const validList = answerKey[`q${q}`];
+            if (!validList) return false;
+            return validList.some(valid => normalizeAnswer(valid) === norm);
+        }
+        function getUserAnswer(q) {
+            const inp = document.getElementById(`q${q}`);
+            return inp ? inp.value.trim() : '';
+        }
+        function updateAnswerCount() {
+            let answered = 0;
+            for (let i=14;i<=19;i++) if (getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
+            for (let i=14;i<=19;i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if (btn) { btn.classList.remove('answered','unanswered'); btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered'); }
+            }
+        }
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for (let i=14;i<=19;i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', () => {
+                    document.getElementById(`q${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+        function markAnswers() {
+            for (let i=14;i<=19;i++) {
+                const inp = document.getElementById(`q${i}`);
+                if (!inp) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                inp.classList.remove('correct','incorrect');
+                const wrapper = inp.closest('.blank-line');
+                const oldBadge = wrapper?.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (correct) inp.classList.add('correct');
+                else {
+                    inp.classList.add('incorrect');
+                    if (wrapper) {
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        badge.textContent = displayAnswers[`q${i}`];
+                        wrapper.appendChild(badge);
+                    }
+                }
+            }
+        }
+        function showExplanation(questionNum) {
+            if (!explanationMode && !examSubmitted) return;
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+            const highlights = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
+            highlights.forEach(span => {
+                span.classList.add('keyword-highlight');
+                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                span.classList.add('scroll-highlight');
+                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
+            });
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
+            if (examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa có)';
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `<strong>✅ Đúng!</strong>`;
+                html += `</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+        function resetAll() {
+            examSubmitted = false; explanationMode = false;
+            for (let i=14;i<=19;i++) {
+                const inp = document.getElementById(`q${i}`);
+                if (inp) {
+                    inp.value = '';
+                    inp.classList.remove('correct','incorrect');
+                    const wrapper = inp.closest('.blank-line');
+                    if (wrapper) { const badge = wrapper.querySelector('.correct-answer-badge'); if (badge) badge.remove(); }
+                }
+            }
+            document.getElementById('mainArea').classList.remove('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = '';
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        // ========== LƯU DỮ LIỆU VÀO DASHBOARD ==========
+        function getPetInfo() {
+            const candidateText = document.querySelector('.candidate')?.textContent || '';
+            let book = 1, test = 1, part = 3;
+            const bookMatch = candidateText.match(/Preliminary\s+(\d+)/i);
+            if (bookMatch) book = parseInt(bookMatch[1]);
+            const testMatch = candidateText.match(/Test\s+(\d+)/i);
+            if (testMatch) test = parseInt(testMatch[1]);
+            const partMatch = candidateText.match(/Part\s+(\d+)/i);
+            if (partMatch) part = parseInt(partMatch[1]);
+            return { book, test, part };
+        }
+
+        function saveToDashboard() {
+            if (!examSubmitted) return;
+            const { book, test, part } = getPetInfo();
+            const skill = 'listening';
+            const details = [];
+            let correctCount = 0;
+            for (let i = 14; i <= 19; i++) {
+                const user = getUserAnswer(i);
+                const isCorrect = isAnswerCorrect(i, user);
+                if (isCorrect) correctCount++;
+                details.push({
+                    question: i,
+                    user: user || '(trống)',
+                    correct: displayAnswers[`q${i}`] || (Array.isArray(answerKey[`q${i}`]) ? answerKey[`q${i}`][0] : answerKey[`q${i}`]),
+                    isCorrect: isCorrect
+                });
+            }
+            const partData = {
+                partId: part,
+                name: `Part ${part}`,
+                totalQuestions: details.length,
+                correctCount: correctCount,
+                details: details
+            };
+            const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+            localStorage.setItem(key, JSON.stringify(partData));
+            console.log(`Đã lưu ${skill} với key: ${key}`);
+        }
+
+        // ---------- EVENT BINDINGS ----------
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            if (examSubmitted) return;
+            let unanswered = [];
+            for (let i=14;i<=19;i++) if (!getUserAnswer(i)) unanswered.push(i);
+            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Nộp bài?`)) return;
+
+            examSubmitted = true;
+            document.getElementById('mainArea').classList.add('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+
+            let correctCount = 0;
+            for (let i=14;i<=19;i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào biểu tượng 👁️ để xem vị trí đáp án trong transcript và giải thích chi tiết.</p>`;
+            saveToDashboard();
+        });
+
+        document.getElementById('explainBtn').addEventListener('click', function() {
+            if (!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            this.disabled = true;
+            this.textContent = 'Đang xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => { if (confirm('Reset tất cả câu trả lời?')) resetAll(); });
+        document.getElementById('closeExplanation').addEventListener('click', () => {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+        });
+        document.querySelectorAll('.fill-input').forEach(inp => inp.addEventListener('input', updateAnswerCount));
+        document.addEventListener('click', (e) => { if (e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question); });
+
+        // Font size
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
+                el.className = `transcript-content font-${size}`;
+                if (el.classList.contains('questions-list')) el.classList.add('centered');
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        // Resizer
+        const transcriptPanel = document.getElementById('transcriptPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'col-resize'; e.preventDefault(); });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const mainRect = document.getElementById('mainArea').getBoundingClientRect();
+            let leftWidth = e.clientX - mainRect.left - 4;
+            leftWidth = Math.min(Math.max(leftWidth, 280), mainRect.width - 320);
+            transcriptPanel.style.width = leftWidth + 'px';
+            questionsPanel.style.width = (mainRect.width - leftWidth - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        createNavButtons();
+        updateAnswerCount();
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        setFontSize('large');
+    })();
+
+    // Context menu highlight (giữ nguyên)
+    (function() {
+        let selectedRange = null;
+        const contextMenu = document.getElementById('contextMenu');
+        const transcriptDiv = document.getElementById('transcriptContent');
+        const questionsDiv = document.getElementById('questionsContent');
+        function handleRightClick(e) {
+            e.preventDefault();
+            const sel = window.getSelection();
+            if (sel.toString().trim()) {
+                selectedRange = sel.getRangeAt(0);
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.style.display = 'block';
+            }
+        }
+        if (transcriptDiv) transcriptDiv.addEventListener('contextmenu', handleRightClick);
+        if (questionsDiv) questionsDiv.addEventListener('contextmenu', handleRightClick);
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
+        window.applyHighlight = function(color) {
+            if (!selectedRange) return;
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(selectedRange.extractContents());
+                selectedRange.insertNode(span);
+            } catch(e) {}
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+        window.removeHighlight = function() {
+            if (!selectedRange) return;
+            try {
+                const iterator = document.createNodeIterator(selectedRange.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+                    acceptNode: function(node) {
+                        if (node.classList && (node.classList.contains('highlight-yellow')||node.classList.contains('highlight-green')||node.classList.contains('highlight-pink')))
+                            return NodeFilter.FILTER_ACCEPT;
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                });
+                let node;
+                while (node = iterator.nextNode()) node.replaceWith(...node.childNodes);
+            } catch(e) {}
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+    })();
+</script>
+</body>
+</html>

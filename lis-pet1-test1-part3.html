@@ -799,6 +799,48 @@
         });
         document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
 
+        // ========== LƯU VÀO DASHBOARD (LOCALSTORAGE) ==========
+        function saveToDashboard() {
+            if (!examSubmitted) return;
+            const candidateText = document.querySelector('.candidate')?.textContent || '';
+            let book = 1, test = 1, part = 3;
+            const bookMatch = candidateText.match(/Preliminary\s+(\d+)/i);
+            if (bookMatch) book = parseInt(bookMatch[1]);
+            const testMatch = candidateText.match(/Test\s+(\d+)/i);
+            if (testMatch) test = parseInt(testMatch[1]);
+            const partMatch = candidateText.match(/Part\s+(\d+)/i);
+            if (partMatch) part = parseInt(partMatch[1]);
+
+            const skill = 'listening';
+            const details = [];
+            let correctCount = 0;
+
+            for (let i = 14; i <= 19; i++) {
+                const user = getUserAnswer(i);
+                const correctKey = answerKey[`q${i}`];
+                let isCorrect = Array.isArray(correctKey) ? correctKey.includes(user) : user === correctKey;
+                if (isCorrect) correctCount++;
+                details.push({
+                    question: i,
+                    user: user || '(trống)',
+                    correct: displayAnswers[`q${i}`],
+                    isCorrect: isCorrect
+                });
+            }
+
+            const partData = {
+                partId: part,
+                name: `Part ${part}`,
+                totalQuestions: details.length,
+                correctCount: correctCount,
+                details: details
+            };
+
+            const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+            localStorage.setItem(key, JSON.stringify(partData));
+            console.log(`✅ Đã lưu ${skill} với key: ${key}`);
+        }
+
         // Khởi tạo
         createNavButtons();
         updateAnswerCount();

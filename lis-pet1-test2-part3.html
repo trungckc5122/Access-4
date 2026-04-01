@@ -277,6 +277,8 @@
             display: none;
         }
         .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; }
+        .close-btn { cursor: pointer; }
         .keyword-highlight {
             text-decoration: underline;
             text-decoration-color: #e67e22;
@@ -523,10 +525,12 @@
             let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
             if (examSubmitted) {
                 const user = getUserAnswer(questionNum) || '(chưa có)';
-                const correct = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:12px;padding:10px; background:${correct ? '#e8f5e8' : '#ffebee'}; border-radius:8px;">
-                            <strong>Câu trả lời của bạn:</strong> "${user}"<br>${!correct ? `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}` : '✅ Chính xác!'}
-                         </div>`;
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `<strong>✅ Đúng!</strong>`;
+                html += `</div>`;
             }
             document.getElementById('explanationText').innerHTML = html;
         }
@@ -578,7 +582,24 @@
             document.getElementById('explanationPanel').classList.add('show');
             document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
             document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào biểu tượng 👁️ để xem vị trí đáp án trong transcript và giải thích.</p>`;
+            saveToDashboard();
         });
+
+        // ========== LƯU VÀO DASHBOARD ==========
+        function saveToDashboard() {
+            if (!examSubmitted) return;
+            const details = [];
+            let correct = 0;
+            for (let i = 14; i <= 19; i++) {
+                const user = getUserAnswer(i) || '(trống)';
+                const isOk = isAnswerCorrect(i, user);
+                if (isOk) correct++;
+                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
+            }
+            const partData = { partId: 3, name: 'Part 3', totalQuestions: 6, correctCount: correct, details };
+            localStorage.setItem('pet_listening_book1_test2_part3', JSON.stringify(partData));
+            console.log('✅ Đã lưu pet_listening_book1_test2_part3');
+        }
 
         document.getElementById('explainBtn').addEventListener('click', function() {
             if (!examSubmitted) return;
