@@ -305,16 +305,25 @@
 
         /* Explanation panel nhỏ gọn, có cuộn */
         .explanation-panel {
+            position: relative;
             background: #fffef9;
             border-left: 4px solid #e6b422;
-            padding: 8px 16px;
+            padding: 15px 16px 8px 16px;
             margin: 0 20px 12px 20px;
             border-radius: 10px;
             display: none;
             max-height: 180px;
             overflow-y: auto;
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
+        .resize-handle {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            cursor: ns-resize;
+            z-index: 100;
+        }
+        .resize-handle:hover { background: rgba(30, 58, 95, 0.05); }
         .explanation-panel.show { display: block; }
         .explanation-header {
             font-weight: 700;
@@ -322,11 +331,9 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 6px;
-            font-size: 0.9rem;
         }
         .close-btn { cursor: pointer; }
         .explanation-content {
-            font-size: 0.85rem;
             line-height: 1.5;
             color: #000000;
         }
@@ -430,6 +437,7 @@
 
     <!-- Explanation panel -->
     <div class="explanation-panel" id="explanationPanel">
+        <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
             <span id="explanationTitle">Giải thích</span>
             <span class="close-btn" id="closeExplanation">✕ Đóng</span>
@@ -900,7 +908,39 @@
         updateAnswerCount();
         document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
         setFontSize('large');
-    })();
+
+            // Resizable explanation panel logic
+            const expPanel = document.getElementById('explanationPanel');
+            const expResizer = document.getElementById('explanationResizer');
+            let isResizingExp = false;
+            let startYExp, startHeightExp;
+
+            if (expResizer && expPanel) {
+                expResizer.addEventListener('mousedown', (e) => {
+                    isResizingExp = true;
+                    startYExp = e.clientY;
+                    startHeightExp = expPanel.offsetHeight;
+                    document.body.style.cursor = 'ns-resize';
+                    document.body.style.userSelect = 'none';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizingExp) return;
+                    const dy = startYExp - e.clientY;
+                    const newHeight = startHeightExp + dy;
+                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                        expPanel.style.maxHeight = newHeight + 'px';
+                        expPanel.style.height = newHeight + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isResizingExp = false;
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                });
+            }
+        })();
 </script>
 </body>
 </html>

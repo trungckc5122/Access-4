@@ -301,15 +301,25 @@
         .progress { background: white; border-radius: 30px; padding: 4px 16px; font-weight: 600; }
 
         .explanation-panel {
-            background: #fffef9;
-            border-left: 4px solid #e6b422;
-            padding: 12px 20px;
-            margin: 0 20px 12px 20px;
-            border-radius: 12px;
-            display: none;
-            max-height: 320px;
-            overflow-y: auto;
+            position: relative;
+            background: #fffef9; 
+            border-left: 4px solid #e6b422; 
+            padding: 15px 16px 8px 16px; 
+            margin: 0 20px 12px 20px; 
+            border-radius: 10px; 
+            display: none; 
+            max-height: 180px; 
+            overflow-y: auto; 
+            font-size: 1rem;
         }
+        .resize-handle {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            cursor: ns-resize;
+            z-index: 100;
+        }
+        .resize-handle:hover { background: rgba(30, 58, 95, 0.05); }
         .explanation-panel.show { display: block; }
         .explanation-header {
             font-weight: 700;
@@ -435,6 +445,7 @@
     </div>
 
     <div class="explanation-panel" id="explanationPanel">
+        <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
             <span id="explanationTitle">Giải thích</span>
             <span class="close-btn" id="closeExplanation">✕ Đóng</span>
@@ -541,10 +552,10 @@
 
             // ---------- HIGHLIGHT MAP ----------
             const highlightMap = {
-                q11: { textId: 'luka-passage', keywords: ["loved telling my friends how good my dad was"] },
-                q12: { textId: 'luka-passage', keywords: ["teacher had more confidence in me than I did"] },
-                q13: { textId: 'luka-passage', keywords: ["can't say I enjoyed my first experience of living far from my parents"] },
-                q14: { textId: 'luka-passage', keywords: ["much too light for my height"] },
+                q11: { textId: 'luka-passage', keywords: ["loved telling my friends how good my dad was, of course, especially when he won a game"] },
+                q12: { textId: 'luka-passage', keywords: ["I thought I'd need to develop my skills before I took part in a real match, but the teacher had more confidence in me than I did"] },
+                q13: { textId: 'luka-passage', keywords: ["I can't say I enjoyed my first experience of living far from my parents"] },
+                q14: { textId: 'luka-passage', keywords: ["I'd been much too light for my height, so had to get that right first"] },
                 q15: { textId: 'luka-passage', keywords: ["My dad was a professional basketball player in Germany, as his father had been before him"] }
             };
 
@@ -946,6 +957,38 @@
             updateAnswerCount();
             document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
             setFontSize('large');
+
+            // Resizable explanation panel logic
+            const expPanel = document.getElementById('explanationPanel');
+            const expResizer = document.getElementById('explanationResizer');
+            let isResizingExp = false;
+            let startYExp, startHeightExp;
+
+            if (expResizer && expPanel) {
+                expResizer.addEventListener('mousedown', (e) => {
+                    isResizingExp = true;
+                    startYExp = e.clientY;
+                    startHeightExp = expPanel.offsetHeight;
+                    document.body.style.cursor = 'ns-resize';
+                    document.body.style.userSelect = 'none';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizingExp) return;
+                    const dy = startYExp - e.clientY;
+                    const newHeight = startHeightExp + dy;
+                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                        expPanel.style.maxHeight = newHeight + 'px';
+                        expPanel.style.height = newHeight + 'px';
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isResizingExp = false;
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                });
+            }
         })();
     </script>
 </body>
