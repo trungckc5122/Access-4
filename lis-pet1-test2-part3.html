@@ -221,7 +221,7 @@
         .fill-input.correct { border: 2px solid #4CAF50; background: #e8f5e8; }
         .fill-input.incorrect { border: 2px solid #f44336; background: #ffebee; }
         .correct-answer-badge {
-            display: inline-block;
+            display: none;
             background: #4CAF50;
             color: white;
             padding: 2px 8px;
@@ -268,17 +268,27 @@
         .btn-danger { background: #f44336; color: white; }
         .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; color: #1e3a5f; }
 
-        .explanation-panel {
-            background: #fffef9;
-            border-left: 4px solid #e6b422;
-            padding: 12px 20px;
-            margin: 0 20px 12px 20px;
-            border-radius: 8px;
+        .correct-answer-badge {
             display: none;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        .explanation-panel {
+            background: #fffef9; border-left: 4px solid #e6b422; padding: 8px 16px; margin: 0 20px 12px 20px; border-radius: 10px; display: none;
+            max-height: 180px; overflow-y: auto; font-size: 0.9rem;
         }
         .explanation-panel.show { display: block; }
-        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; }
-        .close-btn { cursor: pointer; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
+        .close-btn { cursor: pointer; flex-shrink: 0; }
+        .explanation-content { font-size: 0.85rem; line-height: 1.5; color: #000000; }
+        .explanation-content strong { color: #1e3a5f; }
+        .explanation-content em { color: #000000; }
         .keyword-highlight {
             text-decoration: underline;
             text-decoration-color: #e67e22;
@@ -424,12 +434,18 @@
             q19: 'WEBSITE'
         };
         const detailedExplanations = {
-            q14: `<strong>Đáp án: ART</strong><br>Kelly nói rằng cô ấy biết nhiều về máy tính nhưng thực tế: “I actually studied art for my degree.” → Bằng cấp của cô là nghệ thuật.`,
-            q15: `<strong>Đáp án: PEOPLE</strong><br>Cô ấy đánh giá cao phần mềm nhưng nhấn mạnh: “it’s the people there that make it such a fantastic place to work.” → Chính con người làm công ty tuyệt vời.`,
-            q16: `<strong>Đáp án: ANIMALS</strong><br>Phòng của Kelly chịu trách nhiệm: “the one I’m in works on animals in the story” → tạo hình động vật.`,
-            q17: `<strong>Đáp án: ACTING</strong><br>Cô ấy vừa mới bắt đầu: “I’ve just started doing acting classes” để phát triển kỹ năng hiện tại.`,
-            q18: `<strong>Đáp án: eight months / 8 months</strong><br>Kelly so sánh: “Compare that to the eight months it takes my company to do the same” → công ty cô ấy mất 8 tháng.`,
-            q19: `<strong>Đáp án: WEBSITE</strong><br>Dự án tiếp theo: “It’s actually something for a website.” → phim hoạt hình cho trang web.`
+            q14: `<strong>Đáp án: ART</strong><br>
+                  Kelly nói rằng cô ấy biết nhiều về máy tính nhưng thực tế: <em>"I actually studied art for my degree."</em> → Bằng cấp của cô là nghệ thuật.`,
+            q15: `<strong>Đáp án: PEOPLE</strong><br>
+                  Cô ấy đánh giá cao phần mềm nhưng nhấn mạnh: <em>"it’s the people there that make it such a fantastic place to work."</em> → Chính con người làm công ty tuyệt vời.`,
+            q16: `<strong>Đáp án: ANIMALS</strong><br>
+                  Phòng của Kelly chịu trách nhiệm: <em>"the one I’m in works on animals in the story"</em> → tạo hình động vật.`,
+            q17: `<strong>Đáp án: ACTING</strong><br>
+                  Cô ấy vừa mới bắt đầu: <em>"I’ve just started doing acting classes"</em> để phát triển kỹ năng làm phim.`,
+            q18: `<strong>Đáp án: eight months / 8 months</strong><br>
+                  Kelly so sánh: <em>"Compare that to the eight months it takes my company to do the same"</em> → công ty cô ấy mất 8 tháng.`,
+            q19: `<strong>Đáp án: WEBSITE</strong><br>
+                  Dự án tiếp theo: <em>"It’s actually something for a website."</em> → phim hoạt hình cho trang web.`
         };
 
         // =============== TRANSCRIPT (chính xác từ file nghe) ===============
@@ -542,6 +558,7 @@
                 const inp = document.getElementById(`q${i}`);
                 if (inp) {
                     inp.value = '';
+                    inp.disabled = false;
                     inp.classList.remove('correct', 'incorrect');
                     const wrapper = inp.closest('.blank-line');
                     if (wrapper) { const badge = wrapper.querySelector('.correct-answer-badge'); if (badge) badge.remove(); }
@@ -575,14 +592,14 @@
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('submitBtn').textContent = 'Đã nộp bài';
             document.getElementById('explainBtn').disabled = false;
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
 
             let correctCount = 0;
             for (let i = 14; i <= 19; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
             document.getElementById('explanationPanel').classList.add('show');
             document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào biểu tượng 👁️ để xem vị trí đáp án trong transcript và giải thích.</p>`;
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>`;
             saveToDashboard();
+            document.querySelectorAll('.fill-input').forEach(inp => inp.disabled = true);
         });
 
         // ========== LƯU VÀO DASHBOARD ==========
@@ -604,7 +621,7 @@
         document.getElementById('explainBtn').addEventListener('click', function() {
             if (!examSubmitted) return;
             explanationMode = true;
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
             this.disabled = true;
             this.textContent = 'Đang xem giải thích';
             document.getElementById('explanationPanel').classList.remove('show');
