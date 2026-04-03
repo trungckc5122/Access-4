@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PET 1 - Test 3 - Reading Part 2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Reading mode */
+        .test-wrapper.reading-mode {
+            background: #f8f5e6;
+        }
+        .test-wrapper.reading-mode .reading-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .questions-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .panel-header {
+            background: #d6cdb8;
+        }
+
+        /* Header */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .reading-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px 8px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #0f2a44;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+            border: 1px solid #e6b422;
+        }
+        .toggle-switch.active {
+            background: #e6b422;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+        .toggle-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question navigator */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.02); }
+
+        /* Main area */
+        .main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .reading-panel {
+            width: 45%;
+            background: #fffcf5;
+            border-right: 2px solid #b0aa9a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .questions-panel {
+            width: 55%;
+            background: #f8f6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .resizer {
+            width: 8px;
+            background: #b0aa9a;
+            cursor: col-resize;
+        }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .reading-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .questions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        /* Castle cards */
+        .reading-card {
+            background: #fefcf7;
+            border-left: 5px solid #e6b422;
+            padding: 16px 20px;
+            margin-bottom: 25px;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .reading-card .review-title {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #1e3a5f;
+            margin-bottom: 10px;
+            letter-spacing: -0.2px;
+        }
+        .reading-card p {
+            margin: 8px 0;
+        }
+
+        /* Question items - fill-in style */
+        .question-item {
+            margin-bottom: 32px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #f9f7f2;
+            border: 1px solid #e0d6c8;
+            position: relative;
+        }
+        .question-item.correct { background: #e8f5e8; border-color: #4CAF50; }
+        .question-item.incorrect { background: #ffebee; border-color: #f44336; }
+        .question-text {
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #1e3a5f;
+            font-size: 1rem;
+            border-left: 3px solid #e6b422;
+            padding-left: 12px;
+            line-height: 1.4;
+        }
+        .answer-input-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 10px 0 5px 12px;
+        }
+        .answer-input-area label {
+            font-weight: 600;
+            color: #2c3e4e;
+        }
+        .answer-input {
+            width: 70px;
+            padding: 8px 10px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            text-align: center;
+            border: 1px solid #b0aa9a;
+            border-radius: 30px;
+            background: white;
+            font-weight: 500;
+        }
+        .answer-input:focus {
+            outline: none;
+            border-color: #e6b422;
+            box-shadow: 0 0 0 2px rgba(230,180,34,0.2);
+        }
+        .eye-icon {
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            display: none;
+            font-weight: normal;
+        }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .correct-answer-badge {
+            display: none;
+            background: #4CAF50;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 6px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 30px; padding: 4px 16px; font-weight: 600; }
+
+        /* Explanation panel */
+        .explanation-panel {
+            position: relative;
+            background: #fffef9;
+            border-left: 4px solid #e6b422;
+            padding: 15px 16px 8px 16px;
+            margin: 0 20px 12px 20px;
+            border-radius: 10px;
+            display: none;
+            max-height: 180px;
+            overflow-y: auto;
+            font-size: 1rem;
+        }
+        .resize-handle {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            cursor: ns-resize;
+            z-index: 100;
+        }
+        .resize-handle:hover { background: rgba(30, 58, 95, 0.05); }
+        .explanation-panel.show { display: block; }
+        .explanation-header {
+            font-weight: 700;
+            color: #1e3a5f;
+            display: flex;
+            justify-content: space-between;
+        }
+        .close-btn { cursor: pointer; }
+
+        /* Highlight styles */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 4px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 4px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 4px; padding: 0 2px; }
+        .dynamic-highlight {
+            background-color: #ffe082;
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 2px;
+            font-weight: 600;
+            display: inline;
+        }
+        .question-item.highlight-question {
+            border-left: 5px solid #f1c40f;
+            background-color: #fef9e3;
+        }
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+            padding: 6px 0;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 3 · Part 2 (Reading)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question navigation (câu 6-10) -->
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 6 – 10</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <div class="main-area" id="mainArea">
+        <!-- Reading panel: 8 castles A–H -->
+        <div class="reading-panel" id="readingPanel">
+            <div class="panel-header"><span>READING PASSAGE · CASTLES TO VISIT A–H</span></div>
+            <div class="reading-content font-large" id="readingContent">
+                <div class="reading-card" data-review-id="A">
+                    <div class="review-title">A. Durston Castle</div>
+                    <p>Durston Castle has a valuable art collection, secret tunnels – one leading to the beach – and visitors mustn't miss the unusual rooms deep beneath the castle walls. Because the building is the Durston family's home, some parts cannot be visited – but you can sit on the grass under the trees and admire the flower beds and fountains. There's a play area for children too.</p>
+                </div>
+                <div class="reading-card" data-review-id="B">
+                    <div class="review-title">B. Castle Woodward</div>
+                    <p>At Castle Woodward, experience what life was like at the time it was built. Staff wear clothes typical of the time, and offer everyone tasty snacks made using recipes from different periods of history. Inside, the walls are covered with original paintings of the generations of people who've lived in the castle.</p>
+                </div>
+                <div class="reading-card" data-review-id="C">
+                    <div class="review-title">C. Castle Hemsworth</div>
+                    <p>Castle Hemsworth's guides, dressed in historical costumes, give visitors information about the traditional castle building, towers and gardens. Wild horses live nearby. Inside, the castle looks unchanged, with old furniture and portraits of people who've lived here.</p>
+                </div>
+                <div class="reading-card" data-review-id="D">
+                    <div class="review-title">D. Marlin Castle</div>
+                    <p>Only a few parts of the ancient castle of Marlin are left, but you can still visit some underground rooms and see beautiful countryside from the high tower. The castle is in the middle of a lake and has lovely gardens. There are talks about the castle, and the bats, birds and butterflies that have made Marlin their home.</p>
+                </div>
+                <div class="reading-card" data-review-id="E">
+                    <div class="review-title">E. Chartsmouth Castle</div>
+                    <p>Chartsmouth Castle was once owned and lived in by kings. Visitors love exploring the rooms, some of which have hidden tunnels. You can see the sea from the top of the walls, and younger visitors will love the outdoor games.</p>
+                </div>
+                <div class="reading-card" data-review-id="F">
+                    <div class="review-title">F. Carston Castle</div>
+                    <p>Experts at the ruins of Carston Castle will show you around and give you information – and offer you 17th-century snacks! Hear how the building was once the scene of famous battles, and is now home to a variety of wildlife. And from the south side, there are fantastic sea views.</p>
+                </div>
+                <div class="reading-card" data-review-id="G">
+                    <div class="review-title">G. Rushford</div>
+                    <p>Rushford is an old castle on the coast which is a popular local attraction. The Rushford Castle café in the walls serves food typical of the castle's history. Inside, there are beautiful rooms with antique tables and clocks. Outside, visitors can see a wide variety of wildlife.</p>
+                </div>
+                <div class="reading-card" data-review-id="H">
+                    <div class="review-title">H. Sawbridge Castle</div>
+                    <p>Sawbridge Castle was built in 1712 on an island in a lake. Inside, you can still see beautifully designed beds, tables and other objects once used by families living there. Put on headphones and listen to information about the history of Sawbridge Castle. Visitors of all ages will love the toy museum in the gardens.</p>
+                </div>
+            </div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <!-- Questions panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 6–10 (write the letter A–H)</span>
+                <span class="answer-badge" id="answeredCount">0/5 answered</span>
+            </div>
+            <div class="questions-list font-large" id="questionsContent">
+                <h3 style="margin-bottom:8px;">Part 2 · Matching</h3>
+                <p><em>For each person, write the correct castle letter (A, B, C, D, E, F, G or H).</em></p>
+                <div id="questionsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/5</div>
+    </div>
+
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="resize-handle" id="explanationResizer"></div>
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- ANSWER KEY (Test 3 Part 2) ----------
+            const answerKey = { q6: 'F', q7: 'A', q8: 'H', q9: 'B', q10: 'D' };
+            const displayAnswers = { 
+                q6: 'F (Carston Castle)', 
+                q7: 'A (Durston Castle)', 
+                q8: 'H (Sawbridge Castle)', 
+                q9: 'B (Castle Woodward)', 
+                q10: 'D (Marlin Castle)' 
+            };
+
+            const detailedExplanations = {
+                q6: `<strong>Alan (F):</strong><br>
+                  - Site of well-known historical events → "the scene of famous battles".<br>
+                  - Near the coast → "fantastic sea views" (from the south side).<br>
+                  - Tours led by a guide → "Experts ... will show you around and give you information".<br>
+                  <em>✗ Rushford (G) không có tour hướng dẫn và không nhắc đến các sự kiện lịch sử cụ thể.</em>`,
+                q7: `<strong>Yoshiko (A):</strong><br>
+                  - People still living in → "Durston family's home".<br>
+                  - Beautiful gardens → "admire the flower beds and fountains".<br>
+                  - Explore interesting places → "secret tunnels", "unusual rooms deep beneath".<br>
+                  <em>✗ Chartsmouth Castle (E) không còn là nhà của gia đình nào đang sống, và không nhấn mạnh vào khu vườn đẹp.</em>`,
+                q8: `<strong>Paulo and Maria (H):</strong><br>
+                  - Original furniture on display → "beautifully designed beds, tables and other objects once used by families".<br>
+                  - Hear about building's history → "listen to information about the history of Sawbridge Castle".<br>
+                  - Suitable for young children → "toy museum in the gardens" (với lời nhắn "Visitors of all ages will love...").<br>
+                  <em>✗ Rushford (G) có bàn ghế cổ nhưng không nhắc đến lịch sử tòa nhà hay khu vui chơi trẻ em.</em>`,
+                q9: `<strong>Kerim (B):</strong><br>
+                  - Great historical atmosphere → "experience what life was like at the time it was built".<br>
+                  - Typical food from the past → "tasty snacks made using recipes from different periods of history".<br>
+                  - People dressed in costume → "Staff wear clothes typical of the time".<br>
+                  - Art in the castle for centuries → "walls are covered with original paintings of the generations".<br>
+                  <em>✗ Castle Hemsworth (C) có người mặc trang phục nhưng không nhắc đến ẩm thực lịch sử.</em>`,
+                q10: `<strong>Jake (D):</strong><br>
+                  - Ruins → "Only a few parts ... are left" (Ancient castle of Marlin).<br>
+                  - Surrounded by water → "in the middle of a lake".<br>
+                  - Great views → "see beautiful countryside from the high tower".<br>
+                  - Learn about wildlife → "bats, birds and butterflies that have made Marlin their home".<br>
+                  <em>✗ Carston Castle (F) không hoàn toàn được bao quanh bởi nước (chỉ có biển ở một phía).</em>`
+            };
+
+            // Highlight mapping
+            const highlightMap = {
+                q6: { reviewId: 'F', keywords: ["scene of famous battles", "fantastic sea views", "Experts ... will show you around"] },
+                q7: { reviewId: 'A', keywords: ["Durston family's home", "admire the flower beds and fountains", "secret tunnels", "unusual rooms deep beneath"] },
+                q8: { reviewId: 'H', keywords: ["beautifully designed beds, tables", "listen to information about the history", "toy museum in the gardens"] },
+                q9: { reviewId: 'B', keywords: ["experience what life was like", "Staff wear clothes typical of the time", "recipes from different periods", "original paintings of the generations"] },
+                q10: { reviewId: 'D', keywords: ["Only a few parts ... are left", "middle of a lake", "see beautiful countryside from the high tower", "bats, birds and butterflies"] }
+            };
+
+            // Person descriptions
+            const peopleData = [
+                { num: 6, text: "Alan is keen on history, and wants to visit a castle that was the site of well-known historical events. He'd like the castle to be near the coast, with tours led by a guide." },
+                { num: 7, text: "Yoshiko wants to see a castle that people are still living in. She loves visiting beautiful gardens, and would like to explore interesting places in the castle." },
+                { num: 8, text: "Paulo and Maria collect antiques, so want to visit a castle that still has some of its original furniture on display, and hear about the building's history. They also want something that's particularly suitable for young children." },
+                { num: 9, text: "Kerim wants somewhere with a great historical atmosphere, with typical food from the past to try, and people dressed in costume. He'd also like to see art that's been in the castle for centuries." },
+                { num: 10, text: "Jake and his brother have always wanted to visit the ruins of a castle surrounded by water, with great views. Jake also wants to learn about any wildlife living in and around the castle." }
+            ];
+
+            let examSubmitted = false;
+            let explanationMode = false;
+            let selectedRange = null;
+
+            function renderQuestions() {
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
+                peopleData.forEach(person => {
+                    const qDiv = document.createElement('div');
+                    qDiv.className = 'question-item';
+                    qDiv.id = `question-${person.num}`;
+                    qDiv.innerHTML = `
+                        <div class="question-text">${person.num}. ${person.text}</div>
+                        <div class="answer-input-area">
+                            <label for="answer-${person.num}">Your answer (letter A–H):</label>
+                            <input type="text" id="answer-${person.num}" class="answer-input" maxlength="1" placeholder="A–H" autocomplete="off">
+                            <span class="eye-icon" data-question="${person.num}">👁️</span>
+                        </div>
+                    `;
+                    container.appendChild(qDiv);
+                    const input = document.getElementById(`answer-${person.num}`);
+                    input.addEventListener('input', function(e) {
+                        this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
+                        updateAnswerCount();
+                    });
+                });
+            }
+
+            function getUserAnswer(qNum) {
+                const input = document.getElementById(`answer-${qNum}`);
+                if (!input) return null;
+                let val = input.value.trim().toUpperCase();
+                return val.length === 1 && /[A-H]/.test(val) ? val : null;
+            }
+
+            function isAnswerCorrect(qNum, answer) {
+                return answer === answerKey[`q${qNum}`];
+            }
+
+            function updateAnswerCount() {
+                let answered = 0;
+                for (let i = 6; i <= 10; i++) if (getUserAnswer(i)) answered++;
+                document.getElementById('answeredCount').textContent = `${answered}/5 answered`;
+                document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/5`;
+                for (let i = 6; i <= 10; i++) {
+                    const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                    if (btn) {
+                        btn.classList.remove('answered','unanswered');
+                        btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                    }
+                }
+            }
+
+            function createNavButtons() {
+                const nav = document.getElementById('navButtons');
+                nav.innerHTML = '';
+                for (let i = 6; i <= 10; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn unanswered';
+                    btn.textContent = i;
+                    btn.dataset.question = i;
+                    btn.addEventListener('click', () => {
+                        document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                    nav.appendChild(btn);
+                }
+            }
+
+            function markAnswers() {
+                for (let i = 6; i <= 10; i++) {
+                    const questionDiv = document.getElementById(`question-${i}`);
+                    if (!questionDiv) continue;
+                    const user = getUserAnswer(i);
+                    const correct = isAnswerCorrect(i, user);
+                    questionDiv.classList.remove('correct','incorrect');
+                    const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                    if (oldBadge) oldBadge.remove();
+                    if (correct) {
+                        questionDiv.classList.add('correct');
+                    } else {
+                        questionDiv.classList.add('incorrect');
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                        questionDiv.appendChild(badge);
+                    }
+                }
+            }
+
+            function highlightAnswerInReading(questionNum) {
+                document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                    const parent = el.parentNode;
+                    if (parent) {
+                        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                        parent.removeChild(el);
+                    }
+                });
+                document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+
+                const info = highlightMap[`q${questionNum}`];
+                if (!info) return;
+                const card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
+                if (!card) return;
+
+                const qItem = document.getElementById(`question-${questionNum}`);
+                if (qItem) qItem.classList.add('highlight-question');
+
+                const keywords = info.keywords || [];
+                keywords.forEach(keyword => {
+                    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+                    let node;
+                    while (node = walker.nextNode()) {
+                        const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
+                        if (idx !== -1) {
+                            const range = document.createRange();
+                            range.setStart(node, idx);
+                            range.setEnd(node, idx + keyword.length);
+                            const span = document.createElement('span');
+                            span.className = 'dynamic-highlight';
+                            try {
+                                range.surroundContents(span);
+                            } catch(e) { console.log(e); }
+                            break;
+                        }
+                    }
+                });
+                const firstHighlight = document.querySelector('.dynamic-highlight');
+                if (firstHighlight) firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            function showExplanation(questionNum) {
+                if (!explanationMode && !examSubmitted) return;
+                highlightAnswerInReading(questionNum);
+                document.getElementById('explanationPanel').classList.add('show');
+                document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+                let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
+                if (examSubmitted) {
+                    const user = getUserAnswer(questionNum) || '(chưa điền)';
+                    const isCorrect = isAnswerCorrect(questionNum, user);
+                    html += `<div style="margin-top:12px;padding:10px; background:${isCorrect ? '#e0f2e0' : '#ffe0e0'}; border-radius:12px;">`;
+                    html += `<strong>Câu trả lời của bạn:</strong> ${user} ${user ? (isCorrect ? '✓' : '✗') : ''}<br>`;
+                    if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                    else html += `Chính xác!`;
+                    html += `</div>`;
+                }
+                document.getElementById('explanationText').innerHTML = html;
+            }
+
+            function resetAll() {
+                examSubmitted = false;
+                explanationMode = false;
+                for (let i = 6; i <= 10; i++) {
+                    const input = document.getElementById(`answer-${i}`);
+                    if (input) {
+                        input.value = '';
+                        input.disabled = false;
+                    }
+                    const div = document.getElementById(`question-${i}`);
+                    if (div) {
+                        div.classList.remove('correct','incorrect');
+                        const badge = div.querySelector('.correct-answer-badge');
+                        if (badge) badge.remove();
+                    }
+                }
+                document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+                document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                    const parent = el.parentNode;
+                    if (parent) {
+                        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                        parent.removeChild(el);
+                    }
+                });
+                document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').textContent = 'Nộp bài';
+                document.getElementById('explainBtn').disabled = true;
+                document.getElementById('explainBtn').textContent = 'Xem giải thích';
+                document.getElementById('explanationPanel').classList.remove('show');
+                updateAnswerCount();
+            }
+
+            // ==================== LƯU DỮ LIỆU VÀO DASHBOARD ====================
+            function getPetInfo() {
+                return { book: 1, test: 3, part: 2 };
+            }
+
+            function saveToDashboard() {
+                if (!examSubmitted) return;
+                const { book, test, part } = getPetInfo();
+                const skill = 'reading';
+                const details = [];
+                let correctCount = 0;
+                for (let i = 6; i <= 10; i++) {
+                    const user = getUserAnswer(i);
+                    const correct = answerKey[`q${i}`];
+                    const isCorrect = user === correct;
+                    if (isCorrect) correctCount++;
+                    details.push({
+                        question: i,
+                        user: user || '(trống)',
+                        correct: displayAnswers[`q${i}`] || correct,
+                        isCorrect: isCorrect
+                    });
+                }
+                const partData = {
+                    partId: part,
+                    name: `Part ${part}`,
+                    totalQuestions: details.length,
+                    correctCount: correctCount,
+                    details: details
+                };
+                const key = `pet_${skill}_book${book}_test${test}_part${part}`;
+                localStorage.setItem(key, JSON.stringify(partData));
+            }
+
+            // Event listeners
+            document.getElementById('submitBtn').addEventListener('click', () => {
+                if (examSubmitted) return;
+                let unanswered = [];
+                for (let i = 6; i <= 10; i++) if (!getUserAnswer(i)) unanswered.push(i);
+                if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
+                examSubmitted = true;
+                markAnswers();
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+                document.getElementById('explainBtn').disabled = false;
+                saveToDashboard();
+            });
+
+            document.getElementById('explainBtn').addEventListener('click', () => {
+                if (!examSubmitted) return;
+                explanationMode = true;
+                document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+                document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
+                document.getElementById('explainBtn').disabled = true;
+                document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+                document.getElementById('explanationPanel').classList.remove('show');
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                if (confirm('Reset tất cả câu trả lời?')) resetAll();
+            });
+
+            document.getElementById('closeExplanation').addEventListener('click', () => {
+                document.getElementById('explanationPanel').classList.remove('show');
+                document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                    const parent = el.parentNode;
+                    if (parent) {
+                        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                        parent.removeChild(el);
+                    }
+                });
+                document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target.classList && e.target.classList.contains('eye-icon')) {
+                    const q = parseInt(e.target.dataset.question);
+                    showExplanation(q);
+                }
+            });
+
+            // Panel resizer logic
+            const readingPanel = document.getElementById('readingPanel');
+            const questionsPanel = document.getElementById('questionsPanel');
+            const resizer = document.getElementById('resizer');
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const container = document.getElementById('mainArea');
+                const containerRect = container.getBoundingClientRect();
+                const newWidth = e.clientX - containerRect.left;
+                if (newWidth > 300 && newWidth < containerRect.width - 300) {
+                    readingPanel.style.width = `${newWidth}px`;
+                    questionsPanel.style.width = `${containerRect.width - newWidth - 8}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            });
+
+            // Font size controls
+            function setFontSize(size) {
+                document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`).classList.add('active');
+                document.querySelectorAll('.reading-content, .questions-list').forEach(el => {
+                    el.classList.remove('font-small', 'font-medium', 'font-large');
+                    el.classList.add(`font-${size}`);
+                });
+            }
+
+            document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+            document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+            document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+            // Reading mode toggle
+            document.getElementById('readingModeToggle').addEventListener('click', () => {
+                document.getElementById('testWrapper').classList.toggle('reading-mode');
+                document.getElementById('toggleSwitch').classList.toggle('active');
+            });
+
+            // Explanation panel resizer
+            const expPanel = document.getElementById('explanationPanel');
+            const expResizer = document.getElementById('explanationResizer');
+            let isResizingExp = false;
+            let startY, startHeight;
+
+            expResizer.addEventListener('mousedown', (e) => {
+                isResizingExp = true;
+                startY = e.clientY;
+                startHeight = expPanel.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizingExp) return;
+                const dy = startY - e.clientY;
+                const newHeight = startHeight + dy;
+                if (newHeight > 100 && newHeight < 600) {
+                    expPanel.style.height = `${newHeight}px`;
+                    expPanel.style.maxHeight = `${newHeight}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizingExp = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            });
+
+            // Initialize
+            createNavButtons();
+            renderQuestions();
+            updateAnswerCount();
+            setFontSize('large');
+        })();
+    </script>
+</body>
+</html>

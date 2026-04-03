@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PET 1 - Test 2 - Reading Part 6</title>
+    <style>
+        /* ========== FULL WIDTH + SPLIT SCREEN ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .test-wrapper.reading-mode {
+            background: #f8f5e6;
+        }
+        .test-wrapper.reading-mode .left-col,
+        .test-wrapper.reading-mode .right-col {
+            background: #fffaf0;
+        }
+
+        /* Header */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .reading-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px 8px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #0f2a44;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+            border: 1px solid #e6b422;
+        }
+        .toggle-switch.active {
+            background: #e6b422;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+        .toggle-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Navigation */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.02); }
+
+        /* Main layout */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .split-container {
+            display: flex;
+            flex: 1;
+            gap: 0;
+            align-items: flex-start;
+        }
+        .left-col {
+            flex: 1.2;
+            padding: 24px 30px;
+            overflow-y: auto;
+        }
+        .right-col {
+            flex: 0.8;
+            background: #fefcf7;
+            border-left: 2px solid #d4c5ad;
+            padding: 24px 20px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
+        .right-col.show {
+            display: block;
+        }
+        /* Single column (initial) */
+        .single-col {
+            padding: 24px 40px;
+        }
+
+        /* Reading card */
+        .reading-card {
+            background: #fefcf7;
+            border-left: 5px solid #e6b422;
+            padding: 28px 40px;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .reading-card .review-title {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #1e3a5f;
+            margin-bottom: 20px;
+        }
+        .reading-card p {
+            margin: 16px 0;
+            line-height: 1.7;
+            font-size: 1.05rem;
+        }
+
+        /* Instructions block */
+        .part-header {
+            background: #eae4d4;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .part-header h3 {
+            color: #1e3a5f;
+            font-size: 1.3rem;
+            margin-bottom: 6px;
+        }
+        .part-header p {
+            color: #4a3a2a;
+            font-style: italic;
+            font-size: 0.95rem;
+        }
+
+        /* Input fields */
+        .gap-input {
+            display: inline-block;
+            width: auto;
+            min-width: 100px;
+            background: #fffef5;
+            border: 2px solid #d4c5ad;
+            border-radius: 24px;
+            padding: 5px 14px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            font-family: inherit;
+            transition: 0.2s;
+            margin: 0 4px;
+        }
+        .gap-input:focus {
+            outline: none;
+            border-color: #e6b422;
+            background: #fff7e0;
+        }
+        .gap-input.correct {
+            background: #e8f5e8;
+            border-color: #4CAF50;
+        }
+        .gap-input.incorrect {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+        .input-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            position: relative;
+        }
+        .eye-icon {
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.7;
+            transition: 0.2s;
+            display: none;
+            line-height: 1;
+        }
+        .eye-icon:hover {
+            opacity: 1;
+            color: #e6b422;
+        }
+
+        /* Badge */
+        .correct-answer-badge {
+            display: none;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        /* Explanation inside right column */
+        .explanation-header {
+            font-weight: 700;
+            color: #1e3a5f;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e6b422;
+            padding-bottom: 8px;
+        }
+        .explanation-content {
+            font-size: 1rem;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        .answer-feedback {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .answer-feedback.correct {
+            background: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+        }
+        .answer-feedback.incorrect {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+        .close-explanation-btn {
+            cursor: pointer;
+            float: right;
+            color: #666;
+        }
+        .close-explanation-btn:hover {
+            color: #1e3a5f;
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 12px 24px;
+            display: flex;
+            gap: 20px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 28px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 30px; padding: 5px 18px; font-weight: 600; }
+
+        /* Context menu */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+            padding: 6px 0;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+
+        /* Highlight styles */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 4px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 4px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 4px; padding: 0 2px; }
+
+        /* Font size sizes */
+        .font-small .reading-card,
+        .font-small .gap-input,
+        .font-small .review-title,
+        .font-small .explanation-content,
+        .font-small .part-header {
+            font-size: 13px;
+        }
+        .font-medium .reading-card,
+        .font-medium .gap-input,
+        .font-medium .review-title,
+        .font-medium .explanation-content,
+        .font-medium .part-header {
+            font-size: 16px;
+        }
+        .font-large .reading-card,
+        .font-large .gap-input,
+        .font-large .review-title,
+        .font-large .explanation-content,
+        .font-large .part-header {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 2 · Part 6 (Reading)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 27 – 32</span>
+        <div class="nav-buttons" id="navButtons"></div>
+        <span id="answeredCount">0/6 answered</span>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area" id="mainArea"></div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- ANSWER KEY ----------
+            const answerKey = { 27: "be", 28: "with", 29: "of", 30: "us", 31: "to", 32: "than" };
+            const displayAnswers = { 27: "be", 28: "with", 29: "of", 30: "us", 31: "to", 32: "than" };
+
+            const detailedExplanations = {
+                27: `<div><strong>Cấu trúc cố định:</strong> <em>"to be honest"</em> (thành thật mà nói). Cụm từ này được dùng khi người nói muốn thừa nhận một điều gì đó.<br>Dịch: "...và thành thật mà nói, tôi đã khá lo lắng về việc khám phá một thành phố mới một mình."</div>`,
+                28: `<div><strong>Giới từ theo sau tính từ:</strong> Tính từ <em>"familiar"</em> đi kèm với giới từ <em>"with"</em> khi nói về việc ai đó biết rõ điều gì đó.<br>Dịch: "Tôi hy vọng chuyến tham quan sẽ giúp tôi trở nên quen thuộc hơn với thành phố."</div>`,
+                29: `<div><strong>Cụm từ cố định:</strong> <em>"loads of"</em> có nghĩa là rất nhiều (tương đương với <em>"a lot of"</em>).<br>Dịch: "Chúng tôi cũng học được rất nhiều sự thật thú vị về văn hóa Đan Mạch."</div>`,
+                30: `<div><strong>Đại từ nhân xưng:</strong> <em>"us"</em> (chúng tôi). Có nhiều người trong chuyến tham quan và hướng dẫn viên đã đưa ra gợi ý cho tất cả họ. Mặc dù bài blog viết ở ngôi thứ nhất số ít, nhưng ở đây người viết đang là một phần của nhóm khách tham quan.<br>Dịch: "Cuối cùng, anh ấy đã đưa cho chúng tôi tất cả những gợi ý..."</div>`,
+                31: `<div><strong>Cấu trúc:</strong> <em>"place + to-infinitive"</em> (nơi để làm gì đó). <em>"to"</em> là phần của động từ nguyên mẫu có "to" (to eat and visit).<br>Dịch: "...những nơi tốt nhất để ăn uống và tham quan."</div>`,
+                32: `<div><strong>Từ so sánh:</strong> <em>"than"</em> (hơn). Ở đây người viết đang so sánh giữa những gì họ mong đợi (expected) và thực tế những gì họ cảm nhận được.<br>Dịch: "...tơi thực sự đã vui vẻ hơn nhiều so với những gì tôi mong đợi."</div>`
+            };
+
+            let examSubmitted = false;
+            let explanationMode = false;
+            let selectedRange = null;
+            let currentSplit = false;
+
+            const mainArea = document.getElementById('mainArea');
+            const readingCardContent = `
+                <div class="reading-card" id="passageCard">
+                    <div class="review-title">My travel blog</div>
+                    <p>This summer, I travelled to Copenhagen, the capital of Denmark, on my own. I am only 20 and to 
+                        <span class="input-wrapper">
+                            <input type="text" id="q27" class="gap-input" data-q="27" autocomplete="off">
+                            <span class="eye-icon" data-q="27">👁️</span>
+                        </span>
+                        honest, I was nervous about exploring a new city alone. I decided to go on a free walking tour the first day I was there. I hoped the tour would help me to become more familiar 
+                        <span class="input-wrapper">
+                            <input type="text" id="q28" class="gap-input" data-q="28" autocomplete="off">
+                            <span class="eye-icon" data-q="28">👁️</span>
+                        </span>
+                        the city.
+                    </p>
+
+                    <p>Unfortunately, the weather wasn't great, but the tour was still absolutely fantastic! Magnus, our tour guide, knew all about the city's history. We also learnt loads 
+                        <span class="input-wrapper">
+                            <input type="text" id="q29" class="gap-input" data-q="29" autocomplete="off">
+                            <span class="eye-icon" data-q="29">👁️</span>
+                        </span>
+                        interesting facts about Danish culture. At the end of the tour, he gave 
+                        <span class="input-wrapper">
+                            <input type="text" id="q30" class="gap-input" data-q="30" autocomplete="off">
+                            <span class="eye-icon" data-q="30">👁️</span>
+                        </span>
+                        all suggestions for the best places 
+                        <span class="input-wrapper">
+                            <input type="text" id="q31" class="gap-input" data-q="31" autocomplete="off">
+                            <span class="eye-icon" data-q="31">👁️</span>
+                        </span>
+                        eat and visit.
+                    </p>
+
+                    <p>Apart from learning so much, I actually had a lot more fun on the walking tour 
+                        <span class="input-wrapper">
+                            <input type="text" id="q32" class="gap-input" data-q="32" autocomplete="off">
+                            <span class="eye-icon" data-q="32">👁️</span>
+                        </span>
+                        I'd expected. It was an excellent way to experience the city, and learn about its culture and history.
+                    </p>
+                </div>
+            `;
+
+            function renderSingleColumn() {
+                mainArea.innerHTML = `
+                    <div class="single-col">
+                        <div class="part-header">
+                            <h3>Questions 27–32</h3>
+                            <p>For each question, write the correct answer. Write one word for each gap.</p>
+                        </div>
+                        ${readingCardContent}
+                    </div>
+                `;
+                attachInputEvents();
+            }
+
+            function renderSplitColumn() {
+                mainArea.innerHTML = `
+                    <div class="split-container">
+                        <div class="left-col">
+                            <div class="part-header">
+                                <h3>Questions 27–32</h3>
+                                <p>For each question, write the correct answer. Write one word for each gap.</p>
+                            </div>
+                            ${readingCardContent}
+                        </div>
+                        <div class="right-col" id="rightCol">
+                            <div class="explanation-header">
+                                <span>Giải thích</span>
+                                <span class="close-explanation-btn" id="closeRightExplain">✕ Đóng</span>
+                            </div>
+                            <div class="explanation-content" id="rightExplanationText">
+                                Nhấn vào biểu tượng con mắt bên cạnh mỗi câu để xem giải thích.
+                            </div>
+                        </div>
+                    </div>
+                `;
+                attachInputEvents();
+                if (explanationMode) {
+                    const rightCol = document.getElementById('rightCol');
+                    if (rightCol) rightCol.classList.add('show');
+                    for (let i = 27; i <= 32; i++) {
+                        addBadgeForQuestion(i);
+                    }
+                    document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
+                }
+                document.getElementById('closeRightExplain')?.addEventListener('click', () => {
+                    const col = document.getElementById('rightCol');
+                    if (col) col.classList.remove('show');
+                });
+            }
+
+            function attachInputEvents() {
+                document.querySelectorAll('.gap-input').forEach(inp => {
+                    if (examSubmitted) inp.disabled = true;
+                    if (examSubmitted) {
+                        const val = inp.value.trim();
+                        const correct = isAnswerCorrect(parseInt(inp.dataset.q), val);
+                        inp.classList.add(correct ? 'correct' : 'incorrect');
+                    }
+                    inp.addEventListener('input', () => updateAnswerCount());
+                });
+                document.querySelectorAll('.eye-icon').forEach(icon => {
+                    if (explanationMode || examSubmitted) icon.style.display = 'inline-block';
+                    icon.addEventListener('click', (e) => {
+                        const q = parseInt(e.currentTarget.dataset.q);
+                        showExplanationInRightColumn(q);
+                    });
+                });
+            }
+
+            function getUserAnswer(qNum) {
+                const input = document.getElementById(`q${qNum}`);
+                return input ? input.value.trim() : "";
+            }
+
+            function isAnswerCorrect(qNum, val) {
+                return val.toLowerCase() === answerKey[qNum].toLowerCase();
+            }
+
+            function updateAnswerCount() {
+                let answered = 0;
+                for (let i = 27; i <= 32; i++) {
+                    if (getUserAnswer(i) !== "") answered++;
+                }
+                document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
+                document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
+                for (let i = 27; i <= 32; i++) {
+                    const btn = document.querySelector(`.nav-btn[data-q="${i}"]`);
+                    if (btn) {
+                        btn.classList.remove('answered', 'unanswered');
+                        btn.classList.add(getUserAnswer(i) !== "" ? 'answered' : 'unanswered');
+                    }
+                }
+            }
+
+            function createNavButtons() {
+                const nav = document.getElementById('navButtons');
+                nav.innerHTML = '';
+                for (let i = 27; i <= 32; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn unanswered';
+                    btn.textContent = i;
+                    btn.dataset.q = i;
+                    btn.addEventListener('click', () => {
+                        const input = document.getElementById(`q${i}`);
+                        if (input) {
+                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            input.focus();
+                        }
+                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                    nav.appendChild(btn);
+                }
+            }
+
+            function addBadgeForQuestion(qNum) {
+                const input = document.getElementById(`q${qNum}`);
+                if (!input) return;
+                const wrapper = input.parentNode;
+                let existing = wrapper.querySelector('.correct-answer-badge');
+                if (existing) existing.remove();
+                const badge = document.createElement('span');
+                badge.className = 'correct-answer-badge';
+                badge.textContent = displayAnswers[qNum];
+                if (explanationMode) badge.style.display = 'inline-block';
+                wrapper.appendChild(badge);
+            }
+
+            function showExplanationInRightColumn(questionNum) {
+                if (!explanationMode && !examSubmitted) return;
+                if (!currentSplit) {
+                    currentSplit = true;
+                    const vals = {};
+                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
+                    renderSplitColumn();
+                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
+                }
+                const rightCol = document.getElementById('rightCol');
+                if (rightCol) rightCol.classList.add('show');
+                const explanationDiv = document.getElementById('rightExplanationText');
+                if (!explanationDiv) return;
+                let html = detailedExplanations[questionNum] || `<strong>Đáp án: ${displayAnswers[questionNum]}</strong>`;
+                if (examSubmitted) {
+                    const user = getUserAnswer(questionNum) || "(chưa điền)";
+                    const correct = isAnswerCorrect(questionNum, user);
+                    html += `<div class="answer-feedback ${correct ? 'correct' : 'incorrect'}">`;
+                    html += `<strong>Câu trả lời của bạn:</strong> "${user}" ${user ? (correct ? '✓' : '✗') : ''}<br>`;
+                    if (!correct) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[questionNum]}`;
+                    else html += `Chính xác!`;
+                    html += `</div>`;
+                }
+                explanationDiv.innerHTML = html;
+                if (examSubmitted) addBadgeForQuestion(questionNum);
+            }
+
+            function resetAll() {
+                examSubmitted = false;
+                explanationMode = false;
+                currentSplit = false;
+                renderSingleColumn();
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').textContent = 'Nộp bài';
+                document.getElementById('explainBtn').disabled = true;
+                document.getElementById('explainBtn').textContent = 'Xem giải thích';
+                updateAnswerCount();
+            }
+
+            function saveToDashboard() {
+                const book = 1, test = 2, part = 6;
+                const skill = 'reading';
+                const details = [];
+                let correctCount = 0;
+                for (let i = 27; i <= 32; i++) {
+                    const user = getUserAnswer(i);
+                    const correct = answerKey[i];
+                    const isCor = user.toLowerCase() === correct.toLowerCase();
+                    if (isCor) correctCount++;
+                    details.push({ question: i, user: user || '(trống)', correct: correct, isCorrect: isCor });
+                }
+                const partData = { partId: part, name: `Part ${part}`, totalQuestions: details.length, correctCount, details };
+                localStorage.setItem(`pet_${skill}_book${book}_test${test}_part${part}`, JSON.stringify(partData));
+            }
+
+            document.getElementById('submitBtn').addEventListener('click', () => {
+                if (examSubmitted) return;
+                let unanswered = [];
+                for (let i = 27; i <= 32; i++) if (!getUserAnswer(i)) unanswered.push(i);
+                if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
+
+                examSubmitted = true;
+                for (let i = 27; i <= 32; i++) {
+                    const inp = document.getElementById(`q${i}`);
+                    const correct = isAnswerCorrect(i, getUserAnswer(i));
+                    inp.classList.add(correct ? 'correct' : 'incorrect');
+                    inp.disabled = true;
+                }
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+                document.getElementById('explainBtn').disabled = false;
+                saveToDashboard();
+            });
+
+            document.getElementById('explainBtn').addEventListener('click', () => {
+                explanationMode = true;
+                document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+                document.getElementById('explainBtn').disabled = true;
+                document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+                if (!currentSplit) {
+                    currentSplit = true;
+                    const vals = {};
+                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
+                    renderSplitColumn();
+                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                if (confirm('Reset tất cả câu trả lời?')) resetAll();
+            });
+
+            function setFontSize(size) {
+                document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+                const wrapper = document.getElementById('testWrapper');
+                wrapper.classList.remove('font-small', 'font-medium', 'font-large');
+                wrapper.classList.add(`font-${size}`);
+            }
+            document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+            document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+            document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+            document.getElementById('readingModeToggle').addEventListener('click', () => {
+                document.getElementById('testWrapper').classList.toggle('reading-mode');
+                document.getElementById('toggleSwitch').classList.toggle('active');
+            });
+
+            document.addEventListener('contextmenu', (e) => {
+                const target = e.target.closest('.reading-card');
+                if (target) {
+                    const sel = window.getSelection();
+                    if (sel.toString().trim()) {
+                        e.preventDefault();
+                        selectedRange = sel.getRangeAt(0);
+                        const menu = document.getElementById('contextMenu');
+                        menu.style.display = 'block';
+                        menu.style.left = (e.pageX) + 'px';
+                        menu.style.top = (e.pageY) + 'px';
+                    }
+                }
+            });
+            document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
+
+            window.applyHighlight = (color) => {
+                if (selectedRange) {
+                    const span = document.createElement('span');
+                    span.className = 'highlight-' + color;
+                    selectedRange.surroundContents(span);
+                    window.getSelection().removeAllRanges();
+                    selectedRange = null;
+                }
+            };
+            window.removeHighlight = () => {
+                if (selectedRange) {
+                    const parent = selectedRange.commonAncestorContainer.parentElement;
+                    if (parent && parent.className.startsWith('highlight-')) {
+                        parent.replaceWith(parent.textContent);
+                    }
+                    window.getSelection().removeAllRanges();
+                    selectedRange = null;
+                }
+            };
+
+            // Init
+            createNavButtons();
+            renderSingleColumn();
+            updateAnswerCount();
+        })();
+    </script>
+</div>
+</body>
+</html>
