@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 2 - Test 1 - Part 1 (Listening)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header with audio player */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #0f2a44;
+            padding: 6px 18px;
+            border-radius: 40px;
+            border: 1px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .audio-controls audio {
+            height: 40px;
+            width: 320px;
+            border-radius: 20px;
+        }
+        .speed-select {
+            background: #1e3a5f;
+            color: white;
+            border: 1px solid #e6b422;
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+        .audio-warning {
+            font-size: 11px;
+            background: #a94442;
+            padding: 2px 8px;
+            border-radius: 30px;
+            color: #ffd9d9;
+        }
+        .volume-icon {
+            font-size: 20px;
+            cursor: pointer;
+            color: #e6b422;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question navigator (1-7) */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+
+        /* Main area */
+        .main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .transcript-panel {
+            width: 0;
+            background: #fffcf5;
+            border-right: 2px solid #b0aa9a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.2s ease;
+        }
+        .questions-panel {
+            width: 100%;
+            background: #f8f6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.2s ease;
+        }
+        .main-area.show-transcript .transcript-panel {
+            width: 45%;
+        }
+        .main-area.show-transcript .questions-panel {
+            width: 55%;
+        }
+        .resizer {
+            width: 8px;
+            background: #b0aa9a;
+            cursor: col-resize;
+            display: none;
+        }
+        .main-area.show-transcript .resizer {
+            display: block;
+        }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .transcript-content, .questions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            line-height: 1.7;
+        }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        .questions-list.centered {
+            display: flex;
+            flex-direction: column;
+            /* Loại bỏ justify-content: center để không căn giữa */
+            /* justify-content: center; */
+            /* align-items: center; */
+            min-height: 100%;
+        }
+        .questions-list.centered > div {
+            width: 100%;
+            /* max-width: 750px; */
+            margin: 0;
+        }
+
+        .notes-box {
+            background: #f0ebe0;
+            border-left: 4px solid #e6b422;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .question-item {
+            margin-bottom: 25px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f9f7f2;
+            border: 1px solid #e0d6c8;
+            position: relative;
+        }
+        .question-item.correct {
+            background: #e8f5e8;
+            border-color: #4CAF50;
+        }
+        .question-item.incorrect {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e3a5f;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-left: 15px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .option input[type="radio"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .option label {
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .eye-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.7;
+            display: none;
+        }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+
+        .correct-answer-badge {
+            display: none;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 15px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 20px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:hover { background: #2d4b77; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; color: #1e3a5f; }
+
+        .explanation-panel {
+            position: relative;
+            background: #fffef9; 
+            border-left: 4px solid #e6b422; 
+            padding: 15px 16px 8px 16px; 
+            margin: 0 20px 12px 20px; 
+            border-radius: 10px; 
+            display: none; 
+            max-height: 180px; 
+            overflow-y: auto; 
+            font-size: 1rem;
+        }
+        .resize-handle {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 10px;
+            cursor: ns-resize;
+            z-index: 100;
+        }
+        .resize-handle:hover { background: rgba(30, 58, 95, 0.05); }
+        .explanation-panel.show { display: block; }
+        .explanation-header {
+            font-weight: 700;
+            color: #1e3a5f;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .close-btn { cursor: pointer; }
+        .explanation-content {
+            line-height: 1.5;
+            color: #000000;
+        }
+        .transcript-highlight {
+            background-color: #f9e79f !important;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .keyword-highlight {
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 3px;
+            background-color: #fff3cd;
+            font-weight: 600;
+        }
+        .scroll-highlight {
+            animation: highlightFlash 1s ease;
+        }
+        @keyframes highlightFlash {
+            0% { background-color: #f9e79f; }
+            50% { background-color: #f1c40f; }
+            100% { background-color: #f9e79f; }
+        }
+        .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; display: inline; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; display: inline; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; display: inline; }
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            padding: 5px 0;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            min-width: 150px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .context-menu div:hover {
+            background: #1e3a5f;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="test-wrapper">
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 2 · Test 1 · Part 1 (Listening)</div>
+            <div class="audio-controls">
+                <audio id="listeningAudio" controls>
+                    <source src="B1 Preliminary 2 - Test 1 Part 1.mp3" type="audio/mpeg">
+                </audio>
+                <select class="speed-select" id="speedSelect">
+                    <option value="0.7">0.7x</option>
+                    <option value="0.9">0.9x</option>
+                    <option value="1.0" selected>1x</option>
+                    <option value="1.1">1.1x</option>
+                    <option value="1.25">1.25x</option>
+                </select>
+                <span class="volume-icon">🔊</span>
+            </div>
+        </div>
+        <div class="font-controls">
+            <button class="font-btn" id="fontSmall">A-</button>
+            <button class="font-btn" id="fontMedium">A</button>
+            <button class="font-btn active" id="fontLarge">A+</button>
+        </div>
+    </div>
+
+    <div class="question-nav">
+        <span style="font-weight:600; color:#1e3a5f;">Câu 1-7:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <div class="main-area" id="mainArea">
+        <div class="transcript-panel" id="transcriptPanel">
+            <div class="panel-header"><span>TRANSCRIPT (TEST 1, PART 1)</span></div>
+            <div class="transcript-content font-large" id="transcriptContent"></div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 1-7</span>
+                <span class="answer-badge" id="answeredCount">0/7 answered</span>
+            </div>
+            <div class="questions-list font-large centered" id="questionsContent">
+                <div>
+                    <h3>PART 1 Questions 1-7</h3>
+                    <p><em>Choose the correct answer (A, B or C).</em></p>
+                    <div class="notes-box" id="questionsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/7</div>
+    </div>
+
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="resize-handle" id="explanationResizer"></div>
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+</div>
+
+<div class="context-menu" id="contextMenu">
+    <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+    <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+    <div onclick="applyHighlight('pink')">Highlight hồng</div>
+    <div onclick="removeHighlight()">Xóa highlight</div>
+</div>
+
+<script>
+    (function() {
+        // ----- ANSWER KEY (PET 2 TEST 1 PART 1) -----
+        const answerKey = {
+            q1: 'C', q2: 'C', q3: 'A', q4: 'B', q5: 'B', q6: 'A', q7: 'C'
+        };
+        const displayAnswers = { ...answerKey };
+
+        // ----- Detailed explanations (Vietnamese) -----
+        const detailedExplanations = {
+            q1: `<strong>Đáp án: C (Guidebook)</strong><br>
+                  Người đàn ông hỏi về hộ chiếu ("passport") của người phụ nữ, cô ấy nói nó vẫn đang ở trong ba lô cùng với điện thoại (B). Sau đó cô ấy nhận ra mình đã quên thứ gì đó: "It's that guidebook I bought last week." (Đó là cuốn sách hướng dẫn tôi mua tuần trước). Người đàn ông nhận xét là cô ấy có lẽ đã để quên nó trên bàn bếp.<br><br>
+                  <strong>✗ A (Passport) không đúng:</strong> Người phụ nữ xác nhận hộ chiếu vẫn ở trong ba lô ("Mine's in my backpack").<br>
+                  <strong>✗ B (Phone) không đúng:</strong> Điện thoại cũng đang ở trong ba lô cùng với hộ chiếu.<br>
+                  <strong>✓ C (Guidebook) là món đồ mà người phụ nữ đã để quên.</strong>`,
+            q2: `<strong>Đáp án: C</strong><br>
+                  Cậu bé mô tả chiếc áo rất chi tiết: 
+                  - "Divided into two parts" (Chia làm hai phần).
+                  - "The top part has black and white stripes, and there are stars on the white parts." (Phần trên có sọc trắng đen, và có hình ngôi sao trên các phần trắng).
+                  - "The bottom half... has black circles on a white background." (Nửa dưới có các hình tròn đen trên nền trắng).<br><br>
+                  <strong>✗ A không đúng:</strong> Bố trí ngôi sao và sọc không khớp với mô tả.<br>
+                  <strong>✗ B không đúng:</strong> Phần dưới có chấm bi nhưng phần trên không đúng mô tả về ngôi sao trên sọc trắng.<br>
+                  <strong>✓ C khớp hoàn toàn với tất cả các chi tiết mô tả của cậu bé.</strong>`,
+            q3: `<strong>Đáp án: A (Smartphone)</strong><br>
+                  Người phụ nữ giải thích rằng cô ấy đã phải gọi điện cho rạp hát: <em>"I had to call the theatre as their website wasn't working when I tried on my laptop"</em>. Việc đặt vé qua trang web trên máy tính không thực hiện được do quá nhiều người truy cập.<br><br>
+                  <strong>✗ B (Laptop) không đúng:</strong> Trang web không hoạt động khi cô thử dùng laptop.<br>
+                  <strong>✗ C (Box office) không đúng:</strong> Mặc dù có hàng dài người chờ ở rạp, nhưng cô đã từ bỏ việc chờ đợi và về nhà để gọi điện.<br>
+                  <strong>✓ A (Smartphone/Phone) là cách cô ấy thực hiện việc đặt vé thành công.</strong>`,
+            q4: `<strong>Đáp án: B (Strong winds)</strong><br>
+                  Thông báo cho biết chuyến tàu Histon 18:40 bị hoãn: <em>"...the strong winds we're experiencing at the moment mean trains are moving along the railway line at reduced speeds."</em> (Gió mạnh đang diễn ra khiến tàu chạy ở tốc độ giảm dần).<br><br>
+                  <strong>✗ A (Snow) không đúng:</strong> Tuyết được dự báo có thể rơi ở vùng cao nhưng được cho là không ảnh hưởng đến dịch vụ đến Histon.<br>
+                  <strong>✗ C (Heavy rain) không đúng:</strong> Mưa lớn đêm qua đã tạnh ("Last night's heavy rain has cleared").<br>
+                  <strong>✓ B (Strong winds) là nguyên nhân trực tiếp gây ra sự chậm trễ.</strong>`,
+            q5: `<strong>Đáp án: B (Open spaces)</strong><br>
+                  Hướng dẫn viên chỉ ra cơ hội tốt nhất để thấy hổ: <em>"...our best chance is in the open spaces where they hunt."</em> (Cơ hội tốt nhất của chúng ta là ở các không gian mở nơi chúng săn mồi).<br><br>
+                  <strong>✗ A (Forest) không đúng:</strong> Việc thấy chúng trong rừng là một thử thách vì bộ sọc giúp chúng ẩn nấp tốt.<br>
+                  <strong>✗ C (River/Lake) không đúng:</strong> Mặc dù chúng thường đến uống nước ở các hồ khi nhiệt độ tăng, nhưng hướng dẫn viên nói là "It's too early in the season for this yet" (vẫn còn quá sớm trong mùa để thấy điều đó).<br>
+                  <strong>✓ B (Open spaces) là nơi có khả năng cao nhất để thấy hổ lúc này.</strong>`,
+            q6: `<strong>Đáp án: A (Detective film)</strong><br>
+                  Cô gái gợi ý phim mới của Jack Leon về thám tử phá án giết người. Sau khi thảo luận về phim khoa học viễn tưởng ("science-fiction") và kịch thế kỷ 19 ("nineteenth-century drama"), cô gái chốt lại: <em>"I think my first suggestion looks more interesting, to be honest."</em> Người đàn ông đồng ý: "OK. Let's do that then."<br><br>
+                  <strong>✗ B (Sci-fi) không đúng:</strong> Cô gái nói người đàn ông biết cô cảm thấy thế nào về thể loại này (không thích).<br>
+                  <strong>✗ C (Drama) không đúng:</strong> Cô gái thấy nó có vẻ hơi nghiêm túc quá.<br>
+                  <strong>✓ A (Detective film) là sự lựa chọn cuối cùng của họ.</strong>`,
+            q7: `<strong>Đáp án: C (On foot)</strong><br>
+                  Người đàn ông giải thích lý do mình bị ướt: <em>"It took me forty minutes on foot"</em> (Tôi đã mất 40 phút đi bộ). <br><br>
+                  <strong>✗ A (Bus) không đúng:</strong> Xe buýt không đáng tin cậy ở nơi anh sống, dù anh định sẽ đi xe buýt về nhà nếu trời vẫn mưa.<br>
+                  <strong>✗ B (Bicycle) không đúng:</strong> Anh ấy muốn đi xe đạp nhưng phanh đang bị hỏng.<br>
+                  <strong>✓ C (On foot) là cách anh ấy đã đi đến nơi làm việc sáng nay.</strong>`
+        };
+
+        // ----- Full transcript (Test 1 Part 1) -----
+        const transcriptHTML = `
+            <p><strong>Test One, Part 1</strong></p>
+            <p><strong>Question 1</strong><br>
+            <strong>Man:</strong> Our queue for the check-in's over there. Have you got your passport ready?<br>
+            <strong>Woman:</strong> Mine's in my backpack, with my books and phone. ... Oh no! I don't believe it.<br>
+            <strong>Man:</strong> What! You haven't left your passport at home, have you?<br>
+            <strong>Woman:</strong> I know I forgot it once, but I'm more careful now. <span class="highlightable" data-q="1">It's that guidebook I bought last week. The one I told you about? I thought I'd put it in my backpack with my phone and stuff, but I guess I didn't.</span><br>
+            <strong>Man:</strong> Perhaps you left it on the kitchen table.</p>
+
+            <p><strong>Question 2</strong><br>
+            <strong>Boy:</strong> Mum, when you're in town, can you get me that T-shirt I told you about? It's in the sale at the T-shirt shop on the ground floor of the shopping centre. It's black and white and divided into two parts. <span class="highlightable" data-q="2">The top part has black and white stripes, and there are stars on the white parts. The bottom half of the T-shirt has black circles on a white background.</span> They've got lots of similar designs in the store, so please check you've got the one I want. Thanks Mum!</p>
+
+            <p><strong>Question 3</strong><br>
+            <strong>Man:</strong> Did you get tickets for the show?<br>
+            <strong>Woman:</strong> Yes, finally! It's really popular so there were long queues of people waiting to buy tickets outside the theatre.<br>
+            <strong>Man:</strong> So how long did you have to wait to get them?<br>
+            <strong>Woman:</strong> Well, I stood there for a while and then gave up and went home. <span class="highlightable" data-q="3">I had to call the theatre as their website wasn't working when I tried on my laptop</span> - too many people trying to use it, I suppose. Luckily, I managed to get tickets anyway, and quite good seats.</p>
+
+            <p><strong>Question 4</strong><br>
+            <strong>Woman:</strong> There will be a delay to the eighteen-forty service to Histon due to bad weather in the surrounding area. Last night's heavy rain has cleared, but <span class="highlightable" data-q="4">the strong winds we're experiencing at the moment mean trains are moving along the railway line at reduced speeds.</span> Expect the service to be approximately one hour late. The forecast is calmer for the rest of the evening, though there is a possibility of snow on higher ground. Fortunately, this is unlikely to affect services to Histon.</p>
+
+            <p><strong>Question 5</strong><br>
+            <strong>Man:</strong> Welcome to today's tiger tour. This is one of the best places to see wild tigers, so hopefully we'll manage to see some. A good time of year to see them is when temperatures start to rise, because they spend more time drinking at water holes such as lakes. It's too early in the season for this yet, so <span class="highlightable" data-q="5">our best chance is in the open spaces where they hunt.</span> It's much more of a challenge to see them in the forest - their stripes help them hide among the trees.</p>
+
+            <p><strong>Question 6</strong><br>
+            <strong>Woman:</strong> How about going to the cinema tonight? Jack Leon's new movie's on.<br>
+            <strong>Man:</strong> Oh, the one about that detective solving a murder?<br>
+            <strong>Woman:</strong> Yeah, and he's pretty good too! There's that or a science-fiction movie, but you know how I feel about those.<br>
+            <strong>Man:</strong> I know ... they're hardly your thing. Well, how about this nineteenth-century drama? Look.<br>
+            <strong>Woman:</strong> Yeah, we could see that, but it looks a bit serious. <span class="highlightable" data-q="6">I think my first suggestion looks more interesting, to be honest.</span><br>
+            <strong>Man:</strong> OK. Let's do that then. Let's see the seven o'clock show.<br>
+            <strong>Woman:</strong> Sure.</p>
+
+            <p><strong>Question 7</strong><br>
+            <strong>Woman:</strong> Hi Chris, it's pouring down! You look really wet. Did you cycle to work today?<br>
+            <strong>Man:</strong> Well, I wanted to, but my brakes need fixing and I haven't had time to deal with them yet.<br>
+            <strong>Woman:</strong> Couldn't you come by bus?<br>
+            <strong>Man:</strong> They aren't always reliable from where I live. I think I'll get one home, though, if it's still raining later. <span class="highlightable" data-q="7">It took me forty minutes on foot</span> - hopefully I'll be back on my bike again soon.<br>
+            <strong>Woman:</strong> Well, according to the forecast, it's going to rain all day today.</p>
+        `;
+
+        // ----- Questions data (extrated from snapshots) -----
+        const questionsData = [
+            { num: 1, text: "What has the woman left behind?", options: ["Passport", "Phone", "Guidebook"] },
+            { num: 2, text: "Which T-shirt does the boy want?", options: ["Stars on top, stripes on bottom", "Stripes on top, dots on bottom", "Stripes with stars on white background, circles on bottom"] },
+            { num: 3, text: "How did the woman book tickets for the show?", options: ["Smartphone/Phone call", "Laptop/Website", "Box office/In person"] },
+            { num: 4, text: "Why is the train to Histon delayed?", options: ["Snow", "Strong winds", "Heavy rain"] },
+            { num: 5, text: "Where are the tourists most likely to see a tiger?", options: ["In the forest", "In the open spaces", "By the river/lake"] },
+            { num: 6, text: "Which film will they go and see?", options: ["Detective film", "Science-fiction film", "Nineteenth-century drama"] },
+            { num: 7, text: "How did the man travel to work?", options: ["By bus", "By bicycle", "On foot"] }
+        ];
+
+        // ----- Global state -----
+        let examSubmitted = false;
+        let explanationMode = false;
+        const audio = document.getElementById('listeningAudio');
+        const speedSelect = document.getElementById('speedSelect');
+        if(speedSelect) speedSelect.addEventListener('change', () => { if(audio) audio.playbackRate = parseFloat(speedSelect.value); });
+
+        function getUserAnswer(q) {
+            const radios = document.getElementsByName(`q${q}`);
+            for(let r of radios) if(r.checked) return r.value;
+            return null;
+        }
+        function isAnswerCorrect(q, user) { return user === answerKey[`q${q}`]; }
+        function updateAnswerCount() {
+            let answered = 0;
+            for(let i=1;i<=7;i++) if(getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/7 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/7`;
+            for(let i=1;i<=7;i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if(btn) {
+                    btn.classList.remove('answered','unanswered');
+                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                }
+            }
+        }
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for(let i=1;i<=7;i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', () => {
+                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questionsData.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="options">
+                        ${q.options.map((opt, idx) => `
+                            <div class="option">
+                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65+idx)}" id="q${q.num}${String.fromCharCode(65+idx)}">
+                                <label for="q${q.num}${String.fromCharCode(65+idx)}">${String.fromCharCode(65+idx)}. ${opt}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                container.appendChild(div);
+            });
+            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAnswerCount));
+        }
+        function markAnswers() {
+            for(let i=1;i<=7;i++) {
+                const qDiv = document.getElementById(`question-${i}`);
+                if(!qDiv) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                qDiv.classList.remove('correct','incorrect');
+                const oldBadge = qDiv.querySelector('.correct-answer-badge');
+                if(oldBadge) oldBadge.remove();
+                if(correct) qDiv.classList.add('correct');
+                else {
+                    qDiv.classList.add('incorrect');
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    qDiv.appendChild(badge);
+                }
+            }
+        }
+        function showExplanation(questionNum) {
+            if(!explanationMode && !examSubmitted) return;
+            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
+            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
+            const spans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
+            spans.forEach(span => {
+                const parentP = span.closest('p');
+                if(parentP) parentP.classList.add('transcript-highlight');
+                span.classList.add('keyword-highlight');
+                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                span.classList.add('scroll-highlight');
+                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
+            });
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
+            if(examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa chọn)';
+                const isCor = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:10px;background:${isCor?'#e8f5e8':'#ffebee'};border-radius:5px;">
+                          <strong>Câu trả lời của bạn:</strong> ${user}<br>${!isCor ? `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}` : '✅ Đúng!'}
+                          </div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+        function resetAll() {
+            examSubmitted = false; explanationMode = false;
+            for(let i=1;i<=7;i++) {
+                document.getElementsByName(`q${i}`).forEach(r => { r.checked = false; r.disabled = false; });
+                const qDiv = document.getElementById(`question-${i}`);
+                if(qDiv) { qDiv.classList.remove('correct','incorrect'); const b = qDiv.querySelector('.correct-answer-badge'); if(b) b.remove(); }
+            }
+            document.getElementById('mainArea').classList.remove('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = '';
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.transcript-highlight, .keyword-highlight').forEach(el => el.classList.remove('transcript-highlight','keyword-highlight'));
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        // Event listeners
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            if(examSubmitted) return;
+            let unanswered = [];
+            for(let i=1;i<=7;i++) if(!getUserAnswer(i)) unanswered.push(i);
+            if(unanswered.length && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
+            examSubmitted = true;
+            document.getElementById('mainArea').classList.add('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            let correctCount = 0;
+            for(let i=1;i<=7;i++) if(isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/7</p><p>Nhấn "Xem giải thích" để xem chi tiết.</p>`;
+            document.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
+        });
+        document.getElementById('explainBtn').addEventListener('click', () => {
+            if(!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+        });
+        document.getElementById('resetBtn').addEventListener('click', () => { if(confirm('Reset tất cả câu trả lời?')) resetAll(); });
+        document.getElementById('closeExplanation').addEventListener('click', () => {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.transcript-highlight, .keyword-highlight').forEach(el => el.classList.remove('transcript-highlight','keyword-highlight'));
+        });
+        document.addEventListener('click', (e) => {
+            if(e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question);
+        });
+
+        // Font resize logic
+        function setFontSize(size) {
+            ['small','medium','large'].forEach(s => document.getElementById(`font${s.charAt(0).toUpperCase()+s.slice(1)}`).classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
+                el.className = `transcript-content font-${size}`;
+                if(el.classList.contains('questions-list')) el.classList.add('centered');
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        // Resizer logic
+        const transcriptPanel = document.getElementById('transcriptPanel'), questionsPanel = document.getElementById('questionsPanel'), resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'col-resize'; e.preventDefault(); });
+        document.addEventListener('mousemove', (e) => {
+            if(!isResizing) return;
+            const rect = document.getElementById('mainArea').getBoundingClientRect();
+            let leftWidth = e.clientX - rect.left - 4;
+            if(leftWidth < 250) leftWidth = 250;
+            if(leftWidth > rect.width - 250) leftWidth = rect.width - 250;
+            transcriptPanel.style.width = leftWidth + 'px';
+            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        // Vertical resizer for explanation panel
+        const explanationPanel = document.getElementById('explanationPanel'), expResizer = document.getElementById('explanationResizer');
+        let isExpResizing = false;
+        expResizer.addEventListener('mousedown', (e) => { isExpResizing = true; document.body.style.cursor = 'ns-resize'; e.preventDefault(); });
+        document.addEventListener('mousemove', (e) => {
+            if(!isExpResizing) return;
+            const rect = explanationPanel.getBoundingClientRect();
+            let newHeight = rect.bottom - e.clientY;
+            if(newHeight < 100) newHeight = 100;
+            if(newHeight > 500) newHeight = 500;
+            explanationPanel.style.maxHeight = newHeight + 'px';
+        });
+        document.addEventListener('mouseup', () => { isExpResizing = false; document.body.style.cursor = 'default'; });
+
+        // Context menu highlight
+        let selectedRange = null;
+        const contextMenu = document.getElementById('contextMenu');
+        window.removeHighlight = function() {
+            if(selectedRange) {
+                const highlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+                highlights.forEach(h => { if(selectedRange.intersectsNode(h)) h.replaceWith(...h.childNodes); });
+            }
+            contextMenu.style.display = 'none'; selectedRange = null;
+        };
+        window.applyHighlight = function(color) {
+            if(selectedRange) {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(selectedRange.extractContents());
+                selectedRange.insertNode(span);
+            }
+            contextMenu.style.display = 'none'; selectedRange = null;
+        };
+        document.addEventListener('contextmenu', (e) => {
+            const selection = window.getSelection();
+            if(selection.rangeCount > 0 && selection.toString().trim() !== '') {
+                e.preventDefault();
+                selectedRange = selection.getRangeAt(0);
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+            } else {
+                contextMenu.style.display = 'none';
+            }
+        });
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+
+        // Initialize UI
+        createNavButtons();
+        renderQuestions();
+        updateAnswerCount();
+    })();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 2 - Test 1 - Part 4 (Listening)</title>
+    <style>
+        /* Design system based on SKILL.md and template */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #1a1a2a; display: flex; justify-content: center; min-height: 100vh; }
+        .test-wrapper { width: 100%; max-width: 100%; background: #f5f3ee; display: flex; flex-direction: column; height: 100vh; }
+
+        .ielts-header { background: #1e3a5f; color: white; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #e6b422; flex-wrap: wrap; }
+        .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .ielts-logo { background: #e6b422; color: #1e3a5f; font-weight: 800; font-size: 24px; padding: 4px 18px; border-radius: 40px; }
+        .candidate { background: #2d4b77; padding: 4px 16px; border-radius: 30px; font-size: 14px; }
+        
+        .audio-controls { display: flex; align-items: center; gap: 15px; background: #0f2a44; padding: 6px 18px; border-radius: 40px; border: 1px solid #e6b422; }
+        .audio-controls audio { height: 40px; width: 320px; border-radius: 20px; }
+        .speed-select { background: #1e3a5f; color: white; border: 1px solid #e6b422; border-radius: 20px; padding: 4px 8px; font-size: 14px; cursor: pointer; outline: none; }
+        .volume-icon { font-size: 20px; cursor: pointer; color: #e6b422; }
+
+        .font-controls { display: flex; gap: 5px; background: #2d4b77; padding: 3px; border-radius: 30px; }
+        .font-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: white; font-weight: bold; cursor: pointer; }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        .question-nav { background: #d2cbbc; padding: 6px 20px; border-bottom: 2px solid #b0aa9a; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn { width: 32px; height: 32px; border-radius: 6px; border: 2px solid #1e3a5f; background: white; color: #1e3a5f; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+
+        .main-area { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .transcript-panel { width: 0; background: #fffcf5; border-right: 2px solid #b0aa9a; display: flex; flex-direction: column; overflow: hidden; transition: width 0.2s ease; }
+        .questions-panel { width: 100%; background: #f8f6f0; display: flex; flex-direction: column; overflow: hidden; transition: width 0.2s ease; }
+        .main-area.show-transcript .transcript-panel { width: 45%; }
+        .main-area.show-transcript .questions-panel { width: 55%; }
+        .resizer { width: 8px; background: #b0aa9a; cursor: col-resize; display: none; }
+        .main-area.show-transcript .resizer { display: block; }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header { background: #d2cbbc; padding: 8px 15px; font-weight: 600; color: #1e3a5f; border-bottom: 1px solid #b0aa9a; display: flex; justify-content: space-between; }
+        .transcript-content, .questions-list { flex: 1; overflow-y: auto; padding: 20px; line-height: 1.7; }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        .questions-list.centered { display: flex; flex-direction: column; min-height: 100%; }
+        .questions-list.centered > div { width: 100%; margin: 0; }
+        
+        .notes-box { background: #f0ebe0; border-left: 4px solid #e6b422; padding: 20px 25px; border-radius: 12px; margin: 15px 0; }
+        .question-item { margin-bottom: 25px; padding: 15px; border-radius: 8px; background: #f9f7f2; border: 1px solid #e0d6c8; position: relative; }
+        .question-item.correct { background: #e8f5e8; border-color: #4CAF50; }
+        .question-item.incorrect { background: #ffebee; border-color: #f44336; }
+        .question-text { font-weight: 600; margin-bottom: 12px; color: #1e3a5f; font-size: 1.1rem; }
+        
+        .options { display: flex; flex-direction: column; gap: 8px; margin-left: 15px; }
+        .option { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .option input { width: 18px; height: 18px; cursor: pointer; }
+        .option label { cursor: pointer; font-size: 1rem; flex: 1; color: #333; }
+        
+        .eye-icon { display: none; margin-left: 10px; cursor: pointer; font-size: 18px; opacity: 0.7; }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .correct-answer-badge { display: none; background: #4CAF50; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; margin-left: 15px; font-weight: bold; }
+
+        .bottom-bar { background: #d2cbbc; padding: 10px 20px; display: flex; gap: 15px; border-top: 1px solid #b0aa9a; align-items: center; }
+        .btn { padding: 6px 20px; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 14px; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:active { background: #152943; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn:disabled { background: #9aaec2; cursor: not-allowed; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; color: #1e3a5f; }
+
+        /* Explanation Panel */
+        .explanation-panel { position: relative; background: #fffef9; border-left: 4px solid #e6b422; padding: 15px 16px 8px 16px; margin: 0 20px 12px 20px; border-radius: 10px; display: none; max-height: 220px; overflow-y: auto; font-size: 1rem; }
+        .resize-handle { position: absolute; top: 0; left: 0; right: 0; height: 10px; cursor: ns-resize; z-index: 100; }
+        .resize-handle:hover { background: rgba(30, 58, 95, 0.05); }
+        .explanation-panel.show { display: block; }
+        .explanation-header { font-weight: 700; color: #1e3a5f; display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .close-btn { cursor: pointer; }
+        .explanation-content { line-height: 1.6; color: #000; }
+        .explanation-content strong { color: #1e3a5f; }
+        
+        .keyword-highlight { text-decoration: underline; text-decoration-color: #e67e22; text-decoration-thickness: 3px; background-color: #fff3cd; font-weight: 600; border-radius: 4px; padding: 0 2px; }
+        .transcript-highlight { background-color: #fcf4cf !important; border-radius: 4px; padding: 4px; }
+        .scroll-highlight { animation: highlightFlash 1s ease; }
+        @keyframes highlightFlash { 0% { background-color: #fcf4cf; } 50% { background-color: #f1c40f; } 100% { background-color: #fcf4cf; } }
+
+        /* Highlight classes */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; }
+        .context-menu { position: fixed; background: white; border: 1px solid #9a8c7a; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); padding: 5px 0; border-radius: 8px; z-index: 1000; display: none; min-width: 150px; }
+        .context-menu div { padding: 8px 20px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .context-menu div:last-child { border-bottom: none; }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper">
+    <!-- Header -->
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 2 · Test 1 · Part 4 (Listening)</div>
+            <div class="audio-controls">
+                <audio id="listeningAudio" controls>
+                    <source src="B1 Preliminary 2 - Test 1 Part 4.mp3" type="audio/mpeg">
+                </audio>
+                <select class="speed-select" id="speedSelect">
+                    <option value="0.7">0.7x</option>
+                    <option value="0.9">0.9x</option>
+                    <option value="1.0" selected>1x</option>
+                    <option value="1.1">1.1x</option>
+                    <option value="1.25">1.25x</option>
+                </select>
+                <span class="volume-icon">🔊</span>
+            </div>
+        </div>
+        <div class="font-controls">
+            <button class="font-btn" id="fontSmall">A-</button>
+            <button class="font-btn" id="fontMedium">A</button>
+            <button class="font-btn active" id="fontLarge">A+</button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="question-nav">
+        <span style="font-weight:600; color:#1e3a5f;">Questions 20-25:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-area" id="mainArea">
+        <!-- Transcript Panel -->
+        <div class="transcript-panel" id="transcriptPanel">
+            <div class="panel-header"><span>TRANSCRIPT</span></div>
+            <div class="transcript-content font-large" id="transcriptContent"></div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+
+        <!-- Questions Panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 20-25</span>
+                <span class="answer-badge" id="answeredCount">0/6 answered</span>
+            </div>
+            <div class="questions-list font-large centered" id="questionsContent">
+                <div>
+                    <h3>PART 4 Questions 20–25</h3>
+                    <p style="margin-bottom: 20px;"><em>For each question, choose the correct answer.</em></p>
+                    <p style="margin-bottom: 20px;">You will hear an interview with a wildlife photographer called James Thomson who has won a photography competition.</p>
+                    <div id="questionsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
+    </div>
+
+    <!-- Explanation Panel -->
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="resize-handle" id="explanationResizer"></div>
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+</div>
+
+<div class="context-menu" id="contextMenu">
+    <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+    <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+    <div onclick="applyHighlight('pink')">Highlight hồng</div>
+    <div onclick="removeHighlight()">Xóa highlight</div>
+</div>
+
+<script>
+    (function() {
+        // ==================== DATA & ANSWER KEY ====================
+        const answerKey = { q20: 'A', q21: 'A', q22: 'B', q23: 'C', q24: 'C', q25: 'A' };
+        const displayAnswers = { ...answerKey };
+
+        const detailedExplanations = {
+            q20: `<strong>Đáp án: A – receiving a camera as a gift</strong><br>
+                  James giải thích niềm đam mê bắt đầu khi: <em>"And one day <span class='keyword-highlight'>my uncle bought me a camera, and from then on I started taking pictures.</span>"</em> (Và một ngày nọ chú tôi mua cho tôi một chiếc máy ảnh, và kể từ đó tôi bắt đầu chụp ảnh).
+                  <br><br>
+                  <strong>✗ B (seeing his mother taking photographs) không đúng:</strong> Mẹ anh ấy là một họa sĩ (painter), bà đưa anh đi xem triển lãm nghệ thuật chứ không phải là người chụp ảnh.
+                  <br>
+                  <strong>✗ C (attending a photography exhibition) không đúng:</strong> Anh ấy đi xem triển lãm nghệ thuật (art exhibitions) nói chung cùng mẹ để khơi gợi tính sáng tạo, không phải triển lãm nhiếp ảnh cụ thể.`,
+            q21: `<strong>Đáp án: A – He had taken photos in it before.</strong><br>
+                  James nói về công viên nơi chụp bức ảnh đạt giải: <em>"You'd be amazed how much wildlife there is, and <span class='keyword-highlight'>I've managed to get some fantastic pictures there over the years.</span>"</em> (Bạn sẽ ngạc nhiên có bao nhiêu động vật hoang dã ở đó, và tôi đã chụp được những bức ảnh tuyệt vời ở đó qua nhiều năm). Điều này chứng tỏ anh ấy đã chụp ở đây nhiều lần trước đó.
+                  <br><br>
+                  <strong>✗ B (Someone he knew recommended it to him) không đúng:</strong> Không có thông tin nào về việc ai đó giới thiệu địa điểm này. 
+                  <br>
+                  <strong>✗ C (It's always been well known for its natural beauty) không đúng:</strong> Anh ấy nói thực tế đó <em>"không phải là nơi hấp dẫn nhất"</em> (not the most attractive place), mặc dù gần đây nó đã được cải thiện.`,
+            q22: `<strong>Đáp án: B – pleased to meet a famous photographer.</strong><br>
+                  James chia sẻ về "phần hay nhất" (the best bit) sau khi thắng giải: <em>"<span class='keyword-highlight'>The best bit was being introduced to a well-known guy who takes pictures for an international magazine</span> - I got lots of tips"</em>. (Phần hay nhất là được giới thiệu với một người nổi tiếng chuyên chụp ảnh cho một tạp chí quốc tế - tôi đã nhận được rất nhiều lời khuyên).
+                  <br><br>
+                  <strong>✗ A (keen to tell his parents about his achievement) không đúng:</strong> Bố mẹ anh ấy thực tế đã nhận được cuộc gọi thông báo thắng giải trước, nên anh ấy không phải là người "háo hức kể" cho họ.
+                  <br>
+                  <strong>✗ C (surprised because he hadn't won in previous competitions) không đúng:</strong> Anh ấy ngạc nhiên vì mình <em>"chưa bao giờ tham gia cuộc thi nào trước đó"</em> (never entered one before), chứ không phải vì từng thua.`,
+            q23: `<strong>Đáp án: C – It teaches people something new.</strong><br>
+                  Nhiếp ảnh trong mắt James không chỉ là ảnh đẹp: <em>"Photos are more than just pretty pictures. They should be worth looking at, and <span class='keyword-highlight'>help you learn things about life.</span>"</em> (Những bức ảnh không chỉ là những bức hình đẹp. Chúng cần đáng để xem và giúp bạn học được những điều về cuộc sống).
+                  <br><br>
+                  <strong>✗ A (It needs plenty of planning) không đúng:</strong> Anh ấy nói bạn "không bao giờ biết mình sẽ thấy gì", ngầm hiểu yếu tố may mắn và khoảnh khắc hơn là lên kế hoạch tỉ mỉ.
+                  <br>
+                  <strong>✗ B (It must be beautiful to look at) không đúng:</strong> Anh ấy khẳng định ảnh "hơn cả những bức hình đẹp" (more than just pretty pictures).`,
+            q24: `<strong>Đáp án: C – it’s a great social activity.</strong><br>
+                  James nhấn mạnh yếu tố cộng đồng của sở thích này: <em>"...<span class='keyword-highlight'>there are lots of clubs, and it's really fun doing it with other people.</span>"</em> (Có rất nhiều câu lạc bộ, và thật sự rất vui khi thực hiện nó cùng với những người khác).
+                  <br><br>
+                  <strong>✗ A (it involves travelling to interesting places) không đúng:</strong> Anh ấy nói những người bình thường có thể chụp được ảnh tuyệt vời <em>"gần nhà"</em> (closer to home), không nhất thiết phải đi xa.
+                  <br>
+                  <strong>✗ B (it can become a successful career) không đúng:</strong> Anh ấy nhắc đến việc các chuyên gia kiếm được nhiều tiền, nhưng đang giải thích tại sao nó là một "sở thích" (hobby) tốt cho tất cả mọi người.`,
+            q25: `<strong>Đáp án: A – Spend a lot of time taking pictures.</strong><br>
+                  Lời khuyên cốt lõi của James dành cho người mới: <em>"...<span class='keyword-highlight'>nothing's better than getting out there and getting experience.</span>"</em> (Không có gì tốt hơn việc ra ngoài đó và tích lũy kinh nghiệm). Việc ra ngoài tích lũy kinh nghiệm đồng nghĩa với việc dành thời gian chụp ảnh thực tế.
+                  <br><br>
+                  <strong>✗ B (Do a course to get the right skills) không đúng:</strong> James nói anh ấy <em>"không học kỹ năng thông qua khóa học"</em> (didn't learn his skills by taking a course).
+                  <br>
+                  <strong>✗ C (Get the best equipment possible) không đúng:</strong> Anh ấy nói trang thiết bị tối tân là <em>"thực sự không cần thiết"</em> (really not necessary) và điện thoại ngày nay cũng chụp rất tốt.`
+        };
+
+        const transcriptHTML = `
+            <p><strong>Woman:</strong> Today, I’m joined by 20-year-old James Thomson, who’s won a national photography competition with his spectacular photograph of a fish jumping out of the water. James, how did you first become interested in photography?</p>
+            <p><strong>Man:</strong> Well, I grew up enjoying the countryside and wildlife. My mother’s a painter, and often took me to art exhibitions so I think a love of being creative comes from her. <span class="highlightable" data-q="20">And one day my uncle bought me a camera, and from then on I started taking pictures.</span> My mum was really pleased.</p>
+            <p><strong>Woman:</strong> And where did you take your prize-winning photo?</p>
+            <p><strong>Man:</strong> Actually, in a park in my city, where my friends and I used to play. It’s not the most attractive place, even though it’s really improved a lot recently and the lake where I took the picture was made bigger. You’d be amazed how much wildlife there is, and <span class="highlightable" data-q="21">I’ve managed to get some fantastic pictures there over the years.</span> Everyone seemed to like them.</p>
+            <p><strong>Woman:</strong> How did you feel about winning the competition?</p>
+            <p><strong>Man:</strong> Honestly, I was shocked – I’d never entered one before. My parents were really excited because they got the phone call saying I’d won. <span class="highlightable" data-q="22">The best bit was being introduced to a well-known guy who takes pictures for an international magazine</span> – I got lots of tips, and I’ve gone on to do more competitions since.</p>
+            <p><strong>Woman:</strong> Great! So, what makes a good photo, in your opinion?</p>
+            <p><strong>Man:</strong> Well, I hope my picture shows that wildlife is still around even in the middle of a city. And that’s what I like. <span class="highlightable" data-q="23">Photos are more than just pretty pictures. They should be worth looking at, and help you learn things about life.</span> So I’m always ready because you never know what you’ll see!</p>
+            <p><strong>Woman:</strong> True! Why’s photography such a popular hobby?</p>
+            <p><strong>Man:</strong> Well, many people have this idea of a photographer alone out on a mountain somewhere, but actually, <span class="highlightable" data-q="24">there are lots of clubs, and it's really fun doing it with other people.</span> It’s easy to do anywhere – even though experts earn a lot taking pictures all over the world, ordinary people can also get wonderful pictures closer to home.</p>
+            <p><strong>Woman:</strong> Indeed! So James, finally – what advice do you have for young photographers?</p>
+            <p><strong>Man:</strong> Find out what works and what doesn't. I didn’t learn my skills by taking a course – <span class="highlightable" data-q="25">nothing’s better than getting out there and getting experience.</span> Of course, there’s lots of fantastic equipment available but it’s really not necessary and most phones take great pictures.</p>
+            <p><strong>Woman:</strong> James – many thanks ...</p>
+            <p><em>Now listen again.</em></p>
+            <p style="color:#666;">That is the end of Part Four.<br>That is the end of the test.</p>
+        `;
+
+        const questionsData = [
+            { num: 20, text: "What made James become interested in photography?", options: ["receiving a camera as a gift", "seeing his mother taking photographs", "attending a photography exhibition"] },
+            { num: 21, text: "What does James say about the park where he took his prize-winning photo?", options: ["He had taken photos in it before.", "Someone he knew recommended it to him.", "It's always been well known for its natural beauty."] },
+            { num: 22, text: "After winning the competition, James felt", options: ["keen to tell his parents about his achievement.", "pleased to meet a famous photographer.", "surprised because he hadn't won in previous competitions."] },
+            { num: 23, text: "In James' opinion, what is most important for a good photograph?", options: ["It needs plenty of planning.", "It must be beautiful to look at.", "It teaches people something new."] },
+            { num: 24, text: "James thinks that photography is a good hobby because", options: ["it involves travelling to interesting places.", "it can become a successful career.", "it’s a great social activity."] },
+            { num: 25, text: "What advice does James have for other photographers?", options: ["Spend a lot of time taking pictures.", "Do a course to get the right skills.", "Get the best equipment possible."] }
+        ];
+
+        // ---------- STATE & LOGIC ----------
+        let examSubmitted = false, explanationMode = false;
+        const audio = document.getElementById('listeningAudio'), speedSelect = document.getElementById('speedSelect');
+        if(speedSelect) speedSelect.addEventListener('change', () => audio.playbackRate = parseFloat(speedSelect.value));
+
+        function getUserAnswer(q) {
+            const r = document.getElementsByName(`q${q}`);
+            for(let i of r) if(i.checked) return i.value;
+            return null;
+        }
+        function isAnswerCorrect(q, user) { return user === answerKey[`q${q}`]; }
+        function updateAnswerCount() {
+            let answered = 0;
+            for(let i=20; i<=25; i++) if(getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
+            for(let i=20; i<=25; i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if(btn) { btn.className = `nav-btn ${getUserAnswer(i)?'answered':'unanswered'}`; }
+            }
+        }
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for(let i=20; i<=25; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered'; btn.textContent = i; btn.dataset.question = i;
+                btn.onclick = () => {
+                   document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                   btn.classList.add('active');
+                };
+                nav.appendChild(btn);
+            }
+        }
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questionsData.forEach(q => {
+                const div = document.createElement('div'); div.className = 'question-item'; div.id = `question-${q.num}`;
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="options">
+                        ${q.options.map((opt, idx) => `
+                            <div class="option">
+                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65+idx)}" id="q${q.num}${String.fromCharCode(65+idx)}">
+                                <label for="q${q.num}${String.fromCharCode(65+idx)}">${String.fromCharCode(65+idx)}. ${opt}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                container.appendChild(div);
+            });
+            document.querySelectorAll('input').forEach(i => i.onchange = updateAnswerCount);
+        }
+        function markAnswers() {
+            for(let i=20; i<=25; i++) {
+                const qDiv = document.getElementById(`question-${i}`), user = getUserAnswer(i), correct = isAnswerCorrect(i, user);
+                qDiv.classList.remove('correct','incorrect');
+                qDiv.querySelector('.correct-answer-badge')?.remove();
+                if(correct) qDiv.classList.add('correct');
+                else {
+                    qDiv.classList.add('incorrect');
+                    const badge = document.createElement('span'); badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    qDiv.appendChild(badge);
+                }
+            }
+        }
+        function showExplanation(questionNum) {
+            if(!explanationMode && !examSubmitted) return;
+            document.querySelectorAll('.transcript-highlight, .keyword-highlight').forEach(el => el.classList.remove('transcript-highlight','keyword-highlight'));
+            const highlights = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
+            highlights.forEach(span => {
+                span.closest('p')?.classList.add('transcript-highlight');
+                span.classList.add('keyword-highlight', 'scroll-highlight');
+                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
+            });
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
+            if(examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(trống)', correct = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px; padding:10px; border-radius:8px; background:${correct?'#e8f5e8':'#ffebee'};">
+                    <strong>Bạn chọn:</strong> ${user}<br>${!correct ? `<strong>Đáp án đúng:</strong> ${displayAnswers[('q'+questionNum)]}` : '✅ Đúng!'}</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+
+        function saveToDashboard(score) {
+            const data = { partId: 4, name: "Part 4", totalQuestions: 6, correctCount: score };
+            localStorage.setItem('pet_listening_book2_test1_part4', JSON.stringify(data));
+        }
+
+        document.getElementById('submitBtn').onclick = () => {
+            if(examSubmitted) return;
+            let un = []; for(let i=20; i<=25; i++) if(!getUserAnswer(i)) un.push(i);
+            if(un.length && !confirm(`Bạn còn ${un.length} câu chưa chọn. Nộp bài?`)) return;
+            examSubmitted = true;
+            document.getElementById('mainArea').classList.add('show-transcript');
+            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true; document.getElementById('explainBtn').disabled = false;
+            let score = 0; for(let i=20; i<=25; i++) if(isAnswerCorrect(i, getUserAnswer(i))) score++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Số câu đúng:</strong> ${score}/6</p><p>Nhấn <strong>"Xem giải thích"</strong> để xem chi tiết.</p>`;
+            saveToDashboard(score);
+            document.querySelectorAll('input').forEach(el => el.disabled = true);
+        };
+        document.getElementById('explainBtn').onclick = function() {
+            explanationMode = true; document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
+            this.disabled = true; this.textContent = 'Đang xem giải thích';
+        };
+        document.getElementById('resetBtn').onclick = () => { if (confirm('Reset tất cả?')) location.reload(); };
+        document.getElementById('closeExplanation').onclick = () => document.getElementById('explanationPanel').classList.remove('show');
+        document.addEventListener('click', e => { if (e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question); });
+
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
+                el.className = `${el.classList.contains('questions-list')?'questions-list centered':'transcript-content'} font-${size}`;
+            });
+        }
+        document.getElementById('fontSmall').onclick = () => setFontSize('small');
+        document.getElementById('fontMedium').onclick = () => setFontSize('medium');
+        document.getElementById('fontLarge').onclick = () => setFontSize('large');
+
+        // Logic Resizer
+        const transcriptPanel = document.getElementById('transcriptPanel'), questionsPanel = document.getElementById('questionsPanel'), resizer = document.getElementById('resizer');
+        let resizing = false;
+        resizer.onmousedown = () => { resizing = true; document.body.style.cursor = 'col-resize'; };
+        document.onmousemove = (e) => {
+            if(!resizing) return;
+            const rect = document.getElementById('mainArea').getBoundingClientRect();
+            let w = e.clientX - rect.left - 4;
+            w = Math.min(Math.max(w, 250), rect.width - 250);
+            transcriptPanel.style.width = w + 'px'; questionsPanel.style.width = (rect.width - w - 8) + 'px';
+        };
+        document.onmouseup = () => { resizing = false; document.body.style.cursor = 'default'; };
+
+        // Vertical resizer cho explanation
+        const expPanel = document.getElementById('explanationPanel'), expResizer = document.getElementById('explanationResizer');
+        let resizingExp = false, startY, startH;
+        expResizer.onmousedown = (e) => { resizingExp = true; startY = e.clientY; startH = expPanel.offsetHeight; document.body.style.cursor = 'ns-resize'; };
+        document.addEventListener('mousemove', (e) => {
+            if(!resizingExp) return;
+            const newH = startH + (startY - e.clientY);
+            if(newH > 100 && newH < window.innerHeight * 0.7) { expPanel.style.height = newH + 'px'; expPanel.style.maxHeight = newH + 'px'; }
+        });
+        document.addEventListener('mouseup', () => { resizingExp = false; document.body.style.cursor = 'default'; });
+
+        createNavButtons(); renderQuestions(); updateAnswerCount(); setFontSize('large');
+    })();
+
+    // Context menu highlight
+    (function() {
+        let selRange = null; const menu = document.getElementById('contextMenu');
+        document.oncontextmenu = (e) => {
+            if(!e.target.closest('#mainArea')) return;
+            e.preventDefault(); const sel = window.getSelection();
+            if(sel.toString().trim()) {
+                selRange = sel.getRangeAt(0); menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px'; menu.style.display = 'block';
+            }
+        };
+        document.onclick = () => { menu.style.display = 'none'; selRange = null; };
+        window.applyHighlight = (c) => {
+            if(!selRange) return;
+            const span = document.createElement('span'); span.className = `highlight-${c}`; span.appendChild(selRange.extractContents()); selRange.insertNode(span);
+        };
+        window.removeHighlight = () => {
+            if(!selRange) return;
+            const hs = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+            hs.forEach(h => { if(selRange.intersectsNode(h)) h.replaceWith(...h.childNodes); });
+        };
+    })();
+</script>
+</body>
+</html>
+
