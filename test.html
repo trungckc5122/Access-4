@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET 1 - Test 1 - Part 1 (Reading)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: #1a1a2a;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .test-wrapper {
+            width: 100%;
+            max-width: 1600px;
+            background: #f5f3ee;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Reading mode (thêm từ IELTS reading) */
+        .test-wrapper.reading-mode {
+            background: #f8f5e6;
+        }
+        .test-wrapper.reading-mode .reading-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .questions-panel {
+            background: #fffaf0;
+        }
+        .test-wrapper.reading-mode .panel-header {
+            background: #d6cdb8;
+        }
+
+        /* Header */
+        .ielts-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e6b422;
+            flex-wrap: wrap;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .ielts-logo {
+            background: #e6b422;
+            color: #1e3a5f;
+            font-weight: 800;
+            font-size: 24px;
+            padding: 4px 18px;
+            border-radius: 40px;
+        }
+        .candidate {
+            background: #2d4b77;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+        }
+        .timer {
+            background: #0f2a44;
+            padding: 4px 15px;
+            border-radius: 40px;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: monospace;
+            border: 1px solid #e6b422;
+        }
+        .reading-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px 8px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #0f2a44;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.3s;
+            border: 1px solid #e6b422;
+        }
+        .toggle-switch.active {
+            background: #e6b422;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+        .toggle-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .font-controls {
+            display: flex;
+            gap: 5px;
+            background: #2d4b77;
+            padding: 3px;
+            border-radius: 30px;
+        }
+        .font-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .font-btn:hover { background: #3e5f8a; }
+        .font-btn.active { background: #e6b422; color: #1e3a5f; }
+
+        /* Question navigator */
+        .question-nav {
+            background: #d2cbbc;
+            padding: 6px 20px;
+            border-bottom: 2px solid #b0aa9a;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+        .nav-btn {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            border: 2px solid #1e3a5f;
+            background: white;
+            color: #1e3a5f;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .nav-btn:hover { background: #e6b422; }
+        .nav-btn.answered { background: #4CAF50; color: white; border-color: #2e7d32; }
+        .nav-btn.unanswered { background: #e0e0e0; color: #757575; border-color: #9e9e9e; }
+        .nav-btn.active { border: 3px solid #e6b422; transform: scale(1.05); }
+
+        /* Main area */
+        .main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .reading-panel {
+            width: 45%;
+            background: #fffcf5;
+            border-right: 2px solid #b0aa9a;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .questions-panel {
+            width: 55%;
+            background: #f8f6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .resizer {
+            width: 8px;
+            background: #b0aa9a;
+            cursor: col-resize;
+        }
+        .resizer:hover { background: #e6b422; }
+
+        .panel-header {
+            background: #d2cbbc;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #1e3a5f;
+            border-bottom: 1px solid #b0aa9a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .reading-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            line-height: 1.7;
+        }
+        .questions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .font-small { font-size: 13px; }
+        .font-medium { font-size: 15px; }
+        .font-large { font-size: 17px; }
+
+        /* Reading text blocks */
+        .reading-card {
+            background: #fefcf7;
+            border-left: 4px solid #e6b422;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .reading-card p {
+            margin: 5px 0;
+        }
+        .reading-card .source {
+            font-size: 0.85em;
+            color: #7f6b5a;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        /* [THAY ĐỔI] Số câu trong bài đọc */
+        .card-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: #e6b422;
+            background: #1e3a5f;
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        /* Question items */
+        .question-item {
+            margin-bottom: 28px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f9f7f2;
+            border: 1px solid #e0d6c8;
+            position: relative;
+        }
+        .question-item.correct { background: #e8f5e8; border-color: #4CAF50; }
+        .question-item.incorrect { background: #ffebee; border-color: #f44336; }
+        .question-text {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1e3a5f;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-left: 15px;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .option input { width: 16px; height: 16px; cursor: pointer; }
+        .option label { cursor: pointer; }
+        .eye-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.7;
+            display: none;
+        }
+        .eye-icon:hover { opacity: 1; color: #e6b422; }
+        .correct-answer-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 15px;
+            font-weight: bold;
+        }
+
+        /* Bottom bar */
+        .bottom-bar {
+            background: #d2cbbc;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            border-top: 1px solid #b0aa9a;
+            align-items: center;
+        }
+        .btn {
+            padding: 6px 20px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1e3a5f; color: white; }
+        .btn-primary:disabled { background: #9aaec2; cursor: not-allowed; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:disabled { background: #a5d6a7; }
+        .btn-danger { background: #f44336; color: white; }
+        .progress { background: white; border-radius: 20px; padding: 4px 12px; font-weight: 600; }
+
+        /* Explanation panel */
+        .explanation-panel {
+            background: #fffef9;
+            border-left: 4px solid #e6b422;
+            padding: 12px 20px;
+            margin: 0 20px 12px 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .explanation-panel.show { display: block; }
+        .explanation-header {
+            font-weight: 700;
+            color: #1e3a5f;
+            display: flex;
+            justify-content: space-between;
+        }
+        .close-btn { cursor: pointer; }
+
+        /* Highlight styles */
+        .highlight-yellow { background-color: #f9e79f; border-radius: 3px; padding: 0 2px; }
+        .highlight-green { background-color: #a9d6b0; border-radius: 3px; padding: 0 2px; }
+        .highlight-pink { background-color: #fbb9c0; border-radius: 3px; padding: 0 2px; }
+        .dynamic-highlight {
+            background-color: #ffe082;
+            text-decoration: underline;
+            text-decoration-color: #e67e22;
+            text-decoration-thickness: 2px;
+            font-weight: 700;
+            display: inline;
+            transition: 0.2s;
+        }
+        .question-item.highlight-question {
+            border-left: 3px solid #f1c40f;
+            background-color: #fef9e7;
+        }
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #9a8c7a;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            padding: 5px 0;
+            border-radius: 8px;
+            z-index: 1000;
+            display: none;
+            min-width: 150px;
+        }
+        .context-menu div {
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+        .context-menu div:hover { background: #1e3a5f; color: white; }
+    </style>
+</head>
+<body>
+<div class="test-wrapper" id="testWrapper">
+    <!-- Header -->
+    <div class="ielts-header">
+        <div class="brand">
+            <div class="ielts-logo">PET</div>
+            <div class="candidate">B1 Preliminary 1 · Test 1 · Part 1 (Reading)</div>
+            <div class="reading-mode-toggle" id="readingModeToggle">
+                <div class="toggle-switch" id="toggleSwitch"></div>
+                <span class="toggle-label">Đọc sách</span>
+            </div>
+            <div class="font-controls">
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+        </div>
+        <!-- [THAY ĐỔI] Bỏ timer: ẩn div này -->
+    </div>
+
+    <!-- Question nav -->
+    <div class="question-nav">
+        <span style="font-weight:600;">Câu 1-5:</span>
+        <div class="nav-buttons" id="navButtons"></div>
+    </div>
+
+    <!-- Main area -->
+    <div class="main-area" id="mainArea">
+        <!-- Reading panel (bài đọc) -->
+        <div class="reading-panel" id="readingPanel">
+            <!-- [THAY ĐỔI] Bỏ icon 📖 -->
+            <div class="panel-header"><span>READING PASSAGE</span></div>
+            <div class="reading-content font-large" id="readingContent">
+                <!-- Các đoạn văn bản theo đề PET Part 1 -->
+                <!-- [THAY ĐỔI] Thêm số câu vào mỗi card -->
+                <div class="reading-card" data-text-id="1">
+                    <div class="card-num">1</div>
+                    <p><strong>College Shop</strong><br>
+                    Now is the time to buy essential items like pens and folders – prices reduced until Friday.<br>
+                    Open daily during lunch breaks. Also for 30 minutes after last class everyday apart from Monday.</p>
+                </div>
+                <div class="reading-card" data-text-id="2">
+                    <div class="card-num">2</div>
+                    <p><strong>Message from Jake to Max</strong><br>
+                    Hi Max!<br>
+                    I'm afraid I'll no longer be able to come on the shopping trip tomorrow. My aunt is visiting and didn't give us much notice.<br>
+                    Jake</p>
+                </div>
+                <div class="reading-card" data-text-id="3">
+                    <div class="card-num">3</div>
+                    <p><strong>Special Offer</strong><br>
+                    Order any pizza by 7 p.m. and get another one half-price!</p>
+                </div>
+                <div class="reading-card" data-text-id="4">
+                    <div class="card-num">4</div>
+                    <p><strong>From: Mr Wood</strong><br>
+                    To: All students<br>
+                    Subject: Recycling<br>
+                    We've done very well with the recycling paper and plastic waste in the school this term – but we could do better! Please put any suggestions in the box outside my office.</p>
+                </div>
+                <div class="reading-card" data-text-id="5">
+                    <div class="card-num">5</div>
+                    <p><strong>Mel to Sam (text message)</strong><br>
+                    Hi Sam,<br>
+                    Thanks for taking me to the cinema last night. I didn't say at the time but I was a bit frightened! I think I need to watch a comedy next time!<br>
+                    Mel</p>
+                </div>
+            </div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <!-- Questions panel -->
+        <div class="questions-panel" id="questionsPanel">
+            <div class="panel-header">
+                <span>QUESTIONS 1-5</span>
+                <span class="answer-badge" id="answeredCount">0/5 answered</span>
+            </div>
+            <div class="questions-list font-large" id="questionsContent">
+                <h3>Part 1</h3>
+                <p><em>For each question, choose the correct answer (A, B or C).</em></p>
+                <div id="questionsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+        <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
+        <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
+        <button class="btn btn-danger" id="resetBtn">Reset tất cả</button>
+        <div class="progress" id="progressDisplay">Đã làm: 0/5</div>
+    </div>
+
+    <!-- Explanation panel -->
+    <div class="explanation-panel" id="explanationPanel">
+        <div class="explanation-header">
+            <span id="explanationTitle">Giải thích</span>
+            <span class="close-btn" id="closeExplanation">✕ Đóng</span>
+        </div>
+        <div class="explanation-content" id="explanationText"></div>
+    </div>
+
+    <!-- Context menu highlight -->
+    <div class="context-menu" id="contextMenu">
+        <div onclick="applyHighlight('yellow')">Highlight vàng</div>
+        <div onclick="applyHighlight('green')">Highlight xanh lá</div>
+        <div onclick="applyHighlight('pink')">Highlight hồng</div>
+        <div onclick="removeHighlight()">Xóa highlight</div>
+    </div>
+
+    <script>
+        // ---------- ANSWER KEY & EXPLANATIONS (từ ảnh) ----------
+        const answerKey = { q1: 'B', q2: 'C', q3: 'A', q4: 'C', q5: 'B' };
+        const displayAnswers = { q1: 'B', q2: 'C', q3: 'A', q4: 'C', q5: 'B' };
+
+        // Chi tiết giải thích (từ file ảnh)
+        const detailedExplanations = {
+            q1: `<strong>Đáp án: B</strong><br>"prices reduced" là "special offers", "until Friday" nghĩa là đang có ưu đãi. A sai vì không bắt buộc mua ở shop. C sai vì shop mở cả giờ ăn trưa thứ Hai.`,
+            q2: `<strong>Đáp án: C</strong><br>"I'll no longer be able to come" thể hiện hủy kế hoạch đã có. A sai vì không đề nghị ngày mới. B sai vì không mời gặp dì.`,
+            q3: `<strong>Đáp án: A</strong><br>"any pizza" có nghĩa tất cả pizza đều áp dụng. B sai vì chỉ mua 1 pizza thì giá đầy đủ. C sai vì pizza thứ hai chỉ giảm nửa giá, không miễn phí.`,
+            q4: `<strong>Đáp án: C</strong><br>"we could do better!" và "put any suggestions" cho thấy ông Wood muốn ý tưởng mới. A sai vì ông ấy đang yêu cầu gợi ý. B sai vì ông muốn bỏ ý tưởng vào hộp, không phải rác.`,
+            q5: `<strong>Đáp án: B</strong><br>"I didn't say at the time but I was a bit frightened!" thừa nhận thấy sợ. A sai vì họ đã đi xem rồi. C sai vì không hỏi thời gian cụ thể.`
+        };
+
+        // [THAY ĐỔI] Highlight nhiều keyword theo đúng giải thích
+        const highlightMap = {
+            q1: { cardId: 1, keywords: ["prices reduced until Friday"] },
+            q2: { cardId: 2, keywords: ["I'll no longer be able to come"] },
+            q3: { cardId: 3, keywords: ["any pizza", "half-price"] },
+            q4: { cardId: 4, keywords: ["we could do better!", "put any suggestions"] },
+            q5: { cardId: 5, keywords: ["I was a bit frightened"] }
+        };
+
+        // ---------- GLOBAL STATE ----------
+        let examSubmitted = false;
+        let explanationMode = false;
+        let selectedRange = null;
+
+        // [THAY ĐỔI] Bỏ timer hoàn toàn
+
+        // ---------- RENDER QUESTIONS ----------
+        const questionsData = [
+            { num: 1, text: "College Shop notice", options: ["Students must go to the college shop to buy certain items for their studies.", "Students can take advantage of special offers at the college shop at the moment.", "Students may visit the college shop at lunchtime every day except Monday."] },
+            { num: 2, text: "Jake's message to Max", options: ["suggest a new date for a shopping trip.", "invite Max to meet one of his relatives.", "cancel an arrangement he had made."] },
+            { num: 3, text: "Special Offer", options: ["All the pizzas in the restaurant are included in this offer.", "Any pizza ordered before 7 p.m. costs less than the usual price.", "At certain times, a customer can get two pizzas for the price of one."] },
+            { num: 4, text: "Mr Wood's email about recycling", options: ["Mr Wood has made suggestions on how to recycle waste produced by the school.", "Recycling materials should be put into the box outside Mr Wood's office.", "Mr Wood wants new ideas on ways to improve waste recycling in the school."] },
+            { num: 5, text: "Mel's text to Sam", options: ["accept Sam's invitation to the cinema.", "admit to Sam that she found the film scary.", "ask when Sam can see another film with her."] }
+        ];
+
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questionsData.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="options">
+                        ${q.options.map((opt, idx) => {
+                            const letter = String.fromCharCode(65+idx);
+                            return `<div class="option"><input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}"><label for="q${q.num}${letter}">${letter}. ${opt}</label></div>`;
+                        }).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Lấy câu trả lời
+        function getUserAnswer(qNum) {
+            const selected = document.querySelector(`input[name="q${qNum}"]:checked`);
+            return selected ? selected.value : null;
+        }
+
+        function isAnswerCorrect(qNum, answer) {
+            return answer === answerKey[`q${qNum}`];
+        }
+
+        function updateAnswerCount() {
+            let answered = 0;
+            for (let i=1; i<=5; i++) if (getUserAnswer(i)) answered++;
+            document.getElementById('answeredCount').textContent = `${answered}/5 answered`;
+            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/5`;
+            for (let i=1; i<=5; i++) {
+                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+                if (btn) {
+                    btn.classList.remove('answered','unanswered');
+                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
+                }
+            }
+        }
+
+        // Tạo nav buttons
+        function createNavButtons() {
+            const nav = document.getElementById('navButtons');
+            nav.innerHTML = '';
+            for (let i=1; i<=5; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn unanswered';
+                btn.textContent = i;
+                btn.dataset.question = i;
+                btn.addEventListener('click', () => {
+                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+                nav.appendChild(btn);
+            }
+        }
+
+        // Đánh dấu đúng/sai sau khi nộp
+        function markAnswers() {
+            for (let i=1; i<=5; i++) {
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (!questionDiv) continue;
+                const user = getUserAnswer(i);
+                const correct = isAnswerCorrect(i, user);
+                questionDiv.classList.remove('correct','incorrect');
+                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+                if (correct) {
+                    questionDiv.classList.add('correct');
+                } else {
+                    questionDiv.classList.add('incorrect');
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
+                    questionDiv.appendChild(badge);
+                }
+            }
+        }
+
+        // [THAY ĐỔI] Highlight câu chứa đáp án + gạch chân keyword, đồng thời highlight bên câu hỏi
+        function highlightAnswerInReading(questionNum) {
+            // Xóa highlight cũ
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => {
+                el.classList.remove('highlight-question');
+            });
+
+            const info = highlightMap[`q${questionNum}`];
+            if (!info) return;
+            const card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
+            if (!card) return;
+
+            // --- Highlight câu hỏi bên panel phải ---
+            const qItem = document.getElementById(`question-${questionNum}`);
+            if (qItem) qItem.classList.add('highlight-question');
+
+            // --- Highlight từng keyword trong bài đọc ---
+            const keywords = info.keywords || [];
+            let firstSpan = null;
+            keywords.forEach(keyword => {
+                const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    const idx = node.textContent.indexOf(keyword);
+                    if (idx !== -1) {
+                        const range = document.createRange();
+                        range.setStart(node, idx);
+                        range.setEnd(node, idx + keyword.length);
+                        const span = document.createElement('span');
+                        span.className = 'dynamic-highlight';
+                        try {
+                            range.surroundContents(span);
+                            if (!firstSpan) firstSpan = span;
+                        } catch(e) { console.log(e); }
+                        break;
+                    }
+                }
+            });
+            if (firstSpan) firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Hiển thị giải thích + highlight
+        function showExplanation(questionNum) {
+            if (!explanationMode && !examSubmitted) return;
+            highlightAnswerInReading(questionNum);
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
+            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
+            if (examSubmitted) {
+                const user = getUserAnswer(questionNum) || '(chưa chọn)';
+                const isCorrect = isAnswerCorrect(questionNum, user);
+                html += `<div style="margin-top:10px;padding:8px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
+                else html += `✅ Đúng!`;
+                html += `</div>`;
+            }
+            document.getElementById('explanationText').innerHTML = html;
+        }
+
+        // Reset toàn bộ
+        function resetAll() {
+            examSubmitted = false;
+            explanationMode = false;
+            for (let i=1; i<=5; i++) {
+                const radios = document.getElementsByName(`q${i}`);
+                radios.forEach(r => r.checked = false);
+                const div = document.getElementById(`question-${i}`);
+                if (div) {
+                    div.classList.remove('correct','incorrect');
+                    const badge = div.querySelector('.correct-answer-badge');
+                    if (badge) badge.remove();
+                }
+            }
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => {
+                el.classList.remove('highlight-question');
+            });
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').textContent = 'Nộp bài';
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+            updateAnswerCount();
+        }
+
+        // ---------- EVENT LISTENERS ----------
+        document.getElementById('submitBtn').addEventListener('click', () => {
+            if (examSubmitted) return;
+            let unanswered = [];
+            for (let i=1; i<=5; i++) if (!getUserAnswer(i)) unanswered.push(i);
+            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
+            examSubmitted = true;
+            markAnswers();
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
+            document.getElementById('explainBtn').disabled = false;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            let correctCount = 0;
+            for (let i=1; i<=5; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
+            document.getElementById('explanationPanel').classList.add('show');
+            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
+            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/5</p><p>Nhấn vào biểu tượng 👁️ để xem giải thích và vị trí đáp án trong bài đọc.</p>`;
+        });
+
+        document.getElementById('explainBtn').addEventListener('click', () => {
+            if (!examSubmitted) return;
+            explanationMode = true;
+            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
+            document.getElementById('explainBtn').disabled = true;
+            document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
+            document.getElementById('explanationPanel').classList.remove('show');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            if (confirm('Reset tất cả câu trả lời?')) resetAll();
+        });
+
+        document.getElementById('closeExplanation').addEventListener('click', () => {
+            document.getElementById('explanationPanel').classList.remove('show');
+            document.querySelectorAll('.dynamic-highlight').forEach(el => {
+                const parent = el.parentNode;
+                if (parent) {
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    parent.removeChild(el);
+                }
+            });
+            document.querySelectorAll('.question-item.highlight-question').forEach(el => {
+                el.classList.remove('highlight-question');
+            });
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.type === 'radio') updateAnswerCount();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('eye-icon')) {
+                const q = e.target.dataset.question;
+                showExplanation(q);
+            }
+        });
+
+        // Font size
+        function setFontSize(size) {
+            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
+            document.querySelectorAll('.reading-content, .questions-list').forEach(el => {
+                el.classList.remove('font-small','font-medium','font-large');
+                el.classList.add(`font-${size}`);
+            });
+        }
+        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
+        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
+        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
+
+        // Resizer
+        const readingPanel = document.getElementById('readingPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const main = document.getElementById('mainArea');
+            const rect = main.getBoundingClientRect();
+            let leftW = e.clientX - rect.left - 4;
+            if (leftW < 250) leftW = 250;
+            if (leftW > rect.width - 250) leftW = rect.width - 250;
+            readingPanel.style.width = leftW + 'px';
+            questionsPanel.style.width = (rect.width - leftW - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
+
+        // Reading mode toggle
+        const testWrapper = document.getElementById('testWrapper');
+        const toggleSwitch = document.getElementById('toggleSwitch');
+        document.getElementById('readingModeToggle').addEventListener('click', () => {
+            testWrapper.classList.toggle('reading-mode');
+            toggleSwitch.classList.toggle('active');
+        });
+
+        // Context menu highlight - cả reading panel VÀ questions panel
+        const readingContent = document.getElementById('readingContent');
+        const questionsContent = document.getElementById('questionsContent');
+        const contextMenu = document.getElementById('contextMenu');
+
+        function showContextMenu(e) {
+            const sel = window.getSelection();
+            if (sel.toString().trim()) {
+                e.preventDefault();
+                selectedRange = sel.getRangeAt(0);
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.style.display = 'block';
+            }
+        }
+
+        readingContent.addEventListener('contextmenu', showContextMenu);
+        questionsContent.addEventListener('contextmenu', showContextMenu);
+
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
+        window.applyHighlight = (color) => {
+            if (!selectedRange) return;
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(selectedRange.extractContents());
+                selectedRange.insertNode(span);
+            } catch(e) { console.log(e); }
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+        window.removeHighlight = () => {
+            if (!selectedRange) return;
+            const highlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+            highlights.forEach(h => {
+                if (selectedRange.intersectsNode(h)) {
+                    const parent = h.parentNode;
+                    while (h.firstChild) parent.insertBefore(h.firstChild, h);
+                    parent.removeChild(h);
+                }
+            });
+            contextMenu.style.display = 'none';
+            selectedRange = null;
+        };
+
+        // Khởi tạo
+        createNavButtons();
+        renderQuestions();
+        updateAnswerCount();
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        setFontSize('large'); // [THAY ĐỔI] Mặc định cỡ chữ lớn nhất
+    </script>
+</body>
+</html>
