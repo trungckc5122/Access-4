@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PET 1 · Test 2 · Part 3</title>
-    <link rel="stylesheet" href="listening-pet-common.css">
+    <link rel="stylesheet" href="listening-pet-common.css" id="styleLink">
 </head>
 <body>
 <div class="test-wrapper">
@@ -31,6 +31,14 @@
             <button class="font-btn" id="fontSmall">A-</button>
             <button class="font-btn" id="fontMedium">A</button>
             <button class="font-btn active" id="fontLarge">A+</button>
+        </div>
+        <div class="mode-toggle" id="modeToggleContainer">
+            <span class="mode-label">Hiện đại</span>
+            <label class="mode-switch" title="Chuyển đổi chế độ Cổ điển/Hiện đại">
+                <input type="checkbox" id="modeToggle">
+                <span class="mode-slider"></span>
+            </label>
+            <span class="mode-label">Cổ điển</span>
         </div>
         <button class="theme-toggle-btn" id="themeToggle" title="Chuyển đổi Dark/Light mode">
             <span class="icon-moon">🌙</span>
@@ -353,25 +361,55 @@
         document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
         setFontSize('large');
 
+        // ==================== MODE TOGGLE (Classic/Modern) ====================
+        const modeToggle = document.getElementById('modeToggle');
+        const styleLink = document.getElementById('styleLink');
+        const testWrapper = document.getElementById('testWrapper');
+        const html = document.documentElement;
+        const savedMode = localStorage.getItem('pet-mode');
+
+        function setMode(isClassic) {
+            if (isClassic) {
+                styleLink.href = 'listening-pet-common1.css';
+                testWrapper.classList.add('classic-mode');
+                html.removeAttribute('data-theme');
+                localStorage.removeItem('pet-theme');
+            } else {
+                styleLink.href = 'listening-pet-common.css';
+                testWrapper.classList.remove('classic-mode');
+            }
+            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+        }
+
+        if (savedMode === 'classic') {
+            modeToggle.checked = true;
+            setMode(true);
+        } else {
+            modeToggle.checked = false;
+            setMode(false);
+        }
+
+        modeToggle.addEventListener('change', () => {
+            setMode(modeToggle.checked);
+        });
+
         // ==================== THEME TOGGLE ====================
         const themeToggle = document.getElementById('themeToggle');
-        const html = document.documentElement;
         const savedTheme = localStorage.getItem('pet-theme');
-        if (savedTheme === 'dark') {
+        if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
             html.setAttribute('data-theme', 'dark');
         }
         themeToggle.addEventListener('click', () => {
+            if (testWrapper.classList.contains('classic-mode')) {
+                return;
+            }
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('pet-theme', newTheme);
         });
-    })();
 
-    // Context menu highlight thủ công (giữ nguyên chức năng)
-    (function() {
-        let selectedRange = null;
-        const contextMenu = document.getElementById('contextMenu');
+        // Context menu
         const transcriptDiv = document.getElementById('transcriptContent');
         const questionsDiv = document.getElementById('questionsContent');
         function handleRightClick(e) {
@@ -413,38 +451,38 @@
             selectedRange = null;
         };
 
-            // Resizable explanation panel logic
-            const expPanel = document.getElementById('explanationPanel');
-            const expResizer = document.getElementById('explanationResizer');
-            let isResizingExp = false;
-            let startYExp, startHeightExp;
+        // Resizable explanation panel logic
+        const expPanel = document.getElementById('explanationPanel');
+        const expResizer = document.getElementById('explanationResizer');
+        let isResizingExp = false;
+        let startYExp, startHeightExp;
 
-            if (expResizer && expPanel) {
-                expResizer.addEventListener('mousedown', (e) => {
-                    isResizingExp = true;
-                    startYExp = e.clientY;
-                    startHeightExp = expPanel.offsetHeight;
-                    document.body.style.cursor = 'ns-resize';
-                    document.body.style.userSelect = 'none';
-                });
+        if (expResizer && expPanel) {
+            expResizer.addEventListener('mousedown', (e) => {
+                isResizingExp = true;
+                startYExp = e.clientY;
+                startHeightExp = expPanel.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+            });
 
-                document.addEventListener('mousemove', (e) => {
-                    if (!isResizingExp) return;
-                    const dy = startYExp - e.clientY;
-                    const newHeight = startHeightExp + dy;
-                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                        expPanel.style.maxHeight = newHeight + 'px';
-                        expPanel.style.height = newHeight + 'px';
-                    }
-                });
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizingExp) return;
+                const dy = startYExp - e.clientY;
+                const newHeight = startHeightExp + dy;
+                if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                    expPanel.style.maxHeight = newHeight + 'px';
+                    expPanel.style.height = newHeight + 'px';
+                }
+            });
 
-                document.addEventListener('mouseup', () => {
-                    isResizingExp = false;
-                    document.body.style.cursor = 'default';
-                    document.body.style.userSelect = 'auto';
-                });
-            }
-        })();
+            document.addEventListener('mouseup', () => {
+                isResizingExp = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            });
+        }
+    })();
 </script>
 </body>
 </html>
