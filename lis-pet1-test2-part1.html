@@ -55,11 +55,16 @@
 
     <!-- Main area -->
     <div class="main-area" id="mainArea">
+        <!-- Transcript panel (ẩn ban đầu) -->
         <div class="transcript-panel" id="transcriptPanel">
-            <div class="panel-header"><span>TRANSCRIPT</span></div>
+            <div class="panel-header">
+                <span>TRANSCRIPT</span>
+            </div>
             <div class="transcript-content font-large" id="transcriptContent"></div>
         </div>
         <div class="resizer" id="resizer"></div>
+
+        <!-- Questions panel -->
         <div class="questions-panel" id="questionsPanel">
             <div class="panel-header">
                 <span>QUESTIONS 1-7</span>
@@ -75,6 +80,7 @@
         </div>
     </div>
 
+    <!-- Bottom bar -->
     <div class="bottom-bar">
         <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
         <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
@@ -82,6 +88,7 @@
         <div class="progress" id="progressDisplay">Đã làm: 0/7</div>
     </div>
 
+    <!-- Explanation panel -->
     <div class="explanation-panel" id="explanationPanel">
         <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
@@ -92,6 +99,7 @@
     </div>
 </div>
 
+<!-- Context menu for manual highlighting -->
 <div class="context-menu" id="contextMenu">
     <div onclick="applyHighlight('yellow')">Highlight vàng</div>
     <div onclick="applyHighlight('green')">Highlight xanh lá</div>
@@ -99,32 +107,60 @@
     <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
-<script>
-    (function() {
-        // ---------- ANSWER KEY ----------
-        const answerKey = { q1: 'A', q2: 'C', q3: 'B', q4: 'A', q5: 'B', q6: 'A', q7: 'C' };
-        const displayAnswers = { q1: 'A', q2: 'C', q3: 'B', q4: 'A', q5: 'B', q6: 'A', q7: 'C' };
+<!-- Core Listening Engine -->
+<script src="core-listening.js"></script>
 
-        // ---------- GIẢI THÍCH CHI TIẾT (giống phong cách Part 2 & Part 4) ----------
-        const detailedExplanations = {
+<script>
+    // Test Data for PET 1 Test 2 Part 1
+    const pet1Test2Part1Data = {
+        title: "B1 Preliminary 1 · Test 2 · Part 1",
+        type: "multiple-choice",
+        part: 1,
+        book: 1,
+        test: 2,
+
+        // Answer Key
+        answerKey: {
+            q1: 'A',
+            q2: 'C',
+            q3: 'B',
+            q4: 'A',
+            q5: 'B',
+            q6: 'A',
+            q7: 'C'
+        },
+
+        // Display Answers
+        displayAnswers: {
+            q1: 'A',
+            q2: 'C',
+            q3: 'B',
+            q4: 'A',
+            q5: 'B',
+            q6: 'A',
+            q7: 'C'
+        },
+
+        // Detailed Explanations
+        detailedExplanations: {
             q1: `<strong>Đáp án: A (torch)</strong><br>
                   Trong đoạn hội thoại, người đàn ông nói: <em>"I've just realised I've left my torch behind."</em> Anh ấy vừa nhận ra mình đã để quên đèn pin. 
                   <br><br>
-                  <strong>✗ B (sleeping bag) không đúng:</strong> Người đàn ông nói: "I didn’t want to forget my sleeping bag like the last time", nhưng lần này anh ấy nhớ mang theo túi ngủ.
+                  <strong>✗ B (sleeping bag) không đúng:</strong> Người đàn ông nói: "I didn't want to forget my sleeping bag like the last time", nhưng lần này anh ấy nhớ mang theo túi ngủ.
                   <br>
-                  <strong>✗ C (walking boots) không đúng:</strong> Anh ấy nói: "At least I’ve got my walking boots" – anh ấy có mang giày đi bộ đường dài.
+                  <strong>✗ C (walking boots) không đúng:</strong> Anh ấy nói: "At least I've got my walking boots" - anh ấy có mang giày đi bộ đường dài.
                   <br>
                   <strong>✓ A (torch) là vật mà anh ấy quên.</strong>`,
-                  
+
             q2: `<strong>Đáp án: C (12.15)</strong><br>
-                  Thông báo của sân bay: <em>"the flight is delayed and is unlikely to take off until 12.15"</em> – chuyến bay bị hoãn và dự kiến không cất cánh trước 12.15.
+                  Thông báo của sân bay: <em>"the flight is delayed and is unlikely to take off until 12.15"</em> - chuyến bay bị hoãn và dự kiến không cất cánh trước 12.15.
                   <br><br>
                   <strong>✗ A (10.45) không đúng:</strong> Đây là giờ khởi hành dự kiến ban đầu, nhưng bị hoãn.
                   <br>
                   <strong>✗ B (11.30) không đúng:</strong> Đây là thời gian đóng quầy check-in, không phải giờ cất cánh.
                   <br>
                   <strong>✓ C (12.15) là giờ khởi hành mới.</strong>`,
-                  
+
             q3: `<strong>Đáp án: B (castle)</strong><br>
                   Người phụ nữ nói: <em>"We ended up getting some discount tickets to visit a castle."</em> Cuối cùng họ đã mua vé giảm giá để tham quan lâu đài.
                   <br><br>
@@ -133,16 +169,16 @@
                   <strong>✗ C (art gallery) không đúng:</strong> Họ đã đi phòng tranh vào lần trước ("last time we had a family day out"), không phải cuối tuần này.
                   <br>
                   <strong>✓ B (castle) là nơi họ đã đi.</strong>`,
-                  
+
             q4: `<strong>Đáp án: A (a jug of tap water)</strong><br>
-                  Người phụ nữ đề xuất: <em>"What about asking for a jug of tap water – it tastes just as good."</em> Cả hai đồng ý vì nước đóng chai đắt.
+                  Người phụ nữ đề xuất: <em>"What about asking for a jug of tap water - it tastes just as good."</em> Cả hai đồng ý vì nước đóng chai đắt.
                   <br><br>
                   <strong>✗ B (a large bottle of sparkling water) không đúng:</strong> Họ cân nhắc nhưng thấy giá đắt.
                   <br>
                   <strong>✗ C (a glass of still water and a glass of sparkling) không đúng:</strong> Họ cũng nghĩ đến phương án này nhưng cuối cùng chọn bình nước máy.
                   <br>
                   <strong>✓ A (a jug of tap water) là thứ họ gọi.</strong>`,
-                  
+
             q5: `<strong>Đáp án: B (rain)</strong><br>
                   Người đàn ông nói: <em>"I'm interested in water, especially scenes showing rain. Have a look at this one of mine."</em> Anh ấy thích chụp ảnh mưa và đó là bức ảnh của anh.
                   <br><br>
@@ -151,47 +187,47 @@
                   <strong>✗ C (lake and trees) không đúng:</strong> Người phụ nữ hỏi "And is this one yours?" nhưng người đàn ông nói đó là tác phẩm của người khác.
                   <br>
                   <strong>✓ B (rain) là bức ảnh anh chụp.</strong>`,
-                  
+
             q6: `<strong>Đáp án: A (by underground)</strong><br>
-                  Người đàn ông gợi ý: <em>"You could always take the underground to Greenoaks station"</em> – họ có thể đi tàu điện ngầm.
+                  Người đàn ông gợi ý: <em>"You could always take the underground to Greenoaks station"</em> - họ có thể đi tàu điện ngầm.
                   <br><br>
-                  <strong>✗ B (by taxi) không đúng:</strong> Anh ấy nói "I'm sure you and Jack'll be able to take a taxi home afterwards" – chỉ gợi ý taxi lúc về, không phải đi đến buổi hòa nhạc.
+                  <strong>✗ B (by taxi) không đúng:</strong> Anh ấy nói "I'm sure you and Jack'll be able to take a taxi home afterwards" - chỉ gợi ý taxi lúc về, không phải đi đến buổi hòa nhạc.
                   <br>
                   <strong>✗ C (by car) không đúng:</strong> Ban đầu anh định cho đi nhờ nhưng không thể, nên đề xuất tàu điện ngầm.
                   <br>
                   <strong>✓ A (by underground) là cách anh khuyên.</strong>`,
-                  
+
             q7: `<strong>Đáp án: C (snow showers)</strong><br>
-                  Dự báo thời tiết: <em>"There'll be heavy snow showers, mainly in northern areas"</em> – mưa tuyết lớn ở phía bắc vào sáng nay.
+                  Dự báo thời tiết: <em>"There'll be heavy snow showers, mainly in northern areas"</em> - mưa tuyết lớn ở phía bắc vào sáng nay.
                   <br><br>
                   <strong>✗ A (strong winds) không đúng:</strong> Gió mạnh sẽ xuất hiện vào chiều tối ("towards the evening"), không phải sáng nay.
                   <br>
                   <strong>✗ B (fog) không đúng:</strong> Sương mù dày đặc ở khu vực phía nam ("In southern areas"), không phải phía bắc.
                   <br>
                   <strong>✓ C (snow showers) là dự báo cho phía bắc vào sáng nay.</strong>`
-        };
+        },
 
-        // ---------- TRANSCRIPT với các span highlight ----------
-        const transcriptHTML = `
+        // Transcript with highlightable spans
+        transcript: `
             <p><strong>Question 1</strong><br>
             <strong>Woman:</strong> Hi Freddy! All ready for the camping trip? Your backpack looks very full.<br>
-            <strong>Man:</strong> Well, I didn’t want to forget my sleeping bag like the last time I went camping. I was lucky then and it wasn’t too cold. I hope I’ve remembered everything this time.<br>
-            <strong>Woman:</strong> Well, so long as you’ve got your sleeping bag, plus a torch and walking boots, you’ll be fine.<br>
-            <strong>Man:</strong> Oh dear. <span class="highlightable" data-q="1">I’ve just realised I’ve left my torch behind.</span> At least I’ve got my walking boots. Never mind I’ll probably manage.<br>
-            <strong>Woman:</strong> You’ll be fine.</p>
+            <strong>Man:</strong> Well, I didn't want to forget my sleeping bag like the last time I went camping. I was lucky then and it wasn't too cold. I hope I've remembered everything this time.<br>
+            <strong>Woman:</strong> Well, so long as you've got your sleeping bag, plus a torch and walking boots, you'll be fine.<br>
+            <strong>Man:</strong> Oh dear. <span class="highlightable" data-q="1">I've just realised I've left my torch behind.</span> At least I've got my walking boots. Never mind I'll probably manage.<br>
+            <strong>Woman:</strong> You'll be fine.</p>
 
             <p><strong>Question 2</strong><br>
             <strong>Man:</strong> This is an announcement for all passengers waiting to travel on the 10.45 flight to Glasgow. Due to poor weather, this flight is delayed and <span class="highlightable" data-q="2">is unlikely to take off until 12.15.</span> All passengers travelling on this flight can collect a special ticket at the information desk, which they can exchange for a drink and a snack at the cafe. Please note the check-in desk will close at 11.30. We apologise for the delay to your flight and will give you further updates as soon as we can.</p>
 
             <p><strong>Question 3</strong><br>
             <strong>Man:</strong> How was your weekend? Were there any tickets left for the play you wanted to see?<br>
-            <strong>Woman:</strong> Yes, but we decided to do something else in the end. I found a few more options online. <span class="highlightable" data-q="3">We ended up getting some discount tickets to visit a castle.</span> We all enjoyed it far more than the art gallery we went to last time we had a family day out. We’re actually thinking of going there again. It’s just as much fun as going to see a show at the theatre.</p>
+            <strong>Woman:</strong> Yes, but we decided to do something else in the end. I found a few more options online. <span class="highlightable" data-q="3">We ended up getting some discount tickets to visit a castle.</span> We all enjoyed it far more than the art gallery we went to last time we had a family day out. We're actually thinking of going there again. It's just as much fun as going to see a show at the theatre.</p>
 
             <p><strong>Question 4</strong><br>
             <strong>Man:</strong> What shall we have to drink? I'm quite thirsty, so I think I'll just have water.<br>
             <strong>Woman:</strong> Me, too. Let's get a large bottle to share.<br>
             <strong>Man:</strong> Yes, we could do that. Do you prefer sparkling? I always have still.<br>
-            <strong>Woman:</strong> Oh, I like sparkling water. How about getting a glass of still and a glass of sparkling? (short pause) Actually, have you seen the prices? <span class="highlightable" data-q="4">What about asking for a jug of tap water – it tastes just as good.</span><br>
+            <strong>Woman:</strong> Oh, I like sparkling water. How about getting a glass of still and a glass of sparkling? (short pause) Actually, have you seen the prices? <span class="highlightable" data-q="4">What about asking for a jug of tap water - it tastes just as good.</span><br>
             <strong>Man:</strong> Especially if they put ice and lemon in it. Good idea.</p>
 
             <p><strong>Question 5</strong><br>
@@ -208,10 +244,10 @@
 
             <p><em>Now listen again.</em></p>
             <p style="color:#666;">That is the end of Part One.</p>
-        `;
+        `,
 
-        // ---------- Dữ liệu câu hỏi ----------
-        const questionsData = [
+        // Questions Data
+        questions: [
             { num: 1, text: "What has the man forgotten to pack for the trip?", options: ["torch", "sleeping bag", "walking boots"] },
             { num: 2, text: "What time is the plane expected to depart?", options: ["10.45", "11.30", "12.15"] },
             { num: 3, text: "Where did the family go at the weekend?", options: ["theatre", "castle", "art gallery"] },
@@ -219,348 +255,15 @@
             { num: 5, text: "Which photograph did the man take?", options: ["desert", "rain", "lake and trees"] },
             { num: 6, text: "How does the man suggest his friends should travel to the concert?", options: ["by underground", "by taxi", "by car"] },
             { num: 7, text: "What is the weather forecast for the north this morning?", options: ["strong winds", "fog", "snow showers"] }
-        ];
+        ]
+    };
 
-        // ---------- STATE ----------
-        let examSubmitted = false;
-        let explanationMode = false;
-        const audio = document.getElementById('listeningAudio');
-        const speedSelect = document.getElementById('speedSelect');
-        speedSelect.addEventListener('change', function() { audio.playbackRate = parseFloat(this.value); });
-
-        function getUserAnswer(q) {
-            const radios = document.getElementsByName(`q${q}`);
-            for (let radio of radios) if (radio.checked) return radio.value;
-            return null;
-        }
-        function isAnswerCorrect(q, userAnswer) { return userAnswer === answerKey[`q${q}`]; }
-        function updateAnswerCount() {
-            let answered = 0;
-            for (let i = 1; i <= 7; i++) if (getUserAnswer(i)) answered++;
-            document.getElementById('answeredCount').textContent = `${answered}/7 answered`;
-            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/7`;
-            for (let i = 1; i <= 7; i++) {
-                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
-                if (btn) {
-                    btn.classList.remove('answered', 'unanswered');
-                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
-                }
-            }
-        }
-
-        function createNavButtons() {
-            const nav = document.getElementById('navButtons');
-            nav.innerHTML = '';
-            for (let i = 1; i <= 7; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn unanswered';
-                btn.textContent = i;
-                btn.dataset.question = i;
-                btn.addEventListener('click', function() {
-                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-                nav.appendChild(btn);
-            }
-        }
-
-        function renderQuestions() {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-            questionsData.forEach(q => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.id = `question-${q.num}`;
-                div.innerHTML = `
-                    <div class="question-text">${q.num}. ${q.text}</div>
-                    <div class="options">
-                        ${q.options.map((opt, index) => `
-                            <div class="option">
-                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
-                                <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <span class="eye-icon" data-question="${q.num}">👁️</span>
-                `;
-                container.appendChild(div);
-            });
-            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAnswerCount));
-        }
-
-        function markAnswers() {
-            for (let i = 1; i <= 7; i++) {
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (!questionDiv) continue;
-                const user = getUserAnswer(i);
-                const correct = isAnswerCorrect(i, user);
-                questionDiv.classList.remove('correct', 'incorrect');
-                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
-                if (oldBadge) oldBadge.remove();
-                if (correct) questionDiv.classList.add('correct');
-                else {
-                    questionDiv.classList.add('incorrect');
-                    const badge = document.createElement('span');
-                    badge.className = 'correct-answer-badge';
-                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
-                    questionDiv.appendChild(badge);
-                }
-            }
-        }
-
-        function showExplanation(questionNum) {
-            if (!explanationMode && !examSubmitted) return;
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
-            highlightSpans.forEach(span => {
-                const parentP = span.closest('p');
-                if (parentP) parentP.classList.add('transcript-highlight');
-                span.classList.add('keyword-highlight');
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                span.classList.add('scroll-highlight');
-                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
-            });
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
-            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
-            if (examSubmitted) {
-                const user = getUserAnswer(questionNum) || '(chưa chọn)';
-                const isCorrect = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>✅ Đúng!</strong>`;
-                html += `</div>`;
-            }
-            document.getElementById('explanationText').innerHTML = html;
-        }
-
-        function resetAll() {
-            examSubmitted = false; explanationMode = false;
-            for (let i = 1; i <= 7; i++) {
-                document.getElementsByName(`q${i}`).forEach(r => {
-                    r.checked = false;
-                    r.disabled = false;
-                });
-                const qDiv = document.getElementById(`question-${i}`);
-                if (qDiv) { qDiv.classList.remove('correct', 'incorrect'); const badge = qDiv.querySelector('.correct-answer-badge'); if (badge) badge.remove(); }
-            }
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.remove('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = '';
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            document.getElementById('submitBtn').disabled = false; document.getElementById('submitBtn').textContent = 'Nộp bài';
-            document.getElementById('explainBtn').disabled = true; document.getElementById('explainBtn').textContent = 'Xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-            updateAnswerCount();
-        }
-
-        function saveToDashboard() {
-            if (!examSubmitted) return;
-            let correct = 0; const details = [];
-            for (let i = 1; i <= 7; i++) {
-                const user = getUserAnswer(i) || '(trống)';
-                const isOk = isAnswerCorrect(i, getUserAnswer(i));
-                if (isOk) correct++;
-                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
-            }
-            const partData = { partId: 1, name: 'Part 1', totalQuestions: 7, correctCount: correct, details };
-            localStorage.setItem('pet_listening_book1_test2_part1', JSON.stringify(partData));
-            console.log('✅ Đã lưu pet_listening_book1_test2_part1');
-        }
-
-        document.getElementById('submitBtn').addEventListener('click', function() {
-            if (examSubmitted) return;
-            let unanswered = [];
-            for (let i = 1; i <= 7; i++) if (!getUserAnswer(i)) unanswered.push(i);
-            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
-            examSubmitted = true;
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.add('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
-            markAnswers();
-            document.getElementById('submitBtn').disabled = true; document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-            document.getElementById('explainBtn').disabled = false;
-            let correctCount = 0;
-            for (let i = 1; i <= 7; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/7</p><p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>`;
-            saveToDashboard();
-            document.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
-        });
-
-        document.getElementById('explainBtn').addEventListener('click', function() {
-            if (!examSubmitted) return;
-            explanationMode = true;
-            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
-            this.disabled = true; this.textContent = 'Đang xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', function() { if (confirm('Reset tất cả câu trả lời?')) resetAll(); });
-        document.getElementById('closeExplanation').addEventListener('click', function() {
-            document.getElementById('explanationPanel').classList.remove('show');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-        });
-        document.addEventListener('click', function(e) { if (e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question); });
-
-        function setFontSize(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-                el.className = `transcript-content font-${size}`;
-                if (el.classList.contains('questions-list')) el.classList.add('centered');
-            });
-        }
-        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-        // Resizer
-        const transcriptPanel = document.getElementById('transcriptPanel'), questionsPanel = document.getElementById('questionsPanel'), resizer = document.getElementById('resizer');
-        let isResizing = false;
-        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const mainArea = document.getElementById('mainArea');
-            const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
-            if (leftWidth < 250) leftWidth = 250;
-            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-            transcriptPanel.style.width = leftWidth + 'px';
-            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
-
-        createNavButtons(); renderQuestions(); updateAnswerCount(); setFontSize('large');
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-    })();
-
-    // Context menu highlight thủ công
-    (function() {
-        let selectedRange = null;
-        const contextMenu = document.getElementById('contextMenu');
-        const transcriptContent = document.getElementById('transcriptContent');
-        const questionsContent = document.getElementById('questionsContent');
-        function handleRightClick(e) {
-            e.preventDefault();
-            const selection = window.getSelection();
-            if (selection.toString().trim()) {
-                selectedRange = selection.getRangeAt(0);
-                contextMenu.style.left = e.pageX + 'px';
-                contextMenu.style.top = e.pageY + 'px';
-                contextMenu.style.display = 'block';
-            }
-        }
-        if (transcriptContent) transcriptContent.addEventListener('contextmenu', handleRightClick);
-        if (questionsContent) questionsContent.addEventListener('contextmenu', handleRightClick);
-        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
-        window.applyHighlight = function(color) {
-            if (!selectedRange) return;
-            try {
-                const span = document.createElement('span');
-                span.className = `highlight-${color}`;
-                span.appendChild(selectedRange.extractContents());
-                selectedRange.insertNode(span);
-            } catch(e) { console.warn('Highlight error'); }
-            contextMenu.style.display = 'none'; selectedRange = null;
-        };
-        window.removeHighlight = function() {
-            if (!selectedRange) return;
-            try {
-                const iterator = document.createNodeIterator(selectedRange.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, { acceptNode: function(node) { if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) return NodeFilter.FILTER_ACCEPT; return NodeFilter.FILTER_REJECT; } });
-                let node; while (node = iterator.nextNode()) node.replaceWith(...node.childNodes);
-            } catch(e) { console.warn('Remove highlight error'); }
-            contextMenu.style.display = 'none'; selectedRange = null;
-        };
-
-            // Resizable explanation panel logic
-            const expPanel = document.getElementById('explanationPanel');
-            const expResizer = document.getElementById('explanationResizer');
-            let isResizingExp = false;
-            let startYExp, startHeightExp;
-
-            if (expResizer && expPanel) {
-                expResizer.addEventListener('mousedown', (e) => {
-                    isResizingExp = true;
-                    startYExp = e.clientY;
-                    startHeightExp = expPanel.offsetHeight;
-                    document.body.style.cursor = 'ns-resize';
-                    document.body.style.userSelect = 'none';
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (!isResizingExp) return;
-                    const dy = startYExp - e.clientY;
-                    const newHeight = startHeightExp + dy;
-                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                        expPanel.style.maxHeight = newHeight + 'px';
-                        expPanel.style.height = newHeight + 'px';
-                    }
-                });
-
-                document.addEventListener('mouseup', () => {
-                    isResizingExp = false;
-                    document.body.style.cursor = 'default';
-                    document.body.style.userSelect = 'auto';
-                });
-            }
-            // ==================== MODE TOGGLE (Classic/Modern) ====================
-            const modeToggle = document.getElementById('modeToggle');
-            const styleLink = document.getElementById('styleLink');
-            const testWrapper = document.getElementById('testWrapper');
-            const html = document.documentElement;
-            const savedMode = localStorage.getItem('pet-mode');
-
-            function setMode(isClassic) {
-                if (isClassic) {
-                    styleLink.href = 'listening-pet-common1.css';
-                    testWrapper.classList.add('classic-mode');
-                    html.removeAttribute('data-theme');
-                    localStorage.removeItem('pet-theme');
-                } else {
-                    styleLink.href = 'listening-pet-common.css';
-                    testWrapper.classList.remove('classic-mode');
-                }
-                localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-            }
-
-            if (savedMode === 'classic') {
-                modeToggle.checked = true;
-                setMode(true);
-            } else {
-                modeToggle.checked = false;
-                setMode(false);
-            }
-
-            modeToggle.addEventListener('change', () => {
-                setMode(modeToggle.checked);
-            });
-
-            // ==================== THEME TOGGLE ====================
-            const themeToggle = document.getElementById('themeToggle');
-            const savedTheme = localStorage.getItem('pet-theme');
-            if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-                html.setAttribute('data-theme', 'dark');
-            }
-            themeToggle.addEventListener('click', () => {
-                if (testWrapper.classList.contains('classic-mode')) {
-                    return;
-                }
-                const currentTheme = html.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', newTheme);
-                localStorage.setItem('pet-theme', newTheme);
-            });
-
-        })();
+    // Initialize the listening test when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        window.listeningCore = new ListeningCore();
+        window.listeningCore.initializeTest(pet1Test2Part1Data);
+        console.log('PET 1 Test 2 Part 1 loaded with core listening engine');
+    });
 </script>
 </body>
 </html>
-

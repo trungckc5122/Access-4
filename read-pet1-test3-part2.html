@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>PET 1 - Test 3 - Reading Part 2</title>
-    <link rel="stylesheet" href="../reading-pet-common.css">
+    <link rel="stylesheet" href="reading-pet-common.css" id="styleLink">
 </head>
 <body>
 <div class="test-wrapper" id="testWrapper">
@@ -12,20 +12,24 @@
         <div class="brand">
             <div class="ielts-logo">PET</div>
             <div class="candidate">B1 Preliminary 1 · Test 3 · Part 2 (Reading)</div>
-            <div class="reading-mode-toggle" id="readingModeToggle">
-                <div class="toggle-switch" id="toggleSwitch"></div>
-                <span class="toggle-label">Đọc sách</span>
-            </div>
             <div class="font-controls">
                 <button class="font-btn" id="fontSmall">A-</button>
                 <button class="font-btn" id="fontMedium">A</button>
                 <button class="font-btn active" id="fontLarge">A+</button>
             </div>
+            <div class="mode-toggle" id="modeToggleContainer">
+                <span class="mode-label">Hiện đại</span>
+                <label class="mode-switch" title="Chuyển đổi chế độ Cổ điển/Hiện đại">
+                    <input type="checkbox" id="modeToggle">
+                    <span class="mode-slider"></span>
+                </label>
+                <span class="mode-label">Cổ điển</span>
+            </div>
+            <button class="theme-toggle-btn" id="themeToggle" title="Chuyển đổi Dark/Light mode">
+                <span class="icon-moon">🌙</span>
+                <span class="icon-sun">☀️</span>
+            </button>
         </div>
-        <button class="theme-toggle-btn" id="themeToggle" title="Chuyển chế độ Sáng/Tối">
-            <span class="icon-sun">☀️</span>
-            <span class="icon-moon">🌙</span>
-        </button>
     </div>
 
     <!-- Question navigation (câu 6-10) -->
@@ -476,12 +480,6 @@
             document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
             document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
 
-            // Reading mode toggle
-            document.getElementById('readingModeToggle').addEventListener('click', () => {
-                document.getElementById('testWrapper').classList.toggle('reading-mode');
-                document.getElementById('toggleSwitch').classList.toggle('active');
-            });
-
             // Explanation panel resizer
             const expPanel = document.getElementById('explanationPanel');
             const expResizer = document.getElementById('explanationResizer');
@@ -528,21 +526,54 @@
                 localStorage.setItem('theme', theme);
             }
 
-            // Set initial theme
-            if (currentTheme) {
-                setTheme(currentTheme);
-            } else if (prefersDark.matches) {
-                setTheme('dark');
+            // ==================== MODE TOGGLE (Classic/Modern) ====================
+            const modeToggle = document.getElementById('modeToggle');
+            const styleLink = document.getElementById('styleLink');
+            const savedMode = localStorage.getItem('pet-mode');
+
+            function setMode(isClassic) {
+                if (isClassic) {
+                    styleLink.href = 'reading-pet-common1.css';
+                    testWrapper.classList.add('classic-mode');
+                    document.documentElement.removeAttribute('data-theme');
+                    localStorage.removeItem('pet-theme');
+                } else {
+                    styleLink.href = 'reading-pet-common.css';
+                    testWrapper.classList.remove('classic-mode');
+                }
+                localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+            }
+
+            if (savedMode === 'classic') {
+                modeToggle.checked = true;
+                setMode(true);
+            } else {
+                modeToggle.checked = false;
+                setMode(false);
+            }
+
+            modeToggle.addEventListener('change', () => {
+                setMode(modeToggle.checked);
+            });
+
+            // Set initial theme (only if not classic mode)
+            if (!testWrapper.classList.contains('classic-mode')) {
+                if (currentTheme) {
+                    setTheme(currentTheme);
+                } else if (prefersDark.matches) {
+                    setTheme('dark');
+                }
             }
 
             themeToggle.addEventListener('click', () => {
+                if (testWrapper.classList.contains('classic-mode')) return;
                 const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                 setTheme(isDark ? 'light' : 'dark');
             });
 
             // Listen for system theme changes
             prefersDark.addEventListener('change', (e) => {
-                if (!localStorage.getItem('theme')) {
+                if (!localStorage.getItem('theme') && !testWrapper.classList.contains('classic-mode')) {
                     setTheme(e.matches ? 'dark' : 'light');
                 }
             });

@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="listening-pet-common.css" id="styleLink">
 </head>
 <body>
-<div class="test-wrapper">
+<div class="test-wrapper" id="testWrapper">
+    <!-- Header -->
     <div class="ielts-header">
         <div class="brand">
             <div class="ielts-logo">PET</div>
@@ -46,18 +47,24 @@
         </button>
     </div>
 
+    <!-- Question navigator (14-19) -->
     <div class="question-nav">
         <span style="font-weight:600; color:#1e3a5f;">Câu 14-19:</span>
         <div class="nav-buttons" id="navButtons"></div>
     </div>
 
+    <!-- Main area -->
     <div class="main-area" id="mainArea">
+        <!-- Transcript panel (ẩn ban đầu) -->
         <div class="transcript-panel" id="transcriptPanel">
-            <div class="panel-header"><span>TRANSCRIPT</span></div>
+            <div class="panel-header">
+                <span>TRANSCRIPT</span>
+            </div>
             <div class="transcript-content font-large" id="transcriptContent"></div>
         </div>
         <div class="resizer" id="resizer"></div>
 
+        <!-- Questions panel -->
         <div class="questions-panel" id="questionsPanel">
             <div class="panel-header">
                 <span>QUESTIONS 14-19</span>
@@ -65,22 +72,15 @@
             </div>
             <div class="questions-list font-large centered" id="questionsContent">
                 <div>
-                    <h3>PART 3 Questions 14–19</h3>
+                    <h3>PART 3 Questions 14-19</h3>
                     <p><em>Write one or two words or a number or a date or a time.</em></p>
-                    <div class="notes-box">
-                        <p><strong>Kelly Robinson – maker of cartoon films</strong></p>
-                        <p>Kelly did a degree in <span class="question-number">(14)</span> <span class="blank-line"><input class="fill-input" id="q14"> <span class="eye-icon" data-question="14">👁️</span></span> at university.</p>
-                        <p>Kelly really enjoys going to work because of the <span class="question-number">(15)</span> <span class="blank-line"><input class="fill-input" id="q15"> <span class="eye-icon" data-question="15">👁️</span></span> at the company.</p>
-                        <p>Kelly’s department is responsible for creating <span class="question-number">(16)</span> <span class="blank-line"><input class="fill-input" id="q16"> <span class="eye-icon" data-question="16">👁️</span></span> in cartoons.</p>
-                        <p>At the moment Kelly is trying to develop her <span class="question-number">(17)</span> <span class="blank-line"><input class="fill-input" id="q17"> <span class="eye-icon" data-question="17">👁️</span></span> skills.</p>
-                        <p>It takes Kelly’s company <span class="question-number">(18)</span> <span class="blank-line"><input class="fill-input" id="q18"> <span class="eye-icon" data-question="18">👁️</span></span> to make a full-length cartoon film.</p>
-                        <p>Kelly’s next project will be some cartoons for a <span class="question-number">(19)</span> <span class="blank-line"><input class="fill-input" id="q19"> <span class="eye-icon" data-question="19">👁️</span></span> .</p>
-                    </div>
+                    <div class="notes-box" id="questionsContainer"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bottom bar -->
     <div class="bottom-bar">
         <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
         <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
@@ -88,6 +88,7 @@
         <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
     </div>
 
+    <!-- Explanation panel -->
     <div class="explanation-panel" id="explanationPanel">
         <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
@@ -98,6 +99,7 @@
     </div>
 </div>
 
+<!-- Context menu for manual highlighting -->
 <div class="context-menu" id="contextMenu">
     <div onclick="applyHighlight('yellow')">Highlight vàng</div>
     <div onclick="applyHighlight('green')">Highlight xanh lá</div>
@@ -105,384 +107,94 @@
     <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
+<!-- Core Listening Engine -->
+<script src="core-listening.js"></script>
+
 <script>
-    (function() {
-        // ==================== ANSWER KEY ====================
-        const answerKey = {
+    // Test Data for PET 1 Test 2 Part 3 (Fill-in-the-blank)
+    const pet1Test2Part3Data = {
+        title: "B1 Preliminary 1 · Test 2 · Part 3",
+        type: "fill-blank",
+        part: 3,
+        book: 1,
+        test: 2,
+
+        // Answer Key
+        answerKey: {
             q14: 'art',
             q15: 'people',
             q16: 'animals',
             q17: 'acting',
             q18: ['eight months', '8 months', 'eight', '8'],
             q19: 'website'
-        };
-        const displayAnswers = {
+        },
+
+        // Display Answers
+        displayAnswers: {
             q14: 'ART',
             q15: 'PEOPLE',
             q16: 'ANIMALS',
             q17: 'ACTING',
             q18: 'eight months / 8 months',
             q19: 'WEBSITE'
-        };
-        const detailedExplanations = {
+        },
+
+        // Detailed Explanations
+        detailedExplanations: {
             q14: `<strong>Đáp án: ART</strong><br>
                   Kelly nói rằng cô ấy biết nhiều về máy tính nhưng thực tế: <em>"I actually studied art for my degree."</em> → Bằng cấp của cô là nghệ thuật.`,
             q15: `<strong>Đáp án: PEOPLE</strong><br>
-                  Cô ấy đánh giá cao phần mềm nhưng nhấn mạnh: <em>"it’s the people there that make it such a fantastic place to work."</em> → Chính con người làm công ty tuyệt vời.`,
+                  Cô ấy đánh giá cao phần mềm nhưng nhấn mạnh: <em>"it's the people there that make it such a fantastic place to work."</em> → Chính con người làm công ty tuyệt vời.`,
             q16: `<strong>Đáp án: ANIMALS</strong><br>
-                  Phòng của Kelly chịu trách nhiệm: <em>"the one I’m in works on animals in the story"</em> → tạo hình động vật.`,
+                  Phòng của Kelly chịu trách nhiệm: <em>"the one I'm in works on animals in the story"</em> → tạo hình động vật.`,
             q17: `<strong>Đáp án: ACTING</strong><br>
-                  Cô ấy vừa mới bắt đầu: <em>"I’ve just started doing acting classes"</em> để phát triển kỹ năng làm phim.`,
+                  Cô ấy vừa mới bắt đầu: <em>"I've just started doing acting classes"</em> để phát triển kỹ năng làm phim.`,
             q18: `<strong>Đáp án: eight months / 8 months</strong><br>
                   Kelly so sánh: <em>"Compare that to the eight months it takes my company to do the same"</em> → công ty cô ấy mất 8 tháng.`,
             q19: `<strong>Đáp án: WEBSITE</strong><br>
-                  Dự án tiếp theo: <em>"It’s actually something for a website."</em> → phim hoạt hình cho trang web.`
-        };
+                  Dự án tiếp theo: <em>"It's actually something for a website."</em> → phim hoạt hình cho trang web.`
+        },
 
-        // =============== TRANSCRIPT (chính xác từ file nghe) ===============
-        const transcriptHTML = `
-            <p><strong>Woman:</strong> My name’s Kelly Robinson and I make cartoons for a living. I do this on computers and I’ve been doing the job since I left university. Although I now know almost as much about computing as I do about cartoon design, <span class="highlightable" data-q="14">I actually studied art for my degree.</span></p>
-            <p>I got a job with a major film studio soon after leaving university. It’s a great company to work for. The software programmes we use for making cartoons are really good, but <span class="highlightable" data-q="15">it’s the people there that make it such a fantastic place to work.</span></p>
-            <p>Each department has its own special job to do when we’re making a cartoon film. For example, <span class="highlightable" data-q="16">the one I’m in works on animals in the story</span>, while others focus on the human characters or the buildings. It’s then the director’s job to bring everything together.</p>
-            <p>I’m always learning new skills to help improve my work. I did a writing course last year and learnt a lot about different types of stories. And <span class="highlightable" data-q="17">I’ve just started doing acting classes, which are surprisingly useful for understanding filmmaking</span>, even though I don’t plan to appear in any films.</p>
+        // Transcript with highlightable spans
+        transcript: `
+            <p><strong>Woman:</strong> My name's Kelly Robinson and I make cartoons for a living. I do this on computers and I've been doing the job since I left university. Although I now know almost as much about computing as I do about cartoon design, <span class="highlightable" data-q="14">I actually studied art for my degree.</span></p>
+            <p>I got a job with a major film studio soon after leaving university. It's a great company to work for. The software programmes we use for making cartoons are really good, but <span class="highlightable" data-q="15">it's the people there that make it such a fantastic place to work.</span></p>
+            <p>Each department has its own special job to do when we're making a cartoon film. For example, <span class="highlightable" data-q="16">the one I'm in works on animals in the story</span>, while others focus on the human characters or the buildings. It's then the director's job to bring everything together.</p>
+            <p>I'm always learning new skills to help improve my work. I did a writing course last year and learnt a lot about different types of stories. And <span class="highlightable" data-q="17">I've just started doing acting classes, which are surprisingly useful for understanding filmmaking</span>, even though I don't plan to appear in any films.</p>
             <p>Some companies make cartoons the old-fashioned way using thousands of individual drawings but this takes a long time. Using this technique, it can take about two years to create a full-length film. <span class="highlightable" data-q="18">Compare that to the eight months it takes my company to do the same</span> and you see the advantage of using computers.</p>
-            <p><span class="highlightable" data-q="19">My next cartoon project will be the first thing I’ve done that isn’t a film for children. It’s actually something for a website.</span> After working on so many kids’ comedies, it’ll be an interesting challenge.</p>
+            <p><span class="highlightable" data-q="19">My next cartoon project will be the first thing I've done that isn't a film for children. It's actually something for a website.</span> After working on so many kids' comedies, it'll be an interesting challenge.</p>
             <p><em>(Now listen again.)</em></p>
             <p>That is the end of Part Three.</p>
-        `;
+        `,
 
-        // ---------- DOM elements ----------
-        let examSubmitted = false;
-        let explanationMode = false;
-        const audio = document.getElementById('listeningAudio');
-        const speedSelect = document.getElementById('speedSelect');
-        speedSelect.addEventListener('change', () => { audio.playbackRate = parseFloat(speedSelect.value); });
+        // Template for fill-in-the-blank questions
+        template: `
+            <p><strong>Kelly Robinson – maker of cartoon films</strong></p>
+            <p>Kelly did a degree in <span class="question-number">(14)</span> <span class="blank-line"><input class="fill-input" id="q14"></span> at university.</p>
+            <p>Kelly really enjoys going to work because of the <span class="question-number">(15)</span> <span class="blank-line"><input class="fill-input" id="q15"></span> at the company.</p>
+            <p>Kelly's department is responsible for creating <span class="question-number">(16)</span> <span class="blank-line"><input class="fill-input" id="q16"></span> in cartoons.</p>
+            <p>At the moment Kelly is trying to develop her <span class="question-number">(17)</span> <span class="blank-line"><input class="fill-input" id="q17"></span> skills.</p>
+            <p>It takes Kelly's company <span class="question-number">(18)</span> <span class="blank-line"><input class="fill-input" id="q18"></span> to make a full-length cartoon film.</p>
+            <p>Kelly's next project will be some cartoons for a <span class="question-number">(19)</span> <span class="blank-line"><input class="fill-input" id="q19"></span> .</p>
+        `,
 
-        function getUserAnswer(q) { const inp = document.getElementById(`q${q}`); return inp ? inp.value.trim().toLowerCase() : ''; }
-        function isAnswerCorrect(q, ans) {
-            const key = answerKey[`q${q}`];
-            if (Array.isArray(key)) return key.includes(ans);
-            return ans === key;
-        }
-        function updateAnswerCount() {
-            let answered = 0;
-            for (let i = 14; i <= 19; i++) if (getUserAnswer(i)) answered++;
-            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-            for (let i = 14; i <= 19; i++) {
-                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
-                if (btn) {
-                    btn.classList.remove('answered', 'unanswered');
-                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
-                }
-            }
-        }
-        function createNavButtons() {
-            const nav = document.getElementById('navButtons');
-            nav.innerHTML = '';
-            for (let i = 14; i <= 19; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn unanswered';
-                btn.textContent = i;
-                btn.dataset.question = i;
-                btn.addEventListener('click', () => {
-                    document.getElementById(`q${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                });
-                nav.appendChild(btn);
-            }
-        }
+        // Questions array for navigation
+        questions: [
+            { num: 14 },
+            { num: 15 },
+            { num: 16 },
+            { num: 17 },
+            { num: 18 },
+            { num: 19 }
+        ]
+    };
 
-        function markAnswers() {
-            for (let i = 14; i <= 19; i++) {
-                const inp = document.getElementById(`q${i}`);
-                if (!inp) continue;
-                const user = getUserAnswer(i);
-                const correct = isAnswerCorrect(i, user);
-                inp.classList.remove('correct', 'incorrect');
-                const wrapper = inp.closest('.blank-line');
-                const oldBadge = wrapper?.querySelector('.correct-answer-badge');
-                if (oldBadge) oldBadge.remove();
-                if (correct) inp.classList.add('correct');
-                else {
-                    inp.classList.add('incorrect');
-                    if (wrapper) {
-                        const badge = document.createElement('span');
-                        badge.className = 'correct-answer-badge';
-                        badge.textContent = displayAnswers[`q${i}`];
-                        wrapper.appendChild(badge);
-                    }
-                }
-            }
-        }
-
-        function showExplanation(questionNum) {
-            if (!explanationMode && !examSubmitted) return;
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
-            highlightSpans.forEach(span => {
-                span.classList.add('keyword-highlight');
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                span.classList.add('scroll-highlight');
-                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
-            });
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
-            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong>`;
-            if (examSubmitted) {
-                const user = getUserAnswer(questionNum) || '(chưa có)';
-                const isCorrect = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>✅ Đúng!</strong>`;
-                html += `</div>`;
-            }
-            document.getElementById('explanationText').innerHTML = html;
-        }
-
-        function resetAll() {
-            examSubmitted = false;
-            explanationMode = false;
-            for (let i = 14; i <= 19; i++) {
-                const inp = document.getElementById(`q${i}`);
-                if (inp) {
-                    inp.value = '';
-                    inp.disabled = false;
-                    inp.classList.remove('correct', 'incorrect');
-                    const wrapper = inp.closest('.blank-line');
-                    if (wrapper) { const badge = wrapper.querySelector('.correct-answer-badge'); if (badge) badge.remove(); }
-                }
-            }
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.remove('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = '';
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').textContent = 'Nộp bài';
-            document.getElementById('explainBtn').disabled = true;
-            document.getElementById('explainBtn').textContent = 'Xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-            updateAnswerCount();
-        }
-
-        // Submit logic
-        document.getElementById('submitBtn').addEventListener('click', function() {
-            if (examSubmitted) return;
-            let unanswered = [];
-            for (let i = 14; i <= 19; i++) if (!getUserAnswer(i)) unanswered.push(i);
-            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa làm. Nộp bài?`)) return;
-
-            examSubmitted = true;
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.add('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
-            markAnswers();
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-            document.getElementById('explainBtn').disabled = false;
-
-            let correctCount = 0;
-            for (let i = 14; i <= 19; i++) if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>`;
-            saveToDashboard();
-            document.querySelectorAll('.fill-input').forEach(inp => inp.disabled = true);
-        });
-
-        // ========== LƯU VÀO DASHBOARD ==========
-        function saveToDashboard() {
-            if (!examSubmitted) return;
-            const details = [];
-            let correct = 0;
-            for (let i = 14; i <= 19; i++) {
-                const user = getUserAnswer(i) || '(trống)';
-                const isOk = isAnswerCorrect(i, user);
-                if (isOk) correct++;
-                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
-            }
-            const partData = { partId: 3, name: 'Part 3', totalQuestions: 6, correctCount: correct, details };
-            localStorage.setItem('pet_listening_book1_test2_part3', JSON.stringify(partData));
-            console.log('✅ Đã lưu pet_listening_book1_test2_part3');
-        }
-
-        document.getElementById('explainBtn').addEventListener('click', function() {
-            if (!examSubmitted) return;
-            explanationMode = true;
-            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
-            this.disabled = true;
-            this.textContent = 'Đang xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', () => { if (confirm('Reset tất cả câu trả lời?')) resetAll(); });
-        document.getElementById('closeExplanation').addEventListener('click', () => { document.getElementById('explanationPanel').classList.remove('show'); document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight')); });
-        document.querySelectorAll('.fill-input').forEach(inp => inp.addEventListener('input', updateAnswerCount));
-        document.querySelectorAll('.eye-icon').forEach(icon => {
-            icon.addEventListener('click', (e) => { e.stopPropagation(); const q = icon.dataset.question; showExplanation(q); });
-        });
-
-        // Font size
-        function setFontSize(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-                el.className = `transcript-content font-${size}`;
-                if (el.classList.contains('questions-list')) el.classList.add('centered');
-            });
-        }
-        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-        // Resizer
-        const transcriptPanel = document.getElementById('transcriptPanel');
-        const questionsPanel = document.getElementById('questionsPanel');
-        const resizer = document.getElementById('resizer');
-        let isResizing = false;
-        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const mainArea = document.getElementById('mainArea');
-            const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
-            if (leftWidth < 250) leftWidth = 250;
-            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-            transcriptPanel.style.width = leftWidth + 'px';
-            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
-
-        createNavButtons();
-        updateAnswerCount();
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-        setFontSize('large');
-
-        // ==================== MODE TOGGLE (Classic/Modern) ====================
-        const modeToggle = document.getElementById('modeToggle');
-        const styleLink = document.getElementById('styleLink');
-        const testWrapper = document.getElementById('testWrapper');
-        const html = document.documentElement;
-        const savedMode = localStorage.getItem('pet-mode');
-
-        function setMode(isClassic) {
-            if (isClassic) {
-                styleLink.href = 'listening-pet-common1.css';
-                testWrapper.classList.add('classic-mode');
-                html.removeAttribute('data-theme');
-                localStorage.removeItem('pet-theme');
-            } else {
-                styleLink.href = 'listening-pet-common.css';
-                testWrapper.classList.remove('classic-mode');
-            }
-            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-        }
-
-        if (savedMode === 'classic') {
-            modeToggle.checked = true;
-            setMode(true);
-        } else {
-            modeToggle.checked = false;
-            setMode(false);
-        }
-
-        modeToggle.addEventListener('change', () => {
-            setMode(modeToggle.checked);
-        });
-
-        // ==================== THEME TOGGLE ====================
-        const themeToggle = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('pet-theme');
-        if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-            html.setAttribute('data-theme', 'dark');
-        }
-        themeToggle.addEventListener('click', () => {
-            if (testWrapper.classList.contains('classic-mode')) {
-                return;
-            }
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('pet-theme', newTheme);
-        });
-
-        // Context menu
-        const transcriptDiv = document.getElementById('transcriptContent');
-        const questionsDiv = document.getElementById('questionsContent');
-        function handleRightClick(e) {
-            e.preventDefault();
-            const selection = window.getSelection();
-            if (selection.toString().trim()) {
-                selectedRange = selection.getRangeAt(0);
-                contextMenu.style.left = e.pageX + 'px';
-                contextMenu.style.top = e.pageY + 'px';
-                contextMenu.style.display = 'block';
-            }
-        }
-        if (transcriptDiv) transcriptDiv.addEventListener('contextmenu', handleRightClick);
-        if (questionsDiv) questionsDiv.addEventListener('contextmenu', handleRightClick);
-        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
-        window.applyHighlight = function(color) {
-            if (!selectedRange) return;
-            try {
-                const span = document.createElement('span');
-                span.className = `highlight-${color}`;
-                span.appendChild(selectedRange.extractContents());
-                selectedRange.insertNode(span);
-            } catch(e) {}
-            contextMenu.style.display = 'none';
-            selectedRange = null;
-        };
-        window.removeHighlight = function() {
-            if (!selectedRange) return;
-            try {
-                const iterator = document.createNodeIterator(selectedRange.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, { acceptNode: function(node) {
-                    if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) {
-                        if (selectedRange.intersectsNode(node)) return NodeFilter.FILTER_ACCEPT;
-                    } return NodeFilter.FILTER_REJECT;
-                }});
-                let node;
-                while (node = iterator.nextNode()) node.replaceWith(...node.childNodes);
-            } catch(e) {}
-            contextMenu.style.display = 'none';
-            selectedRange = null;
-        };
-
-        // Resizable explanation panel logic
-        const expPanel = document.getElementById('explanationPanel');
-        const expResizer = document.getElementById('explanationResizer');
-        let isResizingExp = false;
-        let startYExp, startHeightExp;
-
-        if (expResizer && expPanel) {
-            expResizer.addEventListener('mousedown', (e) => {
-                isResizingExp = true;
-                startYExp = e.clientY;
-                startHeightExp = expPanel.offsetHeight;
-                document.body.style.cursor = 'ns-resize';
-                document.body.style.userSelect = 'none';
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isResizingExp) return;
-                const dy = startYExp - e.clientY;
-                const newHeight = startHeightExp + dy;
-                if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                    expPanel.style.maxHeight = newHeight + 'px';
-                    expPanel.style.height = newHeight + 'px';
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                isResizingExp = false;
-                document.body.style.cursor = 'default';
-                document.body.style.userSelect = 'auto';
-            });
-        }
-    })();
+    // Initialize the listening test when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        window.listeningCore = new ListeningCore();
+        window.listeningCore.initializeTest(pet1Test2Part3Data);
+        console.log('PET 1 Test 2 Part 3 loaded with core listening engine');
+    });
 </script>
 </body>
 </html>

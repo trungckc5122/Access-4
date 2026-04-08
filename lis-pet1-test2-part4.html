@@ -16,7 +16,7 @@
             <div class="audio-controls">
                 <audio id="listeningAudio" controls>
                     <source src="B1 Preliminary 1 - Test 2 Part 4.mp3" type="audio/mpeg">
-                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg"> <!-- fallback -->
+                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg">
                 </audio>
                 <select class="speed-select" id="speedSelect">
                     <option value="0.7">0.7x</option>
@@ -74,10 +74,7 @@
                 <div>
                     <h3>PART 4 Questions 20-25</h3>
                     <p><em>Choose the correct answer (A, B or C).</em></p>
-
-                    <div class="notes-box" id="questionsContainer">
-                        <!-- Các câu hỏi sẽ được tạo bằng JavaScript để dễ quản lý -->
-                    </div>
+                    <div class="notes-box" id="questionsContainer"></div>
                 </div>
             </div>
         </div>
@@ -102,7 +99,7 @@
     </div>
 </div>
 
-<!-- ===== THÊM CONTEXT MENU CHO HIGHLIGHT THỦ CÔNG ===== -->
+<!-- Context menu for manual highlighting -->
 <div class="context-menu" id="contextMenu">
     <div onclick="applyHighlight('yellow')">Highlight vàng</div>
     <div onclick="applyHighlight('green')">Highlight xanh lá</div>
@@ -110,95 +107,110 @@
     <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
+<!-- Core Listening Engine -->
+<script src="core-listening.js"></script>
+
 <script>
-    (function() {
-        // ---------- ANSWER KEY (chữ cái) ----------
-        const answerKey = {
+    // Test Data for PET 1 Test 2 Part 4
+    const pet1Test2Part4Data = {
+        title: "B1 Preliminary 1 · Test 2 · Part 4",
+        type: "multiple-choice",
+        part: 4,
+        book: 1,
+        test: 2,
+
+        // Answer Key
+        answerKey: {
             q20: 'B',
             q21: 'C',
             q22: 'A',
             q23: 'C',
             q24: 'A',
             q25: 'B'
-        };
+        },
 
-        // ---------- Đáp án hiển thị (dạng chữ cái) ----------
-        const displayAnswers = {
+        // Display Answers
+        displayAnswers: {
             q20: 'B',
             q21: 'C',
             q22: 'A',
             q23: 'C',
             q24: 'A',
             q25: 'B'
-        };
+        },
 
-        // ---------- GIẢI THÍCH CHI TIẾT (dựa theo transcript, format giống Test 3) ----------
-        const detailedExplanations = {
+        // Detailed Explanations
+        detailedExplanations: {
             q20: `<strong>Đáp án: B</strong><br>
                   Rosie nói: <em>"Joel was better at swimming than anyone we knew, and <u>I practised as often as possible so I could swim as fast as him</u>."</em><br>
                   Câu này khẳng định cô ấy tập luyện rất nhiều vì muốn bơi nhanh như anh trai mình.
                   <br><br>
-                  <strong>✗ Phương án A sai:</strong> Bố cô ấy mong muốn hai anh em có hoạt động vào thời gian rảnh thay vì xem màn hình ("didn’t want us to look at a screen"), không phải vì đó là một kỹ năng quan trọng.
+                  <strong>✗ Phương án A sai:</strong> Bố cô ấy mong muốn hai anh em có hoạt động vào thời gian rảnh thay vì xem màn hình ("didn't want us to look at a screen"), không phải vì đó là một kỹ năng quan trọng.
                   <br>
                   <strong>✗ Phương án C sai:</strong> Không có thông tin nói rằng các buổi học bơi ở bể bơi địa phương là miễn phí.`,
+
             q21: `<strong>Đáp án: C</strong><br>
-                  Rosie giải thích: <em>"With all the training and competitions, <u>I couldn’t attend school sometimes, which I was unhappy about</u>."</em><br>
+                  Rosie giải thích: <em>"With all the training and competitions, <u>I couldn't attend school sometimes, which I was unhappy about</u>."</em><br>
                   Điều cô không thích là bỏ lỡ một số buổi học ở trường.
                   <br><br>
                   <strong>✗ Phương án A sai:</strong> Cô bận rộn nhưng vẫn gặp bạn bè khi có thời gian ("I still met up with them when I had time"), nên cô không buồn về việc xa cách bạn bè.
                   <br>
                   <strong>✗ Phương án B sai:</strong> Chuyến đi dài nhưng cô nói mẹ hay chở và hai mẹ con nói chuyện vui vẻ ("we enjoyed chatting on the journey").`,
+
             q22: `<strong>Đáp án: A</strong><br>
-                  Khi thắng giải, Rosie nói: <em>"I couldn’t believe <u>people wanted to read and watch interviews with me!</u>"</em><br>
+                  Khi thắng giải, Rosie nói: <em>"I couldn't believe <u>people wanted to read and watch interviews with me!</u>"</em><br>
                   Cô ngạc nhiên vì công chúng quan tâm đến mình.
                   <br><br>
                   <strong>✗ Phương án B sai:</strong> Cô không ngạc nhiên khi làm tốt bởi vì cô đã tập luyện chăm chỉ và dự kiến sẽ làm tốt ("I expected to do well").
                   <br>
                   <strong>✗ Phương án C sai:</strong> Cô nhắc tới các ngôi sao thể thao khác như một sự so sánh, không phải vì cô được gặp họ.`,
+
             q23: `<strong>Đáp án: C</strong><br>
-                  Rosie chia sẻ: <em>"It’d be great if they also gave me financial support for hotels, as my parents have to spend a lot on that kind of thing."</em><br>
+                  Rosie chia sẻ: <em>"It'd be great if they also gave me financial support for hotels, as my parents have to spend a lot on that kind of thing."</em><br>
                   Cô cần hỗ trợ chi phí lưu trú (accommodation/hotels) khi ở nước ngoài.
                   <br><br>
                   <strong>✗ Phương án A sai:</strong> Một công ty thể thao đã trả tiền vé máy bay ("pays for plane tickets").
                   <br>
                   <strong>✗ Phương án B sai:</strong> Công ty cũng đưa cho cô đồ thể thao như áo tắm, túi xách ("swimsuits, bags and other stuff").`,
+
             q24: `<strong>Đáp án: A</strong><br>
-                  Với huấn luyện viên mới: <em>"thanks to her suggestions about <u>the way I move my arms through the water</u>, I’ve already seen improvements in my speed."</em><br>
-                  Cô đã thay đổi cách di chuyển tay qua dòng nước – tức là kiểu bơi (swimming style).
+                  Với huấn luyện viên mới: <em>"thanks to her suggestions about <u>the way I move my arms through the water</u>, I've already seen improvements in my speed."</em><br>
+                  Cô đã thay đổi cách di chuyển tay qua dòng nước - tức là kiểu bơi (swimming style).
                   <br><br>
                   <strong>✗ Phương án B sai:</strong> Huấn luyện viên kiểm tra chế độ ăn nhưng hài lòng với nó và không thay đổi ("luckily she was satisfied with that").
                   <br>
-                  <strong>✗ Phương án C sai:</strong> Thói quen tập fitness không đổi ("I’m doing the same regular fitness training").`,
-            q25: `<strong>Đáp án: B</strong><br>
-                  Kế hoạch ở Tây Ban Nha: <em>"I’ll work with lots of swimmers <u>I haven’t met before</u>."</em><br>
-                  Cô sẽ tập luyện với những người mới – khác với những người cô đã biết.
-                  <br><br>
-                  <strong>✗ Phương án A sai:</strong> Cô sẽ không tham gia vào các giải đua ("I won’t do any races").
-                  <br>
-                  <strong>✗ Phương án C sai:</strong> Sẽ không phải là kỳ nghỉ để thư giãn, cô khẳng định là rất vất vả ("it’ll still be hard work").`
-        };
+                  <strong>✗ Phương án C sai:</strong> Thói quen tập fitness không đổi ("I'm doing the same regular fitness training").`,
 
-        // ---------- TRANSCRIPT với các span highlight ----------
-        const transcriptHTML = `
-            <p><strong>Man:</strong> This week, I’m joined by swimmer Rosie Banks, who swims in international competitions. Rosie, welcome. So, did you swim a lot when you were very young?</p>
-            <p><strong>Girl:</strong> Yes, before I even started school, my dad used to take my brother Joel and me to the pool in town. He just wanted us to do something in our free time that wasn’t looking at a screen. <span class="highlightable" data-q="20">Joel was better at swimming than anyone we knew, and I practised as often as possible so I could swim as fast as him.</span></p>
+            q25: `<strong>Đáp án: B</strong><br>
+                  Kế hoạch ở Tây Ban Nha: <em>"I'll work with lots of swimmers <u>I haven't met before</u>."</em><br>
+                  Cô sẽ tập luyện với những người mới - khác với những người cô đã biết.
+                  <br><br>
+                  <strong>✗ Phương án A sai:</strong> Cô sẽ không tham gia vào các giải đua ("I won't do any races").
+                  <br>
+                  <strong>✗ Phương án C sai:</strong> Sẽ không phải là kỳ nghỉ để thư giãn, cô khẳng định là rất vất vả ("it'll still be hard work").`
+        },
+
+        // Transcript with highlightable spans
+        transcript: `
+            <p><strong>Man:</strong> This week, I'm joined by swimmer Rosie Banks, who swims in international competitions. Rosie, welcome. So, did you swim a lot when you were very young?</p>
+            <p><strong>Girl:</strong> Yes, before I even started school, my dad used to take my brother Joel and me to the pool in town. He just wanted us to do something in our free time that wasn't looking at a screen. <span class="highlightable" data-q="20">Joel was better at swimming than anyone we knew, and I practised as often as possible so I could swim as fast as him.</span></p>
             <p><strong>Man:</strong> And then you joined a swimming club and started training seriously?</p>
-            <p><strong>Girl:</strong> Yes, I was invited to join the club when I was 12. It took an hour to get to their pool. Mum drove me. We had to leave for training early each morning, but we enjoyed chatting on the journey. <span class="highlightable" data-q="21">With all the training and competitions, I couldn’t attend school sometimes, which I was unhappy about.</span> I was always much busier than my friends, but I still met up with them when I had time.</p>
-            <p><strong>Man:</strong> And now you’ve had success at the Swim Stars International competition. Tell us about that.</p>
-            <p><strong>Girl:</strong> Well, I’d trained hard, and I expected to do well, although winning was still brilliant! Swimming isn’t shown much on TV – it’s usually famous footballers or tennis stars people love watching – so <span class="highlightable" data-q="22">I couldn’t believe people wanted to read and watch interviews with me!</span></p>
-            <p><strong>Man:</strong> So, I imagine it’s expensive taking part in international competitions. Do you get help with the costs?</p>
-            <p><strong>Girl:</strong> Yes. Fortunately, a sportswear company pays for plane tickets, as long as I use their swimsuits, bags and other stuff showing their brand. <span class="highlightable" data-q="23">It’d be great if they also gave me financial support for hotels, as my parents have to spend a lot on that kind of thing.</span></p>
-            <p><strong>Man:</strong> So, you’ve got a new swimming coach now. What changes has she made?</p>
-            <p><strong>Girl:</strong> Well, I’m doing the same regular fitness training. But, <span class="highlightable" data-q="24">thanks to her suggestions about the way I move my arms through the water, I’ve already seen improvements in my speed.</span> She’s also looked at the food I eat – luckily she was satisfied with that. I’m very strict with my diet.</p>
-            <p><strong>Man:</strong> And you’re going to Spain soon I hear.</p>
-            <p><strong>Girl:</strong> Well, I’ve got a short break first, and then I’m going on a special training course there for the whole summer. <span class="highlightable" data-q="25">I’ll work with lots of swimmers I haven’t met before.</span> I’m really looking forward to that. I won’t do any races but it’ll still be hard work.</p>
+            <p><strong>Girl:</strong> Yes, I was invited to join the club when I was 12. It took an hour to get to their pool. Mum drove me. We had to leave for training early each morning, but we enjoyed chatting on the journey. <span class="highlightable" data-q="21">With all the training and competitions, I couldn't attend school sometimes, which I was unhappy about.</span> I was always much busier than my friends, but I still met up with them when I had time.</p>
+            <p><strong>Man:</strong> And now you've had success at the Swim Stars International competition. Tell us about that.</p>
+            <p><strong>Girl:</strong> Well, I'd trained hard, and I expected to do well, although winning was still brilliant! Swimming isn't shown much on TV - it's usually famous footballers or tennis stars people love watching - so <span class="highlightable" data-q="22">I couldn't believe people wanted to read and watch interviews with me!</span></p>
+            <p><strong>Man:</strong> So, I imagine it's expensive taking part in international competitions. Do you get help with the costs?</p>
+            <p><strong>Girl:</strong> Yes. Fortunately, a sportswear company pays for plane tickets, as long as I use their swimsuits, bags and other stuff showing their brand. <span class="highlightable" data-q="23">It'd be great if they also gave me financial support for hotels, as my parents have to spend a lot on that kind of thing.</span></p>
+            <p><strong>Man:</strong> So, you've got a new swimming coach now. What changes has she made?</p>
+            <p><strong>Girl:</strong> Well, I'm doing the same regular fitness training. But, <span class="highlightable" data-q="24">thanks to her suggestions about the way I move my arms through the water, I've already seen improvements in my speed.</span> She's also looked at the food I eat - luckily she was satisfied with that. I'm very strict with my diet.</p>
+            <p><strong>Man:</strong> And you're going to Spain soon I hear.</p>
+            <p><strong>Girl:</strong> Well, I've got a short break first, and then I'm going on a special training course there for the whole summer. <span class="highlightable" data-q="25">I'll work with lots of swimmers I haven't met before.</span> I'm really looking forward to that. I won't do any races but it'll still be hard work.</p>
             <p><strong>Man:</strong> Thanks Rosie….</p>
             <p><em>Now listen again.</em></p>
             <p style="color:#666;">That is the end of Part Four.</p>
-        `;
+        `,
 
-        // ---------- Dữ liệu câu hỏi ----------
-        const questionsData = [
+        // Questions Data
+        questions: [
             { num: 20, text: "Rosie swam a lot when she was very young because", options: [
                 "her father thought it was an important skill.",
                 "she wanted to be like her brother.",
@@ -217,7 +229,7 @@
             { num: 23, text: "Rosie says she needs more help with the cost of", options: [
                 "transport to competitions.",
                 "the kit she needs.",
-                "her accommodation while she’s abroad."
+                "her accommodation while she's abroad."
             ]},
             { num: 24, text: "What has Rosie changed since she got a new coach?", options: [
                 "her swimming style.",
@@ -229,446 +241,15 @@
                 "train with different people.",
                 "have some time to relax."
             ]}
-        ];
+        ]
+    };
 
-        // ---------- STATE ----------
-        let examSubmitted = false;
-        let explanationMode = false;
-        const audio = document.getElementById('listeningAudio');
-        const speedSelect = document.getElementById('speedSelect');
-
-        speedSelect.addEventListener('change', function() {
-            audio.playbackRate = parseFloat(this.value);
-        });
-
-        // Helper: lấy câu trả lời của người dùng (chữ cái A, B, C hoặc null)
-        function getUserAnswer(q) {
-            const radios = document.getElementsByName(`q${q}`);
-            for (let radio of radios) {
-                if (radio.checked) return radio.value;
-            }
-            return null;
-        }
-
-        // Kiểm tra một câu có đúng không
-        function isAnswerCorrect(q, userAnswer) {
-            return userAnswer === answerKey[`q${q}`];
-        }
-
-        // Cập nhật số câu đã làm và màu nav
-        function updateAnswerCount() {
-            let answered = 0;
-            for (let i = 20; i <= 25; i++) if (getUserAnswer(i)) answered++;
-            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-            for (let i = 20; i <= 25; i++) {
-                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
-                if (btn) {
-                    btn.classList.remove('answered', 'unanswered');
-                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
-                }
-            }
-        }
-
-        // Tạo nút điều hướng từ 20 đến 25
-        function createNavButtons() {
-            const nav = document.getElementById('navButtons');
-            nav.innerHTML = '';
-            for (let i = 20; i <= 25; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn unanswered';
-                btn.textContent = i;
-                btn.dataset.question = i;
-                btn.addEventListener('click', function() {
-                    const q = this.dataset.question;
-                    document.getElementById(`question-${q}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-                nav.appendChild(btn);
-            }
-        }
-
-        // Tạo HTML cho các câu hỏi
-        function renderQuestions() {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-            questionsData.forEach(q => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.id = `question-${q.num}`;
-                div.innerHTML = `
-                    <div class="question-text">${q.num}. ${q.text}</div>
-                    <div class="options">
-                        ${q.options.map((opt, index) => `
-                            <div class="option">
-                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
-                                <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <span class="eye-icon" data-question="${q.num}">👁️</span>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // Đánh dấu đúng/sai và hiển thị badge
-        function markAnswers() {
-            for (let i = 20; i <= 25; i++) {
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (!questionDiv) continue;
-                const user = getUserAnswer(i);
-                const correct = isAnswerCorrect(i, user);
-                questionDiv.classList.remove('correct', 'incorrect');
-                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
-                if (oldBadge) oldBadge.remove();
-                if (correct) {
-                    questionDiv.classList.add('correct');
-                } else {
-                    questionDiv.classList.add('incorrect');
-                    // Hiển thị badge đáp án đúng
-                    const badge = document.createElement('span');
-                    badge.className = 'correct-answer-badge';
-                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
-                    questionDiv.appendChild(badge);
-                }
-            }
-        }
-
-        // Hiển thị giải thích cho câu hỏi
-        function showExplanation(questionNum) {
-            if (!explanationMode && !examSubmitted) return;
-
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-
-            const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
-            highlightSpans.forEach(span => {
-                const parentP = span.closest('p');
-                if (parentP) parentP.classList.add('transcript-highlight');
-                span.classList.add('keyword-highlight');
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                span.classList.add('scroll-highlight');
-                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
-            });
-
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
-            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
-            if (examSubmitted) {
-                const user = getUserAnswer(questionNum) || '(chưa chọn)';
-                const isCorrect = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>✅ Đúng!</strong>`;
-                html += `</div>`;
-            }
-            document.getElementById('explanationText').innerHTML = html;
-        }
-
-        // Reset tất cả
-        function resetAll() {
-            examSubmitted = false;
-            explanationMode = false;
-            for (let i = 20; i <= 25; i++) {
-                const radios = document.getElementsByName(`q${i}`);
-                radios.forEach(r => {
-                    r.checked = false;
-                    r.disabled = false;
-                });
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (questionDiv) {
-                    questionDiv.classList.remove('correct', 'incorrect');
-                    const badge = questionDiv.querySelector('.correct-answer-badge');
-                    if (badge) badge.remove();
-                }
-            }
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.remove('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = '';
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').textContent = 'Nộp bài';
-            document.getElementById('explainBtn').disabled = true;
-            document.getElementById('explainBtn').textContent = 'Xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-            updateAnswerCount();
-        }
-
-        // ---------- EVENT LISTENERS ----------
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', updateAnswerCount);
-        });
-
-        document.getElementById('submitBtn').addEventListener('click', function() {
-            if (examSubmitted) return;
-            let unanswered = [];
-            for (let i = 20; i <= 25; i++) if (!getUserAnswer(i)) unanswered.push(i);
-            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
-
-            examSubmitted = true;
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.add('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
-            markAnswers();
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-            document.getElementById('explainBtn').disabled = false;
-
-            let correctCount = 0;
-            for (let i = 20; i <= 25; i++) {
-                if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
-            }
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `
-                <h4>Bạn đã nộp bài</h4>
-                <p><strong>Đúng:</strong> ${correctCount}/6</p>
-                <p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>
-            `;
-            saveToDashboard();
-            document.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
-        });
-
-        // ========== LƯU VÀO DASHBOARD ==========
-        function saveToDashboard() {
-            if (!examSubmitted) return;
-            const details = [];
-            let correct = 0;
-            for (let i = 20; i <= 25; i++) {
-                const user = getUserAnswer(i) || '(trống)';
-                const isOk = isAnswerCorrect(i, getUserAnswer(i));
-                if (isOk) correct++;
-                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
-            }
-            const partData = { partId: 4, name: 'Part 4', totalQuestions: 6, correctCount: correct, details };
-            localStorage.setItem('pet_listening_book1_test2_part4', JSON.stringify(partData));
-            console.log('✅ Đã lưu pet_listening_book1_test2_part4');
-        }
-
-        document.getElementById('explainBtn').addEventListener('click', function() {
-            if (!examSubmitted) return;
-            explanationMode = true;
-            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
-            this.disabled = true;
-            this.textContent = 'Đang xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', function() {
-            if (confirm('Reset tất cả câu trả lời?')) resetAll();
-        });
-
-        document.getElementById('closeExplanation').addEventListener('click', function() {
-            document.getElementById('explanationPanel').classList.remove('show');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-        });
-
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('eye-icon')) {
-                const q = e.target.dataset.question;
-                showExplanation(q);
-            }
-        });
-
-        // Font size
-        function setFontSize(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-                el.className = `transcript-content font-${size}`;
-                if (el.classList.contains('questions-list')) {
-                    el.classList.add('centered');
-                }
-            });
-        }
-        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-        // Resizer
-        const transcriptPanel = document.getElementById('transcriptPanel');
-        const questionsPanel = document.getElementById('questionsPanel');
-        const resizer = document.getElementById('resizer');
-        let isResizing = false;
-        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const mainArea = document.getElementById('mainArea');
-            const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
-            if (leftWidth < 250) leftWidth = 250;
-            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-            transcriptPanel.style.width = leftWidth + 'px';
-            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
-
-        // Khởi tạo
-        createNavButtons();
-        renderQuestions();
-        updateAnswerCount();
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-        setFontSize('large');
-
-        // ==================== MODE TOGGLE (Classic/Modern) ====================
-        const modeToggle = document.getElementById('modeToggle');
-        const styleLink = document.getElementById('styleLink');
-        const testWrapper = document.getElementById('testWrapper');
-        const html = document.documentElement;
-        const savedMode = localStorage.getItem('pet-mode');
-
-        function setMode(isClassic) {
-            if (isClassic) {
-                styleLink.href = 'listening-pet-common1.css';
-                testWrapper.classList.add('classic-mode');
-                html.removeAttribute('data-theme');
-                localStorage.removeItem('pet-theme');
-            } else {
-                styleLink.href = 'listening-pet-common.css';
-                testWrapper.classList.remove('classic-mode');
-            }
-            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-        }
-
-        if (savedMode === 'classic') {
-            modeToggle.checked = true;
-            setMode(true);
-        } else {
-            modeToggle.checked = false;
-            setMode(false);
-        }
-
-        modeToggle.addEventListener('change', () => {
-            setMode(modeToggle.checked);
-        });
-
-        // ==================== THEME TOGGLE ====================
-        const themeToggle = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('pet-theme');
-        if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-            html.setAttribute('data-theme', 'dark');
-        }
-        themeToggle.addEventListener('click', () => {
-            if (testWrapper.classList.contains('classic-mode')) {
-                return;
-            }
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('pet-theme', newTheme);
-        });
-    })();
-
-    // ========== THÊM CHỨC NĂNG HIGHLIGHT THỦ CÔNG ==========
-    let selectedRange = null;
-    const contextMenu = document.getElementById('contextMenu');
-
-    // Bắt sự kiện chuột phải trên transcript và phần câu hỏi
-    document.getElementById('transcriptContent')?.addEventListener('contextmenu', handleRightClick);
-    document.getElementById('questionsContent')?.addEventListener('contextmenu', handleRightClick);
-
-    function handleRightClick(e) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection.toString().trim()) {
-            selectedRange = selection.getRangeAt(0);
-            contextMenu.style.left = e.pageX + 'px';
-            contextMenu.style.top = e.pageY + 'px';
-            contextMenu.style.display = 'block';
-        }
-    }
-
-    // Ẩn menu khi click ra ngoài
-    document.addEventListener('click', () => {
-        contextMenu.style.display = 'none';
-        selectedRange = null;
+    // Initialize the listening test when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        window.listeningCore = new ListeningCore();
+        window.listeningCore.initializeTest(pet1Test2Part4Data);
+        console.log('PET 1 Test 2 Part 4 loaded with core listening engine');
     });
-
-    // Hàm áp dụng highlight (được gọi từ onclick trong menu)
-    window.applyHighlight = function(color) {
-        if (!selectedRange) return;
-        try {
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            span.appendChild(selectedRange.extractContents());
-            selectedRange.insertNode(span);
-        } catch (e) {
-            console.warn('Không thể highlight đoạn này');
-        }
-        contextMenu.style.display = 'none';
-        selectedRange = null;
-    };
-
-    // Hàm xoá highlight (chỉ xoá trong vùng được chọn)
-    window.removeHighlight = function() {
-        if (!selectedRange) return;
-        try {
-            // Tìm các thẻ highlight nằm trong vùng chọn và thay bằng nội dung gốc
-            const selectedNodes = [];
-            const iterator = document.createNodeIterator(
-                selectedRange.commonAncestorContainer,
-                NodeFilter.SHOW_ELEMENT,
-                {
-                    acceptNode: function(node) {
-                        if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) {
-                            if (selectedRange.intersectsNode(node)) {
-                                return NodeFilter.FILTER_ACCEPT;
-                            }
-                        }
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                }
-            );
-            let node;
-            while (node = iterator.nextNode()) {
-                node.replaceWith(...node.childNodes); // xoá thẻ span, giữ lại text
-            }
-        } catch (e) {
-            console.warn('Không thể xoá highlight');
-        }
-        contextMenu.style.display = 'none';
-        selectedRange = null;
-    };
-
-    // Resizable explanation panel logic
-    (function() {
-        const expPanel = document.getElementById('explanationPanel');
-        const expResizer = document.getElementById('explanationResizer');
-        let isResizingExp = false;
-        let startYExp, startHeightExp;
-
-        if (expResizer && expPanel) {
-            expResizer.addEventListener('mousedown', (e) => {
-                isResizingExp = true;
-                startYExp = e.clientY;
-                startHeightExp = expPanel.offsetHeight;
-                document.body.style.cursor = 'ns-resize';
-                document.body.style.userSelect = 'none';
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isResizingExp) return;
-                const dy = startYExp - e.clientY;
-                const newHeight = startHeightExp + dy;
-                if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                    expPanel.style.maxHeight = newHeight + 'px';
-                    expPanel.style.height = newHeight + 'px';
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                isResizingExp = false;
-                document.body.style.cursor = 'default';
-                document.body.style.userSelect = 'auto';
-            });
-        }
-    })();
 </script>
 </body>
 </html>

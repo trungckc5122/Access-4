@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>PET 1 - Test 2 - Reading Part 4</title>
-    <link rel="stylesheet" href="reading-pet-common.css">
+    <link rel="stylesheet" href="reading-pet-common.css" id="styleLink">
 </head>
 <body>
 <div class="test-wrapper part4-layout" id="testWrapper">
@@ -14,14 +14,18 @@
         <div class="brand">
             <div class="ielts-logo">PET</div>
             <div class="candidate">B1 Preliminary 1 · Test 2 · Part 4 (Reading)</div>
-            <div class="reading-mode-toggle" id="readingModeToggle">
-                <div class="toggle-switch" id="toggleSwitch"></div>
-                <span class="toggle-label">Đọc sách</span>
-            </div>
             <div class="font-controls">
                 <button class="font-btn" id="fontSmall">A-</button>
                 <button class="font-btn" id="fontMedium">A</button>
                 <button class="font-btn active" id="fontLarge">A+</button>
+            </div>
+            <div class="mode-toggle" id="modeToggleContainer">
+                <span class="mode-label">Hiện đại</span>
+                <label class="mode-switch" title="Chuyển đổi chế độ Cổ điển/Hiện đại">
+                    <input type="checkbox" id="modeToggle">
+                    <span class="mode-slider"></span>
+                </label>
+                <span class="mode-label">Cổ điển</span>
             </div>
             <button class="theme-toggle-btn" id="themeToggle" title="Chuyển đổi Dark/Light mode">
                 <span class="icon-moon">🌙</span>
@@ -726,12 +730,6 @@
     });
     document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
 
-    // ==================== READING MODE ====================
-    document.getElementById('readingModeToggle').addEventListener('click', () => {
-        document.getElementById('testWrapper').classList.toggle('reading-mode');
-        document.getElementById('toggleSwitch').classList.toggle('active');
-    });
-
     // ==================== CONTEXT MENU HIGHLIGHT ====================
     const contextMenu = document.getElementById('contextMenu');
     function showContextMenu(e) {
@@ -772,15 +770,46 @@
         selectedRange = null;
     };
 
-    // ==================== INIT ====================
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
+    // ==================== MODE TOGGLE (Classic/Modern) ====================
+    const modeToggle = document.getElementById('modeToggle');
+    const styleLink = document.getElementById('styleLink');
+    const testWrapper = document.getElementById('testWrapper');
     const html = document.documentElement;
+    const savedMode = localStorage.getItem('pet-mode');
+
+    function setMode(isClassic) {
+        if (isClassic) {
+            styleLink.href = 'reading-pet-common1.css';
+            testWrapper.classList.add('classic-mode');
+            html.removeAttribute('data-theme');
+            localStorage.removeItem('pet-theme');
+        } else {
+            styleLink.href = 'reading-pet-common.css';
+            testWrapper.classList.remove('classic-mode');
+        }
+        localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+    }
+
+    if (savedMode === 'classic') {
+        modeToggle.checked = true;
+        setMode(true);
+    } else {
+        modeToggle.checked = false;
+        setMode(false);
+    }
+
+    modeToggle.addEventListener('change', () => {
+        setMode(modeToggle.checked);
+    });
+
+    // ==================== THEME TOGGLE ====================
+    const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('pet-theme');
-    if (savedTheme === 'dark') {
+    if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
         html.setAttribute('data-theme', 'dark');
     }
     themeToggle.addEventListener('click', () => {
+        if (testWrapper.classList.contains('classic-mode')) return;
         const currentTheme = html.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', newTheme);

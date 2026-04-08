@@ -8,7 +8,6 @@
 </head>
 <body>
 <div class="test-wrapper" id="testWrapper">
-    <!-- Header -->
     <div class="ielts-header">
         <div class="brand">
             <div class="ielts-logo">PET</div>
@@ -16,7 +15,7 @@
             <div class="audio-controls">
                 <audio id="listeningAudio" controls>
                     <source src="B1 Preliminary 1 - Test 3 Part 4.mp3" type="audio/mpeg">
-                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" type="audio/mpeg"> <!-- fallback -->
+                    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" type="audio/mpeg">
                 </audio>
                 <select class="speed-select" id="speedSelect">
                     <option value="0.7">0.7x</option>
@@ -35,56 +34,32 @@
         </div>
         <div class="mode-toggle" id="modeToggleContainer">
             <span class="mode-label">Hiện đại</span>
-            <label class="mode-switch" title="Chuyển đổi chế độ Cổ điển/Hiện đại">
-                <input type="checkbox" id="modeToggle">
-                <span class="mode-slider"></span>
-            </label>
+            <label class="mode-switch"><input type="checkbox" id="modeToggle"><span class="mode-slider"></span></label>
             <span class="mode-label">Cổ điển</span>
         </div>
-        <button class="theme-toggle-btn" id="themeToggle" title="Chuyển đổi Dark/Light mode">
-            <span class="icon-moon">🌙</span>
-            <span class="icon-sun">☀️</span>
-        </button>
+        <button class="theme-toggle-btn" id="themeToggle"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
     </div>
 
-    <!-- Question navigator (20-25) -->
     <div class="question-nav">
         <span style="font-weight:600; color:#1e3a5f;">Câu 20-25:</span>
         <div class="nav-buttons" id="navButtons"></div>
     </div>
 
-    <!-- Main area -->
     <div class="main-area" id="mainArea">
-        <!-- Transcript panel (ẩn ban đầu) -->
         <div class="transcript-panel" id="transcriptPanel">
-            <div class="panel-header">
-                <span>TRANSCRIPT</span>
-            </div>
+            <div class="panel-header"><span>TRANSCRIPT</span></div>
             <div class="transcript-content font-large" id="transcriptContent"></div>
         </div>
         <div class="resizer" id="resizer"></div>
-
-        <!-- Questions panel -->
         <div class="questions-panel" id="questionsPanel">
             <div class="panel-header">
                 <span>QUESTIONS 20-25</span>
                 <span class="answer-badge" id="answeredCount">0/6 answered</span>
             </div>
-            <div class="questions-list font-large centered" id="questionsContent">
-                <div>
-                    <h3>PART 4 Questions 20-25</h3>
-                    <p><em>You will hear an interview with a man called James Sweeney who works as a tree-climbing instructor.</em></p>
-                    <p style="margin-top:6px;"><em>For each question, choose the correct answer (A, B or C).</em></p>
-
-                    <div class="notes-box" id="questionsContainer">
-                        <!-- Các câu hỏi sẽ được tạo bằng JavaScript để dễ quản lý -->
-                    </div>
-                </div>
-            </div>
+            <div class="questions-list font-large" id="questionsContent"></div>
         </div>
     </div>
 
-    <!-- Bottom bar -->
     <div class="bottom-bar">
         <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
         <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
@@ -92,7 +67,6 @@
         <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
     </div>
 
-    <!-- Explanation panel -->
     <div class="explanation-panel" id="explanationPanel">
         <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
@@ -103,7 +77,6 @@
     </div>
 </div>
 
-<!-- ===== THÊM CONTEXT MENU CHO HIGHLIGHT THỦ CÔNG ===== -->
 <div class="context-menu" id="contextMenu">
     <div onclick="applyHighlight('yellow')">Highlight vàng</div>
     <div onclick="applyHighlight('green')">Highlight xanh lá</div>
@@ -111,557 +84,92 @@
     <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
+<script src="core-listening.js"></script>
 <script>
-    (function() {
-        // ---------- ANSWER KEY (chữ cái) ----------
-        const answerKey = {
-            q20: 'A',
-            q21: 'B',
-            q22: 'A',
-            q23: 'B',
-            q24: 'C',
-            q25: 'C'
-        };
+const pet1Test3Part4Data = {
+    title: "B1 Preliminary 1 · Test 3 · Part 4",
+    type: "multiple-choice",
+    part: 4,
+    book: 1,
+    test: 3,
 
-        // ---------- Đáp án hiển thị (dạng chữ cái) ----------
-        const displayAnswers = {
-            q20: 'A',
-            q21: 'B',
-            q22: 'A',
-            q23: 'B',
-            q24: 'C',
-            q25: 'C'
-        };
+    answerKey: { q20: 'A', q21: 'B', q22: 'A', q23: 'B', q24: 'C', q25: 'C' },
+    displayAnswers: { q20: 'A', q21: 'B', q22: 'A', q23: 'B', q24: 'C', q25: 'C' },
 
-        // ---------- GIẢI THÍCH CHI TIẾT ----------
-        const detailedExplanations = {
-            q20: `<strong>Đáp án: A – He worked for someone who looked after trees.</strong><br>James nói: <em>"Mom had a friend who was an arborist – someone who takes care of trees – and <u>he offered me a job one summer</u>."</em> Chính việc được người bạn của mẹ (một chuyên gia chăm sóc cây) cho việc làm mùa hè đã khơi dậy niềm đam mê với cây của anh ấy.
-                  <br><br>
-                  <strong>✗ Phương án B sai:</strong> Anh chơi trong vườn khi còn bé nhưng "I wasn't allowed to go up the trees" (không được phép leo cây).
-                  <br>
-                  <strong>✗ Phương án C sai:</strong> Mẹ anh làm thiết kế vườn ("garden designer") chứ không trực tiếp dạy anh về cây (việc bạn mẹ mới là nguồn cảm hứng trực tiếp).`,
-            q21: `<strong>Đáp án: B – the wide range of people in the class.</strong><br>James kể: <em>"I was expecting everyone in the class to be young and fit... In fact <u>there were middle-aged climbers, children – even old people!</u>"</em> Điều bất ngờ là sự đa dạng về độ tuổi của học viên.
-                  <br><br>
-                  <strong>✗ Phương án A sai:</strong> Anh không ngạc nhiên về thời gian ("We stayed in the trees for hours because it was so much fun!").
-                  <br>
-                  <strong>✗ Phương án C sai:</strong> Anh biết rõ là cần phải có dụng cụ đặc biệt, nên anh không bất ngờ ("There was obviously special equipment to make climbing safe").`,
-            q22: `<strong>Đáp án: A – helping people who need the skill for their work.</strong><br>James nói: <em>"Particularly <u>teaching those whose jobs involve having to go up trees</u>, like scientists, for example."</em> Anh ấy đặc biệt thích dạy những người cần kỹ năng leo cây cho công việc của họ.
-                  <br><br>
-                  <strong>✗ Phương án B sai:</strong> Mặc dù dạy niềm vui thời ấu thơ cũng tốt, nhưng anh nhấn mạnh đặc biệt (particularly) việc dạy những người cần kỹ năng vì công việc.
-                  <br>
-                  <strong>✗ Phương án C sai:</strong> Anh thực tế không thích làm việc dưới trời mưa hay khi quá nóng ("although not so much in the rain or when it's very hot").`,
-            q23: `<strong>Đáp án: B – there isn't much work in his own area in winter.</strong><br>James giải thích: <em>"I live and work in the north-west of this country, and <u>no-one wants to climb trees there in the winter</u>. So I move around."</em> Vào mùa đông không có khách ở vùng anh ở, nên anh phải di chuyển đến nơi khác.
-                  <br><br>
-                  <strong>✗ Phương án A sai:</strong> Không phải vì mức độ phổ biến leo cây tăng lên ở Mỹ mà anh phải di chuyển ("there's actually more interest in the subject abroad than from here").
-                  <br>
-                  <strong>✗ Phương án C sai:</strong> Anh di chuyển vì nhu cầu công việc (tránh mùa đông), chứ không phải chỉ vì muốn du lịch tham quan.`,
-            q24: `<strong>Đáp án: C – He can look at the stars.</strong><br>James nói: <em>"<u>It's such a great place to get views of the night sky.</u>"</em> Lý do anh thích ngủ trên cây là để ngắm bầu trời đêm (nhìn ngắm các vì sao).
-                  <br><br>
-                  <strong>✗ Phương án A sai:</strong> Anh thức dậy vì tiếng chim nhưng điều đó rất ồn ("a tiny bird sounds very loud"), không phải là điểm anh thích.
-                  <br>
-                  <strong>✗ Phương án B sai:</strong> Mặc dù anh nói "it's not that bad really", nhưng đây không phải là điều làm anh thích việc ngủ trên cây.`,
-            q25: `<strong>Đáp án: C – he has to protect the trees.</strong><br>James giải thích: <em>"The climbing's more challenging... because you have to move more slowly. <u>It's an important environment, so you need to be careful not to damage it.</u>"</em> Phải di chuyển chậm để bảo vệ môi trường rừng nhiệt đới, không làm hại cây.
-                  <br><br>
-                  <strong>✗ Phương án A sai:</strong> Côn trùng sống trong cây nhưng anh cảnh báo không nên di chuyển nhanh để tránh hút côn trùng và bị cắn ("If you go fast you attract them"), không bảo là nghiên cứu (study) chúng.
-                  <br>
-                  <strong>✗ Phương án B sai:</strong> Anh khẳng định "not because the trees are harder to climb" (không phải vì cây khó leo hơn).`
-        };
+    detailedExplanations: {
+        q20: `<strong>Đáp án: A – He worked for someone who looked after trees.</strong><br>James nói: <em>"Mom had a friend who was an arborist – someone who takes care of trees – and <u>he offered me a job one summer</u>."</em> Chính việc được người bạn của mẹ (một chuyên gia chăm sóc cây) cho việc làm mùa hè đã khơi dậy niềm đam mê với cây của anh ấy.
+              <br><br>
+              <strong>✗ Phương án B sai:</strong> Anh chơi trong vườn khi còn bé nhưng "I wasn't allowed to go up the trees" (không được phép leo cây).
+              <br>
+              <strong>✗ Phương án C sai:</strong> Mẹ anh làm thiết kế vườn ("garden designer") chứ không trực tiếp dạy anh về cây (việc bạn mẹ mới là nguồn cảm hứng trực tiếp).`,
 
-        // ---------- TRANSCRIPT với các span highlight ----------
-        const transcriptHTML = `
-            <p><em>Now look at Part Four. For each question, choose the correct answer. Look at questions 20 to 25 now. You have 45 seconds.</em></p>
-            <p><em>You will hear an interview with a man called James Sweeney who works as a tree-climbing instructor.</em></p>
-            <hr style="margin:10px 0; border-color:#d2cbbc;">
-            <p><strong>Woman:</strong> I'm talking to James Sweeney, who's a tree-climbing instructor. He teaches people who want to learn for different reasons. How did you get interested in trees, James?</p>
-            <p><strong>Man:</strong> I grew up around trees, because my mother was a garden designer. I often spent time in the gardens she worked on, although I wasn't allowed to go up the trees. What really got me into it was that <span class="highlightable" data-q="20">Mom had a friend who was an arborist – someone who takes care of trees – and he offered me a job one summer.</span></p>
-            <p><strong>Woman:</strong> And then you went on a course to learn to climb trees. How was that?</p>
-            <p><strong>Man:</strong> Well <span class="highlightable" data-q="21">I was expecting everyone in the class to be young and fit, because I thought you needed to be strong to climb trees. In fact there were middle-aged climbers, children – even old people!</span> There was obviously special equipment to make climbing safe. We stayed in the trees for hours because it was so much fun!</p>
-            <p><strong>Woman:</strong> And then you became a teacher of tree-climbing yourself… What do you enjoy most about it?</p>
-            <p><strong>Man:</strong> It's great to be in the open, although not so much in the rain or when it's very hot. And I like working with people. <span class="highlightable" data-q="22">Particularly teaching those whose jobs involve having to go up trees, like scientists, for example.</span> There aren't so many of them – most people come because of happy memories of a childhood tree-climbing experience.</p>
-            <p><strong>Woman:</strong> You often travel around the USA, too. Why?</p>
-            <p><strong>Man:</strong> I live and work in the north-west of this country, and <span class="highlightable" data-q="23">no-one wants to climb trees there in the winter. So I move around.</span> I've climbed trees in every US state except Alaska! And in other countries – there's actually more interest in the subject abroad than from here though.</p>
-            <p><strong>Woman:</strong> And you like sleeping in trees, I understand. Why's that?</p>
-            <p><strong>Man:</strong> <span class="highlightable" data-q="24">It's such a great place to get views of the night sky.</span> People say it must be uncomfortable, but you get used to it – it's not that bad really. You can't wake up late in the trees though – even a tiny bird sounds very loud when it's only a few inches from your head!</p>
-            <p><strong>Woman:</strong> You've climbed trees in rainforests too. How is that different?</p>
-            <p><strong>Man:</strong> The climbing's more challenging – not because the trees are harder to climb, but because you have to move more slowly. <span class="highlightable" data-q="25">It's an important environment, so you need to be careful not to damage it.</span> There are insects living in the trees too. If you go fast you attract them, and you're more likely to get bitten.</p>
-            <p><strong>Woman:</strong> Thanks, James… (fade)</p>
-            <p><em>Now listen again.</em></p>
-            <p><em>[repeat]</em></p>
-            <p style="color:#666;">That is the end of Part Four.<br>You now have six minutes to write your answers on the answer sheet.<br>You have one more minute.<br>That is the end of the test.</p>
-        `;
+        q21: `<strong>Đáp án: B – the wide range of people in the class.</strong><br>James kể: <em>"I was expecting everyone in the class to be young and fit... In fact <u>there were middle-aged climbers, children – even old people!</u>"</em> Điều bất ngờ là sự đa dạng về độ tuổi của học viên.
+              <br><br>
+              <strong>✗ Phương án A sai:</strong> Anh không ngạc nhiên về thời gian ("We stayed in the trees for hours because it was so much fun!").
+              <br>
+              <strong>✗ Phương án C sai:</strong> Anh biết rõ là cần phải có dụng cụ đặc biệt, nên anh không bất ngờ ("There was obviously special equipment to make climbing safe").`,
 
-        // ---------- Dữ liệu câu hỏi ----------
-        const questionsData = [
-            { num: 20, text: "How did James become interested in trees?", options: [
-                "He worked for someone who looked after trees.",
-                "He enjoyed playing in trees when he was a child.",
-                "He learnt about trees from his mother."
-            ]},
-            { num: 21, text: "What surprised James when he first learnt to climb trees?", options: [
-                "the time it took to become good at it",
-                "the wide range of people in the class",
-                "the amount of equipment needed"
-            ]},
-            { num: 22, text: "What does James enjoy most about his teaching work?", options: [
-                "helping people who need the skill for their work",
-                "giving people an interesting new experience",
-                "showing people how to climb in different kinds of weather"
-            ]},
-            { num: 23, text: "James travels around the USA a lot because", options: [
-                "interest in tree climbing is increasing there.",
-                "there isn't much work in his own area in winter.",
-                "he'd like to visit as many parts of the country as possible."
-            ]},
-            { num: 24, text: "What does James like about sleeping in trees?", options: [
-                "He wakes up to the sound of birds.",
-                "He thinks it's comfortable.",
-                "He can look at the stars."
-            ]},
-            { num: 25, text: "When James climbs in the rainforests, he moves more slowly because", options: [
-                "he wants to study the insects.",
-                "he finds the trees difficult to climb.",
-                "he has to protect the trees."
-            ]}
-        ];
+        q22: `<strong>Đáp án: A – helping people who need the skill for their work.</strong><br>James nói: <em>"Particularly <u>teaching those whose jobs involve having to go up trees</u>, like scientists, for example."</em> Anh ấy đặc biệt thích dạy những người cần kỹ năng leo cây cho công việc của họ.
+              <br><br>
+              <strong>✗ Phương án B sai:</strong> Mặc dù dạy niềm vui thời ấu thơ cũng tốt, nhưng anh nhấn mạnh đặc biệt (particularly) việc dạy những người cần kỹ năng vì công việc.
+              <br>
+              <strong>✗ Phương án C sai:</strong> Anh thực tế không thích làm việc dưới trời mưa hay khi quá nóng ("although not so much in the rain or when it's very hot").`,
 
-        // ---------- STATE ----------
-        let examSubmitted = false;
-        let explanationMode = false;
-        const audio = document.getElementById('listeningAudio');
-        const speedSelect = document.getElementById('speedSelect');
+        q23: `<strong>Đáp án: B – there isn't much work in his own area in winter.</strong><br>James giải thích: <em>"I live and work in the north-west of this country, and <u>no-one wants to climb trees there in the winter</u>. So I move around."</em> Vào mùa đông không có khách ở vùng anh ở, nên anh phải di chuyển đến nơi khác.
+              <br><br>
+              <strong>✗ Phương án A sai:</strong> Không phải vì mức độ phổ biến leo cây tăng lên ở Mỹ mà anh phải di chuyển ("there's actually more interest in the subject abroad than from here").
+              <br>
+              <strong>✗ Phương án C sai:</strong> Anh di chuyển vì nhu cầu công việc (tránh mùa đông), chứ không phải chỉ vì muốn du lịch tham quan.`,
 
-        speedSelect.addEventListener('change', function() {
-            audio.playbackRate = parseFloat(this.value);
-        });
+        q24: `<strong>Đáp án: C – He can look at the stars.</strong><br>James nói: <em>"<u>It's such a great place to get views of the night sky.</u>"</em> Lý do anh thích ngủ trên cây là để ngắm bầu trời đêm (nhìn ngắm các vì sao).
+              <br><br>
+              <strong>✗ Phương án A sai:</strong> Anh thức dậy vì tiếng chim nhưng điều đó rất ồn ("a tiny bird sounds very loud"), không phải là điểm anh thích.
+              <br>
+              <strong>✗ Phương án B sai:</strong> Mặc dù anh nói "it's not that bad really", nhưng đây không phải là điều làm anh thích việc ngủ trên cây.`,
 
-        // Helper: lấy câu trả lời của người dùng (chữ cái A, B, C hoặc null)
-        function getUserAnswer(q) {
-            const radios = document.getElementsByName(`q${q}`);
-            for (let radio of radios) {
-                if (radio.checked) return radio.value;
-            }
-            return null;
-        }
+        q25: `<strong>Đáp án: C – he has to protect the trees.</strong><br>James giải thích: <em>"The climbing's more challenging... because you have to move more slowly. <u>It's an important environment, so you need to be careful not to damage it.</u>"</em> Phải di chuyển chậm để bảo vệ môi trường rừng nhiệt đới, không làm hại cây.
+              <br><br>
+              <strong>✗ Phương án A sai:</strong> Côn trùng sống trong cây nhưng anh cảnh báo không nên di chuyển nhanh để tránh hút côn trùng và bị cắn ("If you go fast you attract them"), không bảo là nghiên cứu (study) chúng.
+              <br>
+              <strong>✗ Phương án B sai:</strong> Anh khẳng định "not because the trees are harder to climb" (không phải vì cây khó leo hơn).`
+    },
 
-        // Kiểm tra một câu có đúng không
-        function isAnswerCorrect(q, userAnswer) {
-            return userAnswer === answerKey[`q${q}`];
-        }
+    transcript: `
+        <p><em>Now look at Part Four. For each question, choose the correct answer. Look at questions 20 to 25 now. You have 45 seconds.</em></p>
+        <p><em>You will hear an interview with a man called James Sweeney who works as a tree-climbing instructor.</em></p>
+        <hr style="margin:10px 0; border-color:#d2cbbc;">
+        <p><strong>Woman:</strong> I'm talking to James Sweeney, who's a tree-climbing instructor. He teaches people who want to learn for different reasons. How did you get interested in trees, James?</p>
+        <p><strong>Man:</strong> I grew up around trees, because my mother was a garden designer. I often spent time in the gardens she worked on, although I wasn't allowed to go up the trees. What really got me into it was that <span class="highlightable" data-q="20">Mom had a friend who was an arborist – someone who takes care of trees – and he offered me a job one summer.</span></p>
+        <p><strong>Woman:</strong> And then you went on a course to learn to climb trees. How was that?</p>
+        <p><strong>Man:</strong> Well <span class="highlightable" data-q="21">I was expecting everyone in the class to be young and fit, because I thought you needed to be strong to climb trees. In fact there were middle-aged climbers, children – even old people!</span> There was obviously special equipment to make climbing safe. We stayed in the trees for hours because it was so much fun!</p>
+        <p><strong>Woman:</strong> And then you became a teacher of tree-climbing yourself… What do you enjoy most about it?</p>
+        <p><strong>Man:</strong> It's great to be in the open, although not so much in the rain or when it's very hot. And I like working with people. <span class="highlightable" data-q="22">Particularly teaching those whose jobs involve having to go up trees, like scientists, for example.</span> There aren't so many of them – most people come because of happy memories of a childhood tree-climbing experience.</p>
+        <p><strong>Woman:</strong> You often travel around the USA, too. Why?</p>
+        <p><strong>Man:</strong> I live and work in the north-west of this country, and <span class="highlightable" data-q="23">no-one wants to climb trees there in the winter. So I move around.</span> I've climbed trees in every US state except Alaska! And in other countries – there's actually more interest in the subject abroad than from here though.</p>
+        <p><strong>Woman:</strong> And you like sleeping in trees, I understand. Why's that?</p>
+        <p><strong>Man:</strong> <span class="highlightable" data-q="24">It's such a great place to get views of the night sky.</span> People say it must be uncomfortable, but you get used to it – it's not that bad really. You can't wake up late in the trees though – even a tiny bird sounds very loud when it's only a few inches from your head!</p>
+        <p><strong>Woman:</strong> You've climbed trees in rainforests too. How is that different?</p>
+        <p><strong>Man:</strong> The climbing's more challenging – not because the trees are harder to climb, but because you have to move more slowly. <span class="highlightable" data-q="25">It's an important environment, so you need to be careful not to damage it.</span> There are insects living in the trees too. If you go fast you attract them, and you're more likely to get bitten.</p>
+        <p><strong>Woman:</strong> Thanks, James… (fade)</p>
+        <p><em>Now listen again.</em></p>
+        <p><em>[repeat]</em></p>
+        <p style="color:#666;">That is the end of Part Four.<br>You now have six minutes to write your answers on the answer sheet.<br>You have one more minute.<br>That is the end of the test.</p>
+    `,
 
-        // Cập nhật số câu đã làm và màu nav
-        function updateAnswerCount() {
-            let answered = 0;
-            for (let i = 20; i <= 25; i++) if (getUserAnswer(i)) answered++;
-            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-            for (let i = 20; i <= 25; i++) {
-                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
-                if (btn) {
-                    btn.classList.remove('answered', 'unanswered');
-                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
-                }
-            }
-        }
+    questions: [
+        { num: 20, text: "How did James become interested in trees?", options: ["He worked for someone who looked after trees.", "He enjoyed playing in trees when he was a child.", "He learnt about trees from his mother."] },
+        { num: 21, text: "What surprised James when he first learnt to climb trees?", options: ["the time it took to become good at it", "the wide range of people in the class", "the amount of equipment needed"] },
+        { num: 22, text: "What does James enjoy most about his teaching work?", options: ["helping people who need the skill for their work", "giving people an interesting new experience", "showing people how to climb in different kinds of weather"] },
+        { num: 23, text: "James travels around the USA a lot because", options: ["interest in tree climbing is increasing there.", "there isn't much work in his own area in winter.", "he'd like to visit as many parts of the country as possible."] },
+        { num: 24, text: "What does James like about sleeping in trees?", options: ["He wakes up to the sound of birds.", "He thinks it's comfortable.", "He can look at the stars."] },
+        { num: 25, text: "When James climbs in the rainforests, he moves more slowly because", options: ["he wants to study the insects.", "he finds the trees difficult to climb.", "he has to protect the trees."] }
+    ]
+};
 
-        // Tạo nút điều hướng từ 20 đến 25
-        function createNavButtons() {
-            const nav = document.getElementById('navButtons');
-            nav.innerHTML = '';
-            for (let i = 20; i <= 25; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn unanswered';
-                btn.textContent = i;
-                btn.dataset.question = i;
-                btn.addEventListener('click', function() {
-                    const q = this.dataset.question;
-                    document.getElementById(`question-${q}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-                nav.appendChild(btn);
-            }
-        }
-
-        // Tạo HTML cho các câu hỏi
-        function renderQuestions() {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-            questionsData.forEach(q => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.id = `question-${q.num}`;
-                div.innerHTML = `
-                    <div class="question-text">${q.num}. ${q.text}</div>
-                    <div class="options">
-                        ${q.options.map((opt, index) => `
-                            <div class="option">
-                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
-                                <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <span class="eye-icon" data-question="${q.num}">👁️</span>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // Đánh dấu đúng/sai và hiển thị badge
-        function markAnswers() {
-            for (let i = 20; i <= 25; i++) {
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (!questionDiv) continue;
-                const user = getUserAnswer(i);
-                const correct = isAnswerCorrect(i, user);
-                questionDiv.classList.remove('correct', 'incorrect');
-                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
-                if (oldBadge) oldBadge.remove();
-                if (correct) {
-                    questionDiv.classList.add('correct');
-                } else {
-                    questionDiv.classList.add('incorrect');
-                    // Hiển thị badge đáp án đúng
-                    const badge = document.createElement('span');
-                    badge.className = 'correct-answer-badge';
-                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
-                    questionDiv.appendChild(badge);
-                }
-            }
-        }
-
-        // Hiển thị giải thích cho câu hỏi
-        function showExplanation(questionNum) {
-            if (!explanationMode && !examSubmitted) return;
-
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-
-            const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
-            highlightSpans.forEach(span => {
-                const parentP = span.closest('p');
-                if (parentP) parentP.classList.add('transcript-highlight');
-                span.classList.add('keyword-highlight');
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                span.classList.add('scroll-highlight');
-                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
-            });
-
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
-            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
-            if (examSubmitted) {
-                const user = getUserAnswer(questionNum) || '(chưa chọn)';
-                const isCorrect = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>✅ Đúng!</strong>`;
-                html += `</div>`;
-            }
-            document.getElementById('explanationText').innerHTML = html;
-        }
-
-        // Reset tất cả
-        function resetAll() {
-            examSubmitted = false;
-            explanationMode = false;
-            for (let i = 20; i <= 25; i++) {
-                const radios = document.getElementsByName(`q${i}`);
-                radios.forEach(r => {
-                    r.checked = false;
-                    r.disabled = false;
-                });
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (questionDiv) {
-                    questionDiv.classList.remove('correct', 'incorrect');
-                    const badge = questionDiv.querySelector('.correct-answer-badge');
-                    if (badge) badge.remove();
-                }
-            }
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.remove('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = '';
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').textContent = 'Nộp bài';
-            document.getElementById('explainBtn').disabled = true;
-            document.getElementById('explainBtn').textContent = 'Xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-            updateAnswerCount();
-        }
-
-        // ---------- EVENT LISTENERS ----------
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', updateAnswerCount);
-        });
-
-        document.getElementById('submitBtn').addEventListener('click', function() {
-            if (examSubmitted) return;
-            let unanswered = [];
-            for (let i = 20; i <= 25; i++) if (!getUserAnswer(i)) unanswered.push(i);
-            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
-
-            examSubmitted = true;
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.add('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
-            markAnswers();
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-            document.getElementById('explainBtn').disabled = false;
-
-            let correctCount = 0;
-            for (let i = 20; i <= 25; i++) {
-                if (isAnswerCorrect(i, getUserAnswer(i))) correctCount++;
-            }
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `
-                <h4>Bạn đã nộp bài</h4>
-                <p><strong>Đúng:</strong> ${correctCount}/6</p>
-                <p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>
-            `;
-            saveToDashboard();
-            document.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
-        });
-
-        // ========== LƯU VÀO DASHBOARD ==========
-        function saveToDashboard() {
-            if (!examSubmitted) return;
-            const details = [];
-            let correct = 0;
-            for (let i = 20; i <= 25; i++) {
-                const user = getUserAnswer(i) || '(trống)';
-                const isOk = isAnswerCorrect(i, getUserAnswer(i));
-                if (isOk) correct++;
-                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
-            }
-            const partData = { partId: 4, name: 'Part 4', totalQuestions: 6, correctCount: correct, details };
-            localStorage.setItem('pet_listening_book1_test3_part4', JSON.stringify(partData));
-            console.log('✅ Đã lưu pet_listening_book1_test3_part4');
-        }
-
-        document.getElementById('explainBtn').addEventListener('click', function() {
-            if (!examSubmitted) return;
-            explanationMode = true;
-            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
-            this.disabled = true;
-            this.textContent = 'Đang xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', function() {
-            if (confirm('Reset tất cả câu trả lời?')) resetAll();
-        });
-
-        document.getElementById('closeExplanation').addEventListener('click', function() {
-            document.getElementById('explanationPanel').classList.remove('show');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-        });
-
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('eye-icon')) {
-                const q = e.target.dataset.question;
-                showExplanation(q);
-            }
-        });
-
-        // Font size
-        function setFontSize(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-                el.className = `transcript-content font-${size}`;
-                if (el.classList.contains('questions-list')) {
-                    el.classList.add('centered');
-                }
-            });
-        }
-        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-        // Resizer
-        const transcriptPanel = document.getElementById('transcriptPanel');
-        const questionsPanel = document.getElementById('questionsPanel');
-        const resizer = document.getElementById('resizer');
-        let isResizing = false;
-        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const mainArea = document.getElementById('mainArea');
-            const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
-            if (leftWidth < 250) leftWidth = 250;
-            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-            transcriptPanel.style.width = leftWidth + 'px';
-            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
-
-        // Khởi tạo
-        createNavButtons();
-        renderQuestions();
-        updateAnswerCount();
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-        setFontSize('large');
-
-        // ==================== MODE TOGGLE (Classic/Modern) ====================
-        const modeToggle = document.getElementById('modeToggle');
-        const styleLink = document.getElementById('styleLink');
-        const testWrapper = document.getElementById('testWrapper');
-        const html = document.documentElement;
-        const savedMode = localStorage.getItem('pet-mode');
-
-        function setMode(isClassic) {
-            if (isClassic) {
-                styleLink.href = 'listening-pet-common1.css';
-                testWrapper.classList.add('classic-mode');
-                html.removeAttribute('data-theme');
-                localStorage.removeItem('pet-theme');
-            } else {
-                styleLink.href = 'listening-pet-common.css';
-                testWrapper.classList.remove('classic-mode');
-            }
-            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-        }
-
-        if (savedMode === 'classic') {
-            modeToggle.checked = true;
-            setMode(true);
-        } else {
-            modeToggle.checked = false;
-            setMode(false);
-        }
-
-        modeToggle.addEventListener('change', () => {
-            setMode(modeToggle.checked);
-        });
-
-        // ==================== THEME TOGGLE ====================
-        const themeToggle = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('pet-theme');
-        if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-            html.setAttribute('data-theme', 'dark');
-        }
-        themeToggle.addEventListener('click', () => {
-            if (testWrapper.classList.contains('classic-mode')) {
-                return;
-            }
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('pet-theme', newTheme);
-        });
-    })();
-
-    // ========== THÊM CHỨC NĂNG HIGHLIGHT THỦ CÔNG ==========
-    let selectedRange = null;
-    const contextMenu = document.getElementById('contextMenu');
-
-    // Bắt sự kiện chuột phải trên transcript và phần câu hỏi
-    document.getElementById('transcriptContent')?.addEventListener('contextmenu', handleRightClick);
-    document.getElementById('questionsContent')?.addEventListener('contextmenu', handleRightClick);
-
-    function handleRightClick(e) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection.toString().trim()) {
-            selectedRange = selection.getRangeAt(0);
-            contextMenu.style.left = e.pageX + 'px';
-            contextMenu.style.top = e.pageY + 'px';
-            contextMenu.style.display = 'block';
-        }
-    }
-
-    // Ẩn menu khi click ra ngoài
-    document.addEventListener('click', () => {
-        contextMenu.style.display = 'none';
-        selectedRange = null;
-    });
-
-    // Hàm áp dụng highlight (được gọi từ onclick trong menu)
-    window.applyHighlight = function(color) {
-        if (!selectedRange) return;
-        try {
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            span.appendChild(selectedRange.extractContents());
-            selectedRange.insertNode(span);
-        } catch (e) {
-            console.warn('Không thể highlight đoạn này');
-        }
-        contextMenu.style.display = 'none';
-        selectedRange = null;
-    };
-
-    // Hàm xoá highlight (chỉ xoá trong vùng được chọn)
-    window.removeHighlight = function() {
-        if (!selectedRange) return;
-        try {
-            // Tìm các thẻ highlight nằm trong vùng chọn và thay bằng nội dung gốc
-            const selectedNodes = [];
-            const iterator = document.createNodeIterator(
-                selectedRange.commonAncestorContainer,
-                NodeFilter.SHOW_ELEMENT,
-                {
-                    acceptNode: function(node) {
-                        if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) {
-                            if (selectedRange.intersectsNode(node)) {
-                                return NodeFilter.FILTER_ACCEPT;
-                            }
-                        }
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                }
-            );
-            let node;
-            while (node = iterator.nextNode()) {
-                node.replaceWith(...node.childNodes); // xoá thẻ span, giữ lại text
-            }
-        } catch (e) {
-            console.warn('Không thể xoá highlight');
-        }
-        contextMenu.style.display = 'none';
-        selectedRange = null;
-    };
-
-    // Resizable explanation panel logic
-    (function() {
-        const expPanel = document.getElementById('explanationPanel');
-        const expResizer = document.getElementById('explanationResizer');
-        let isResizingExp = false;
-        let startYExp, startHeightExp;
-
-        if (expResizer && expPanel) {
-            expResizer.addEventListener('mousedown', (e) => {
-                isResizingExp = true;
-                startYExp = e.clientY;
-                startHeightExp = expPanel.offsetHeight;
-                document.body.style.cursor = 'ns-resize';
-                document.body.style.userSelect = 'none';
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!isResizingExp) return;
-                const dy = startYExp - e.clientY;
-                const newHeight = startHeightExp + dy;
-                if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                    expPanel.style.maxHeight = newHeight + 'px';
-                    expPanel.style.height = newHeight + 'px';
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                isResizingExp = false;
-                document.body.style.cursor = 'default';
-                document.body.style.userSelect = 'auto';
-            });
-        }
-    })();
+document.addEventListener('DOMContentLoaded', function() {
+    window.listeningCore = new ListeningCore();
+    window.listeningCore.initializeTest(pet1Test3Part4Data);
+});
 </script>
 </body>
 </html>

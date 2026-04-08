@@ -8,6 +8,7 @@
 </head>
 <body>
 <div class="test-wrapper" id="testWrapper">
+    <!-- Header -->
     <div class="ielts-header">
         <div class="brand">
             <div class="ielts-logo">PET</div>
@@ -46,17 +47,24 @@
         </button>
     </div>
 
+    <!-- Question navigator (8-13) -->
     <div class="question-nav">
         <span style="font-weight:600; color:#1e3a5f;">Câu 8-13:</span>
         <div class="nav-buttons" id="navButtons"></div>
     </div>
 
+    <!-- Main area -->
     <div class="main-area" id="mainArea">
+        <!-- Transcript panel (ẩn ban đầu) -->
         <div class="transcript-panel" id="transcriptPanel">
-            <div class="panel-header"><span>TRANSCRIPT</span></div>
+            <div class="panel-header">
+                <span>TRANSCRIPT</span>
+            </div>
             <div class="transcript-content font-large" id="transcriptContent"></div>
         </div>
         <div class="resizer" id="resizer"></div>
+
+        <!-- Questions panel -->
         <div class="questions-panel" id="questionsPanel">
             <div class="panel-header">
                 <span>QUESTIONS 8-13</span>
@@ -72,6 +80,7 @@
         </div>
     </div>
 
+    <!-- Bottom bar -->
     <div class="bottom-bar">
         <button class="btn btn-primary" id="submitBtn">Nộp bài</button>
         <button class="btn btn-success" id="explainBtn" disabled>Xem giải thích</button>
@@ -79,6 +88,7 @@
         <div class="progress" id="progressDisplay">Đã làm: 0/6</div>
     </div>
 
+    <!-- Explanation panel -->
     <div class="explanation-panel" id="explanationPanel">
         <div class="resize-handle" id="explanationResizer"></div>
         <div class="explanation-header">
@@ -89,6 +99,7 @@
     </div>
 </div>
 
+<!-- Context menu for manual highlighting -->
 <div class="context-menu" id="contextMenu">
     <div onclick="applyHighlight('yellow')">Highlight vàng</div>
     <div onclick="applyHighlight('green')">Highlight xanh lá</div>
@@ -96,432 +107,144 @@
     <div onclick="removeHighlight()">Xóa highlight</div>
 </div>
 
-<script>
-    (function() {
-        // ---------- ĐÁP ÁN CHÍNH XÁC ----------
-        const answerKey = { q8: 'B', q9: 'A', q10: 'B', q11: 'C', q12: 'B', q13: 'A' };
-        const displayAnswers = { q8: 'B', q9: 'A', q10: 'B', q11: 'C', q12: 'B', q13: 'A' };
+<!-- Core Listening Engine -->
+<script src="core-listening.js"></script>
 
-        // ========== GIẢI THÍCH CHI TIẾT – BỐ CỤC NHƯ PART 1 (TEST 3) ==========
-        const detailedExplanations = {
+<script>
+    // Test Data for PET 1 Test 2 Part 2
+    const pet1Test2Part2Data = {
+        title: "B1 Preliminary 1 · Test 2 · Part 2",
+        type: "multiple-choice",
+        part: 2,
+        book: 1,
+        test: 2,
+
+        // Answer Key
+        answerKey: {
+            q8: 'B',
+            q9: 'A',
+            q10: 'B',
+            q11: 'C',
+            q12: 'B',
+            q13: 'A'
+        },
+
+        // Display Answers
+        displayAnswers: {
+            q8: 'B',
+            q9: 'A',
+            q10: 'B',
+            q11: 'C',
+            q12: 'B',
+            q13: 'A'
+        },
+
+        // Detailed Explanations
+        detailedExplanations: {
             q8: `<strong>Đáp án: B</strong><br>
-                  Cậu bé nói: <em>"I wanted to have all my mates from college and my football team. But it wouldn’t be a good idea to have so many people riding together, so I’ll have to choose between them, which is a shame."</em> → cậu ấy thất vọng vì không thể mời tất cả bạn bè.<br><br>
-                  <strong>✗ A (annoyed that some friends don’t want to come)</strong> – Không có thông tin bạn bè từ chối.<br>
-                  <strong>✓ B (disappointed that he can’t invite more friends)</strong> – Chính xác, "which is a shame" thể hiện sự thất vọng.<br>
-                  <strong>✗ C (worried that it might be boring)</strong> – Cậu ấy nói "I don’t think that matters" về việc lặp lại hoạt động cũ, không lo lắng về sự nhàm chán.`,
-            
+                  Cậu bé nói: <em>"I wanted to have all my mates from college and my football team. But it wouldn't be a good idea to have so many people riding together, so I'll have to choose between them, which is a shame."</em> → cậu ấy thất vọng vì không thể mời tất cả bạn bè.<br><br>
+                  <strong>✗ A (annoyed that some friends don't want to come)</strong> - Không có thông tin bạn bè từ chối.<br>
+                  <strong>✓ B (disappointed that he can't invite more friends)</strong> - Chính xác, "which is a shame" thể hiện sự thất vọng.<br>
+                  <strong>✗ C (worried that it might be boring)</strong> - Cậu ấy nói "I don't think that matters" về việc lặp lại hoạt động cũ, không lo lắng về sự nhàm chán.`,
+
             q9: `<strong>Đáp án: A</strong><br>
                   Cả hai đều đồng ý rằng số lượng khán giả ít hơn bình thường.<br>
-                  Người phụ nữ: <em>"there weren’t nearly as many people watching as there normally are."</em><br>
+                  Người phụ nữ: <em>"there weren't nearly as many people watching as there normally are."</em><br>
                   Người đàn ông: <em>"The cold weather might be the reason for the low numbers."</em><br><br>
-                  <strong>✓ A (the crowd was smaller than usual)</strong> – Đúng, cả hai cùng xác nhận.<br>
-                  <strong>✗ B (the match was quite boring)</strong> – Chỉ người đàn ông cho rằng trận đấu "pretty dull", người phụ nữ phản đối.<br>
-                  <strong>✗ C (the referee made some bad decisions)</strong> – Người phụ nữ cho rằng trọng tài làm tốt: "I didn’t think he did too badly actually."`,
-            
+                  <strong>✓ A (the crowd was smaller than usual)</strong> - Đúng, cả hai cùng xác nhận.<br>
+                  <strong>✗ B (the match was quite boring)</strong> - Chỉ người đàn ông cho rằng trận đấu "pretty dull", người phụ nữ phản đối.<br>
+                  <strong>✗ C (the referee made some bad decisions)</strong> - Người phụ nữ cho rằng trọng tài làm tốt: "I didn't think he did too badly actually."`,
+
             q10: `<strong>Đáp án: B</strong><br>
                   Người đàn ông kể rằng bạn bè cười nhạo khi anh ấy sợ hãi trên dốc trượt tuyết: <em>"which made me feel pretty silly."</em><br><br>
-                  <strong>✗ A (upset that he was injured)</strong> – Anh ấy suýt bị thương ("I nearly hurt myself") nhưng không thực sự bị thương.<br>
-                  <strong>✓ B (embarrassed by his skiing ability)</strong> – "feel pretty silly" chính là xấu hổ, ngượng ngùng.<br>
-                  <strong>✗ C (angry that his friends put photos online)</strong> – Anh ấy không tức giận về ảnh; ảnh được chụp lúc đầu kỳ nghỉ khi anh ấy còn vui vẻ.`,
-            
-            q11: `<strong>Đáp án: C</strong><br>
-                  Người phụ nữ thích đọc đánh giá từ người dùng thực tế trên mạng: <em>"I’d always rather see what car owners say than trust adverts or stuff on TV."</em> Cô ấy xem chương trình TV chỉ để biết nơi tìm thông tin trực tuyến.<br><br>
-                  <strong>✗ A (advertisements)</strong> – Cô ấy không tin quảng cáo.<br>
-                  <strong>✗ B (TV programmes)</strong> – Chương trình TV chỉ giúp cô tìm nguồn đánh giá trực tuyến, không phải nguồn thông tin chính.<br>
-                  <strong>✓ C (internet reviews)</strong> – Chính xác: "what car owners say" trên mạng.`,
-            
-            q12: `<strong>Đáp án: B</strong><br>
-                  Người phụ nữ phụ trách tổ chức cuộc thi và cho biết: <em>"being in charge of the whole thing, I’ve more than enough to do. I can tell you, I’m spending ages sorting things out"</em> → mất rất nhiều thời gian để tổ chức.<br><br>
-                  <strong>✗ A (Judging it is the easiest part)</strong> – Cô ấy nói rất mừng vì mình không phải là giám khảo: "I’m glad picking the winner’s not my job".<br>
-                  <strong>✓ B (It is taking a long time to organise it)</strong> – Đúng, "spending ages sorting things out".<br>
-                  <strong>✗ C (She would love to perform in it)</strong> – Cô ấy thích xem và bình luận hơn, không muốn biểu diễn.`,
-            
-            q13: `<strong>Đáp án: A</strong><br>
-                  Người phụ nữ ngạc nhiên vì sức khỏe được cải thiện sau khi chuyển đến thành phố: <em>"I’m actually fitter than when I lived in the countryside. I hadn’t expected that."</em><br><br>
-                  <strong>✓ A (pleased about a surprising health benefit)</strong> – Cô ấy hài lòng vì thể lực tốt hơn, điều bất ngờ.<br>
-                  <strong>✗ B (glad that she has met friendly people)</strong> – Cô ấy chưa kết bạn nhiều: "once I’ve got to know more people".<br>
-                  <strong>✗ C (satisfied with her local area)</strong> – Cô ấy chưa chắc chắn: "I do sometimes wonder whether this is the right area for me".`
-        };
+                  <strong>✗ A (upset that he was injured)</strong> - Anh ấy suýt bị thương ("I nearly hurt myself") nhưng không thực sự bị thương.<br>
+                  <strong>✓ B (embarrassed by his skiing ability)</strong> - "feel pretty silly" chính là xấu hổ, ngượng ngùng.<br>
+                  <strong>✗ C (angry that his friends put photos online)</strong> - Anh ấy không tức giận về ảnh; ảnh được chụp lúc đầu kỳ nghỉ khi anh ấy còn vui vẻ.`,
 
-        // Transcript với highlightable spans
-        const transcriptHTML = `
+            q11: `<strong>Đáp án: C</strong><br>
+                  Người phụ nữ thích đọc đánh giá từ người dùng thực tế trên mạng: <em>"I'd always rather see what car owners say than trust adverts or stuff on TV."</em> Cô ấy xem chương trình TV chỉ để biết nơi tìm thông tin trực tuyến.<br><br>
+                  <strong>✗ A (advertisements)</strong> - Cô ấy không tin quảng cáo.<br>
+                  <strong>✗ B (TV programmes)</strong> - Chương trình TV chỉ giúp cô tìm nguồn đánh giá trực tuyến, không phải nguồn thông tin chính.<br>
+                  <strong>✓ C (internet reviews)</strong> - Chính xác: "what car owners say" trên mạng.`,
+
+            q12: `<strong>Đáp án: B</strong><br>
+                  Người phụ nữ phụ trách tổ chức cuộc thi và cho biết: <em>"being in charge of the whole thing, I've more than enough to do. I can tell you, I'm spending ages sorting things out"</em> → mất rất nhiều thời gian để tổ chức.<br><br>
+                  <strong>✗ A (Judging it is the easiest part)</strong> - Cô ấy nói rất mừng vì mình không phải là giám khảo: "I'm glad picking the winner's not my job".<br>
+                  <strong>✓ B (It is taking a long time to organise it)</strong> - Đúng, "spending ages sorting things out".<br>
+                  <strong>✗ C (She would love to perform in it)</strong> - Cô ấy thích xem và bình luận hơn, không muốn biểu diễn.`,
+
+            q13: `<strong>Đáp án: A</strong><br>
+                  Người phụ nữ ngạc nhiên vì sức khỏe được cải thiện sau khi chuyển đến thành phố: <em>"which means I'm actually fitter than when I lived in the countryside. I hadn't expected that."</em><br><br>
+                  <strong>✓ A (pleased about a surprising health benefit)</strong> - Cô ấy hài lòng vì thể lực tốt hơn, điều bất ngờ.<br>
+                  <strong>✗ B (glad that she has met friendly people)</strong> - Cô ấy chưa kết bạn nhiều: "once I've got to know more people".<br>
+                  <strong>✗ C (satisfied with her local area)</strong> - Cô ấy chưa chắc chắn: "I do sometimes wonder whether this is the right area for me".`
+        },
+
+        // Transcript with highlightable spans
+        transcript: `
             <p><strong>Question 8</strong><br>
             <strong>Woman:</strong> What are you doing for your birthday?<br>
-            <strong>Boy:</strong> I’m having a group bike ride and then a picnic in the park. I know it’s the same as what we did last year but I don’t think that matters. <span class="highlightable" data-q="8">I wanted to have all my mates from college and my football team. But it wouldn’t be a good idea to have so many people riding together, so I’ll have to choose between them, which is a shame.</span><br>
-            <strong>Woman:</strong> I’m sure it’ll be fun whoever comes.<br>
-            <strong>Boy:</strong> You’re right. I hate having to make decisions like this. Anyway, you’ll come, won’t you?<br>
+            <strong>Boy:</strong> I'm having a group bike ride and then a picnic in the park. I know it's the same as what we did last year but I don't think that matters. <span class="highlightable" data-q="8">I wanted to have all my mates from college and my football team. But it wouldn't be a good idea to have so many people riding together, so I'll have to choose between them, which is a shame.</span><br>
+            <strong>Woman:</strong> I'm sure it'll be fun whoever comes.<br>
+            <strong>Boy:</strong> You're right. I hate having to make decisions like this. Anyway, you'll come, won't you?<br>
             <strong>Woman:</strong> Of course!<br>
             <em>Now listen again.</em></p>
 
             <p><strong>Question 9</strong><br>
             <strong>Man:</strong> Did you enjoy the match last night? I have to say I thought it was pretty dull.<br>
-            <strong>Woman:</strong> Oh I don’t know – most people seemed to be enjoying it. Me included. <span class="highlightable" data-q="9">Although there weren’t nearly as many people watching as there normally are.</span><br>
-            <strong>Man:</strong> <span class="highlightable" data-q="9">The cold weather might be the reason for the low numbers.</span> And the people who were there weren’t too happy with some of the things the referee did.<br>
-            <strong>Woman:</strong> He had some difficult situations to deal with. I didn’t think he did too badly actually.<br>
-            <strong>Man:</strong> Anyway, at least our team won. That’s what matters!<br>
+            <strong>Woman:</strong> Oh I don't know - most people seemed to be enjoying it. Me included. <span class="highlightable" data-q="9">Although there weren't nearly as many people watching as there normally are.</span><br>
+            <strong>Man:</strong> <span class="highlightable" data-q="9">The cold weather might be the reason for the low numbers.</span> And the people who were there weren't too happy with some of the things the referee did.<br>
+            <strong>Woman:</strong> He had some difficult situations to deal with. I didn't think he did too badly actually.<br>
+            <strong>Man:</strong> Anyway, at least our team won. That's what matters!<br>
             <em>Now listen again.</em></p>
 
             <p><strong>Question 10</strong><br>
-            <strong>Man:</strong> I’m never going skiing again!<br>
+            <strong>Man:</strong> I'm never going skiing again!<br>
             <strong>Woman:</strong> Why? You looked like you were having a good time in the photos I saw on the internet.<br>
             <strong>Man:</strong> They were taken at the start of the holiday. I was so excited then.<br>
             <strong>Woman:</strong> So, what happened?<br>
-            <strong>Man:</strong> Everything was fine until someone suggested trying one of the more advanced routes. I’ve never been so scared in all my life. It was too difficult for me and I had to give up half-way – I nearly hurt myself hitting a tree! The others all found this very funny, <span class="highlightable" data-q="10">which made me feel pretty silly.</span><br>
+            <strong>Man:</strong> Everything was fine until someone suggested trying one of the more advanced routes. I've never been so scared in all my life. It was too difficult for me and I had to give up half-way - I nearly hurt myself hitting a tree! The others all found this very funny, <span class="highlightable" data-q="10">which made me feel pretty silly.</span><br>
             <strong>Woman:</strong> Oh dear.<br>
             <em>Now listen again.</em></p>
 
             <p><strong>Question 11</strong><br>
             <strong>Man:</strong> I hear you just bought a new car. How did you decide which one to get?<br>
-            <strong>Woman:</strong> Well, I often watch that TV show about cars … you know the one with Ben Clark where they give all sorts of information about different models. <span class="highlightable" data-q="11">They mentioned some useful places to look online where people who’ve bought new cars give their opinions. I’d always rather see what car owners say than trust adverts or stuff on TV.</span> Anyway, they were all pretty positive about the model I was hoping to get so I went for it in the end!<br>
+            <strong>Woman:</strong> Well, I often watch that TV show about cars … you know the one with Ben Clark where they give all sorts of information about different models. <span class="highlightable" data-q="11">They mentioned some useful places to look online where people who've bought new cars give their opinions. I'd always rather see what car owners say than trust adverts or stuff on TV.</span> Anyway, they were all pretty positive about the model I was hoping to get so I went for it in the end!<br>
             <em>Now listen again.</em></p>
 
             <p><strong>Question 12</strong><br>
             <strong>Man:</strong> How are things going with preparations for the singing competition?<br>
-            <strong>Woman:</strong> Well, there are some strong singers this year, so I’m glad picking the winner’s not my job. I mean, how do you go about choosing?<br>
+            <strong>Woman:</strong> Well, there are some strong singers this year, so I'm glad picking the winner's not my job. I mean, how do you go about choosing?<br>
             <strong>Man:</strong> Have you ever thought about entering a singing competition yourself?<br>
-            <strong>Woman:</strong> I think it’s more fun watching and making comments about everyone else! And anyway, <span class="highlightable" data-q="12">being in charge of the whole thing, I’ve more than enough to do. I can tell you, I’m spending ages sorting things out, including most evenings. But I love it.</span><br>
-            <strong>Man:</strong> I’m sure it’ll be great.<br>
+            <strong>Woman:</strong> I think it's more fun watching and making comments about everyone else! And anyway, <span class="highlightable" data-q="12">being in charge of the whole thing, I've more than enough to do. I can tell you, I'm spending ages sorting things out, including most evenings. But I love it.</span><br>
+            <strong>Man:</strong> I'm sure it'll be great.<br>
             <em>Now listen again.</em></p>
 
             <p><strong>Question 13</strong><br>
             <strong>Man:</strong> Are you happy about your move to the city?<br>
-            <strong>Woman:</strong> Well, my neighbours are very quiet but there’s a lot of street noise from all the shops and restaurants. I suppose everything’s nearby, so now I can walk everywhere, <span class="highlightable" data-q="13">which means I’m actually fitter than when I lived in the countryside. I hadn’t expected that.</span> I do sometimes wonder whether this is the right area for me, but once I’ve got to know more people, I’ll be able to decide if it’s the sort of place I’m going to be happy in. Why don’t you come round soon?<br>
-            <strong>Man:</strong> I’d love to.<br>
+            <strong>Woman:</strong> Well, my neighbours are very quiet but there's a lot of street noise from all the shops and restaurants. I suppose everything's nearby, so now I can walk everywhere, <span class="highlightable" data-q="13">which means I'm actually fitter than when I lived in the countryside. I hadn't expected that.</span> I do sometimes wonder whether this is the right area for me, but once I've got to know more people, I'll be able to decide if it's the sort of place I'm going to be happy in. Why don't you come round soon?<br>
+            <strong>Man:</strong> I'd love to.<br>
             <em>Now listen again.</em><br>
             That is the end of Part Two.</p>
-        `;
+        `,
 
-        const questionsData = [
-            { num: 8, text: "How does he feel about the plans he’s made?", options: ["annoyed that some of his friends don’t want to come", "disappointed that he can’t invite more friends", "worried that it might be boring for his friends"] },
+        // Questions Data
+        questions: [
+            { num: 8, text: "How does he feel about the plans he's made?", options: ["annoyed that some of his friends don't want to come", "disappointed that he can't invite more friends", "worried that it might be boring for his friends"] },
             { num: 9, text: "They both think that", options: ["the crowd was smaller than usual.", "the match was quite boring.", "the referee made some bad decisions."] },
             { num: 10, text: "How did he feel during the holiday?", options: ["upset that he was injured", "embarrassed by his skiing ability", "angry that his friends put photos online"] },
             { num: 11, text: "The woman thinks the best way to get information about new cars is from", options: ["advertisements.", "TV programmes.", "internet reviews."] },
             { num: 12, text: "What does the woman say about it?", options: ["Judging it is the easiest part.", "It is taking a long time to organise it.", "She would love to perform in it."] },
             { num: 13, text: "How does the woman feel about it?", options: ["pleased about a surprising health benefit", "glad that she has met friendly people", "satisfied with her local area"] }
-        ];
+        ]
+    };
 
-        let examSubmitted = false;
-        let explanationMode = false;
-        const audio = document.getElementById('listeningAudio');
-        const speedSelect = document.getElementById('speedSelect');
-        speedSelect.addEventListener('change', function() { audio.playbackRate = parseFloat(this.value); });
-
-        function getUserAnswer(q) {
-            const radios = document.getElementsByName(`q${q}`);
-            for (let radio of radios) if (radio.checked) return radio.value;
-            return null;
-        }
-        function isAnswerCorrect(q, userAnswer) { return userAnswer === answerKey[`q${q}`]; }
-        function updateAnswerCount() {
-            let answered = 0;
-            for (let i = 8; i <= 13; i++) if (getUserAnswer(i)) answered++;
-            document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-            document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-            for (let i = 8; i <= 13; i++) {
-                const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
-                if (btn) {
-                    btn.classList.remove('answered', 'unanswered');
-                    btn.classList.add(getUserAnswer(i) ? 'answered' : 'unanswered');
-                }
-            }
-        }
-        function createNavButtons() {
-            const nav = document.getElementById('navButtons');
-            nav.innerHTML = '';
-            for (let i = 8; i <= 13; i++) {
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn unanswered';
-                btn.textContent = i;
-                btn.dataset.question = i;
-                btn.addEventListener('click', function() {
-                    document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-                nav.appendChild(btn);
-            }
-        }
-        function renderQuestions() {
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
-            questionsData.forEach(q => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.id = `question-${q.num}`;
-                div.innerHTML = `
-                    <div class="question-text">${q.num}. ${q.text}</div>
-                    <div class="options">
-                        ${q.options.map((opt, index) => `
-                            <div class="option">
-                                <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
-                                <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <span class="eye-icon" data-question="${q.num}">👁️</span>
-                `;
-                container.appendChild(div);
-            });
-            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', updateAnswerCount));
-        }
-        function markAnswers() {
-            for (let i = 8; i <= 13; i++) {
-                const div = document.getElementById(`question-${i}`);
-                if (!div) continue;
-                const user = getUserAnswer(i);
-                const correct = isAnswerCorrect(i, user);
-                div.classList.remove('correct', 'incorrect');
-                const oldBadge = div.querySelector('.correct-answer-badge');
-                if (oldBadge) oldBadge.remove();
-                if (correct) div.classList.add('correct');
-                else {
-                    div.classList.add('incorrect');
-                    const badge = document.createElement('span');
-                    badge.className = 'correct-answer-badge';
-                    badge.textContent = `Đáp án đúng: ${displayAnswers[`q${i}`]}`;
-                    div.appendChild(badge);
-                }
-            }
-        }
-        function showExplanation(questionNum) {
-            if (!explanationMode && !examSubmitted) return;
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            const spans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
-            spans.forEach(span => {
-                const parentP = span.closest('p');
-                if (parentP) parentP.classList.add('transcript-highlight');
-                span.classList.add('keyword-highlight');
-                span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                span.classList.add('scroll-highlight');
-                setTimeout(() => span.classList.remove('scroll-highlight'), 1000);
-            });
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = `Giải thích câu ${questionNum}`;
-            let html = detailedExplanations[`q${questionNum}`] || `<strong>Đáp án: ${displayAnswers[`q${questionNum}`]}</strong><br>`;
-            if (examSubmitted) {
-                const user = getUserAnswer(questionNum) || '(chưa chọn)';
-                const isCorrect = isAnswerCorrect(questionNum, user);
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Câu trả lời của bạn:</strong> ${user}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>✅ Đúng!</strong>`;
-                html += `</div>`;
-            }
-            document.getElementById('explanationText').innerHTML = html;
-        }
-        function resetAll() {
-            examSubmitted = false; explanationMode = false;
-            for (let i = 8; i <= 13; i++) {
-                document.getElementsByName(`q${i}`).forEach(r => {
-                    r.checked = false;
-                    r.disabled = false;
-                });
-                const qDiv = document.getElementById(`question-${i}`);
-                if (qDiv) { qDiv.classList.remove('correct', 'incorrect'); const badge = qDiv.querySelector('.correct-answer-badge'); if (badge) badge.remove(); }
-            }
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.remove('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = '';
-            document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-            document.getElementById('submitBtn').disabled = false; document.getElementById('submitBtn').textContent = 'Nộp bài';
-            document.getElementById('explainBtn').disabled = true; document.getElementById('explainBtn').textContent = 'Xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-            updateAnswerCount();
-        }
-        function saveToDashboard() {
-            if (!examSubmitted) return;
-            let correct = 0; const details = [];
-            for (let i = 8; i <= 13; i++) {
-                const user = getUserAnswer(i) || '(trống)';
-                const isOk = isAnswerCorrect(i, getUserAnswer(i));
-                if (isOk) correct++;
-                details.push({ question: i, user: user, correct: displayAnswers[`q${i}`], isCorrect: isOk });
-            }
-            const partData = { partId: 2, name: 'Part 2', totalQuestions: 6, correctCount: correct, details };
-            localStorage.setItem('pet_listening_book1_test2_part2', JSON.stringify(partData));
-        }
-        document.getElementById('submitBtn').addEventListener('click', function() {
-            if (examSubmitted) return;
-            let unanswered = [];
-            for (let i = 8; i <= 13; i++) if (!getUserAnswer(i)) unanswered.push(i);
-            if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) return;
-            examSubmitted = true;
-            const mainArea = document.getElementById('mainArea');
-            mainArea.classList.add('show-transcript');
-            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
-            markAnswers();
-            document.getElementById('submitBtn').disabled = true; document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-            document.getElementById('explainBtn').disabled = false;
-            document.getElementById('explanationPanel').classList.add('show');
-            document.getElementById('explanationTitle').textContent = 'KẾT QUẢ';
-            document.getElementById('explanationText').innerHTML = `<h4>Bạn đã nộp bài</h4><p><strong>Đúng:</strong> ${correctCount}/6</p><p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>`;
-            saveToDashboard();
-            document.querySelectorAll('input[type="radio"]').forEach(el => el.disabled = true);
-        });
-        document.getElementById('explainBtn').addEventListener('click', function() {
-            if (!examSubmitted) return;
-            explanationMode = true;
-            document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(icon => icon.style.display = 'inline-block');
-            this.disabled = true; this.textContent = 'Đang xem giải thích';
-            document.getElementById('explanationPanel').classList.remove('show');
-        });
-        document.getElementById('resetBtn').addEventListener('click', function() { if (confirm('Reset tất cả câu trả lời?')) resetAll(); });
-        document.getElementById('closeExplanation').addEventListener('click', function() {
-            document.getElementById('explanationPanel').classList.remove('show');
-            document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
-            document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
-        });
-        document.addEventListener('click', function(e) { if (e.target.classList.contains('eye-icon')) showExplanation(e.target.dataset.question); });
-        function setFontSize(size) {
-            document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-            document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-                el.className = `transcript-content font-${size}`;
-                if (el.classList.contains('questions-list')) el.classList.add('centered');
-            });
-        }
-        document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-        document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-        document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-        const transcriptPanel = document.getElementById('transcriptPanel'), questionsPanel = document.getElementById('questionsPanel'), resizer = document.getElementById('resizer');
-        let isResizing = false;
-        resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const mainArea = document.getElementById('mainArea');
-            const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
-            if (leftWidth < 250) leftWidth = 250;
-            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-            transcriptPanel.style.width = leftWidth + 'px';
-            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
-        document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = 'default'; });
-        createNavButtons(); renderQuestions(); updateAnswerCount(); setFontSize('large');
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-    })();
-
-    // Context menu highlight thủ công
-    (function() {
-        let selectedRange = null;
-        const contextMenu = document.getElementById('contextMenu');
-        const transcriptContent = document.getElementById('transcriptContent');
-        const questionsContent = document.getElementById('questionsContent');
-        function handleRightClick(e) {
-            e.preventDefault();
-            const selection = window.getSelection();
-            if (selection.toString().trim()) {
-                selectedRange = selection.getRangeAt(0);
-                contextMenu.style.left = e.pageX + 'px';
-                contextMenu.style.top = e.pageY + 'px';
-                contextMenu.style.display = 'block';
-            }
-        }
-        if (transcriptContent) transcriptContent.addEventListener('contextmenu', handleRightClick);
-        if (questionsContent) questionsContent.addEventListener('contextmenu', handleRightClick);
-        document.addEventListener('click', () => { contextMenu.style.display = 'none'; selectedRange = null; });
-        window.applyHighlight = function(color) {
-            if (!selectedRange) return;
-            try {
-                const span = document.createElement('span');
-                span.className = `highlight-${color}`;
-                span.appendChild(selectedRange.extractContents());
-                selectedRange.insertNode(span);
-            } catch(e) { console.warn('Highlight error'); }
-            contextMenu.style.display = 'none'; selectedRange = null;
-        };
-        window.removeHighlight = function() {
-            if (!selectedRange) return;
-            try {
-                const iterator = document.createNodeIterator(selectedRange.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, { acceptNode: function(node) { if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink'))) return NodeFilter.FILTER_ACCEPT; return NodeFilter.FILTER_REJECT; } });
-                let node; while (node = iterator.nextNode()) node.replaceWith(...node.childNodes);
-            } catch(e) { console.warn('Remove highlight error'); }
-            contextMenu.style.display = 'none'; selectedRange = null;
-        };
-
-            // Resizable explanation panel logic
-            const expPanel = document.getElementById('explanationPanel');
-            const expResizer = document.getElementById('explanationResizer');
-            let isResizingExp = false;
-            let startYExp, startHeightExp;
-
-            if (expResizer && expPanel) {
-                expResizer.addEventListener('mousedown', (e) => {
-                    isResizingExp = true;
-                    startYExp = e.clientY;
-                    startHeightExp = expPanel.offsetHeight;
-                    document.body.style.cursor = 'ns-resize';
-                    document.body.style.userSelect = 'none';
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (!isResizingExp) return;
-                    const dy = startYExp - e.clientY;
-                    const newHeight = startHeightExp + dy;
-                    if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                        expPanel.style.maxHeight = newHeight + 'px';
-                        expPanel.style.height = newHeight + 'px';
-                    }
-                });
-
-                document.addEventListener('mouseup', () => {
-                    isResizingExp = false;
-                    document.body.style.cursor = 'default';
-                    document.body.style.userSelect = 'auto';
-                });
-            }
-            // ==================== MODE TOGGLE (Classic/Modern) ====================
-            const modeToggle = document.getElementById('modeToggle');
-            const styleLink = document.getElementById('styleLink');
-            const testWrapper = document.getElementById('testWrapper');
-            const html = document.documentElement;
-            const savedMode = localStorage.getItem('pet-mode');
-
-            function setMode(isClassic) {
-                if (isClassic) {
-                    styleLink.href = 'listening-pet-common1.css';
-                    testWrapper.classList.add('classic-mode');
-                    html.removeAttribute('data-theme');
-                    localStorage.removeItem('pet-theme');
-                } else {
-                    styleLink.href = 'listening-pet-common.css';
-                    testWrapper.classList.remove('classic-mode');
-                }
-                localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-            }
-
-            if (savedMode === 'classic') {
-                modeToggle.checked = true;
-                setMode(true);
-            } else {
-                modeToggle.checked = false;
-                setMode(false);
-            }
-
-            modeToggle.addEventListener('change', () => {
-                setMode(modeToggle.checked);
-            });
-
-            // ==================== THEME TOGGLE ====================
-            const themeToggle = document.getElementById('themeToggle');
-            const savedTheme = localStorage.getItem('pet-theme');
-            if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-                html.setAttribute('data-theme', 'dark');
-            }
-            themeToggle.addEventListener('click', () => {
-                if (testWrapper.classList.contains('classic-mode')) {
-                    return;
-                }
-                const currentTheme = html.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', newTheme);
-                localStorage.setItem('pet-theme', newTheme);
-            });
-
-        })();
+    // Initialize the listening test when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        window.listeningCore = new ListeningCore();
+        window.listeningCore.initializeTest(pet1Test2Part2Data);
+        console.log('PET 1 Test 2 Part 2 loaded with core listening engine');
+    });
 </script>
 </body>
 </html>
