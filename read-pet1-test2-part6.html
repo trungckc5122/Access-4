@@ -35,10 +35,10 @@
     <div class="question-nav">
         <span style="font-weight:600;">Câu 27 – 32</span>
         <div class="nav-buttons" id="navButtons"></div>
-        <span id="answeredCount">0/6 answered</span>
+        <span id="answeredCount" style="font-size:13px; color:#555; margin-left:10px;">0/6 answered</span>
     </div>
 
-    <!-- Main area: will be dynamically filled -->
+    <!-- Main area -->
     <div class="main-area split-layout" id="mainArea"></div>
 
     <div class="bottom-bar">
@@ -54,389 +54,80 @@
         <div onclick="applyHighlight('pink')">Highlight hồng</div>
         <div onclick="removeHighlight()">Xóa highlight</div>
     </div>
+</div>
 
-    <script>
-        (function() {
-            // ---------- ANSWER KEY ----------
-            const answerKey = { 27: "be", 28: "with", 29: "of", 30: "us", 31: "to", 32: "than" };
-            const displayAnswers = { 27: "be", 28: "with", 29: "of", 30: "us", 31: "to", 32: "than" };
-
-            const detailedExplanations = {
-                27: `<div><strong>Cấu trúc cố định:</strong> <em>"to be honest"</em> (thành thật mà nói). Cụm từ này được dùng khi người nói muốn thừa nhận một điều gì đó.<br>Dịch: "...và thành thật mà nói, tôi đã khá lo lắng về việc khám phá một thành phố mới một mình."</div>`,
-                28: `<div><strong>Giới từ theo sau tính từ:</strong> Tính từ <em>"familiar"</em> đi kèm với giới từ <em>"with"</em> khi nói về việc ai đó biết rõ điều gì đó.<br>Dịch: "Tôi hy vọng chuyến tham quan sẽ giúp tôi trở nên quen thuộc hơn với thành phố."</div>`,
-                29: `<div><strong>Cụm từ cố định:</strong> <em>"loads of"</em> có nghĩa là rất nhiều (tương đương với <em>"a lot of"</em>).<br>Dịch: "Chúng tôi cũng học được rất nhiều sự thật thú vị về văn hóa Đan Mạch."</div>`,
-                30: `<div><strong>Đại từ nhân xưng:</strong> <em>"us"</em> (chúng tôi). Có nhiều người trong chuyến tham quan và hướng dẫn viên đã đưa ra gợi ý cho tất cả họ. Mặc dù bài blog viết ở ngôi thứ nhất số ít, nhưng ở đây người viết đang là một phần của nhóm khách tham quan.<br>Dịch: "Cuối cùng, anh ấy đã đưa cho chúng tôi tất cả những gợi ý..."</div>`,
-                31: `<div><strong>Cấu trúc:</strong> <em>"place + to-infinitive"</em> (nơi để làm gì đó). <em>"to"</em> là phần của động từ nguyên mẫu có "to" (to eat and visit).<br>Dịch: "...những nơi tốt nhất để ăn uống và tham quan."</div>`,
-                32: `<div><strong>Từ so sánh:</strong> <em>"than"</em> (hơn). Ở đây người viết đang so sánh giữa những gì họ mong đợi (expected) và thực tế những gì họ cảm nhận được.<br>Dịch: "...tơi thực sự đã vui vẻ hơn nhiều so với những gì tôi mong đợi."</div>`
-            };
-
-            let examSubmitted = false;
-            let explanationMode = false;
-            let selectedRange = null;
-            let currentSplit = false;
-
-            const mainArea = document.getElementById('mainArea');
-            const readingCardContent = `
+<script src="core-reading.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const testData = {
+            type: 'split-layout',
+            part: 6,
+            answerKey: { q27: "be", q28: "with", q29: "of", q30: "us", q31: "to", q32: "than" },
+            displayAnswers: { q27: "be", q28: "with", q29: "of", q30: "us", q31: "to", q32: "than" },
+            detailedExplanations: {
+                27: `<div><strong>Cấu trúc cố định:</strong> <em>"to be honest"</em> (thành thật mà nói). Cụm từ này được dùng khi người nói muốn thừa nhận một điều gì đó.<br>
+                Dịch: "...và thành thật mà nói, tôi đã khá lo lắng về việc khám phá một thành phố mới một mình."</div>`,
+                28: `<div><strong>Giới từ theo sau tính từ:</strong> Tính từ <em>"familiar"</em> đi kèm với giới từ <em>"with"</em> khi nói về việc ai đó biết rõ điều gì đó.<br>
+                Dịch: "Tôi hy vọng chuyến tham quan sẽ giúp tôi trở nên quen thuộc hơn với thành phố."</div>`,
+                29: `<div><strong>Cụm từ cố định:</strong> <em>"loads of"</em> có nghĩa là rất nhiều (tương đương với <em>"a lot of"</em>).<br>
+                Dịch: "Chúng tôi cũng học được rất nhiều sự thật thú vị về văn hóa Đan Mạch."</div>`,
+                30: `<div><strong>Đại từ nhân xưng:</strong> <em>"us"</em> (chúng tôi). Có nhiều người trong chuyến tham quan và hướng dẫn viên đã đưa ra gợi ý cho tất cả họ.<br>
+                Dịch: "Cuối cùng, anh ấy đã đưa cho chúng tôi tất cả những gợi ý..."</div>`,
+                31: `<div><strong>Cấu trúc:</strong> <em>"place + to-infinitive"</em> (nơi để làm gì đó). <em>"to"</em> là phần của động từ nguyên mẫu có "to" (to eat and visit).<br>
+                Dịch: "...những nơi tốt nhất để ăn uống và tham quan."</div>`,
+                32: `<div><strong>Từ so sánh:</strong> <em>"than"</em> (hơn). Ở đây người viết đang so sánh giữa những gì họ mong đợi và thực tế.<br>
+                Dịch: "...tôi thực sự đã vui vẻ hơn nhiều so với những gì tôi mong đợi."</div>`
+            },
+            template: `
                 <div class="reading-card" id="passageCard">
                     <div class="review-title">My travel blog</div>
-                    <p>This summer, I travelled to Copenhagen, the capital of Denmark, on my own. I am only 20 and to 
+                    <p>This summer, I travelled to Copenhagen, the capital of Denmark, on my own. I am only 20 and to
                         <span class="input-wrapper">
                             <input type="text" id="q27" class="gap-input" data-q="27" autocomplete="off">
-                            <span class="eye-icon" data-q="27">👁️</span>
+                            <span class="eye-icon" data-question="27">👁️</span>
                         </span>
-                        honest, I was nervous about exploring a new city alone. I decided to go on a free walking tour the first day I was there. I hoped the tour would help me to become more familiar 
+                        honest, I was nervous about exploring a new city alone. I decided to go on a free walking tour the first day I was there. I hoped the tour would help me to become more familiar
                         <span class="input-wrapper">
                             <input type="text" id="q28" class="gap-input" data-q="28" autocomplete="off">
-                            <span class="eye-icon" data-q="28">👁️</span>
+                            <span class="eye-icon" data-question="28">👁️</span>
                         </span>
                         the city.
                     </p>
-
-                    <p>Unfortunately, the weather wasn't great, but the tour was still absolutely fantastic! Magnus, our tour guide, knew all about the city's history. We also learnt loads 
+                    <p>Unfortunately, the weather wasn't great, but the tour was still absolutely fantastic! Magnus, our tour guide, knew all about the city's history. We also learnt loads
                         <span class="input-wrapper">
                             <input type="text" id="q29" class="gap-input" data-q="29" autocomplete="off">
-                            <span class="eye-icon" data-q="29">👁️</span>
+                            <span class="eye-icon" data-question="29">👁️</span>
                         </span>
-                        interesting facts about Danish culture. At the end of the tour, he gave 
+                        interesting facts about Danish culture. At the end of the tour, he gave
                         <span class="input-wrapper">
                             <input type="text" id="q30" class="gap-input" data-q="30" autocomplete="off">
-                            <span class="eye-icon" data-q="30">👁️</span>
+                            <span class="eye-icon" data-question="30">👁️</span>
                         </span>
-                        all suggestions for the best places 
+                        all suggestions for the best places
                         <span class="input-wrapper">
                             <input type="text" id="q31" class="gap-input" data-q="31" autocomplete="off">
-                            <span class="eye-icon" data-q="31">👁️</span>
+                            <span class="eye-icon" data-question="31">👁️</span>
                         </span>
                         eat and visit.
                     </p>
-
-                    <p>Apart from learning so much, I actually had a lot more fun on the walking tour 
+                    <p>Apart from learning so much, I actually had a lot more fun on the walking tour
                         <span class="input-wrapper">
                             <input type="text" id="q32" class="gap-input" data-q="32" autocomplete="off">
-                            <span class="eye-icon" data-q="32">👁️</span>
+                            <span class="eye-icon" data-question="32">👁️</span>
                         </span>
                         I'd expected. It was an excellent way to experience the city, and learn about its culture and history.
                     </p>
                 </div>
-            `;
+            `,
+            questions: [
+                { num: 27 }, { num: 28 }, { num: 29 }, { num: 30 }, { num: 31 }, { num: 32 }
+            ]
+        };
 
-            function renderSingleColumn() {
-                mainArea.innerHTML = `
-                    <div class="single-col">
-                        <div class="part-header">
-                            <h3>Questions 27–32</h3>
-                            <p>For each question, write the correct answer. Write one word for each gap.</p>
-                        </div>
-                        ${readingCardContent}
-                    </div>
-                `;
-                attachInputEvents();
-            }
-
-            function renderSplitColumn() {
-                mainArea.innerHTML = `
-                    <div class="split-container">
-                        <div class="left-col">
-                            <div class="part-header">
-                                <h3>Questions 27–32</h3>
-                                <p>For each question, write the correct answer. Write one word for each gap.</p>
-                            </div>
-                            ${readingCardContent}
-                        </div>
-                        <div class="right-col" id="rightCol">
-                            <div class="explanation-header">
-                                <span>Giải thích</span>
-                                <span class="close-explanation-btn" id="closeRightExplain">✕ Đóng</span>
-                            </div>
-                            <div class="explanation-content" id="rightExplanationText">
-                                Nhấn vào biểu tượng con mắt bên cạnh mỗi câu để xem giải thích.
-                            </div>
-                        </div>
-                    </div>
-                `;
-                attachInputEvents();
-                if (explanationMode) {
-                    const rightCol = document.getElementById('rightCol');
-                    if (rightCol) rightCol.classList.add('show');
-                    for (let i = 27; i <= 32; i++) {
-                        addBadgeForQuestion(i);
-                    }
-                    document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
-                }
-                document.getElementById('closeRightExplain')?.addEventListener('click', () => {
-                    const col = document.getElementById('rightCol');
-                    if (col) col.classList.remove('show');
-                });
-            }
-
-            function attachInputEvents() {
-                document.querySelectorAll('.gap-input').forEach(inp => {
-                    if (examSubmitted) inp.disabled = true;
-                    if (examSubmitted) {
-                        const val = inp.value.trim();
-                        const correct = isAnswerCorrect(parseInt(inp.dataset.q), val);
-                        inp.classList.add(correct ? 'correct' : 'incorrect');
-                    }
-                    inp.addEventListener('input', () => updateAnswerCount());
-                });
-                document.querySelectorAll('.eye-icon').forEach(icon => {
-                    if (explanationMode || examSubmitted) icon.style.display = 'inline-block';
-                    icon.addEventListener('click', (e) => {
-                        const q = parseInt(e.currentTarget.dataset.q);
-                        showExplanationInRightColumn(q);
-                    });
-                });
-            }
-
-            function getUserAnswer(qNum) {
-                const input = document.getElementById(`q${qNum}`);
-                return input ? input.value.trim() : "";
-            }
-
-            function isAnswerCorrect(qNum, val) {
-                return val.toLowerCase() === answerKey[qNum].toLowerCase();
-            }
-
-            function updateAnswerCount() {
-                let answered = 0;
-                for (let i = 27; i <= 32; i++) {
-                    if (getUserAnswer(i) !== "") answered++;
-                }
-                document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-                document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-                for (let i = 27; i <= 32; i++) {
-                    const btn = document.querySelector(`.nav-btn[data-q="${i}"]`);
-                    if (btn) {
-                        btn.classList.remove('answered', 'unanswered');
-                        btn.classList.add(getUserAnswer(i) !== "" ? 'answered' : 'unanswered');
-                    }
-                }
-            }
-
-            function createNavButtons() {
-                const nav = document.getElementById('navButtons');
-                nav.innerHTML = '';
-                for (let i = 27; i <= 32; i++) {
-                    const btn = document.createElement('button');
-                    btn.className = 'nav-btn unanswered';
-                    btn.textContent = i;
-                    btn.dataset.q = i;
-                    btn.addEventListener('click', () => {
-                        const input = document.getElementById(`q${i}`);
-                        if (input) {
-                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            input.focus();
-                        }
-                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                    });
-                    nav.appendChild(btn);
-                }
-            }
-
-            function addBadgeForQuestion(qNum) {
-                const input = document.getElementById(`q${qNum}`);
-                if (!input) return;
-                const wrapper = input.parentNode;
-                let existing = wrapper.querySelector('.correct-answer-badge');
-                if (existing) existing.remove();
-                const badge = document.createElement('span');
-                badge.className = 'correct-answer-badge';
-                badge.textContent = displayAnswers[qNum];
-                if (explanationMode) badge.style.display = 'inline-block';
-                wrapper.appendChild(badge);
-            }
-
-            function showExplanationInRightColumn(questionNum) {
-                if (!explanationMode && !examSubmitted) return;
-                if (!currentSplit) {
-                    currentSplit = true;
-                    const vals = {};
-                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
-                    renderSplitColumn();
-                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
-                }
-                const rightCol = document.getElementById('rightCol');
-                if (rightCol) rightCol.classList.add('show');
-                const explanationDiv = document.getElementById('rightExplanationText');
-                if (!explanationDiv) return;
-                let html = detailedExplanations[questionNum] || `<strong>Đáp án: ${displayAnswers[questionNum]}</strong>`;
-                if (examSubmitted) {
-                    const user = getUserAnswer(questionNum) || "(chưa điền)";
-                    const correct = isAnswerCorrect(questionNum, user);
-                    html += `<div class="answer-feedback ${correct ? 'correct' : 'incorrect'}">`;
-                    html += `<strong>Câu trả lời của bạn:</strong> "${user}" ${user ? (correct ? '✓' : '✗') : ''}<br>`;
-                    if (!correct) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[questionNum]}`;
-                    else html += `Chính xác!`;
-                    html += `</div>`;
-                }
-                explanationDiv.innerHTML = html;
-                if (examSubmitted) addBadgeForQuestion(questionNum);
-            }
-
-            function resetAll() {
-                examSubmitted = false;
-                explanationMode = false;
-                currentSplit = false;
-                renderSingleColumn();
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('submitBtn').textContent = 'Nộp bài';
-                document.getElementById('explainBtn').disabled = true;
-                document.getElementById('explainBtn').textContent = 'Xem giải thích';
-                updateAnswerCount();
-            }
-
-            function saveToDashboard() {
-                const book = 1, test = 2, part = 6;
-                const skill = 'reading';
-                const details = [];
-                let correctCount = 0;
-                for (let i = 27; i <= 32; i++) {
-                    const user = getUserAnswer(i);
-                    const correct = answerKey[i];
-                    const isCor = user.toLowerCase() === correct.toLowerCase();
-                    if (isCor) correctCount++;
-                    details.push({ question: i, user: user || '(trống)', correct: correct, isCorrect: isCor });
-                }
-                const partData = { partId: part, name: `Part ${part}`, totalQuestions: details.length, correctCount, details };
-                localStorage.setItem(`pet_${skill}_book${book}_test${test}_part${part}`, JSON.stringify(partData));
-            }
-
-            document.getElementById('submitBtn').addEventListener('click', () => {
-                if (examSubmitted) return;
-                let unanswered = [];
-                for (let i = 27; i <= 32; i++) if (!getUserAnswer(i)) unanswered.push(i);
-                if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
-
-                examSubmitted = true;
-                for (let i = 27; i <= 32; i++) {
-                    const inp = document.getElementById(`q${i}`);
-                    const correct = isAnswerCorrect(i, getUserAnswer(i));
-                    inp.classList.add(correct ? 'correct' : 'incorrect');
-                    inp.disabled = true;
-                }
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-                document.getElementById('explainBtn').disabled = false;
-                saveToDashboard();
-            });
-
-            document.getElementById('explainBtn').addEventListener('click', () => {
-                explanationMode = true;
-                document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
-                document.getElementById('explainBtn').disabled = true;
-                document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
-                if (!currentSplit) {
-                    currentSplit = true;
-                    const vals = {};
-                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
-                    renderSplitColumn();
-                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
-                }
-            });
-
-            document.getElementById('resetBtn').addEventListener('click', () => {
-                if (confirm('Reset tất cả câu trả lời?')) resetAll();
-            });
-
-            function setFontSize(size) {
-                document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-                const wrapper = document.getElementById('testWrapper');
-                wrapper.classList.remove('font-small', 'font-medium', 'font-large');
-                wrapper.classList.add(`font-${size}`);
-            }
-            document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-            document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-            document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-            document.addEventListener('contextmenu', (e) => {
-                const target = e.target.closest('.reading-card');
-                if (target) {
-                    const sel = window.getSelection();
-                    if (sel.toString().trim()) {
-                        e.preventDefault();
-                        selectedRange = sel.getRangeAt(0);
-                        const menu = document.getElementById('contextMenu');
-                        menu.style.display = 'block';
-                        menu.style.left = (e.pageX) + 'px';
-                        menu.style.top = (e.pageY) + 'px';
-                    }
-                }
-            });
-            document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
-
-            window.applyHighlight = (color) => {
-                if (selectedRange) {
-                    const span = document.createElement('span');
-                    span.className = 'highlight-' + color;
-                    selectedRange.surroundContents(span);
-                    window.getSelection().removeAllRanges();
-                    selectedRange = null;
-                }
-            };
-            window.removeHighlight = () => {
-                if (selectedRange) {
-                    const parent = selectedRange.commonAncestorContainer.parentElement;
-                    if (parent && parent.className.startsWith('highlight-')) {
-                        parent.replaceWith(parent.textContent);
-                    }
-                    window.getSelection().removeAllRanges();
-                    selectedRange = null;
-                }
-            };
-
-            // ==================== MODE TOGGLE (Classic/Modern) ====================
-            const modeToggle = document.getElementById('modeToggle');
-            const styleLink = document.getElementById('styleLink');
-            const html = document.documentElement;
-            const savedMode = localStorage.getItem('pet-mode');
-
-            function setMode(isClassic) {
-                if (isClassic) {
-                    styleLink.href = 'reading-pet-common1.css';
-                    testWrapper.classList.add('classic-mode');
-                    html.removeAttribute('data-theme');
-                    localStorage.removeItem('pet-theme');
-                } else {
-                    styleLink.href = 'reading-pet-common.css';
-                    testWrapper.classList.remove('classic-mode');
-                }
-                localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-            }
-
-            if (savedMode === 'classic') {
-                modeToggle.checked = true;
-                setMode(true);
-            } else {
-                modeToggle.checked = false;
-                setMode(false);
-            }
-
-            modeToggle.addEventListener('change', () => {
-                setMode(modeToggle.checked);
-            });
-
-            // ==================== THEME TOGGLE ====================
-            const themeToggle = document.getElementById('themeToggle');
-            const savedTheme = localStorage.getItem('pet-theme');
-            if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-                html.setAttribute('data-theme', 'dark');
-            }
-            themeToggle.addEventListener('click', () => {
-                if (testWrapper.classList.contains('classic-mode')) return;
-                const currentTheme = html.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', newTheme);
-                localStorage.setItem('pet-theme', newTheme);
-            });
-
-            createNavButtons();
-            renderSingleColumn();
-            updateAnswerCount();
-        })();
-    </script>
-</div>
+        window.readingCore = new ReadingCore();
+        window.readingCore.initializeTest(testData);
+    });
+</script>
 </body>
 </html>
 

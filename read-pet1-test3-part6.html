@@ -33,12 +33,12 @@
     </div>
 
     <div class="question-nav">
-        <span style="font-weight:600;">Câu 27 - 32</span>
+        <span style="font-weight:600;">Câu 27 – 32</span>
         <div class="nav-buttons" id="navButtons"></div>
-        <span id="answeredCount">0/6 answered</span>
+        <span id="answeredCount" style="font-size:13px; color:#555; margin-left:10px;">0/6 answered</span>
     </div>
 
-    <!-- Main area: will be dynamically filled -->
+    <!-- Main area -->
     <div class="main-area split-layout" id="mainArea"></div>
 
     <div class="bottom-bar">
@@ -54,391 +54,81 @@
         <div onclick="applyHighlight('pink')">Highlight hồng</div>
         <div onclick="removeHighlight()">Xóa highlight</div>
     </div>
+</div>
 
-    <script>
-        (function() {
-            // ---------- ANSWER KEY ----------
-            const answerKey = { 27: ["so"], 28: ["every", "each"], 29: ["if", "when", "whenever"], 30: ["why"], 31: ["about"], 32: ["There"] };
-            const displayAnswers = { 27: "so", 28: "every / each", 29: "if / when / whenever", 30: "why", 31: "about", 32: "There" };
-
-            const detailedExplanations = {
-                27: `<div><strong>Cấu trúc:</strong> <em>"so + adjective + that"</em> (quá ... đến mức ...).<br>Dịch: "...tôi đã quá lo lắng (so nervous) đến mức tôi thậm chí còn không dám nhờ ai giúp đỡ."</div>`,
-                28: `<div><strong>Lượng từ:</strong> <em>"every"</em> hoặc <em>"each"</em> đi kèm với danh từ đếm được số ít (student) để chỉ từng cá nhân trong một nhóm.<br>Dịch: "Hãy nhớ rằng mỗi sinh viên (every/each student) tại trường đều từng là người mới..."</div>`,
-                29: `<div><strong>Liên từ:</strong> <em>"if"</em> (nếu), <em>"when"</em> (khi) hoặc <em>"whenever"</em> (bất cứ khi nào). Cả 3 từ đều phù hợp về nghĩa để đánh dấu một tình huống có thể xảy ra.<br>Dịch: "Vì vậy, nếu (if) bạn không chắc chắn nên đi đâu, hãy hỏi..."</div>`,
-                30: `<div><strong>Cấu trúc gợi ý:</strong> <em>"Why not + bare infinitive"</em> (tại sao không nhỉ?). Dùng để đưa ra lời khuyên hoặc gợi ý một cách lịch sự.<br>Dịch: "...tại sao không (why not) dành thời gian nghỉ ngơi cùng các bạn cùng lớp..."</div>`,
-                31: `<div><strong>Cấu trúc gợi ý:</strong> <em>"How about + V-ing"</em> (Thế còn việc ... thì sao?). Đây là một cách phổ biến khác để đưa ra gợi ý.<br>Dịch: "Hoặc thế còn (how about) việc tham gia một trong nhiều câu lạc bộ tại trường thì sao?"</div>`,
-                32: `<div><strong>Cấu trúc tồn tại:</strong> <em>"There are"</em> dùng để chỉ sự hiện diện của một cái gì đó số nhiều (lots).<br>Dịch: "Có (There) rất nhiều lựa chọn dành cho bạn."</div>`
-            };
-
-            let examSubmitted = false;
-            let explanationMode = false;
-            let selectedRange = null;
-            let currentSplit = false;
-
-            const mainArea = document.getElementById('mainArea');
-            const readingCardContent = `
+<script src="core-reading.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const testData = {
+            type: 'split-layout',
+            part: 6,
+            answerKey: { q27: ["so"], q28: ["every", "each"], q29: ["if", "when", "whenever"], q30: ["why"], q31: ["about"], q32: ["There"] },
+            displayAnswers: { q27: "so", q28: "every / each", q29: "if / when / whenever", q30: "why", q31: "about", q32: "There" },
+            detailedExplanations: {
+                27: `<div><strong>Cấu trúc:</strong> <em>"so + adjective + that"</em> (quá ... đến mức ...).<br>
+                Dịch: "...tôi đã quá lo lắng (so nervous) đến mức tôi thậm chí còn không dám nhờ ai giúp đỡ."</div>`,
+                28: `<div><strong>Lượng từ:</strong> <em>"every"</em> hoặc <em>"each"</em> đi kèm với danh từ đếm được số ít (student) để chỉ từng cá nhân trong một nhóm.<br>
+                Dịch: "Hãy nhớ rằng mỗi sinh viên (every/each student) tại trường đều từng là người mới..."</div>`,
+                29: `<div><strong>Liên từ:</strong> <em>"if"</em> (nếu), <em>"when"</em> (khi) hoặc <em>"whenever"</em> (bất cứ khi nào). Cả 3 từ đều phù hợp về nghĩa.<br>
+                Dịch: "Vì vậy, nếu (if) bạn không chắc chắn nên đi đâu, hãy hỏi..."</div>`,
+                30: `<div><strong>Cấu trúc gợi ý:</strong> <em>"Why not + bare infinitive"</em> (tại sao không nhỉ?). Dùng để đưa ra lời khuyên.<br>
+                Dịch: "...tại sao không (why not) dành thời gian nghỉ ngơi cùng các bạn cùng lớp..."</div>`,
+                31: `<div><strong>Cấu trúc gợi ý:</strong> <em>"How about + V-ing"</em> (Thế còn việc ... thì sao?).<br>
+                Dịch: "Hoặc thế còn (how about) việc tham gia một trong nhiều câu lạc bộ tại trường thì sao?"</div>`,
+                32: `<div><strong>Cấu trúc tồn tại:</strong> <em>"There are"</em> dùng để chỉ sự hiện diện của một cái gì đó số nhiều.<br>
+                Dịch: "Có (There) rất nhiều lựa chọn dành cho bạn."</div>`
+            },
+            template: `
                 <div class="reading-card" id="passageCard">
                     <div class="review-title">Starting at college</div>
                     <p>Hi, my name's Emma. Welcome to the college! I've been studying here for a year now.
                         Starting at college isn't easy, but I'm sure you'll soon feel at home. When I first started
-                        studying here last year, I was (27) 
+                        studying here last year, I was
                         <span class="input-wrapper">
                             <input type="text" id="q27" class="gap-input" data-q="27" autocomplete="off">
-                            <span class="eye-icon" data-q="27">👁️</span>
+                            <span class="eye-icon" data-question="27">👁️</span>
                         </span>
                         nervous that I couldn't even ask anyone for help. I got lost five times on my first day!
                     </p>
-
-                    <p>Remember that (28) 
+                    <p>Remember that
                         <span class="input-wrapper">
                             <input type="text" id="q28" class="gap-input" data-q="28" autocomplete="off">
-                            <span class="eye-icon" data-q="28">👁️</span>
+                            <span class="eye-icon" data-question="28">👁️</span>
                         </span>
-                        student at the college has been new at one time, and understands how you feel. So (29) 
+                        student at the college has been new at one time, and understands how you feel. So
                         <span class="input-wrapper">
                             <input type="text" id="q29" class="gap-input" data-q="29" autocomplete="off">
-                            <span class="eye-icon" data-q="29">👁️</span>
+                            <span class="eye-icon" data-question="29">👁️</span>
                         </span>
                         you're not sure where to go, just ask someone. We're all friendly here.
                     </p>
-
-                    <p>There are lots of things to do in your free time. (30) 
+                    <p>There are lots of things to do in your free time.
                         <span class="input-wrapper">
                             <input type="text" id="q30" class="gap-input" data-q="30" autocomplete="off">
-                            <span class="eye-icon" data-q="30">👁️</span>
+                            <span class="eye-icon" data-question="30">👁️</span>
                         </span>
-                        not spend some time relaxing with your classmates? Or (31) 
+                        not spend some time relaxing with your classmates? Or
                         <span class="input-wrapper">
                             <input type="text" id="q31" class="gap-input" data-q="31" autocomplete="off">
-                            <span class="eye-icon" data-q="31">👁️</span>
+                            <span class="eye-icon" data-question="31">👁️</span>
                         </span>
-                        joining one of the many clubs at the school? (32) 
+                        joining one of the many clubs at the school?
                         <span class="input-wrapper">
                             <input type="text" id="q32" class="gap-input" data-q="32" autocomplete="off">
-                            <span class="eye-icon" data-q="32">👁️</span>
+                            <span class="eye-icon" data-question="32">👁️</span>
                         </span>
                         are lots of choices for you.
                     </p>
                 </div>
-            `;
+            `,
+            questions: [
+                { num: 27 }, { num: 28 }, { num: 29 }, { num: 30 }, { num: 31 }, { num: 32 }
+            ]
+        };
 
-            function renderSingleColumn() {
-                mainArea.innerHTML = `
-                    <div class="single-col">
-                        <div class="part-header">
-                            <h3>Questions 27-32</h3>
-                            <p>For each question, write the correct answer. Write one word for each gap.</p>
-                        </div>
-                        ${readingCardContent}
-                    </div>
-                `;
-                attachInputEvents();
-            }
-
-            function renderSplitColumn() {
-                mainArea.innerHTML = `
-                    <div class="split-container">
-                        <div class="left-col">
-                            <div class="part-header">
-                                <h3>Questions 27-32</h3>
-                                <p>For each question, write the correct answer. Write one word for each gap.</p>
-                            </div>
-                            ${readingCardContent}
-                        </div>
-                        <div class="right-col" id="rightCol">
-                            <div class="explanation-header">
-                                <span>Giải thích</span>
-                                <span class="close-explanation-btn" id="closeRightExplain">✕ Đóng</span>
-                            </div>
-                            <div class="explanation-content" id="rightExplanationText">
-                                Nhấn vào biểu tượng con mắt bên cạnh mỗi câu để xem giải thích.
-                            </div>
-                        </div>
-                    </div>
-                `;
-                attachInputEvents();
-                if (explanationMode) {
-                    const rightCol = document.getElementById('rightCol');
-                    if (rightCol) rightCol.classList.add('show');
-                    for (let i = 27; i <= 32; i++) {
-                        addBadgeForQuestion(i);
-                    }
-                    document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
-                }
-                document.getElementById('closeRightExplain')?.addEventListener('click', () => {
-                    const col = document.getElementById('rightCol');
-                    if (col) col.classList.remove('show');
-                });
-            }
-
-            function attachInputEvents() {
-                document.querySelectorAll('.gap-input').forEach(inp => {
-                    if (examSubmitted) inp.disabled = true;
-                    if (examSubmitted) {
-                        const val = inp.value.trim();
-                        const correct = isAnswerCorrect(parseInt(inp.dataset.q), val);
-                        inp.classList.add(correct ? 'correct' : 'incorrect');
-                    }
-                    inp.addEventListener('input', () => updateAnswerCount());
-                });
-                document.querySelectorAll('.eye-icon').forEach(icon => {
-                    if (explanationMode || examSubmitted) icon.style.display = 'inline-block';
-                    icon.addEventListener('click', (e) => {
-                        const q = parseInt(e.currentTarget.dataset.q);
-                        showExplanationInRightColumn(q);
-                    });
-                });
-            }
-
-            function getUserAnswer(qNum) {
-                const input = document.getElementById(`q${qNum}`);
-                return input ? input.value.trim() : "";
-            }
-
-            function isAnswerCorrect(qNum, val) {
-                return answerKey[qNum].some(correct => val.toLowerCase() === correct.toLowerCase());
-            }
-
-            function updateAnswerCount() {
-                let answered = 0;
-                for (let i = 27; i <= 32; i++) {
-                    if (getUserAnswer(i) !== "") answered++;
-                }
-                document.getElementById('answeredCount').textContent = `${answered}/6 answered`;
-                document.getElementById('progressDisplay').textContent = `Đã làm: ${answered}/6`;
-                for (let i = 27; i <= 32; i++) {
-                    const btn = document.querySelector(`.nav-btn[data-q="${i}"]`);
-                    if (btn) {
-                        btn.classList.remove('answered', 'unanswered');
-                        btn.classList.add(getUserAnswer(i) !== "" ? 'answered' : 'unanswered');
-                    }
-                }
-            }
-
-            function createNavButtons() {
-                const nav = document.getElementById('navButtons');
-                nav.innerHTML = '';
-                for (let i = 27; i <= 32; i++) {
-                    const btn = document.createElement('button');
-                    btn.className = 'nav-btn unanswered';
-                    btn.textContent = i;
-                    btn.dataset.q = i;
-                    btn.addEventListener('click', () => {
-                        const input = document.getElementById(`q${i}`);
-                        if (input) {
-                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            input.focus();
-                        }
-                        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                    });
-                    nav.appendChild(btn);
-                }
-            }
-
-            function addBadgeForQuestion(qNum) {
-                const input = document.getElementById(`q${qNum}`);
-                if (!input) return;
-                const wrapper = input.parentNode;
-                let existing = wrapper.querySelector('.correct-answer-badge');
-                if (existing) existing.remove();
-                const badge = document.createElement('span');
-                badge.className = 'correct-answer-badge';
-                badge.textContent = displayAnswers[qNum];
-                if (explanationMode) badge.style.display = 'inline-block';
-                wrapper.appendChild(badge);
-            }
-
-            function showExplanationInRightColumn(questionNum) {
-                if (!explanationMode && !examSubmitted) return;
-                if (!currentSplit) {
-                    currentSplit = true;
-                    const vals = {};
-                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
-                    renderSplitColumn();
-                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
-                }
-                const rightCol = document.getElementById('rightCol');
-                if (rightCol) rightCol.classList.add('show');
-                const explanationDiv = document.getElementById('rightExplanationText');
-                if (!explanationDiv) return;
-                let html = detailedExplanations[questionNum] || `<strong>Đáp án: ${displayAnswers[questionNum]}</strong>`;
-                if (examSubmitted) {
-                    const user = getUserAnswer(questionNum) || "(chưa điền)";
-                    const correct = isAnswerCorrect(questionNum, user);
-                    html += `<div class="answer-feedback ${correct ? 'correct' : 'incorrect'}">`;
-                    html += `<strong>Câu trả lời của bạn:</strong> "${user}" ${user ? (correct ? '✓' : '✗') : ''}<br>`;
-                    if (!correct) html += `<strong>Đáp án đúng:</strong> ${displayAnswers[questionNum]}`;
-                    else html += `Chính xác!`;
-                    html += `</div>`;
-                }
-                explanationDiv.innerHTML = html;
-                if (examSubmitted) addBadgeForQuestion(questionNum);
-            }
-
-            function resetAll() {
-                examSubmitted = false;
-                explanationMode = false;
-                currentSplit = false;
-                renderSingleColumn();
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('submitBtn').textContent = 'Nộp bài';
-                document.getElementById('explainBtn').disabled = true;
-                document.getElementById('explainBtn').textContent = 'Xem giải thích';
-                updateAnswerCount();
-            }
-
-            function saveToDashboard() {
-                const book = 1, test = 3, part = 6;
-                const skill = 'reading';
-                const details = [];
-                let correctCount = 0;
-                for (let i = 27; i <= 32; i++) {
-                    const user = getUserAnswer(i);
-                    const correct = answerKey[i];
-                    const isCor = answerKey[i].some(c => user.toLowerCase() === c.toLowerCase());
-                    if (isCor) correctCount++;
-                    details.push({ question: i, user: user || '(trống)', correct: displayAnswers[i], isCorrect: isCor });
-                }
-                const partData = { partId: part, name: `Part ${part}`, totalQuestions: details.length, correctCount, details };
-                localStorage.setItem(`pet_${skill}_book${book}_test${test}_part${part}`, JSON.stringify(partData));
-            }
-
-            document.getElementById('submitBtn').addEventListener('click', () => {
-                if (examSubmitted) return;
-                let unanswered = [];
-                for (let i = 27; i <= 32; i++) if (!getUserAnswer(i)) unanswered.push(i);
-                if (unanswered.length > 0 && !confirm(`Bạn còn ${unanswered.length} câu chưa điền. Vẫn nộp bài?`)) return;
-
-                examSubmitted = true;
-                for (let i = 27; i <= 32; i++) {
-                    const inp = document.getElementById(`q${i}`);
-                    const correct = isAnswerCorrect(i, getUserAnswer(i));
-                    inp.classList.add(correct ? 'correct' : 'incorrect');
-                    inp.disabled = true;
-                }
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').textContent = 'Đã nộp bài';
-                document.getElementById('explainBtn').disabled = false;
-                saveToDashboard();
-            });
-
-            document.getElementById('explainBtn').addEventListener('click', () => {
-                explanationMode = true;
-                document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'inline-block');
-                document.getElementById('explainBtn').disabled = true;
-                document.getElementById('explainBtn').textContent = 'Đang xem giải thích';
-                if (!currentSplit) {
-                    currentSplit = true;
-                    const vals = {};
-                    for(let i=27; i<=32; i++) vals[i] = getUserAnswer(i);
-                    renderSplitColumn();
-                    for(let i=27; i<=32; i++) document.getElementById(`q${i}`).value = vals[i];
-                }
-            });
-
-            document.getElementById('resetBtn').addEventListener('click', () => {
-                if (confirm('Reset tât ca câu trâ lôi?')) resetAll();
-            });
-
-            function setFontSize(size) {
-                document.querySelectorAll('.font-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById(`font${size.charAt(0).toUpperCase()+size.slice(1)}`).classList.add('active');
-                const wrapper = document.getElementById('testWrapper');
-                wrapper.classList.remove('font-small', 'font-medium', 'font-large');
-                wrapper.classList.add(`font-${size}`);
-            }
-            document.getElementById('fontSmall').addEventListener('click', () => setFontSize('small'));
-            document.getElementById('fontMedium').addEventListener('click', () => setFontSize('medium'));
-            document.getElementById('fontLarge').addEventListener('click', () => setFontSize('large'));
-
-
-            document.addEventListener('contextmenu', (e) => {
-                const target = e.target.closest('.reading-card');
-                if (target) {
-                    const sel = window.getSelection();
-                    if (sel.toString().trim()) {
-                        e.preventDefault();
-                        selectedRange = sel.getRangeAt(0);
-                        const menu = document.getElementById('contextMenu');
-                        menu.style.display = 'block';
-                        menu.style.left = (e.pageX) + 'px';
-                        menu.style.top = (e.pageY) + 'px';
-                    }
-                }
-            });
-            document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
-
-            window.applyHighlight = (color) => {
-                if (selectedRange) {
-                    const span = document.createElement('span');
-                    span.className = 'highlight-' + color;
-                    selectedRange.surroundContents(span);
-                    window.getSelection().removeAllRanges();
-                    selectedRange = null;
-                }
-            };
-            window.removeHighlight = () => {
-                if (selectedRange) {
-                    const parent = selectedRange.commonAncestorContainer.parentElement;
-                    if (parent && parent.className.startsWith('highlight-')) {
-                        parent.replaceWith(parent.textContent);
-                    }
-                    window.getSelection().removeAllRanges();
-                    selectedRange = null;
-                }
-            };
-
-            // ==================== MODE TOGGLE (Classic/Modern) ====================
-            const modeToggle = document.getElementById('modeToggle');
-            const styleLink = document.getElementById('styleLink');
-            const html = document.documentElement;
-            const savedMode = localStorage.getItem('pet-mode');
-
-            function setMode(isClassic) {
-                if (isClassic) {
-                    styleLink.href = 'reading-pet-common1.css';
-                    testWrapper.classList.add('classic-mode');
-                    html.removeAttribute('data-theme');
-                    localStorage.removeItem('pet-theme');
-                } else {
-                    styleLink.href = 'reading-pet-common.css';
-                    testWrapper.classList.remove('classic-mode');
-                }
-                localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-            }
-
-            if (savedMode === 'classic') {
-                modeToggle.checked = true;
-                setMode(true);
-            } else {
-                modeToggle.checked = false;
-                setMode(false);
-            }
-
-            modeToggle.addEventListener('change', () => {
-                setMode(modeToggle.checked);
-            });
-
-            // ==================== THEME TOGGLE ====================
-            const themeToggle = document.getElementById('themeToggle');
-            const savedTheme = localStorage.getItem('pet-theme');
-            if (savedTheme === 'dark' && !testWrapper.classList.contains('classic-mode')) {
-                html.setAttribute('data-theme', 'dark');
-            }
-            themeToggle.addEventListener('click', () => {
-                if (testWrapper.classList.contains('classic-mode')) return;
-                const currentTheme = html.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', newTheme);
-                localStorage.setItem('pet-theme', newTheme);
-            });
-
-            createNavButtons();
-            renderSingleColumn();
-            updateAnswerCount();
-        })();
-    </script>
-</div>
+        window.readingCore = new ReadingCore();
+        window.readingCore.initializeTest(testData);
+    });
+</script>
 </body>
 </html>
