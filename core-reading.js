@@ -1170,12 +1170,26 @@ class ReadingCore {
     }
 
     handleReset() {
-        if (confirm('Reset tất cả câu trả lời?')) {
-            this.resetAll();
-        }
+        this.resetAll();
     }
 
     resetAll() {
+        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+
+        // Lấy book, test, part từ currentTestData (đã được truyền khi khởi tạo)
+        const book = this.currentTestData.book || 1;
+        const test = this.currentTestData.test || 1;
+        const part = this.currentTestData.part || 1;
+
+        // Tạo key chính xác theo format chuẩn (giống như index đang dùng)
+        const completedKey = `pet_reading_book${book}_test${test}_part${part}`;
+        const draftKey = completedKey + '_draft';
+
+        console.log('[Reset] Deleting keys:', completedKey, draftKey);
+        localStorage.removeItem(completedKey);
+        localStorage.removeItem(draftKey);
+
+        // === Reset UI ===
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
@@ -1257,33 +1271,14 @@ class ReadingCore {
             explanationPanel.classList.remove('show');
         }
 
-        // === Xóa DỨT ĐIỂM tất cả key liên quan đến part này ===
-        const meta = this.storageManager.parseTestInfo(
-            document.querySelector('.candidate')?.textContent || ''
-        );
-        const book = meta.book || 1;
-        const test = meta.test || 1;
-        const part = this.currentTestData.part || meta.part || 1;
+        // Gửi sự kiện storage (để tab index ở chế độ nền nhận được)
+        window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
+        window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
-        // Tạo pattern key: pet_reading_bookX_testY_partZ
-        const targetKey = `pet_reading_book${book}_test${test}_part${part}`;
-
-        // Xóa tất cả key có chứa targetKey (kể cả _draft)
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.includes(targetKey)) {
-                localStorage.removeItem(key);
-                console.log(`[Reset] Deleted key: ${key}`);
-            }
-        }
-
-        // Gửi sự kiện storage (để các tab khác nhận)
-        window.dispatchEvent(new StorageEvent('storage', { key: targetKey }));
-
-        // Gửi broadcast (để tab index nhận dù không có storage)
+        // Gửi broadcast (để index ở bất kỳ tab nào cũng nhận)
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
-            channel.postMessage({ action: 'reset', type: 'reading', part: part });
+            channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
