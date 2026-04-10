@@ -1,7 +1,11 @@
 /**
- * CORE LISTING ENGINE - PET B1 PRELIMINARY
+ * CORE LISTENING ENGINE - PET B1 PRELIMINARY
  * Contains all functionality for listening tests across all parts and tests
  * Compatible with PET 1 & PET 2, Tests 1-4, Parts 1-4
+ * 
+ * CHANGELOG:
+ * - Added autosave draft feature (save progress automatically)
+ * - Reset now also clears saved results and draft
  */
 
 class ListeningCore {
@@ -14,6 +18,8 @@ class ListeningCore {
         this.highlightManager = new HighlightManager();
         this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
+        this.debounceTimer = null;
+        this.DEBOUNCE_MS = 500; // Lưu sau 0.5s không thay đổi
     }
 
     /**
@@ -40,10 +46,110 @@ class ListeningCore {
         // Initialize navigation
         this.createNavigation();
         
+        // === MỚI: Khôi phục draft nếu chưa nộp bài ===
+        if (!this.isCompleted()) {
+            this.loadDraft();
+        }
+        
         // Update initial state
         this.updateAnswerCount();
         
         console.log('Listening test initialized:', testData.title);
+    }
+
+    /**
+     * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
+     */
+    isCompleted() {
+        if (!this.currentTestData) return false;
+        const key = this.getStorageKey(false);
+        return localStorage.getItem(key) !== null;
+    }
+
+    /**
+     * Lấy storage key (có hoặc không có hậu tố _draft)
+     */
+    getStorageKey(isDraft = false) {
+        // Ưu tiên dùng book/test/part từ testData nếu có, fallback parse từ title
+        const d = this.currentTestData;
+        let book = d.book, test = d.test, part = d.part;
+        if (!book || !test || !part) {
+            const parsed = this.parseTestInfo(d.title);
+            book = book || parsed.book;
+            test = test || parsed.test;
+            part = part || parsed.part;
+        }
+        let key = `pet_listening_book${book}_test${test}_part${part}`;
+        if (isDraft) key += '_draft';
+        return key;
+    }
+
+    /**
+     * Lấy dữ liệu nháp hiện tại từ giao diện
+     */
+    getDraftData() {
+        const questionRange = this.getQuestionRange();
+        const answers = {};
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            answers[`q${i}`] = this.getUserAnswer(i);
+        }
+        return answers;
+    }
+
+    /**
+     * Lưu nháp vào localStorage (có debounce)
+     */
+    saveDraft() {
+        if (this.examSubmitted) return; // Không lưu nháp nếu đã nộp bài
+        
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            const draft = this.getDraftData();
+            const key = this.getStorageKey(true);
+            localStorage.setItem(key, JSON.stringify(draft));
+            console.log('Listening draft saved for', this.currentTestData.title);
+        }, this.DEBOUNCE_MS);
+    }
+
+    /**
+     * Khôi phục nháp từ localStorage và áp dụng vào giao diện
+     */
+    loadDraft() {
+        const key = this.getStorageKey(true);
+        const draftJson = localStorage.getItem(key);
+        if (!draftJson) return false;
+        
+        try {
+            const draft = JSON.parse(draftJson);
+            const questionRange = this.getQuestionRange();
+            
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const ans = draft[`q${i}`];
+                if (ans === undefined || ans === null) continue;
+                
+                if (this.currentTestData.type === 'multiple-choice') {
+                    const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
+                    if (radio) radio.checked = true;
+                } else if (this.currentTestData.type === 'fill-blank') {
+                    const input = document.getElementById(`q${i}`);
+                    if (input) input.value = ans;
+                }
+            }
+            console.log('Listening draft loaded for', this.currentTestData.title);
+            this.updateAnswerCount();
+            return true;
+        } catch (e) {
+            console.warn('Failed to load listening draft', e);
+            return false;
+        }
+    }
+
+    /**
+     * Xóa nháp khỏi localStorage
+     */
+    clearDraft() {
+        const key = this.getStorageKey(true);
+        localStorage.removeItem(key);
     }
 
     /**
@@ -153,6 +259,7 @@ class ListeningCore {
         document.addEventListener('change', (e) => {
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
+                this.saveDraft(); // <-- MỚI
             }
         });
 
@@ -160,6 +267,7 @@ class ListeningCore {
         document.addEventListener('input', (e) => {
             if (e.target && e.target.matches('.fill-input')) {
                 this.updateAnswerCount();
+                this.saveDraft(); // <-- MỚI
             }
         });
 
@@ -307,7 +415,7 @@ class ListeningCore {
 
         const progressDisplay = document.getElementById('progressDisplay');
         if (progressDisplay) {
-            progressDisplay.textContent = `Done: ${answered}/${total}`;
+            progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
         }
 
         // Update navigation buttons
@@ -336,7 +444,7 @@ class ListeningCore {
         }
 
         if (unanswered.length > 0) {
-            if (!confirm(`You have ${unanswered.length} unanswered questions. Submit anyway?`)) {
+            if (!confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) {
                 return;
             }
         }
@@ -373,6 +481,9 @@ class ListeningCore {
 
         // Save to dashboard
         this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
+        
+        // === MỚI: Xóa draft sau khi nộp bài ===
+        this.clearDraft();
 
         // Disable inputs
         this.disableInputs();
@@ -597,6 +708,13 @@ class ListeningCore {
         if (explanationPanel) {
             explanationPanel.classList.remove('show');
         }
+
+        // === MỚI: Xóa cả kết quả đã lưu và nháp ===
+        if (this.currentTestData) {
+            const completedKey = this.getStorageKey(false);
+            localStorage.removeItem(completedKey);
+        }
+        this.clearDraft();
 
         this.updateAnswerCount();
     }
