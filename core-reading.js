@@ -5,7 +5,7 @@
  * 
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
- * - Reset now also clears saved results and draft
+ * - Reset now also clears saved results and draftF
  */
 
 class ReadingCore {
