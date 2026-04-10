@@ -892,15 +892,20 @@ class HighlightManager {
 
     /**
      * Setup context menu for manual highlighting
+     * FIXED: Use event delegation to handle dynamic DOM changes and allow highlighting in questions
      */
     setupContextMenu() {
         document.addEventListener('contextmenu', (e) => {
-            const selection = window.getSelection();
-            if (selection.toString().trim()) {
-                e.preventDefault();
-                // Save the selection to restore it later if needed
-                this.savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
-                this.showContextMenu(e.pageX, e.pageY);
+            // Kiểm tra target có nằm trong vùng transcript hoặc vùng câu hỏi không
+            const highlightArea = e.target.closest('#transcriptContent, .transcript-content, .reading-content, #questionsContainer, .questions-panel, .question-item, .questions-list, #mainArea');
+            if (highlightArea) {
+                const selection = window.getSelection();
+                if (selection.toString().trim()) {
+                    e.preventDefault();
+                    // Save the selection to use when applying highlight
+                    this.savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+                    this.showContextMenu(e.pageX, e.pageY);
+                }
             }
         });
 
@@ -962,12 +967,16 @@ class HighlightManager {
 
     /**
      * Apply manual highlight
+     * FIXED: Use saved range when available
      */
     applyHighlight(color) {
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
+        let range = this.savedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
 
-        const range = selection.getRangeAt(0);
         const span = document.createElement('span');
         span.className = `highlight-${color}`;
         
@@ -980,27 +989,30 @@ class HighlightManager {
             range.insertNode(span);
         }
         
-        selection.removeAllRanges();
+        window.getSelection().removeAllRanges();
         this.hideContextMenu();
+        this.savedRange = null;
     }
 
     /**
      * Remove manual highlight
+     * FIXED: Use saved range and TreeWalker on commonAncestorContainer
      */
     removeHighlight() {
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
+        let range = this.savedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
 
-        const range = selection.getRangeAt(0);
-        const contents = range.extractContents();
-        
-        // Remove highlight spans
+        // Tìm tất cả các highlight span nằm trong range
         const walker = document.createTreeWalker(
-            contents,
-            NodeFilter.SHOW_ALL,
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_ELEMENT,
             {
                 acceptNode: (node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE && 
+                    if (node.classList && 
                         (node.classList.contains('highlight-yellow') || 
                          node.classList.contains('highlight-green') || 
                          node.classList.contains('highlight-pink'))) {
@@ -1011,22 +1023,25 @@ class HighlightManager {
             }
         );
 
-        const highlights = [];
+        const toRemove = [];
         let node;
         while (node = walker.nextNode()) {
-            highlights.push(node);
+            if (range.intersectsNode(node)) {
+                toRemove.push(node);
+            }
         }
 
-        highlights.forEach(highlight => {
-            while (highlight.firstChild) {
-                highlight.parentNode.insertBefore(highlight.firstChild, highlight);
+        toRemove.forEach(span => {
+            const parent = span.parentNode;
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
             }
-            highlight.parentNode.removeChild(highlight);
+            parent.removeChild(span);
         });
 
-        range.insertNode(contents);
-        selection.removeAllRanges();
+        window.getSelection().removeAllRanges();
         this.hideContextMenu();
+        this.savedRange = null;
     }
 
     /**
