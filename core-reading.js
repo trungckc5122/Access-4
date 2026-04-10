@@ -2,6 +2,10 @@
  * CORE READING ENGINE - PET B1 PRELIMINARY
  * Contains all functionality for reading tests across all parts and tests
  * Compatible with PET 1 & PET 2, Tests 1-4, Parts 1-6
+ * 
+ * CHANGELOG:
+ * - Added autosave draft feature (save progress automatically)
+ * - Reset now also clears saved results and draft
  */
 
 class ReadingCore {
@@ -15,6 +19,8 @@ class ReadingCore {
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
+        this.debounceTimer = null;
+        this.DEBOUNCE_MS = 500;
     }
 
     /**
@@ -45,8 +51,16 @@ class ReadingCore {
         // Setup event listeners
         this.setupEventListeners();
         
+        // === MỚI: Lưu draft khi rời trang ===
+        this.setupBeforeUnload();
+        
         // Initialize navigation
         this.createNavigation();
+        
+        // === MỚI: Khôi phục draft nếu chưa nộp bài ===
+        if (!this.isCompleted()) {
+            this.loadDraft();
+        }
         
         // Update initial state
         this.updateAnswerCount();
@@ -57,6 +71,202 @@ class ReadingCore {
         });
         
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
+    }
+
+    /**
+     * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
+     */
+    isCompleted() {
+        if (!this.currentTestData) {
+            console.log('[Reading Draft] isCompleted: no test data');
+            return false;
+        }
+        const key = this.getStorageKey(false);
+        const completed = localStorage.getItem(key) !== null;
+        console.log('[Reading Draft] isCompleted check - key:', key, 'completed:', completed);
+        return completed;
+    }
+
+    /**
+     * Lấy storage key (có hoặc không có hậu tố _draft)
+     */
+    getStorageKey(isDraft = false) {
+        const meta = this.currentTestData.metadata || this.storageManager.parseTestInfo(
+            document.querySelector('.candidate')?.textContent || ''
+        );
+        const book = meta.book || 1;
+        const test = meta.test || 1;
+        const part = this.currentTestData.part || meta.part || 1;
+        let key = `pet_reading_book${book}_test${test}_part${part}`;
+        if (isDraft) key += '_draft';
+        console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
+        return key;
+    }
+
+    /**
+     * Lấy dữ liệu nháp hiện tại từ giao diện
+     */
+    getDraftData() {
+        const questionRange = this.getQuestionRange();
+        const draft = { type: this.currentTestData.type };
+        
+        if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                draft[`q${i}`] = this.getUserAnswer(i);
+            }
+        } else if (this.currentTestData.type === 'matching') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const input = document.getElementById(`answer-${i}`);
+                draft[`q${i}`] = input ? input.value.trim().toUpperCase() : '';
+            }
+        } else if (this.currentTestData.type === 'drag-drop') {
+            draft.slotState = { ...this.slotState };
+        } else if (this.currentTestData.type === 'split-layout') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const inp = document.getElementById(`q${i}`);
+                draft[`q${i}`] = inp ? inp.value : '';
+            }
+        }
+        return draft;
+    }
+
+    /**
+     * Lưu nháp vào localStorage (có debounce)
+     */
+    saveDraft() {
+        if (this.examSubmitted) {
+            console.log('[Reading Draft] Skip: exam already submitted');
+            return;
+        }
+        if (!this.currentTestData) {
+            console.log('[Reading Draft] Skip: no test data');
+            return;
+        }
+        
+        clearTimeout(this.debounceTimer);
+        console.log('[Reading Draft] Scheduled save in', this.DEBOUNCE_MS, 'ms');
+        
+        this.debounceTimer = setTimeout(() => {
+            try {
+                const draft = this.getDraftData();
+                const key = this.getStorageKey(true);
+                localStorage.setItem(key, JSON.stringify(draft));
+                console.log('[Reading Draft] SAVED to key:', key, 'data:', draft);
+            } catch (e) {
+                console.error('[Reading Draft] FAILED to save:', e);
+            }
+        }, this.DEBOUNCE_MS);
+    }
+
+    /**
+     * Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang hoặc radio change
+     */
+    saveDraftImmediate() {
+        if (this.examSubmitted || !this.currentTestData) return;
+        clearTimeout(this.debounceTimer);
+        try {
+            const draft = this.getDraftData();
+            const key = this.getStorageKey(true);
+            localStorage.setItem(key, JSON.stringify(draft));
+            console.log('[Reading Draft] Saved immediately to key:', key);
+        } catch (e) {
+            console.error('[Reading Draft] Immediate save failed:', e);
+        }
+    }
+
+    /**
+     * Setup handlers để lưu draft khi rời trang
+     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
+     */
+    setupBeforeUnload() {
+        // 1. beforeunload - desktop browsers thông thường
+        window.addEventListener('beforeunload', () => {
+            this.saveDraftImmediate();
+        });
+
+        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
+        window.addEventListener('pagehide', () => {
+            this.saveDraftImmediate();
+        });
+
+        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.saveDraftImmediate();
+            }
+        });
+    }
+
+    /**
+     * Khôi phục nháp từ localStorage và áp dụng vào giao diện
+     */
+    loadDraft() {
+        const key = this.getStorageKey(true);
+        console.log('[Reading Draft] Attempting to load from key:', key);
+        
+        const draftJson = localStorage.getItem(key);
+        if (!draftJson) {
+            console.log('[Reading Draft] No draft found for key:', key);
+            return false;
+        }
+        
+        try {
+            const draft = JSON.parse(draftJson);
+            console.log('[Reading Draft] Loaded data:', draft);
+            const questionRange = this.getQuestionRange();
+            
+            if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                    const ans = draft[`q${i}`];
+                    if (!ans) continue;
+                    const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        if (draft.type === 'inline-radio') {
+                            this.updateInlineSlotFromRadio(i);
+                        }
+                    }
+                }
+            } else if (draft.type === 'matching') {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                    const ans = draft[`q${i}`];
+                    if (!ans) continue;
+                    const input = document.getElementById(`answer-${i}`);
+                    if (input) input.value = ans;
+                }
+            } else if (draft.type === 'drag-drop') {
+                // Khôi phục drag-drop
+                const slotState = draft.slotState || {};
+                for (const [qNumStr, value] of Object.entries(slotState)) {
+                    const qNum = parseInt(qNumStr);
+                    if (value && value.value) {
+                        this.placeInSlot(qNum, value.value);
+                    }
+                }
+            } else if (draft.type === 'split-layout') {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                    const ans = draft[`q${i}`];
+                    if (ans === undefined) continue;
+                    const inp = document.getElementById(`q${i}`);
+                    if (inp) inp.value = ans;
+                }
+            }
+            
+            console.log('[Reading Draft] SUCCESSFULLY loaded for', this.currentTestData?.title || 'reading test');
+            this.updateAnswerCount();
+            return true;
+        } catch (e) {
+            console.warn('[Reading Draft] FAILED to load:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Xóa nháp khỏi localStorage
+     */
+    clearDraft() {
+        const key = this.getStorageKey(true);
+        localStorage.removeItem(key);
     }
 
     /**
@@ -239,6 +449,7 @@ class ReadingCore {
         });
 
         this.slotState[qNum] = value ? { value, text } : null;
+        this.saveDraftImmediate(); // Drag-drop: save immediately
     }
 
     placeInSlot(qNum, value) {
@@ -308,6 +519,7 @@ class ReadingCore {
             radios.forEach(radio => {
                 radio.addEventListener('change', () => {
                     this.updateInlineSlotFromRadio(i);
+                    this.saveDraftImmediate(); // Radio change: save immediately
                 });
             });
         }
@@ -329,6 +541,7 @@ class ReadingCore {
         }
         this.updateAnswerCount();
     }
+
     /**
      * Render single column layout for fill-in-the-blank text (Part 6)
      */
@@ -392,7 +605,10 @@ class ReadingCore {
                 const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
                 inp.classList.add(correct ? 'correct' : 'incorrect');
             }
-            inp.addEventListener('input', () => this.updateAnswerCount());
+            inp.addEventListener('input', () => {
+                this.updateAnswerCount();
+                this.saveDraft(); // Text input: debounced save
+            });
         });
         
         document.querySelectorAll('.eye-icon').forEach(icon => {
@@ -413,10 +629,22 @@ class ReadingCore {
      * Setup global event listeners
      */
     setupEventListeners() {
-        // Form input states
+        // Form input states - radio buttons lưu NGAY, text input lưu debounced
         document.addEventListener('change', (e) => {
-            if (e.target && (e.target.matches('input[type="radio"]') || e.target.matches('input[type="text"]'))) {
+            if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
+                this.saveDraftImmediate(); // Radio: lưu ngay
+            } else if (e.target && e.target.matches('input[type="text"]')) {
+                this.updateAnswerCount();
+                this.saveDraft(); // Text: debounce
+            }
+        });
+        
+        // Input event cho text fields (real-time save)
+        document.addEventListener('input', (e) => {
+            if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('.gap-input') || e.target.matches('.answer-input'))) {
+                this.updateAnswerCount();
+                this.saveDraft(); // Debounced
             }
         });
         
@@ -677,6 +905,10 @@ class ReadingCore {
 
         // Local storage saving
         this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
+        
+        // === MỚI: Xóa draft sau khi nộp ===
+        this.clearDraft();
+        
         this.disableInputs();
     }
 
@@ -990,6 +1222,11 @@ class ReadingCore {
         if (explanationPanel) {
             explanationPanel.classList.remove('show');
         }
+
+        // === MỚI: Xóa cả kết quả đã lưu và nháp ===
+        const completedKey = this.getStorageKey(false);
+        localStorage.removeItem(completedKey);
+        this.clearDraft();
 
         this.updateAnswerCount();
     }
