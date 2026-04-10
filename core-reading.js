@@ -1185,9 +1185,10 @@ class ReadingCore {
         const completedKey = `pet_reading_book${book}_test${test}_part${part}`;
         const draftKey = completedKey + '_draft';
 
-        console.log('[Reset] Deleting keys:', completedKey, draftKey);
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
+        console.log('[Reset] Deleted completedKey:', completedKey);
+        console.log('[Reset] Deleted draftKey:', draftKey);
 
         // === Reset UI ===
         this.examSubmitted = false;

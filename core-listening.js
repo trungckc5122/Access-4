@@ -720,6 +720,8 @@ class ListeningCore {
 
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
+        console.log('[Reset] Deleted completedKey:', completedKey);
+        console.log('[Reset] Deleted draftKey:', draftKey);
 
         // === Reset UI ===
         this.examSubmitted = false;
