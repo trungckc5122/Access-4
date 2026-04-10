@@ -19,7 +19,7 @@ class ListeningCore {
         this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
         this.debounceTimer = null;
-        this.DEBOUNCE_MS = 500; // Lưu sau 0.5s không thay đổi
+        this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
     }
 
     /**
@@ -43,6 +43,9 @@ class ListeningCore {
         // Setup event listeners
         this.setupEventListeners();
         
+        // === MỚI: Lưu draft khi rời trang ===
+        this.setupBeforeUnload();
+        
         // Initialize navigation
         this.createNavigation();
         
@@ -61,26 +64,35 @@ class ListeningCore {
      * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
      */
     isCompleted() {
-        if (!this.currentTestData) return false;
+        if (!this.currentTestData) {
+            console.log('[Draft] isCompleted: no test data');
+            return false;
+        }
         const key = this.getStorageKey(false);
-        return localStorage.getItem(key) !== null;
+        const completed = localStorage.getItem(key) !== null;
+        console.log('[Draft] isCompleted check - key:', key, 'completed:', completed);
+        return completed;
     }
 
     /**
      * Lấy storage key (có hoặc không có hậu tố _draft)
      */
     getStorageKey(isDraft = false) {
-        // Ưu tiên dùng book/test/part từ testData nếu có, fallback parse từ title
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
+        
+        // Nếu thiếu metadata, parse từ title
         if (!book || !test || !part) {
-            const parsed = this.parseTestInfo(d.title);
+            const parsed = this.storageManager.parseTestInfo(d.title);
             book = book || parsed.book;
             test = test || parsed.test;
             part = part || parsed.part;
         }
+        
         let key = `pet_listening_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
+        
+        console.log('[Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
     }
 
@@ -100,15 +112,44 @@ class ListeningCore {
      * Lưu nháp vào localStorage (có debounce)
      */
     saveDraft() {
-        if (this.examSubmitted) return; // Không lưu nháp nếu đã nộp bài
+        if (this.examSubmitted) {
+            console.log('[Draft] Skip: exam already submitted');
+            return;
+        }
+        if (!this.currentTestData) {
+            console.log('[Draft] Skip: no test data');
+            return;
+        }
         
         clearTimeout(this.debounceTimer);
+        console.log('[Draft] Scheduled save in', this.DEBOUNCE_MS, 'ms');
+        
         this.debounceTimer = setTimeout(() => {
+            try {
+                const draft = this.getDraftData();
+                const key = this.getStorageKey(true);
+                localStorage.setItem(key, JSON.stringify(draft));
+                console.log('[Draft] SAVED to key:', key, 'data:', draft);
+            } catch (e) {
+                console.error('[Draft] FAILED to save:', e);
+            }
+        }, this.DEBOUNCE_MS);
+    }
+
+    /**
+     * Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang
+     */
+    saveDraftImmediate() {
+        if (this.examSubmitted || !this.currentTestData) return;
+        clearTimeout(this.debounceTimer);
+        try {
             const draft = this.getDraftData();
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
-            console.log('Listening draft saved for', this.currentTestData.title);
-        }, this.DEBOUNCE_MS);
+            console.log('[Draft] SAVED IMMEDIATELY to key:', key);
+        } catch (e) {
+            console.error('[Draft] Immediate save failed:', e);
+        }
     }
 
     /**
@@ -116,11 +157,18 @@ class ListeningCore {
      */
     loadDraft() {
         const key = this.getStorageKey(true);
+        console.log('[Draft] Attempting to load from key:', key);
+        
         const draftJson = localStorage.getItem(key);
-        if (!draftJson) return false;
+        if (!draftJson) {
+            console.log('[Draft] No draft found for key:', key);
+            return false;
+        }
         
         try {
             const draft = JSON.parse(draftJson);
+            console.log('[Draft] Loaded data:', draft);
+            
             const questionRange = this.getQuestionRange();
             
             for (let i = questionRange.start; i <= questionRange.end; i++) {
@@ -135,7 +183,7 @@ class ListeningCore {
                     if (input) input.value = ans;
                 }
             }
-            console.log('Listening draft loaded for', this.currentTestData.title);
+            console.log('[Draft] SUCCESSFULLY loaded for', this.currentTestData.title);
             this.updateAnswerCount();
             return true;
         } catch (e) {
@@ -247,6 +295,29 @@ class ListeningCore {
                 eyeIcon.setAttribute('data-question', questionNum);
                 eyeIcon.textContent = '👁️';
                 parent.appendChild(eyeIcon);
+            }
+        });
+    }
+
+    /**
+     * Setup handlers để lưu draft khi rời trang
+     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
+     */
+    setupBeforeUnload() {
+        // 1. beforeunload - desktop browsers thông thường
+        window.addEventListener('beforeunload', () => {
+            this.saveDraftImmediate();
+        });
+
+        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
+        window.addEventListener('pagehide', () => {
+            this.saveDraftImmediate();
+        });
+
+        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.saveDraftImmediate();
             }
         });
     }
