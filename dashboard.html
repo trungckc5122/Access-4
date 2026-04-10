@@ -988,16 +988,46 @@
     }
 
     function clearCurrentTest() {
-        if (confirm(`Bạn có chắc muốn xóa toàn bộ dữ liệu của PET ${currentBook} - Test ${currentTest}?`)) {
-            readingParts.forEach(p => localStorage.removeItem(getStorageKey('reading', p)));
-            listeningParts.forEach(p => localStorage.removeItem(getStorageKey('listening', p)));
+        const hasDraft = checkDraftData();
+        let message = hasDraft
+            ? `Đang có bài làm chưa xong, xác nhận xóa dữ liệu chứ?`
+            : `Bạn có chắc muốn xóa toàn bộ dữ liệu của PET ${currentBook} - Test ${currentTest}?`;
+        if (confirm(message)) {
+            readingParts.forEach(p => {
+                const key = getStorageKey('reading', p);
+                localStorage.removeItem(key);
+                localStorage.removeItem(key + '_draft');
+            });
+            listeningParts.forEach(p => {
+                const key = getStorageKey('listening', p);
+                localStorage.removeItem(key);
+                localStorage.removeItem(key + '_draft');
+            });
             refreshData();
         }
     }
 
+    function checkDraftData() {
+        for (let part of readingParts) {
+            const key = getStorageKey('reading', part);
+            if (localStorage.getItem(key + '_draft')) return true;
+        }
+        for (let part of listeningParts) {
+            const key = getStorageKey('listening', part);
+            if (localStorage.getItem(key + '_draft')) return true;
+        }
+        return false;
+    }
+
     function deletePartData(skill, part) {
-        if (confirm(`Xóa dữ liệu ${skill} Part ${part}?`)) {
-            localStorage.removeItem(getStorageKey(skill, part));
+        const storageKey = getStorageKey(skill, part);
+        const hasDraft = localStorage.getItem(storageKey + '_draft') !== null;
+        let message = hasDraft 
+            ? `Đang có bài làm chưa xong, xác nhận xóa dữ liệu chứ?`
+            : `Xóa dữ liệu ${skill} Part ${part}?`;
+        if (confirm(message)) {
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(storageKey + '_draft');
             refreshData();
         }
     }
@@ -1017,6 +1047,15 @@
     }
 
     init();
+
+    // Cảnh báo khi rời trang nếu có bài làm chưa xong
+    window.addEventListener('beforeunload', (e) => {
+        if (checkDraftData()) {
+            e.preventDefault();
+            e.returnValue = 'Đang có bài làm chưa xong, xác nhận rời trang chứ?';
+            return e.returnValue;
+        }
+    });
 
     // Global expose
     window.refreshData = refreshData;
