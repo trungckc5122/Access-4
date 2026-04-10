@@ -346,19 +346,40 @@ class ListeningCore {
         });
 
         // Submit button
-        document.getElementById('submitBtn')?.addEventListener('click', () => {
-            this.handleSubmit();
-        });
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                console.log('[UI] Submit button clicked');
+                this.handleSubmit();
+            });
+            console.log('[UI] Submit event attached');
+        } else {
+            console.error('[UI] submitBtn not found');
+        }
 
         // Explain button
-        document.getElementById('explainBtn')?.addEventListener('click', () => {
-            this.handleExplain();
-        });
+        const explainBtn = document.getElementById('explainBtn');
+        if (explainBtn) {
+            explainBtn.addEventListener('click', () => {
+                console.log('[UI] Explain button clicked');
+                this.handleExplain();
+            });
+            console.log('[UI] Explain event attached');
+        } else {
+            console.error('[UI] explainBtn not found');
+        }
 
         // Reset button
-        document.getElementById('resetBtn')?.addEventListener('click', () => {
-            this.handleReset();
-        });
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                console.log('[UI] Reset button clicked');
+                this.handleReset();
+            });
+            console.log('[UI] Reset event attached');
+        } else {
+            console.error('[UI] resetBtn not found');
+        }
 
         // Eye icon clicks
         document.addEventListener('click', (e) => {
@@ -702,14 +723,20 @@ class ListeningCore {
      * Handle reset button click
      */
     handleReset() {
-        this.resetAll();
+        console.log('[handleReset] called');
+        if (confirm('Reset tất cả câu trả lời của part này?')) {
+            console.log('[handleReset] confirmed, calling resetAll');
+            this.resetAll();
+        } else {
+            console.log('[handleReset] cancelled');
+        }
     }
 
     /**
      * Reset all answers and state
      */
     resetAll() {
-        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+        console.log('[resetAll] started');
 
         const book = this.currentTestData.book || 1;
         const test = this.currentTestData.test || 1;
