@@ -18,12 +18,13 @@ class ReadingCore {
         this.currentTestData = null;
         this.currentSplit = false; // Used for Part 6 split layout
         this.slotState = {}; // Used for Part 4 & 5
-        
+
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 500;
+        this._isResetting = false;
     }
 
     /**
@@ -137,8 +138,8 @@ class ReadingCore {
      * Lưu nháp vào localStorage (có debounce)
      */
     saveDraft() {
-        if (this.examSubmitted) {
-            console.log('[Reading Draft] Skip: exam already submitted');
+        if (this.examSubmitted || this._isResetting) {
+            console.log('[Reading Draft] Skip: exam already submitted or resetting');
             return;
         }
         if (!this.currentTestData) {
@@ -165,7 +166,7 @@ class ReadingCore {
      * Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang hoặc radio change
      */
     saveDraftImmediate() {
-        if (this.examSubmitted || !this.currentTestData) return;
+        if (this.examSubmitted || !this.currentTestData || this._isResetting) return;
         clearTimeout(this.debounceTimer);
         try {
             const draft = this.getDraftData();
@@ -637,6 +638,7 @@ class ReadingCore {
     setupEventListeners() {
         // Form input states - radio buttons lưu NGAY, text input lưu debounced
         document.addEventListener('change', (e) => {
+            if (this._isResetting) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
                 this.saveDraftImmediate(); // Radio: lưu ngay
@@ -645,9 +647,10 @@ class ReadingCore {
                 this.saveDraft(); // Text: debounce
             }
         });
-        
+
         // Input event cho text fields (real-time save)
         document.addEventListener('input', (e) => {
+            if (this._isResetting) return;
             if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('.gap-input') || e.target.matches('.answer-input'))) {
                 this.updateAnswerCount();
                 this.saveDraft(); // Debounced
@@ -1192,16 +1195,13 @@ class ReadingCore {
 
     handleReset() {
         console.log('[handleReset] called');
-        if (confirm('Reset tất cả câu trả lời của part này?')) {
-            console.log('[handleReset] confirmed, calling resetAll');
-            this.resetAll();
-        } else {
-            console.log('[handleReset] cancelled');
-        }
+        this.resetAll();
     }
 
     resetAll() {
         console.log('[resetAll] started');
+        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+        this._isResetting = true;
 
         // Lấy book, test, part từ currentTestData (đã được truyền khi khởi tạo)
         const book = this.currentTestData.book || 1;
@@ -1310,6 +1310,7 @@ class ReadingCore {
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
+        this._isResetting = false;
         this.updateAnswerCount();
     }
 

@@ -20,6 +20,7 @@ class ListeningCore {
         this.uiManager = new UIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
+        this._isResetting = false;
     }
 
     /**
@@ -112,8 +113,8 @@ class ListeningCore {
      * Lưu nháp vào localStorage (có debounce)
      */
     saveDraft() {
-        if (this.examSubmitted) {
-            console.log('[Draft] Skip: exam already submitted');
+        if (this.examSubmitted || this._isResetting) {
+            console.log('[Draft] Skip: exam already submitted or resetting');
             return;
         }
         if (!this.currentTestData) {
@@ -140,7 +141,7 @@ class ListeningCore {
      * Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang
      */
     saveDraftImmediate() {
-        if (this.examSubmitted || !this.currentTestData) return;
+        if (this.examSubmitted || !this.currentTestData || this._isResetting) return;
         clearTimeout(this.debounceTimer);
         try {
             const draft = this.getDraftData();
@@ -331,6 +332,7 @@ class ListeningCore {
     setupEventListeners() {
         // Radio button changes - lưu NGAY, không debounce
         document.addEventListener('change', (e) => {
+            if (this._isResetting) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
@@ -339,9 +341,10 @@ class ListeningCore {
 
         // Input field changes (for fill-in-blank)
         document.addEventListener('input', (e) => {
+            if (this._isResetting) return;
             if (e.target && e.target.matches('.fill-input')) {
                 this.updateAnswerCount();
-                this.saveDraft(); // <-- MỚI
+                this.saveDraft();
             }
         });
 
@@ -724,12 +727,7 @@ class ListeningCore {
      */
     handleReset() {
         console.log('[handleReset] called');
-        if (confirm('Reset tất cả câu trả lời của part này?')) {
-            console.log('[handleReset] confirmed, calling resetAll');
-            this.resetAll();
-        } else {
-            console.log('[handleReset] cancelled');
-        }
+        this.resetAll();
     }
 
     /**
@@ -737,6 +735,8 @@ class ListeningCore {
      */
     resetAll() {
         console.log('[resetAll] started');
+        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+        this._isResetting = true;
 
         const book = this.currentTestData.book || 1;
         const test = this.currentTestData.test || 1;
@@ -837,6 +837,7 @@ class ListeningCore {
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
+        this._isResetting = false;
         this.updateAnswerCount();
     }
 
