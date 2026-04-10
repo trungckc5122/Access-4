@@ -232,6 +232,9 @@ class ListeningCore {
         
         // Setup explanation panel
         this.uiManager.setupExplanationPanel();
+        
+        // Setup auto-collapse for header/footer
+        this.uiManager.setupAutoCollapse(this);
     }
 
     /**
@@ -528,6 +531,11 @@ class ListeningCore {
      */
     submitExam() {
         this.examSubmitted = true;
+
+        // Expand header/footer when submitted (don't auto-collapse)
+        document.querySelector('.ielts-header')?.classList.remove('collapsed');
+        document.querySelector('.question-nav')?.classList.remove('collapsed');
+        document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
         // Show transcript
         this.showTranscript();
@@ -1300,6 +1308,148 @@ class UIManager {
             isResizing = false;
             document.body.style.cursor = 'default';
         });
+    }
+
+    /**
+     * Setup auto-collapse for header and footer after 5s of mouse leave
+     */
+    setupAutoCollapse(coreInstance) {
+        const header = document.querySelector('.ielts-header');
+        const footer = document.querySelector('.bottom-bar');
+        const questionNav = document.querySelector('.question-nav');
+        
+        if (!header && !footer) return;
+
+        // Add toggle button to header
+        this.addAutoCollapseToggle(header, coreInstance);
+
+        let headerTimer = null;
+        let footerTimer = null;
+        const COLLAPSE_DELAY = 5000; // 5 seconds
+
+        const isAutoCollapseEnabled = () => {
+            return localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        };
+
+        const collapseHeader = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            header?.classList.add('collapsed');
+        };
+
+        const expandHeader = () => {
+            header?.classList.remove('collapsed');
+        };
+
+        const collapseFooter = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            footer?.classList.add('collapsed');
+        };
+
+        const expandFooter = () => {
+            footer?.classList.remove('collapsed');
+        };
+
+        // Header hover handling
+        if (header) {
+            header.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            header.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Question nav hover handling - hover to expand header, but don't collapse question nav itself
+        if (questionNav) {
+            questionNav.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            questionNav.addEventListener('mouseleave', () => {
+                if (!header?.matches(':hover') && isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Footer hover handling
+        if (footer) {
+            footer.addEventListener('mouseenter', () => {
+                clearTimeout(footerTimer);
+                expandFooter();
+            });
+            footer.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    footerTimer = setTimeout(collapseFooter, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Start collapsed after initial delay only if enabled
+        setTimeout(() => {
+            if (!coreInstance.examSubmitted && isAutoCollapseEnabled()) {
+                collapseHeader();
+                collapseFooter();
+            }
+        }, COLLAPSE_DELAY);
+    }
+
+    /**
+     * Add auto-collapse toggle button to header
+     */
+    addAutoCollapseToggle(header, coreInstance) {
+        if (!header) return;
+        
+        // Check if toggle already exists
+        if (header.querySelector('.autocollapse-toggle')) return;
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'autocollapse-toggle';
+        toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
+        
+        // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
+        const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
+        </svg>`;
+        const iconExpand = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>`;
+        
+        const isEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        toggleBtn.innerHTML = isEnabled ? iconShrink : iconExpand;
+        toggleBtn.classList.toggle('active', isEnabled);
+
+        toggleBtn.addEventListener('click', () => {
+            const currentlyEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+            const newEnabled = !currentlyEnabled;
+            localStorage.setItem('pet-autocollapse-enabled', newEnabled.toString());
+            
+            toggleBtn.classList.toggle('active', newEnabled);
+            toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
+            
+            if (!newEnabled) {
+                // Expand header and footer when disabled (keep question-nav visible)
+                header?.classList.remove('collapsed');
+                document.querySelector('.bottom-bar')?.classList.remove('collapsed');
+            }
+        });
+
+        // Find a good place to insert the button - right after mode toggle (modern/classic)
+        const modeToggle = header.querySelector('#modeToggleContainer');
+        const themeToggle = header.querySelector('.theme-toggle-btn');
+        
+        if (modeToggle) {
+            modeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else if (themeToggle) {
+            themeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else {
+            header.appendChild(toggleBtn);
+        }
     }
 }
 
