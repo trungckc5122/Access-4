@@ -946,12 +946,23 @@
     });
   }
   
-  // ========== 2. KIỂM TRA LINK LỖI (TỐI ƯU HƠN) ==========
+  // ========== 2. KIỂM TRA LINK LỖI (CHỈ TRONG PANEL ACTIVE) ==========
   async function checkBrokenLinks() {
-    const allLinks = Array.from(document.links).filter(link => {
+    // Chỉ kiểm tra link trong panel đang active
+    const activePanel = document.querySelector('.active-panel');
+    if (!activePanel) return;
+    
+    const allLinks = Array.from(activePanel.querySelectorAll('a')).filter(link => {
       const href = link.getAttribute('href');
+      // Bỏ qua link đã kiểm tra hoặc đã đánh dấu lỗi
+      if (link.classList.contains('broken-link') || link.dataset.checked === 'true') return false;
       return href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:');
     });
+
+    if (allLinks.length === 0) return;
+
+    // Đánh dấu đã kiểm tra để tránh kiểm tra lại
+    allLinks.forEach(link => link.dataset.checked = 'true');
 
     // Sử dụng queue để tránh spam request đồng thời
     const queue = [...allLinks];
@@ -1026,6 +1037,9 @@
 
       // Lưu tab vào localStorage
       localStorage.setItem('activeTab', tabId);
+      
+      // Kiểm tra link lỗi trong panel mới sau khi chuyển tab
+      setTimeout(checkBrokenLinks, 100);
     }
 
     tabs.forEach(btn => {
