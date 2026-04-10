@@ -788,20 +788,31 @@ class ListeningCore {
             explanationPanel.classList.remove('show');
         }
 
-        // === MỚI: Xóa cả kết quả đã lưu và nháp ===
+        // === Xóa DỨT ĐIỂM tất cả key liên quan đến part này ===
         if (this.currentTestData) {
-            const completedKey = this.getStorageKey(false);
-            localStorage.removeItem(completedKey);
-            const draftKey = this.getStorageKey(true);
-            localStorage.removeItem(draftKey);
+            const book = this.currentTestData.book || 1;
+            const test = this.currentTestData.test || 1;
+            const part = this.currentTestData.part || 1;
 
-            window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
-            window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
+            // Tạo pattern key: pet_listening_bookX_testY_partZ
+            const targetKey = `pet_listening_book${book}_test${test}_part${part}`;
 
-            // Gửi thông báo qua BroadcastChannel để index cập nhật
+            // Xóa tất cả key có chứa targetKey (kể cả _draft)
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.includes(targetKey)) {
+                    localStorage.removeItem(key);
+                    console.log(`[Reset] Deleted key: ${key}`);
+                }
+            }
+
+            // Gửi sự kiện storage (để các tab khác nhận)
+            window.dispatchEvent(new StorageEvent('storage', { key: targetKey }));
+
+            // Gửi broadcast (để tab index nhận dù không có storage)
             try {
                 const channel = new BroadcastChannel('pet_reset_channel');
-                channel.postMessage({ action: 'reset', type: 'listening', part: this.currentTestData.part });
+                channel.postMessage({ action: 'reset', type: 'listening', part: part });
                 channel.close();
             } catch(e) { console.warn('BroadcastChannel error:', e); }
         } else {

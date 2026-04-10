@@ -1257,20 +1257,33 @@ class ReadingCore {
             explanationPanel.classList.remove('show');
         }
 
-        // === MỚI: Xóa cả kết quả đã lưu và nháp ===
-        const completedKey = this.getStorageKey(false);
-        localStorage.removeItem(completedKey);
-        const draftKey = this.getStorageKey(true);
-        localStorage.removeItem(draftKey);
+        // === Xóa DỨT ĐIỂM tất cả key liên quan đến part này ===
+        const meta = this.storageManager.parseTestInfo(
+            document.querySelector('.candidate')?.textContent || ''
+        );
+        const book = meta.book || 1;
+        const test = meta.test || 1;
+        const part = this.currentTestData.part || meta.part || 1;
 
-        // Dispatch storage event để index (các tab khác) cập nhật badge
-        window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
-        window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
+        // Tạo pattern key: pet_reading_bookX_testY_partZ
+        const targetKey = `pet_reading_book${book}_test${test}_part${part}`;
 
-        // Gửi thông báo qua BroadcastChannel để index cập nhật
+        // Xóa tất cả key có chứa targetKey (kể cả _draft)
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes(targetKey)) {
+                localStorage.removeItem(key);
+                console.log(`[Reset] Deleted key: ${key}`);
+            }
+        }
+
+        // Gửi sự kiện storage (để các tab khác nhận)
+        window.dispatchEvent(new StorageEvent('storage', { key: targetKey }));
+
+        // Gửi broadcast (để tab index nhận dù không có storage)
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
-            channel.postMessage({ action: 'reset', type: 'reading', part: this.currentTestData.part });
+            channel.postMessage({ action: 'reset', type: 'reading', part: part });
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
