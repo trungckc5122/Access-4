@@ -1260,11 +1260,12 @@ class ReadingCore {
         // === MỚI: Xóa cả kết quả đã lưu và nháp ===
         const completedKey = this.getStorageKey(false);
         localStorage.removeItem(completedKey);
-        this.clearDraft();
+        const draftKey = this.getStorageKey(true);
+        localStorage.removeItem(draftKey);
 
-        // Dispatch storage event để dashboard (index.html) cập nhật ngay
+        // Dispatch storage event để index (các tab khác) cập nhật badge
         window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
-        window.dispatchEvent(new StorageEvent('storage', { key: this.getStorageKey(true) }));
+        window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
         this.updateAnswerCount();
     }
