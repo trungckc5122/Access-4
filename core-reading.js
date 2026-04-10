@@ -282,6 +282,94 @@ class ReadingCore {
             this.uiManager.setupResizer();
             this.uiManager.setupExplanationPanel();
         }
+        
+        // === MỚI: Setup Focus Mode ===
+        this.setupFocusMode();
+    }
+
+    /**
+     * Setup Focus Mode - chế độ làm bài toàn màn hình
+     */
+    setupFocusMode() {
+        // Tạo CSS cho focus mode nếu chưa có
+        if (!document.getElementById('focus-mode-styles')) {
+            const style = document.createElement('style');
+            style.id = 'focus-mode-styles';
+            style.textContent = `
+                body.focus-mode header { display: none !important; }
+                body.focus-mode .test-info { display: none !important; }
+                body.focus-mode .action-buttons { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+                body.focus-mode .nav-panel { position: fixed; left: 20px; top: 20px; z-index: 1000; max-height: calc(100vh - 40px); overflow-y: auto; }
+                body.focus-mode main { max-width: 100%; padding: 20px 40px; margin-top: 0; }
+                body.focus-mode .questions-panel { width: 100%; max-width: 900px; margin: 0 auto; }
+                body.focus-mode .focus-toggle { position: fixed; top: 20px; right: 20px; z-index: 1001; }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Tạo nút toggle focus mode
+        const existingBtn = document.getElementById('focus-mode-toggle');
+        if (existingBtn) return; // Đã có rồi
+        
+        const btn = document.createElement('button');
+        btn.id = 'focus-mode-toggle';
+        btn.className = 'focus-toggle';
+        btn.innerHTML = '👁️‍🗨️ Focus';
+        btn.title = 'Chế độ tập trung (Focus Mode)';
+        btn.style.cssText = `
+            background: var(--primary, #0d9488);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+        `;
+        
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'scale(1.05)';
+            btn.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        
+        btn.addEventListener('click', () => this.toggleFocusMode());
+        
+        // Thêm vào body
+        document.body.appendChild(btn);
+        
+        // Khôi phục trạng thái focus mode từ localStorage
+        const savedFocusMode = localStorage.getItem('readingFocusMode');
+        if (savedFocusMode === 'true') {
+            document.body.classList.add('focus-mode');
+            btn.innerHTML = '🔲 Thoát Focus';
+        }
+    }
+
+    /**
+     * Toggle Focus Mode on/off
+     */
+    toggleFocusMode() {
+        const isFocusMode = document.body.classList.toggle('focus-mode');
+        const btn = document.getElementById('focus-mode-toggle');
+        
+        if (isFocusMode) {
+            btn.innerHTML = '🔲 Thoát Focus';
+            localStorage.setItem('readingFocusMode', 'true');
+            console.log('[Focus Mode] Enabled');
+        } else {
+            btn.innerHTML = '👁️‍🗨️ Focus';
+            localStorage.setItem('readingFocusMode', 'false');
+            console.log('[Focus Mode] Disabled');
+        }
     }
 
     /**
