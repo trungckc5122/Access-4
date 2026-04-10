@@ -1267,6 +1267,13 @@ class ReadingCore {
         window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
         window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
+        // Gửi thông báo qua BroadcastChannel để index cập nhật
+        try {
+            const channel = new BroadcastChannel('pet_reset_channel');
+            channel.postMessage({ action: 'reset', type: 'reading', part: this.currentTestData.part });
+            channel.close();
+        } catch(e) { console.warn('BroadcastChannel error:', e); }
+
         this.updateAnswerCount();
     }
 
