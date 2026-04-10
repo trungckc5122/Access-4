@@ -837,11 +837,11 @@ class ListeningCore {
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
-        // Thay vì gán false ngay, dùng setTimeout để chắc chắn các event change đã xử lý xong
-        setTimeout(() => {
+        // Dùng microtask để chắc chắn các event change đã xử lý xong
+        Promise.resolve().then(() => {
             this._isResetting = false;
             console.log('[Reset] Re-enabled draft saving');
-        }, 200);
+        });
         this.updateAnswerCount();
     }
 
@@ -1531,4 +1531,5 @@ window.removeHighlight = function() {
 };
 
 // Export for use in HTML files
+window.ListeningCore = ListeningCore;
 window.ListeningCore = ListeningCore;

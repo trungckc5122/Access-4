@@ -1214,6 +1214,7 @@ class ReadingCore {
 
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
+        this.clearDraft(); // Gọi thêm một lần nữa để chắc chắn
         console.log('[Reset] Deleted completedKey:', completedKey);
         console.log('[Reset] Deleted draftKey:', draftKey);
 
@@ -1310,11 +1311,11 @@ class ReadingCore {
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
-        // Thay vì gán false ngay, dùng setTimeout để chắc chắn các event change đã xử lý xong
-        setTimeout(() => {
+        // Dùng microtask để chắc chắn các event change đã xử lý xong
+        Promise.resolve().then(() => {
             this._isResetting = false;
             console.log('[Reset] Re-enabled draft saving');
-        }, 200);
+        });
         this.updateAnswerCount();
     }
 
