@@ -731,15 +731,129 @@ class ListeningCore {
     }
 
     /**
+     * Reset all answers and state
+     */
+    resetAll() {
+        console.log('[resetAll] started');
+        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+
+        // ========== KHÓA CỨNG LƯU DRAFT ==========
+        const originalSaveDraft = this.saveDraft;
+        const originalSaveDraftImmediate = this.saveDraftImmediate;
+        this.saveDraft = function() {};
+        this.saveDraftImmediate = function() {};
+
+        this._isResetting = true;
+
+        const book = this.currentTestData.book || 1;
+        const test = this.currentTestData.test || 1;
+        const part = this.currentTestData.part || 1;
+
+        const completedKey = `pet_listening_book${book}_test${test}_part${part}`;
+        const draftKey = completedKey + '_draft';
+
+        localStorage.removeItem(completedKey);
+        localStorage.removeItem(draftKey);
+        console.log('[Reset] Deleted completedKey:', completedKey);
+        console.log('[Reset] Deleted draftKey:', draftKey);
+
+        // === Reset UI ===
+        this.examSubmitted = false;
+        this.explanationMode = false;
+
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            if (this.currentTestData.type === 'multiple-choice') {
+                const radios = document.getElementsByName(`q${i}`);
+                radios.forEach(radio => {
+                    radio.checked = false;
+                    radio.disabled = false;
+                });
+            } else if (this.currentTestData.type === 'fill-blank') {
+                const input = document.getElementById(`q${i}`);
+                if (input) {
+                    input.value = '';
+                    input.disabled = false;
+                }
+            }
+
+            // Xóa class correct/incorrect và badge
+            const questionDiv = document.getElementById(`question-${i}`);
+            if (questionDiv) {
+                questionDiv.classList.remove('correct', 'incorrect');
+                const badge = questionDiv.querySelector('.correct-answer-badge');
+                if (badge) badge.remove();
+            }
+
+            if (this.currentTestData.type === 'fill-blank') {
+                const input = document.getElementById(`q${i}`);
+                if (input) {
+                    input.classList.remove('correct', 'incorrect');
+                    const wrapper = input.closest('.blank-line');
+                    if (wrapper) {
+                        const badge = wrapper.querySelector('.correct-answer-badge');
+                        if (badge) badge.remove();
+                    }
+                }
+            }
+        }
+
+        // Hide transcript
+        const mainArea = document.getElementById('mainArea');
+        const transcriptContent = document.getElementById('transcriptContent');
+        if (mainArea && transcriptContent) {
+            mainArea.classList.remove('show-transcript');
+            transcriptContent.innerHTML = '';
+        }
+
+        // Hide eye icons
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            icon.style.display = 'none';
+        });
+
+        this.highlightManager.clearAllHighlights();
+
+        // Reset buttons
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Nộp bài';
+        }
+
+        const explainBtn = document.getElementById('explainBtn');
+        if (explainBtn) {
+            explainBtn.disabled = true;
+            explainBtn.textContent = 'Xem giải thích';
+        }
+
+        const explanationPanel = document.getElementById('explanationPanel');
+        if (explanationPanel) {
+            explanationPanel.classList.remove('show');
+        }
+
+        // Gửi BroadcastChannel
+        try {
+            const channel = new BroadcastChannel('pet_reset_channel');
+            channel.postMessage({ action: 'reset', type: 'listening', book, test, part });
+            channel.close();
+        } catch(e) {
+            console.warn('BroadcastChannel error:', e);
+        }
+
+        // ========== KHÔI PHỤC LƯU DRAFT ==========
+        setTimeout(() => {
+            this.saveDraft = originalSaveDraft;
+            this.saveDraftImmediate = originalSaveDraftImmediate;
+            this._isResetting = false;
+            console.log('[Reset] Draft saving re-enabled');
+        }, 0);
+
+        this.updateAnswerCount();
     }
 
-    // Gửi BroadcastChannel
-    try {
-        const channel = new BroadcastChannel('pet_reset_channel');
-        channel.postMessage({ action: 'reset', type: 'listening', book, test, part });
-        channel.close();
-    } catch(e) {
-        console.warn('BroadcastChannel error:', e);
+    /**
+     * Show explanation for specific question
      */
     showExplanation(questionNum) {
         if (!this.explanationMode && !this.examSubmitted) return;
