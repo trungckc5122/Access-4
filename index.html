@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Trung tâm ôn tập | Access 4 & PET & Solution</title>
+  <title>Hệ thống ôn tập | Access 4 & PET & Solution</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
     :root {
       --primary: #0d9488;
       --primary-rgb: 13, 148, 136;
-      --text: #0f172a; /* Cực kỳ rõ nét ở light mode */
+      --text: #0f172a;
       --text-muted: #475569;
       --bg-gradient: radial-gradient(circle at top left, #f0fdfa, #f8fafc, #eff6ff);
       --card-bg-rgb: 255, 255, 255;
       --glass-bg: rgba(var(--card-bg-rgb), 0.85);
-      --glass-border: rgba(15, 23, 42, 0.12); /* Lồng khung rõ ràng hơn ở chế độ Light */
+      --glass-border: rgba(15, 23, 42, 0.12);
       --card-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.08);
       --card-hover-shadow: 0 20px 50px -12px rgba(13, 148, 136, 0.15);
       --header-bg: rgba(255, 255, 255, 0.9);
@@ -373,7 +373,7 @@
       transform: translateY(-5px);
       box-shadow: var(--card-hover-shadow);
       border-color: rgba(var(--primary-rgb), 0.2);
-      z-index: 9999 !important; /* Đẩy lên cao hẳn so với header (1000) */
+      z-index: 9999 !important;
     }
     
     summary {
@@ -454,7 +454,7 @@
       display: none;
       z-index: 10000;
       box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      pointer-events: auto; /* Cho phép nhận chuột để giữ menu không bị đóng */
+      pointer-events: auto;
       transition: all 0.3s;
       opacity: 0;
     }
@@ -517,6 +517,20 @@
       content: ' (soon)';
       font-size: 10px;
       opacity: 0.5;
+    }
+
+    /* Nhãn đã hoàn thành cho PET */
+    .completed-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      background-color: #10b981;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+      vertical-align: middle;
     }
 
     footer {
@@ -863,7 +877,6 @@
   }
 
   // ========== 3. DYNAMIC STACKING COORDINATION ==========
-  // Xử lý triệt để lỗi "Stacking Context Trap" do animation tạo ra
   function initGlobalStacking() {
     const main = document.querySelector('main');
     const interactiveElements = document.querySelectorAll('details, .review-button, .test-button');
@@ -882,7 +895,7 @@
     });
   }
   
-  // ========== 3. CHUYỂN TAB (MƯỢT MÀ HƠN) ==========
+  // ========== 4. CHUYỂN TAB (MƯỢT MÀ HƠN) ==========
   function initTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
     const panels = {
@@ -919,7 +932,7 @@
     activateTab(savedTab);
   }
 
-  // ========== 4. DARK MODE LOGIC ==========
+  // ========== 5. DARK MODE LOGIC ==========
   function initTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     const currentTheme = localStorage.getItem('theme');
@@ -949,6 +962,37 @@
       }
     });
   }
+
+  // ========== 6. ĐÁNH DẤU BÀI PET ĐÃ HOÀN THÀNH ==========
+  function markCompletedPETParts() {
+    // Regex khớp: lis-pet1-test2-part3.html hoặc read-pet2-test4-part1.html
+    const petLinkPattern = /^(lis|read)-pet(\d+)-test(\d+)-part(\d+)\.html$/;
+
+    document.querySelectorAll('a[href]').forEach(link => {
+      const href = link.getAttribute('href');
+      const match = href.match(petLinkPattern);
+      if (!match) return;
+
+      const [, skill, book, test, part] = match;
+      const storageKey = skill === 'lis'
+        ? `pet_listening_book${book}_test${test}_part${part}`
+        : `pet_reading_book${book}_test${test}_part${part}`;
+
+      // Nếu đã có dữ liệu kết quả trong localStorage
+      if (localStorage.getItem(storageKey)) {
+        // Tránh thêm nhiều lần nếu link đã được đánh dấu
+        if (link.querySelector('.completed-badge')) return;
+
+        // Tạo badge
+        const badge = document.createElement('span');
+        badge.className = 'completed-badge';
+        badge.textContent = '✓ đã hoàn thành';
+        
+        // Chèn vào sau nội dung text của link
+        link.appendChild(badge);
+      }
+    });
+  }
   
   document.addEventListener('DOMContentLoaded', () => {
     initTabs();
@@ -956,6 +1000,7 @@
     checkBrokenLinks();
     initTheme();
     initGlobalStacking();
+    markCompletedPETParts(); // Gọi hàm đánh dấu hoàn thành
     
     // Hiệu ứng Fade in cho header khi load
     const header = document.querySelector('header');
