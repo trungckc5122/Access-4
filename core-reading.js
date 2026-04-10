@@ -6,7 +6,6 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
- * - FIXED: Manual highlighting context menu and removeHighlight() logic
  */
 
 class ReadingCore {
@@ -214,532 +213,600 @@ class ReadingCore {
         try {
             const draft = JSON.parse(draftJson);
             console.log('[Reading Draft] Loaded data:', draft);
-
             const questionRange = this.getQuestionRange();
-
-            if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            
+            if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans) {
-                        const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
-                        if (radio) {
-                            radio.checked = true;
-                            console.log(`[Reading Draft] Restored q${i}=${ans}`);
+                    if (!ans) continue;
+                    const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        if (draft.type === 'inline-radio') {
+                            this.updateInlineSlotFromRadio(i);
                         }
                     }
                 }
-            } else if (this.currentTestData.type === 'matching') {
+            } else if (draft.type === 'matching') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
-                    const val = draft[`q${i}`];
-                    if (val) {
-                        const input = document.getElementById(`answer-${i}`);
-                        if (input) input.value = val;
+                    const ans = draft[`q${i}`];
+                    if (!ans) continue;
+                    const input = document.getElementById(`answer-${i}`);
+                    if (input) input.value = ans;
+                }
+            } else if (draft.type === 'drag-drop') {
+                // Khôi phục drag-drop
+                const slotState = draft.slotState || {};
+                for (const [qNumStr, value] of Object.entries(slotState)) {
+                    const qNum = parseInt(qNumStr);
+                    if (value && value.value) {
+                        this.placeInSlot(qNum, value.value);
                     }
                 }
-            } else if (this.currentTestData.type === 'drag-drop') {
-                if (draft.slotState) {
-                    this.slotState = draft.slotState;
-                    console.log('[Reading Draft] Restored drag-drop state');
-                }
-            } else if (this.currentTestData.type === 'split-layout') {
+            } else if (draft.type === 'split-layout') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
-                    const val = draft[`q${i}`];
-                    if (val) {
-                        const inp = document.getElementById(`q${i}`);
-                        if (inp) inp.value = val;
-                    }
+                    const ans = draft[`q${i}`];
+                    if (ans === undefined) continue;
+                    const inp = document.getElementById(`q${i}`);
+                    if (inp) inp.value = ans;
                 }
             }
-
+            
+            console.log('[Reading Draft] SUCCESSFULLY loaded for', this.currentTestData?.title || 'reading test');
             this.updateAnswerCount();
             return true;
         } catch (e) {
-            console.error('[Reading Draft] Failed to parse draft:', e);
+            console.warn('[Reading Draft] FAILED to load:', e);
             return false;
         }
     }
 
     /**
-     * Xóa draft khỏi localStorage
+     * Xóa nháp khỏi localStorage
      */
     clearDraft() {
         const key = this.getStorageKey(true);
-        try {
-            localStorage.removeItem(key);
-            console.log('[Reading Draft] Cleared draft for key:', key);
-        } catch (e) {
-            console.error('[Reading Draft] Failed to clear draft:', e);
-        }
+        localStorage.removeItem(key);
     }
 
     /**
-     * Determine the range of question numbers in this test
-     */
-    getQuestionRange() {
-        const questions = this.currentTestData.questions || [];
-        if (questions.length === 0) {
-            return { start: 1, end: 5 }; // Default to 1-5
-        }
-        const nums = questions.map(q => q.num).filter(n => !isNaN(n)).sort((a, b) => a - b);
-        return { start: nums[0], end: nums[nums.length - 1] };
-    }
-
-    /**
-     * Get global question list (not part-specific)
-     */
-    getGlobalQuestionRange() {
-        return { start: 1, end: 300 };
-    }
-
-    /**
-     * Setup UI components (progress display, controls)
+     * Setup UI components and interactions
      */
     setupUI() {
-        const submitBtn = document.getElementById('submitBtn');
-        const explainBtn = document.getElementById('explainBtn');
-        const resetBtn = document.getElementById('resetBtn');
-
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => this.handleSubmit());
+        this.uiManager.setupFontControls();
+        this.uiManager.setupThemeToggle();
+        this.uiManager.setupModeToggle();
+        
+        // Only set up standard resizers if not using split-layout dynamic generation
+        if (this.currentTestData.type !== 'split-layout') {
+            this.uiManager.setupResizer();
+            this.uiManager.setupExplanationPanel();
         }
-        if (explainBtn) {
-            explainBtn.addEventListener('click', () => this.handleExplain());
-        }
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => this.handleReset());
-        }
-
-        this.setupResizers();
-        this.setupExplanationPanel();
-        this.setupAutoCollapse(this);
+        
+        // Setup auto-collapse for header/footer
+        this.uiManager.setupAutoCollapse(this);
     }
 
     /**
-     * Render all questions in the test
+     * Render questions based on standard test types
      */
     renderQuestions() {
-        const questionsContainer = document.getElementById('questionsContainer');
-        if (!questionsContainer) return;
+        const container = document.getElementById('questionsContainer');
+        if (!container) return;
 
-        questionsContainer.innerHTML = '';
-        const questionRange = this.getQuestionRange();
+        container.innerHTML = '';
 
-        this.currentTestData.questions.forEach((qData) => {
-            const questionNum = qData.num;
-            if (questionNum < questionRange.start || questionNum > questionRange.end) return;
-
-            const questionDiv = document.createElement('div');
-            questionDiv.id = `question-${questionNum}`;
-            questionDiv.className = 'question-item';
-
-            // Question text (handle null text)
-            const qText = document.createElement('p');
-            qText.className = 'question-text';
-            const questionTitle = qData.text || qData.intro || '';
-            qText.innerHTML = `<strong>${questionNum}. ${questionTitle}</strong>`;
-            questionDiv.appendChild(qText);
-
-            // Options
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'options';
-
-            const options = qData.options || [];
-            options.forEach((optionText, idx) => {
-                const optionLabel = document.createElement('label');
-                optionLabel.className = 'option-label';
-
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `q${questionNum}`;
-                radio.value = String.fromCharCode(65 + idx); // A, B, C...
-                radio.addEventListener('change', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft(); // Save on change
-                    this.saveDraftImmediate(); // Immediate save
-                });
-
-                const optionSpan = document.createElement('span');
-                optionSpan.textContent = `${String.fromCharCode(65 + idx)}. ${optionText}`;
-
-                optionLabel.appendChild(radio);
-                optionLabel.appendChild(optionSpan);
-                optionsDiv.appendChild(optionLabel);
-            });
-
-            questionDiv.appendChild(optionsDiv);
-            questionsContainer.appendChild(questionDiv);
-        });
-    }
-
-    /**
-     * Render inline-radio questions (all options on one line)
-     */
-    renderInlineRadioQuestions() {
-        const questionsContainer = document.getElementById('questionsContainer');
-        if (!questionsContainer) return;
-
-        questionsContainer.innerHTML = '';
-        const questionRange = this.getQuestionRange();
-
-        this.currentTestData.questions.forEach((qData) => {
-            const questionNum = qData.num;
-            if (questionNum < questionRange.start || questionNum > questionRange.end) return;
-
-            const questionDiv = document.createElement('div');
-            questionDiv.id = `question-${questionNum}`;
-            questionDiv.className = 'question-item inline-radio-item';
-
-            // Question text (handle null text)
-            const qText = document.createElement('p');
-            qText.className = 'question-text';
-            const questionTitle = qData.text || qData.intro || '';
-            qText.innerHTML = `<strong>${questionNum}. ${questionTitle}</strong>`;
-            questionDiv.appendChild(qText);
-
-            // Options on one line
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'options inline-options';
-
-            const options = qData.options || [];
-            options.forEach((optionText, idx) => {
-                const optionLabel = document.createElement('label');
-                optionLabel.className = 'option-label inline';
-
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `q${questionNum}`;
-                radio.value = String.fromCharCode(65 + idx);
-                radio.addEventListener('change', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft();
-                    this.saveDraftImmediate();
-                });
-
-                const optionSpan = document.createElement('span');
-                optionSpan.textContent = optionText;
-
-                optionLabel.appendChild(radio);
-                optionLabel.appendChild(optionSpan);
-                optionsDiv.appendChild(optionLabel);
-            });
-
-            questionDiv.appendChild(optionsDiv);
-            questionsContainer.appendChild(questionDiv);
-        });
-    }
-
-    /**
-     * Render Part 6 split layout: left reading, right answers
-     */
-    renderSingleColumn() {
-        const mainArea = document.getElementById('mainArea');
-        if (!mainArea) return;
-
-        mainArea.innerHTML = `
-            <div id="leftCol" class="split-col">
-                <div class="panel-header"><span>READING PASSAGE</span></div>
-                <div class="reading-content font-large" id="readingContent"></div>
-            </div>
-            <div id="rightCol" class="split-col">
-                <div class="panel-header"><span>QUESTIONS & ANSWERS</span></div>
-                <div class="questions-list font-large">
-                    <div id="questionsContainer"></div>
-                </div>
-                <div id="rightExplanationText" class="explanation-content"></div>
-            </div>
-        `;
-
-        // Copy reading content
-        const readingContent = document.getElementById('readingContent');
-        if (readingContent && this.currentTestData.readingContent) {
-            readingContent.innerHTML = this.currentTestData.readingContent;
-        }
-
-        // Render questions
-        const questionsContainer = document.getElementById('questionsContainer');
-        if (questionsContainer) {
-            questionsContainer.innerHTML = '';
-            const questionRange = this.getQuestionRange();
-
-            this.currentTestData.questions.forEach((qData) => {
-                const questionNum = qData.num;
-                if (questionNum < questionRange.start || questionNum > questionRange.end) return;
-
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'question-item';
-
-                const qText = document.createElement('p');
-                qText.className = 'question-text';
-                qText.innerHTML = `<strong>${questionNum}. ${qData.text}</strong>`;
-                questionDiv.appendChild(qText);
-
-                const inputDiv = document.createElement('div');
-                inputDiv.style.marginLeft = '20px';
-                inputDiv.style.marginBottom = '10px';
-
-                const inp = document.createElement('input');
-                inp.id = `q${questionNum}`;
-                inp.type = 'text';
-                inp.placeholder = 'Your answer';
-                inp.style.width = '100%';
-                inp.style.padding = '8px';
-                inp.style.border = '1px solid #ccc';
-                inp.style.borderRadius = '4px';
-                inp.addEventListener('input', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft();
-                });
-                inp.addEventListener('click', () => this.showExplanation(questionNum));
-
-                inputDiv.appendChild(inp);
-                questionDiv.appendChild(inputDiv);
-                questionsContainer.appendChild(questionDiv);
-            });
-        }
-    }
-
-    /**
-     * Render split column for explanation view (Part 6)
-     */
-    renderSplitColumn() {
-        const mainArea = document.getElementById('mainArea');
-        if (!mainArea) return;
-
-        mainArea.innerHTML = `
-            <div id="leftCol" class="split-col">
-                <div class="panel-header"><span>READING PASSAGE</span></div>
-                <div class="reading-content font-large" id="readingContent"></div>
-            </div>
-            <div id="rightCol" class="split-col">
-                <div class="panel-header"><span>QUESTIONS & ANSWERS</span></div>
-                <div class="questions-list font-large">
-                    <div id="questionsContainer"></div>
-                </div>
-                <div id="rightExplanationText" class="explanation-content"></div>
-            </div>
-        `;
-
-        // Copy reading content
-        const readingContent = document.getElementById('readingContent');
-        if (readingContent && this.currentTestData.readingContent) {
-            readingContent.innerHTML = this.currentTestData.readingContent;
-        }
-
-        // Render questions
-        const questionsContainer = document.getElementById('questionsContainer');
-        if (questionsContainer) {
-            questionsContainer.innerHTML = '';
-            const questionRange = this.getQuestionRange();
-
-            this.currentTestData.questions.forEach((qData) => {
-                const questionNum = qData.num;
-                if (questionNum < questionRange.start || questionNum > questionRange.end) return;
-
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'question-item';
-
-                const qText = document.createElement('p');
-                qText.className = 'question-text';
-                qText.innerHTML = `<strong>${questionNum}. ${qData.text}</strong>`;
-                questionDiv.appendChild(qText);
-
-                const inputDiv = document.createElement('div');
-                inputDiv.style.marginLeft = '20px';
-                inputDiv.style.marginBottom = '10px';
-
-                const inp = document.createElement('input');
-                inp.id = `q${questionNum}`;
-                inp.type = 'text';
-                inp.placeholder = 'Your answer';
-                inp.style.width = '100%';
-                inp.style.padding = '8px';
-                inp.style.border = '1px solid #ccc';
-                inp.style.borderRadius = '4px';
-                inp.addEventListener('click', () => this.showExplanation(questionNum));
-
-                inputDiv.appendChild(inp);
-                questionDiv.appendChild(inputDiv);
-                questionsContainer.appendChild(questionDiv);
-            });
-        }
-    }
-
-    /**
-     * Render drag-drop part (Part 4 & 5)
-     */
-    setupDragDropEvents() {
-        const dragItems = document.querySelectorAll('[draggable="true"]');
-        const slots = document.querySelectorAll('[data-slot-id]');
-
-        dragItems.forEach(item => {
-            item.addEventListener('dragstart', (e) => {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/html', item.innerHTML);
-            });
-        });
-
-        slots.forEach(slot => {
-            slot.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                slot.style.backgroundColor = '#f0f0f0';
-            });
-
-            slot.addEventListener('dragleave', () => {
-                slot.style.backgroundColor = '';
-            });
-
-            slot.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const html = e.dataTransfer.getData('text/html');
-                slot.innerHTML = html;
-                slot.style.backgroundColor = '';
+        if (this.currentTestData.type === 'multiple-choice') {
+            this.currentTestData.questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
                 
-                // Extract which item was dropped
-                const questNum = parseInt(slot.getAttribute('data-slot-id'));
-                const draggedId = e.dataTransfer.getData('item-id') || 'unknown';
-                this.slotState[questNum] = draggedId;
-                this.saveDraft();
-                this.updateAnswerCount();
+                const introHtml = q.intro
+                    ? `<div class="question-intro">${q.num}. ${q.intro}</div>`
+                    : `<div class="question-num-only">${q.num}.</div>`;
+                    
+                div.innerHTML = `
+                    ${introHtml}
+                    <div class="options">
+                        ${q.options.map((opt, idx) => {
+                            const letter = String.fromCharCode(65 + idx);
+                            return `
+                                <div class="option">
+                                    <input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}">
+                                    <label for="q${q.num}${letter}">${letter} ${opt}</label>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                
+                container.appendChild(div);
             });
-        });
-    }
-
-    /**
-     * Attach event listeners for split-layout input fields
-     */
-    attachInputEvents() {
-        const questionRange = this.getQuestionRange();
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const inp = document.getElementById(`q${i}`);
-            if (inp) {
-                inp.addEventListener('input', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft();
-                });
-                inp.addEventListener('click', () => this.showExplanation(i));
-            }
-        }
-    }
-
-    /**
-     * Setup all event listeners
-     */
-    setupEventListeners() {
-        document.addEventListener('change', (e) => {
-            if (e.target.matches('input[type="radio"]')) {
-                this.updateAnswerCount();
-                this.saveDraft();
-                this.saveDraftImmediate();
-            }
-        });
-
-        // Explanation close button
-        const closeExplanationBtn = document.getElementById('closeExplanation');
-        if (closeExplanationBtn) {
-            closeExplanationBtn.addEventListener('click', () => {
-                const explanationPanel = document.getElementById('explanationPanel');
-                if (explanationPanel) {
-                    explanationPanel.classList.remove('show');
+        } else if (this.currentTestData.type === 'matching') {
+            this.currentTestData.questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="answer-input-area">
+                        <label for="answer-${q.num}">Your answer (letter A–H):</label>
+                        <input type="text" id="answer-${q.num}" class="answer-input" maxlength="1" placeholder="A–H" autocomplete="off">
+                        <span class="eye-icon" data-question="${q.num}">👁️</span>
+                    </div>
+                `;
+                container.appendChild(div);
+                
+                // Add enforcing A-H formatting
+                const input = document.getElementById(`answer-${q.num}`);
+                if (input) {
+                    input.addEventListener('input', function() {
+                        this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
+                        // Force a dispatch to update the answer count via the global listener
+                        this.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
                 }
             });
         }
     }
 
-    /**
-     * Get the answer for a specific question (returns option letter or text value)
-     */
-    getUserAnswer(questionNum) {
-        if (this.currentTestData.type === 'split-layout') {
-            const inp = document.getElementById(`q${questionNum}`);
-            return inp ? inp.value.trim() : null;
-        } else if (this.currentTestData.type === 'drag-drop') {
-            return this.slotState[questionNum] || null;
-        } else {
-            const radio = document.querySelector(`input[name="q${questionNum}"]:checked`);
-            return radio ? radio.value : null;
-        }
+    // ==================== PART 4: DRAG & DROP ====================
+    setupDragDropEvents() {
+        const sentenceEls = document.querySelectorAll('.sentence-item');
+        let touchSelected = null;
+
+        document.querySelectorAll('.sentence-item').forEach(item => {
+            item.addEventListener('dragstart', e => {
+                item.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', item.getAttribute('data-value'));
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+            // Touch/Click to select support
+            item.addEventListener('click', () => {
+                if (this.examSubmitted) return;
+                if (touchSelected === item) {
+                    touchSelected = null;
+                    item.style.outline = '';
+                    return;
+                }
+                if (touchSelected) touchSelected.style.outline = '';
+                touchSelected = item;
+                item.style.outline = '3px solid #e6b422';
+            });
+        });
+
+        const allDropTargets = [
+            ...document.querySelectorAll('.inline-drop-slot'),
+            ...document.querySelectorAll('.drop-slot-panel')
+        ];
+
+        allDropTargets.forEach(slot => {
+            slot.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                slot.classList.add('drag-over');
+            });
+            slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                if (this.examSubmitted) return;
+                const value = e.dataTransfer.getData('text/plain');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) this.placeInSlot(qNum, value);
+            });
+            slot.addEventListener('click', () => {
+                if (this.examSubmitted) return;
+                if (!touchSelected) return;
+                const value = touchSelected.getAttribute('data-value');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) {
+                    this.placeInSlot(qNum, value);
+                    touchSelected.style.outline = '';
+                    touchSelected = null;
+                }
+            });
+        });
+
+        // Setup remove chips
+        document.querySelectorAll('.remove-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent bubbling to drop target
+                if (this.examSubmitted) return;
+                const slot = chip.closest('[data-q]');
+                if (!slot) return;
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                this.clearSlot(qNum);
+            });
+        });
     }
 
-    /**
-     * Get all answers for the test
-     */
-    getUserAnswers() {
-        const answers = {};
-        const questionRange = this.getQuestionRange();
-
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            answers[i] = this.getUserAnswer(i);
-        }
-
-        return answers;
+    getPart4Sentence(value) {
+        return document.getElementById(`sent-${value}`);
     }
 
-    /**
-     * Check if an answer is correct
-     */
-    isAnswerCorrect(questionNum, userAnswer) {
-        if (!userAnswer || userAnswer === '') return false;
+    setSlotContent(qNum, value, text) {
+        const reading = document.getElementById(`readingSlot${qNum}`);
+        const panel = document.getElementById(`panelSlot${qNum}`);
+        const displayText = value ? `${value} – ${text}` : null;
 
-        const key = this.currentTestData.answerKey[`q${questionNum}`] || 
-                    this.currentTestData.answerKey[questionNum];
+        [reading, panel].forEach(slot => {
+            if (!slot) return;
+            const contentEl = slot.querySelector('.slot-content');
+            const removeEl = slot.querySelector('.remove-chip');
+            if (value) {
+                if(contentEl) contentEl.textContent = displayText;
+                slot.setAttribute('data-selected', value);
+                if(removeEl) removeEl.style.display = 'inline';
+            } else {
+                if(contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
+                slot.removeAttribute('data-selected');
+                if(removeEl) removeEl.style.display = 'none';
+            }
+        });
+
+        this.slotState[qNum] = value ? { value, text } : null;
+        this.saveDraftImmediate(); // Drag-drop: save immediately
+    }
+
+    placeInSlot(qNum, value) {
+        const sentEl = this.getPart4Sentence(value);
+        const text = sentEl ? sentEl.querySelector('.sentence-text').textContent.trim() : value;
+
+        // If this sentence is already in another slot, clear that slot first
+        for (const [key, state] of Object.entries(this.slotState)) {
+            if (state && state.value === value && parseInt(key) !== qNum) {
+                this.setSlotContent(parseInt(key), null, null);
+            }
+        }
+
+        // Return old sentence to bank
+        const prev = this.slotState[qNum];
+        if (prev && prev.value !== value) {
+            const prevEl = this.getPart4Sentence(prev.value);
+            if (prevEl) prevEl.classList.remove('hidden');
+        }
+
+        this.setSlotContent(qNum, value, text);
+        if (sentEl) sentEl.classList.add('hidden');
+        this.updateAnswerCount();
+        this.setActiveNavButton(qNum);
+    }
+
+    clearSlot(qNum) {
+        const prev = this.slotState[qNum];
+        if (prev) {
+            const el = this.getPart4Sentence(prev.value);
+            if (el) el.classList.remove('hidden');
+        }
+        this.setSlotContent(qNum, null, null);
+        this.updateAnswerCount();
+    }
+
+    // ==================== PART 5: INLINE RADIO ====================
+    renderInlineRadioQuestions() {
+        const container = document.getElementById('questionsContainer');
+        if (!container) return;
+        container.innerHTML = '';
         
-        return userAnswer.toString().toUpperCase() === key.toString().toUpperCase();
+        const optionsList = this.currentTestData.optionsList;
+        const qRange = this.getQuestionRange();
+
+        for (let i = qRange.start; i <= qRange.end; i++) {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question-item';
+            qDiv.id = `question-${i}`;
+            
+            const optionsHtml = optionsList[i].map(opt => {
+                const letter = opt.charAt(0);
+                return `<label><input type="radio" name="q${i}" value="${letter}"> ${opt}</label>`;
+            }).join('');
+            
+            qDiv.innerHTML = `
+                <div class="question-text">${i}.</div>
+                <div class="answer-input-area">
+                    <div class="radio-group" id="radio-group-${i}">${optionsHtml}</div>
+                    <span class="eye-icon" data-question="${i}">👁️</span>
+                </div>
+            `;
+            container.appendChild(qDiv);
+
+            // Add listener to update inline gap
+            const radios = qDiv.querySelectorAll(`input[name="q${i}"]`);
+            radios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    this.updateInlineSlotFromRadio(i);
+                    this.saveDraftImmediate(); // Radio change: save immediately
+                });
+            });
+        }
+    }
+
+    updateInlineSlotFromRadio(qNum) {
+        const selectedLetter = this.getUserAnswer(qNum);
+        const slot = document.getElementById(`readingSlot${qNum}`);
+        if (!slot) return;
+        const contentSpan = slot.querySelector('.slot-content') || slot;
+
+        if (selectedLetter && this.currentTestData.wordMap && this.currentTestData.wordMap[qNum] && this.currentTestData.wordMap[qNum][selectedLetter]) {
+            const word = this.currentTestData.wordMap[qNum][selectedLetter];
+            contentSpan.textContent = word;
+            this.slotState[qNum] = { value: selectedLetter, text: word };
+        } else {
+            contentSpan.textContent = `[${qNum}]`;
+            this.slotState[qNum] = null;
+        }
+        this.updateAnswerCount();
     }
 
     /**
-     * Create navigation buttons for questions
+     * Render single column layout for fill-in-the-blank text (Part 6)
+     */
+    renderSingleColumn() {
+        const mainArea = document.getElementById('mainArea');
+        if (!mainArea || !this.currentTestData.template) return;
+        
+        mainArea.innerHTML = `
+            <div class="single-col">
+                <div class="part-header">
+                    <h3>Questions ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
+                    <p>For each question, write the correct answer. Write one word for each gap.</p>
+                </div>
+                ${this.currentTestData.template}
+            </div>
+        `;
+    }
+
+    /**
+     * Render split column layout for fill-in-the-blank text (Part 6)
+     */
+    renderSplitColumn() {
+        const mainArea = document.getElementById('mainArea');
+        if (!mainArea || !this.currentTestData.template) return;
+        
+        mainArea.innerHTML = `
+            <div class="split-container">
+                <div class="left-col">
+                    <div class="part-header">
+                        <h3>Questions ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
+                        <p>For each question, write the correct answer. Write one word for each gap.</p>
+                    </div>
+                    ${this.currentTestData.template}
+                </div>
+                <div class="right-col" id="rightCol">
+                    <div class="explanation-header">
+                        <span>Giải thích</span>
+                        <span class="close-explanation-btn" id="closeRightExplain">✕ Đóng</span>
+                    </div>
+                    <div class="explanation-content" id="rightExplanationText">
+                        Nhấn vào biểu tượng con mắt bên cạnh mỗi câu để xem giải thích.
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('closeRightExplain')?.addEventListener('click', () => {
+            const col = document.getElementById('rightCol');
+            if (col) col.classList.remove('show');
+        });
+    }
+
+    /**
+     * Setup event listeners for forms and interaction inside custom template (Part 6)
+     */
+    attachInputEvents() {
+        document.querySelectorAll('.gap-input').forEach(inp => {
+            if (this.examSubmitted) {
+                inp.disabled = true;
+                const val = inp.value.trim();
+                const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
+                inp.classList.add(correct ? 'correct' : 'incorrect');
+            }
+            inp.addEventListener('input', () => {
+                this.updateAnswerCount();
+                this.saveDraft(); // Text input: debounced save
+            });
+        });
+        
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            if (this.explanationMode || this.examSubmitted) {
+                icon.style.display = 'inline-block';
+            } else {
+                icon.style.display = 'none';
+            }
+            
+            icon.addEventListener('click', (e) => {
+                const qNum = parseInt(e.currentTarget.dataset.q || e.currentTarget.dataset.question);
+                this.showExplanation(qNum);
+            });
+        });
+    }
+
+    /**
+     * Setup global event listeners
+     */
+    setupEventListeners() {
+        // Form input states - radio buttons lưu NGAY, text input lưu debounced
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.matches('input[type="radio"]')) {
+                this.updateAnswerCount();
+                this.saveDraftImmediate(); // Radio: lưu ngay
+            } else if (e.target && e.target.matches('input[type="text"]')) {
+                this.updateAnswerCount();
+                this.saveDraft(); // Text: debounce
+            }
+        });
+        
+        // Input event cho text fields (real-time save)
+        document.addEventListener('input', (e) => {
+            if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('.gap-input') || e.target.matches('.answer-input'))) {
+                this.updateAnswerCount();
+                this.saveDraft(); // Debounced
+            }
+        });
+        
+        // Eye icon click handler for standard types
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('eye-icon') && !e.target.dataset.q) {
+                const qNum = e.target.dataset.question;
+                if (qNum) {
+                    this.showExplanation(parseInt(qNum));
+                }
+            }
+        });
+
+        // Submit button
+        document.getElementById('submitBtn')?.addEventListener('click', () => {
+            this.handleSubmit();
+        });
+
+        // Explain button
+        document.getElementById('explainBtn')?.addEventListener('click', () => {
+            this.handleExplain();
+        });
+
+        // Reset button
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+            this.handleReset();
+        });
+
+        // Close explanation panel for standard layout
+        document.getElementById('closeExplanation')?.addEventListener('click', () => {
+            this.closeExplanation();
+        });
+    }
+
+    /**
+     * Build navigation controls map
      */
     createNavigation() {
-        const navButtons = document.getElementById('navButtons');
-        if (!navButtons) return;
+        const nav = document.getElementById('navButtons');
+        if (!nav || !this.currentTestData) return;
 
-        navButtons.innerHTML = '';
+        nav.innerHTML = '';
         const questionRange = this.getQuestionRange();
 
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             const btn = document.createElement('button');
-            btn.className = 'nav-btn';
-            btn.dataset.question = i;
-            btn.dataset.q = i;
+            btn.className = 'nav-btn unanswered';
             btn.textContent = i;
-            btn.addEventListener('click', () => this.navigateToQuestion(i));
-            navButtons.appendChild(btn);
+            btn.dataset.question = i;
+            
+            // Allow dataset match to Part 6 structure dataset.q setup
+            btn.dataset.q = i;
+            
+            btn.addEventListener('click', () => {
+                this.scrollToQuestion(i);
+                this.setActiveNavButton(i);
+            });
+            
+            nav.appendChild(btn);
         }
     }
 
     /**
-     * Navigate to a specific question
+     * Discover question range dynamically
      */
-    navigateToQuestion(questionNum) {
-        let questionElement = document.getElementById(`question-${questionNum}`);
-        if (!questionElement && this.currentTestData.type === 'split-layout') {
-            questionElement = document.getElementById(`q${questionNum}`);
+    getQuestionRange() {
+        if (!this.currentTestData) return { start: 1, end: 5 };
+        
+        if (this.currentTestData.questions) {
+            const numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
+            return {
+                start: numbers[0] || 1,
+                end: numbers[numbers.length - 1] || 5
+            };
         }
-
-        if (questionElement) {
-            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            if (this.currentTestData.type === 'split-layout') {
-                questionElement.focus();
+        
+        if (this.currentTestData.answerKey) {
+            const keys = Object.keys(this.currentTestData.answerKey)
+                .map(k => parseInt(k.replace('q', '')))
+                .filter(n => !isNaN(n))
+                .sort((a, b) => a - b);
+            if (keys.length > 0) {
+                return { start: keys[0], end: keys[keys.length - 1] };
             }
         }
-
-        // Update active nav button
-        this.setActiveNavButton(questionNum);
+        
+        return { start: 1, end: 5 };
     }
 
     /**
-     * Set active nav button
+     * Retrieve the user's answer
+     */
+    getUserAnswer(questionNum) {
+        if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            const radios = document.getElementsByName(`q${questionNum}`);
+            for (let radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return null;
+        } else if (this.currentTestData.type === 'drag-drop') {
+            return this.slotState[questionNum] ? this.slotState[questionNum].value : null;
+        } else if (this.currentTestData.type === 'matching') {
+            const input = document.getElementById(`answer-${questionNum}`);
+            if (!input) return null;
+            let val = input.value.trim().toUpperCase();
+            return (val.length === 1 && /[A-H]/.test(val)) ? val : null;
+        } else if (this.currentTestData.type === 'split-layout') {
+            const input = document.getElementById(`q${questionNum}`);
+            return input ? input.value.trim() : "";
+        }
+        return null;
+    }
+
+    /**
+     * Verification check against answerKey
+     */
+    isAnswerCorrect(questionNum, userAnswer) {
+        if (!userAnswer) return false;
+        
+        const keyMap = this.currentTestData.answerKey[`q${questionNum}`] || this.currentTestData.answerKey[questionNum];
+        
+        if (Array.isArray(keyMap)) {
+            // Support multiple correct alternatives (e.g. ['every', 'each'])
+            return keyMap.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+        } else if (typeof keyMap === 'string') {
+            return userAnswer.toLowerCase() === keyMap.toLowerCase();
+        }
+        return false;
+    }
+
+    /**
+     * Set active nav class
      */
     setActiveNavButton(questionNum) {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-
-        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) ||
+        
+        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) || 
                           document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
+        }
+    }
+
+    /**
+     * Scroll into view for a question
+     */
+    scrollToQuestion(questionNum) {
+        let questionElement = document.getElementById(`question-${questionNum}`);
+        if (!questionElement && this.currentTestData.type === 'split-layout') {
+            questionElement = document.getElementById(`q${questionNum}`);
+        }
+        
+        if (questionElement) {
+            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (this.currentTestData.type === 'split-layout') {
+                questionElement.focus();
+            }
         }
     }
 
@@ -1032,19 +1099,23 @@ class ReadingCore {
             if (explanationPanel && explanationTitle && explanationText) {
                 explanationPanel.classList.add('show');
                 explanationTitle.textContent = `Giải thích câu ${questionNum}`;
-
+                
                 const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
                 let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
                            this.currentTestData.detailedExplanations[questionNum] || 
-                           `<strong>Đáp án: ${customAnsDisplay}</strong>`;
+                           `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
                 
                 if (this.examSubmitted) {
-                    const user = this.getUserAnswer(questionNum) || "(chưa chọn)";
-                    const correct = this.isAnswerCorrect(questionNum, user);
-                    html += `<div class="answer-feedback ${correct ? 'correct' : 'incorrect'}" style="margin-top:10px;padding:8px;background:${correct ? '#e8f5e8' : '#ffebee'};border-radius:5px;">`;
-                    html += `<strong>Câu trả lời của bạn:</strong> "${user}" ${user ? (correct ? '✓' : '✗') : ''}<br>`;
-                    if (!correct) html += `<strong>Đáp án đúng:</strong> ${customAnsDisplay}`;
-                    else html += `Chính xác!`;
+                    const userAnswer = this.getUserAnswer(questionNum) || '(chưa chọn/điền)';
+                    const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
+                    
+                    html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                    html += `<strong>Câu trả lời của bạn:</strong> ${userAnswer}<br>`;
+                    if (!isCorrect) {
+                        html += `<strong>Đáp án đúng:</strong> ${customAnsDisplay}`;
+                    } else {
+                        html += `<strong>✅ Đúng!</strong>`;
+                    }
                     html += `</div>`;
                 }
                 
@@ -1053,57 +1124,96 @@ class ReadingCore {
         }
     }
 
-    /**
-     * Add correction badge next to an answer (for Part 6 split view)
-     */
-    addBadgeForQuestion(questionNum) {
-        const inp = document.getElementById(`q${questionNum}`);
-        if (!inp) return;
-
-        inp.classList.remove('correct', 'incorrect');
-        const correct = this.isAnswerCorrect(questionNum, this.getUserAnswer(questionNum));
-        inp.classList.add(correct ? 'correct' : 'incorrect');
-        inp.disabled = true;
+    addBadgeForQuestion(qNum) {
+        const input = document.getElementById(`q${qNum}`);
+        if (!input) return;
+        const wrapper = input.parentNode;
+        let existing = wrapper.querySelector('.correct-answer-badge');
+        if (existing) existing.remove();
+        
+        const badge = document.createElement('span');
+        badge.className = 'correct-answer-badge';
+        badge.textContent = this.currentTestData.displayAnswers[`q${qNum}`] || this.currentTestData.displayAnswers[qNum];
+        if (this.explanationMode) badge.style.display = 'inline-block';
+        wrapper.appendChild(badge);
     }
 
-    /**
-     * Handle reset
-     */
+    closeExplanation() {
+        const explanationPanel = document.getElementById('explanationPanel');
+        if (explanationPanel) {
+            explanationPanel.classList.remove('show');
+        }
+        this.highlightManager.clearAllHighlights();
+    }
+
     handleReset() {
-        if (confirm('Bạn chắc chắn muốn reset tất cả câu trả lời? Không thể hoàn tác.')) {
-            this.resetExam();
+        if (confirm('Reset tất cả câu trả lời?')) {
+            this.resetAll();
         }
     }
 
-    /**
-     * Reset exam state
-     */
-    resetExam() {
-        // Clear all answer selections
+    resetAll() {
+        this.examSubmitted = false;
+        this.explanationMode = false;
+        this.currentSplit = false;
+
         const questionRange = this.getQuestionRange();
 
         if (this.currentTestData.type === 'split-layout') {
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const inp = document.getElementById(`q${i}`);
-                if (inp) {
-                    inp.value = '';
-                    inp.disabled = false;
-                    inp.classList.remove('correct', 'incorrect');
-                }
-            }
+            this.renderSingleColumn();
+            this.attachInputEvents();
         } else {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const radios = document.querySelectorAll(`input[name="q${i}"]`);
-                radios.forEach(r => r.checked = false);
+                if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+                    const radios = document.getElementsByName(`q${i}`);
+                    radios.forEach(radio => {
+                        radio.checked = false;
+                        radio.disabled = false;
+                    });
+                    if (this.currentTestData.type === 'inline-radio') {
+                        this.updateInlineSlotFromRadio(i);
+                    }
+                } else if (this.currentTestData.type === 'drag-drop') {
+                    this.clearSlot(i);
+                    const reading = document.getElementById(`readingSlot${i}`);
+                    const panel = document.getElementById(`panelSlot${i}`);
+                    [reading, panel].forEach(slot => {
+                        if (slot) slot.classList.remove('correct', 'incorrect');
+                        const b = slot && slot.querySelector('.correct-answer-badge');
+                        if (b) b.remove();
+                    });
+                    this.slotState = {};
+                } else if (this.currentTestData.type === 'matching') {
+                    const input = document.getElementById(`answer-${i}`);
+                    if (input) {
+                        input.value = '';
+                        input.disabled = false;
+                    }
+                }
+
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (questionDiv) {
+                    questionDiv.classList.remove('correct', 'incorrect');
+                    const badge = questionDiv.querySelector('.correct-answer-badge');
+                    if (badge) badge.remove();
+                }
             }
-            
-            document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.remove());
-            document.querySelectorAll('.question-item').forEach(el => {
-                el.classList.remove('correct', 'incorrect', 'highlight-question');
+        }
+
+        if (this.currentTestData.type === 'drag-drop') {
+            document.querySelectorAll('.sentence-item').forEach(el => {
+                el.classList.remove('hidden');
+                el.setAttribute('draggable', 'true');
+                el.style.cursor = 'grab';
             });
         }
 
-        // Reset button states
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            icon.style.display = 'none';
+        });
+
+        this.highlightManager.clearAllHighlights();
+
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -1113,61 +1223,387 @@ class ReadingCore {
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = true;
+            explainBtn.textContent = 'Xem giải thích';
         }
 
-        // Reset global state
-        this.examSubmitted = false;
-        this.explanationMode = false;
-        this.slotState = {};
-        this.currentSplit = false;
-
-        // Clear highlights
-        this.highlightManager.clearAllHighlights();
-
-        // Clear and re-render
         const explanationPanel = document.getElementById('explanationPanel');
         if (explanationPanel) {
             explanationPanel.classList.remove('show');
         }
 
-        this.updateAnswerCount();
-        
-        // === MỚI: Xóa draft khi reset ===
+        // === MỚI: Xóa cả kết quả đã lưu và nháp ===
+        const completedKey = this.getStorageKey(false);
+        localStorage.removeItem(completedKey);
         this.clearDraft();
+
+        this.updateAnswerCount();
+    }
+
+    disableInputs() {
+        if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            document.querySelectorAll('input[type="radio"]').forEach(input => {
+                input.disabled = true;
+            });
+        } else if (this.currentTestData.type === 'drag-drop') {
+            document.querySelectorAll('.sentence-item').forEach(el => {
+                el.setAttribute('draggable', 'false');
+                el.style.cursor = 'default';
+            });
+        } else if (this.currentTestData.type === 'matching') {
+            document.querySelectorAll('input[type="text"].answer-input').forEach(input => {
+                input.disabled = true;
+            });
+        }
+        // Split-layout handles disabled fields directly within submit hook
+    }
+
+    getUserAnswers() {
+        const answers = {};
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            answers[i] = this.getUserAnswer(i);
+        }
+
+        return answers;
+    }
+}
+
+/**
+ * Highlighting functionalities inside the text content pane
+ */
+class ReadingHighlightManager {
+    constructor() {
+        this.selectedRange = null;
+        this.setupContextMenu();
     }
 
     /**
-     * Disable all inputs after submission
+     * Expose global helper interface bridging manual highlighting
      */
-    disableInputs() {
-        if (this.currentTestData.type === 'split-layout') {
-            const questionRange = this.getQuestionRange();
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const inp = document.getElementById(`q${i}`);
-                if (inp) inp.disabled = true;
+    setupContextMenu() {
+        const attachMenu = (el) => {
+            if (!el) return;
+            el.addEventListener('contextmenu', (e) => {
+                const target = e.target.closest('.reading-card') || e.target.closest('.reading-content');
+                if (target) {
+                    const sel = window.getSelection();
+                    if (sel.toString().trim()) {
+                        e.preventDefault();
+                        this.selectedRange = sel.getRangeAt(0);
+                        this.showContextMenu(e.pageX, e.pageY);
+                    }
+                }
+            });
+        };
+
+        // Delay attaching to ensure DOM load
+        setTimeout(() => {
+            attachMenu(document.getElementById('readingContent'));
+            attachMenu(document.getElementById('mainArea')); // Fallback for Part 6
+        }, 500);
+
+        document.addEventListener('click', (e) => {
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && !contextMenu.contains(e.target)) {
+                this.hideContextMenu();
             }
-        } else {
-            const radios = document.querySelectorAll('input[type="radio"]');
-            radios.forEach(r => r.disabled = true);
+        });
+    }
+
+    showContextMenu(x, y) {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
+        }
+    }
+
+    hideContextMenu() {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
         }
     }
 
     /**
-     * Setup resizable panels
+     * Programatically inject spans capturing the text using TreeWalker
      */
-    setupResizers() {
-        const resizer = document.getElementById('resizer');
+    highlightAnswerInReading(questionNum, referenceMap) {
+        this.clearAllHighlights();
+
+        if (!referenceMap) return;
+        const info = referenceMap[`q${questionNum}`] || referenceMap[questionNum];
+        if (!info) return;
+        
+        let card;
+        if (info.cardId) {
+            card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
+        } else if (info.reviewId) {
+            card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
+        }
+        
+        if (!card) return;
+
+        const qItem = document.getElementById(`question-${questionNum}`);
+        if (qItem) qItem.classList.add('highlight-question');
+
+        let firstSpan = null;
+        const keywords = info.keywords || [];
+        
+        keywords.forEach(keyword => {
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
+                if (idx !== -1) {
+                    const range = document.createRange();
+                    range.setStart(node, idx);
+                    range.setEnd(node, idx + keyword.length);
+                    const span = document.createElement('span');
+                    span.className = 'dynamic-highlight';
+                    try {
+                        range.surroundContents(span);
+                        if (!firstSpan) firstSpan = span;
+                    } catch(e) { console.log("Tree span surround failed", e); }
+                    break;
+                }
+            }
+        });
+        
+        if (firstSpan) {
+            firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // Scroll to the card containing it at least
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    clearAllHighlights() {
+        document.querySelectorAll('.dynamic-highlight').forEach(el => {
+            const parent = el.parentNode;
+            if (parent) {
+                while (el.firstChild) {
+                    parent.insertBefore(el.firstChild, el);
+                }
+                parent.removeChild(el);
+            }
+        });
+        document.querySelectorAll('.question-item.highlight-question').forEach(el => {
+            el.classList.remove('highlight-question');
+        });
+    }
+
+    applyHighlight(color) {
+        if (!this.selectedRange) return;
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            // Use extract/append approach to avoid element-breaking surround failures
+            span.appendChild(this.selectedRange.extractContents());
+            this.selectedRange.insertNode(span);
+        } catch(e) { 
+            console.log("Could not highlight element bound properly.", e); 
+        }
+        this.hideContextMenu();
+        this.selectedRange = null;
+    }
+
+    removeHighlight() {
+        if (!this.selectedRange) return;
+        // Target specifically our custom highlight spans
+        document.querySelectorAll('.highlight-yellow,.highlight-green,.highlight-pink').forEach(h => {
+             if (this.selectedRange.intersectsNode(h)) {
+                 const parent = h.parentNode;
+                 while (h.firstChild) {
+                     parent.insertBefore(h.firstChild, h);
+                 }
+                 parent.removeChild(h);
+             }
+        });
+        this.hideContextMenu();
+        this.selectedRange = null;
+    }
+}
+
+/**
+ * Storage extraction for the PET module architecture
+ */
+class ReadingStorageManager {
+    saveResults(testData, userAnswers) {
+        const details = [];
+        let correctCount = 0;
+
+        const questions = testData.questions || 
+                          Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q','')) })).filter(q => !isNaN(q.num));
+                          
+        const questionRangeStart = Math.min(...questions.map(q => q.num));
+        const questionRangeEnd = Math.max(...questions.map(q => q.num));
+
+        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
+            const userAnswer = userAnswers[i];
+            const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
+            
+            // Revalidate internally
+            let isCorrect = false;
+            if (userAnswer) {
+                if (Array.isArray(answerKeyRaw)) {
+                    isCorrect = answerKeyRaw.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+                } else if (typeof answerKeyRaw === 'string') {
+                    isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
+                }
+            }
+            
+            if (isCorrect) correctCount++;
+
+            const correctAnswerString = testData.displayAnswers[`q${i}`] || testData.displayAnswers[i] || answerKeyRaw;
+
+            details.push({
+                question: i,
+                user: userAnswer || '(trống)',
+                correct: correctAnswerString,
+                isCorrect: isCorrect
+            });
+        }
+
+        const partId = testData.part || this.parseTestInfo(document.title).part;
+        const partData = {
+            partId: partId,
+            name: `Part ${partId}`,
+            totalQuestions: details.length,
+            correctCount: correctCount,
+            details: details
+        };
+
+        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const resolvedPart = testData.part || part;
+        
+        const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
+        
+        localStorage.setItem(key, JSON.stringify(partData));
+        console.log(`Results saved with key: ${key}`);
+    }
+
+    parseTestInfo(title) {
+        let book = 1, test = 1, part = 1;
+        
+        const bookMatch = title.match(/Preliminary\s+(\d+)/i);
+        if (bookMatch) book = parseInt(bookMatch[1]);
+        
+        const testMatch = title.match(/Test\s+(\d+)/i);
+        if (testMatch) test = parseInt(testMatch[1]);
+        
+        const partMatch = title.match(/Part\s+(\d+)/i);
+        if (partMatch) part = parseInt(partMatch[1]);
+        
+        return { book, test, part };
+    }
+}
+
+/**
+ * Interactive DOM controls manipulation
+ */
+class ReadingUIManager {
+    setupFontControls() {
+        const fontButtons = {
+            fontSmall: 'small',
+            fontMedium: 'medium', 
+            fontLarge: 'large'
+        };
+
+        Object.entries(fontButtons).forEach(([id, size]) => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.addEventListener('click', () => this.setFontSize(size));
+            }
+        });
+    }
+
+    setFontSize(size) {
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+
+        // Target content directly instead of overriding classes fully
+        document.querySelectorAll('.reading-content, .questions-list, #testWrapper').forEach(el => {
+            el.classList.remove('font-small', 'font-medium', 'font-large');
+            el.classList.add(`font-${size}`);
+        });
+    }
+
+    setupThemeToggle() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+
+        // Restore
+        const testWrapper = document.getElementById('testWrapper');
+        const savedTheme = localStorage.getItem('pet-theme');
+        if (savedTheme === 'dark' && testWrapper && !testWrapper.classList.contains('classic-mode')) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (testWrapper && testWrapper.classList.contains('classic-mode')) return;
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('pet-theme', newTheme);
+        });
+    }
+
+    setupModeToggle() {
+        const modeToggle = document.getElementById('modeToggle');
+        const styleLink = document.getElementById('styleLink');
+        const testWrapper = document.getElementById('testWrapper');
+        
+        if (!modeToggle || !styleLink || !testWrapper) return;
+
+        const setMode = (isClassic) => {
+            if (isClassic) {
+                styleLink.href = 'reading-pet-common1.css';
+                testWrapper.classList.add('classic-mode');
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.removeItem('pet-theme');
+            } else {
+                styleLink.href = 'reading-pet-common.css';
+                testWrapper.classList.remove('classic-mode');
+            }
+            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+        };
+
+        const savedMode = localStorage.getItem('pet-mode');
+        if (savedMode === 'classic') {
+            modeToggle.checked = true;
+            setMode(true);
+        } else {
+            modeToggle.checked = false;
+            setMode(false);
+        }
+
+        modeToggle.addEventListener('change', () => {
+            setMode(modeToggle.checked);
+        });
+    }
+
+    setupResizer() {
         const readingPanel = document.getElementById('readingPanel');
         const questionsPanel = document.getElementById('questionsPanel');
-
-        if (!resizer || !readingPanel || !questionsPanel) return;
+        const resizer = document.getElementById('resizer');
+        
+        if (!readingPanel || !questionsPanel || !resizer) return;
 
         let isResizing = false;
 
         resizer.addEventListener('mousedown', () => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
         });
 
         document.addEventListener('mousemove', (e) => {
@@ -1367,287 +1803,6 @@ class ReadingCore {
             themeToggle.insertAdjacentElement('afterend', toggleBtn);
         } else {
             header.appendChild(toggleBtn);
-        }
-    }
-}
-
-// ============= READING HIGHLIGHT MANAGER - FIXED =============
-class ReadingHighlightManager {
-    constructor() {
-        this.selectedRange = null;
-        this.setupContextMenu();
-    }
-
-    /**
-     * Expose global helper interface bridging manual highlighting
-     * FIXED: Use event delegation to handle dynamic DOM changes
-     */
-    setupContextMenu() {
-        // Sử dụng event delegation trên document để bắt contextmenu trong vùng đọc và câu hỏi
-        document.addEventListener('contextmenu', (e) => {
-            // Kiểm tra target có nằm trong vùng đọc hoặc vùng câu hỏi không
-            const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
-            if (highlightArea) {
-                const selection = window.getSelection();
-                if (selection.toString().trim()) {
-                    e.preventDefault();
-                    this.selectedRange = selection.getRangeAt(0);
-                    this.showContextMenu(e.pageX, e.pageY);
-                }
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu && !contextMenu.contains(e.target)) {
-                this.hideContextMenu();
-            }
-        });
-    }
-
-    showContextMenu(x, y) {
-        const contextMenu = document.getElementById('contextMenu');
-        if (contextMenu) {
-            contextMenu.style.left = x + 'px';
-            contextMenu.style.top = y + 'px';
-            contextMenu.style.display = 'block';
-        }
-    }
-
-    hideContextMenu() {
-        const contextMenu = document.getElementById('contextMenu');
-        if (contextMenu) {
-            contextMenu.style.display = 'none';
-        }
-    }
-
-    /**
-     * Programatically inject spans capturing the text using TreeWalker
-     */
-    highlightAnswerInReading(questionNum, referenceMap) {
-        this.clearAllHighlights();
-
-        if (!referenceMap) return;
-        const info = referenceMap[`q${questionNum}`] || referenceMap[questionNum];
-        if (!info) return;
-        
-        let card;
-        if (info.cardId) {
-            card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
-        } else if (info.reviewId) {
-            card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
-        }
-        
-        if (!card) return;
-
-        const qItem = document.getElementById(`question-${questionNum}`);
-        if (qItem) qItem.classList.add('highlight-question');
-
-        let firstSpan = null;
-        const keywords = info.keywords || [];
-        
-        keywords.forEach(keyword => {
-            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while (node = walker.nextNode()) {
-                const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
-                if (idx !== -1) {
-                    const range = document.createRange();
-                    range.setStart(node, idx);
-                    range.setEnd(node, idx + keyword.length);
-                    const span = document.createElement('span');
-                    span.className = 'dynamic-highlight';
-                    try {
-                        range.surroundContents(span);
-                        if (!firstSpan) firstSpan = span;
-                    } catch(e) { console.log("Tree span surround failed", e); }
-                    break;
-                }
-            }
-        });
-        
-        if (firstSpan) {
-            firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-            // Scroll to the card containing it at least
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
-
-    clearAllHighlights() {
-        document.querySelectorAll('.dynamic-highlight').forEach(el => {
-            const parent = el.parentNode;
-            if (parent) {
-                while (el.firstChild) {
-                    parent.insertBefore(el.firstChild, el);
-                }
-                parent.removeChild(el);
-            }
-        });
-        document.querySelectorAll('.question-item.highlight-question').forEach(el => {
-            el.classList.remove('highlight-question');
-        });
-    }
-
-    /**
-     * FIXED: Apply manual highlighting with saved range
-     */
-    applyHighlight(color) {
-        let range = this.selectedRange;
-        if (!range) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            range = selection.getRangeAt(0);
-        }
-        try {
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            span.appendChild(range.extractContents());
-            range.insertNode(span);
-        } catch(e) {
-            console.log("Could not highlight", e);
-        }
-        // Xóa selection và đóng menu
-        window.getSelection().removeAllRanges();
-        this.hideContextMenu();
-        this.selectedRange = null;
-    }
-
-    /**
-     * FIXED: Remove highlighting with saved range and TreeWalker
-     */
-    removeHighlight() {
-        let range = this.selectedRange;
-        if (!range) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            range = selection.getRangeAt(0);
-        }
-        // Tìm tất cả các highlight span nằm trong range
-        const walker = document.createTreeWalker(
-            range.commonAncestorContainer,
-            NodeFilter.SHOW_ELEMENT,
-            {
-                acceptNode: (node) => {
-                    if (node.classList && 
-                        (node.classList.contains('highlight-yellow') || 
-                         node.classList.contains('highlight-green') || 
-                         node.classList.contains('highlight-pink'))) {
-                        return NodeFilter.FILTER_ACCEPT;
-                    }
-                    return NodeFilter.FILTER_SKIP;
-                }
-            }
-        );
-        const toRemove = [];
-        let node;
-        while (node = walker.nextNode()) {
-            if (range.intersectsNode(node)) {
-                toRemove.push(node);
-            }
-        }
-        toRemove.forEach(span => {
-            const parent = span.parentNode;
-            while (span.firstChild) {
-                parent.insertBefore(span.firstChild, span);
-            }
-            parent.removeChild(span);
-        });
-        window.getSelection().removeAllRanges();
-        this.hideContextMenu();
-        this.selectedRange = null;
-    }
-}
-
-/**
- * Storage extraction for the PET module architecture
- */
-class ReadingStorageManager {
-    saveResults(testData, userAnswers) {
-        const details = [];
-        let correctCount = 0;
-
-        const questions = testData.questions || 
-                          Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q','')) })).filter(q => !isNaN(q.num));
-                          
-        const questionRangeStart = Math.min(...questions.map(q => q.num));
-        const questionRangeEnd = Math.max(...questions.map(q => q.num));
-        
-        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
-            const userAns = userAnswers[i];
-            const keyAns = testData.answerKey[`q${i}`] || testData.answerKey[i];
-            const correct = userAns && userAns.toString().toUpperCase() === keyAns.toString().toUpperCase();
-            
-            if (correct) correctCount++;
-            
-            details.push({
-                num: i,
-                userAnswer: userAns || '-',
-                correctAnswer: keyAns,
-                correct: correct
-            });
-        }
-
-        const metadata = this.parseTestInfo(document.querySelector('.candidate')?.textContent || '');
-        const resultKey = `pet_reading_book${metadata.book}_test${metadata.test}_part${metadata.part}`;
-        
-        const result = {
-            timestamp: new Date().toISOString(),
-            part: testData.part,
-            correctCount: correctCount,
-            total: details.length,
-            details: details
-        };
-
-        try {
-            localStorage.setItem(resultKey, JSON.stringify(result));
-            console.log('Results saved:', resultKey, result);
-        } catch(e) {
-            console.error('Failed to save results:', e);
-        }
-    }
-
-    parseTestInfo(candidateText) {
-        // Example: "B1 Preliminary 1 · Test 1 · Part 1 (Reading)"
-        const parts = candidateText.split('·');
-        let book = 1, test = 1, part = 1;
-        
-        if (parts.length >= 1) {
-            const match1 = parts[0].match(/Preliminary (\d+)/);
-            if (match1) book = parseInt(match1[1]);
-        }
-        if (parts.length >= 2) {
-            const match2 = parts[1].match(/Test (\d+)/);
-            if (match2) test = parseInt(match2[1]);
-        }
-        if (parts.length >= 3) {
-            const match3 = parts[2].match(/Part (\d+)/);
-            if (match3) part = parseInt(match3[1]);
-        }
-        
-        return { book, test, part };
-    }
-}
-
-/**
- * UI Manager for Reading tests
- */
-class ReadingUIManager {
-    toggleDarkMode() {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('pet-dark-mode', document.body.classList.contains('dark-mode'));
-    }
-
-    changeFontSize(size) {
-        const container = document.getElementById('questionsContent');
-        if (container) {
-            container.className = container.className.replace(/font-\w+/g, '');
-            container.classList.add(`font-${size}`);
-        }
-        const readingContent = document.getElementById('readingContent');
-        if (readingContent) {
-            readingContent.className = readingContent.className.replace(/font-\w+/g, '');
-            readingContent.classList.add(`font-${size}`);
         }
     }
 }
