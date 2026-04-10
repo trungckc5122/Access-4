@@ -6,6 +6,9 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
+ * - FIXED: matching support in markAnswers, reset badge
+ * - FIXED: highlight manager uses event delegation, fallback selection
+ * - FIXED: force reflow in mode toggle
  */
 
 class ReadingCore {
@@ -947,6 +950,26 @@ class ReadingCore {
                     }
                 });
                 continue;
+            } else if (this.currentTestData.type === 'matching') {
+                const input = document.getElementById(`answer-${i}`);
+                if (input) {
+                    const userAnswer = this.getUserAnswer(i);
+                    const isCorrect = this.isAnswerCorrect(i, userAnswer);
+                    input.classList.remove('correct', 'incorrect');
+                    const oldBadge = input.parentNode.querySelector('.correct-answer-badge');
+                    if (oldBadge) oldBadge.remove();
+                    if (isCorrect) {
+                        input.classList.add('correct');
+                    } else if (userAnswer) {
+                        input.classList.add('incorrect');
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        const ansStr = this.currentTestData.displayAnswers[`q${i}`] || this.currentTestData.displayAnswers[i];
+                        badge.textContent = `✓ ${ansStr}`;
+                        input.parentNode.appendChild(badge);
+                    }
+                }
+                continue;
             }
 
             const questionDiv = document.getElementById(`question-${i}`);
@@ -1188,6 +1211,9 @@ class ReadingCore {
                     if (input) {
                         input.value = '';
                         input.disabled = false;
+                        input.classList.remove('correct', 'incorrect');
+                        const badge = input.parentNode?.querySelector('.correct-answer-badge');
+                        if (badge) badge.remove();
                     }
                 }
 
@@ -1271,6 +1297,7 @@ class ReadingCore {
 
 /**
  * Highlighting functionalities inside the text content pane
+ * FIXED: Use event delegation, fallback selection, TreeWalker
  */
 class ReadingHighlightManager {
     constructor() {
@@ -1280,28 +1307,22 @@ class ReadingHighlightManager {
 
     /**
      * Expose global helper interface bridging manual highlighting
+     * FIXED: Use event delegation on document to handle dynamic DOM changes
      */
     setupContextMenu() {
-        const attachMenu = (el) => {
-            if (!el) return;
-            el.addEventListener('contextmenu', (e) => {
-                const target = e.target.closest('.reading-card') || e.target.closest('.reading-content');
-                if (target) {
-                    const sel = window.getSelection();
-                    if (sel.toString().trim()) {
-                        e.preventDefault();
-                        this.selectedRange = sel.getRangeAt(0);
-                        this.showContextMenu(e.pageX, e.pageY);
-                    }
+        // Sử dụng event delegation trên document để bắt contextmenu trong vùng đọc và câu hỏi
+        document.addEventListener('contextmenu', (e) => {
+            // Kiểm tra target có nằm trong vùng đọc hoặc vùng câu hỏi không
+            const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
+            if (highlightArea) {
+                const selection = window.getSelection();
+                if (selection.toString().trim()) {
+                    e.preventDefault();
+                    this.selectedRange = selection.getRangeAt(0);
+                    this.showContextMenu(e.pageX, e.pageY);
                 }
-            });
-        };
-
-        // Delay attaching to ensure DOM load
-        setTimeout(() => {
-            attachMenu(document.getElementById('readingContent'));
-            attachMenu(document.getElementById('mainArea')); // Fallback for Part 6
-        }, 500);
+            }
+        });
 
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
@@ -1395,33 +1416,71 @@ class ReadingHighlightManager {
         });
     }
 
+    /**
+     * FIXED: Apply manual highlighting with saved range + fallback selection
+     */
     applyHighlight(color) {
-        if (!this.selectedRange) return;
+        let range = this.selectedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
         try {
             const span = document.createElement('span');
             span.className = `highlight-${color}`;
-            // Use extract/append approach to avoid element-breaking surround failures
-            span.appendChild(this.selectedRange.extractContents());
-            this.selectedRange.insertNode(span);
-        } catch(e) { 
-            console.log("Could not highlight element bound properly.", e); 
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+        } catch(e) {
+            console.log("Could not highlight", e);
         }
+        // Xóa selection và đóng menu
+        window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
     }
 
+    /**
+     * FIXED: Remove highlighting with saved range + fallback selection + TreeWalker
+     */
     removeHighlight() {
-        if (!this.selectedRange) return;
-        // Target specifically our custom highlight spans
-        document.querySelectorAll('.highlight-yellow,.highlight-green,.highlight-pink').forEach(h => {
-             if (this.selectedRange.intersectsNode(h)) {
-                 const parent = h.parentNode;
-                 while (h.firstChild) {
-                     parent.insertBefore(h.firstChild, h);
-                 }
-                 parent.removeChild(h);
-             }
+        let range = this.selectedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
+        // Tìm tất cả các highlight span nằm trong range
+        const walker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: (node) => {
+                    if (node.classList && 
+                        (node.classList.contains('highlight-yellow') || 
+                         node.classList.contains('highlight-green') || 
+                         node.classList.contains('highlight-pink'))) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+        const toRemove = [];
+        let node;
+        while (node = walker.nextNode()) {
+            if (range.intersectsNode(node)) {
+                toRemove.push(node);
+            }
+        }
+        toRemove.forEach(span => {
+            const parent = span.parentNode;
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
+            }
+            parent.removeChild(span);
         });
+        window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
     }
@@ -1576,6 +1635,8 @@ class ReadingUIManager {
                 testWrapper.classList.remove('classic-mode');
             }
             localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+            // Force reflow để áp dụng style ngay
+            void document.body.offsetHeight;
         };
 
         const savedMode = localStorage.getItem('pet-mode');
