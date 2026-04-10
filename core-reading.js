@@ -1310,7 +1310,11 @@ class ReadingCore {
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
-        this._isResetting = false;
+        // Thay vì gán false ngay, dùng setTimeout để chắc chắn các event change đã xử lý xong
+        setTimeout(() => {
+            this._isResetting = false;
+            console.log('[Reset] Re-enabled draft saving');
+        }, 200);
         this.updateAnswerCount();
     }
 
