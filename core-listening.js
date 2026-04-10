@@ -326,11 +326,11 @@ class ListeningCore {
      * Setup all event listeners
      */
     setupEventListeners() {
-        // Radio button changes
+        // Radio button changes - lưu NGAY, không debounce
         document.addEventListener('change', (e) => {
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
-                this.saveDraft(); // <-- MỚI
+                this.saveDraftImmediate();
             }
         });
 
