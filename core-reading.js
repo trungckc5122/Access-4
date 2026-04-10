@@ -1262,6 +1262,10 @@ class ReadingCore {
         localStorage.removeItem(completedKey);
         this.clearDraft();
 
+        // Dispatch storage event để dashboard (index.html) cập nhật ngay
+        window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
+        window.dispatchEvent(new StorageEvent('storage', { key: this.getStorageKey(true) }));
+
         this.updateAnswerCount();
     }
 

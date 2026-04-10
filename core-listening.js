@@ -792,8 +792,14 @@ class ListeningCore {
         if (this.currentTestData) {
             const completedKey = this.getStorageKey(false);
             localStorage.removeItem(completedKey);
+            this.clearDraft();
+
+            // Dispatch storage event để dashboard cập nhật
+            window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
+            window.dispatchEvent(new StorageEvent('storage', { key: this.getStorageKey(true) }));
+        } else {
+            this.clearDraft();
         }
-        this.clearDraft();
 
         this.updateAnswerCount();
     }
