@@ -1396,25 +1396,32 @@ class ReadingHighlightManager {
     }
 
     applyHighlight(color) {
-        if (!this.selectedRange) return;
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
         try {
             const span = document.createElement('span');
             span.className = `highlight-${color}`;
             // Use extract/append approach to avoid element-breaking surround failures
-            span.appendChild(this.selectedRange.extractContents());
-            this.selectedRange.insertNode(span);
-        } catch(e) { 
-            console.log("Could not highlight element bound properly.", e); 
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+        } catch(e) {
+            console.log("Could not highlight element bound properly.", e);
         }
+        selection.removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
     }
 
     removeHighlight() {
-        if (!this.selectedRange) return;
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
         // Target specifically our custom highlight spans
         document.querySelectorAll('.highlight-yellow,.highlight-green,.highlight-pink').forEach(h => {
-             if (this.selectedRange.intersectsNode(h)) {
+             if (range.intersectsNode(h)) {
                  const parent = h.parentNode;
                  while (h.firstChild) {
                      parent.insertBefore(h.firstChild, h);
@@ -1422,6 +1429,7 @@ class ReadingHighlightManager {
                  parent.removeChild(h);
              }
         });
+        selection.removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
     }

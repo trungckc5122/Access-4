@@ -898,6 +898,8 @@ class HighlightManager {
             const selection = window.getSelection();
             if (selection.toString().trim()) {
                 e.preventDefault();
+                // Save the selection to restore it later if needed
+                this.savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
                 this.showContextMenu(e.pageX, e.pageY);
             }
         });
