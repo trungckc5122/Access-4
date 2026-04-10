@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Hệ thống ôn tập | Access 4 & PET & Solution</title>
+  <title>Trung tâm ôn tập | Access 4 & PET & Solution</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
     :root {
       --primary: #0d9488;
       --primary-rgb: 13, 148, 136;
-      --text: #0f172a;
+      --text: #0f172a; /* Cực kỳ rõ nét ở light mode */
       --text-muted: #475569;
       --bg-gradient: radial-gradient(circle at top left, #f0fdfa, #f8fafc, #eff6ff);
       --card-bg-rgb: 255, 255, 255;
       --glass-bg: rgba(var(--card-bg-rgb), 0.85);
-      --glass-border: rgba(15, 23, 42, 0.12);
+      --glass-border: rgba(15, 23, 42, 0.12); /* Lồng khung rõ ràng hơn ở chế độ Light */
       --card-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.08);
       --card-hover-shadow: 0 20px 50px -12px rgba(13, 148, 136, 0.15);
       --header-bg: rgba(255, 255, 255, 0.9);
@@ -373,7 +373,7 @@
       transform: translateY(-5px);
       box-shadow: var(--card-hover-shadow);
       border-color: rgba(var(--primary-rgb), 0.2);
-      z-index: 9999 !important;
+      z-index: 9999 !important; /* Đẩy lên cao hẳn so với header (1000) */
     }
     
     summary {
@@ -438,6 +438,18 @@
       padding-left: 20px;
     }
     
+    /* Badge cho links trong details */
+    details li a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    details li a .status-badge {
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+    
     /* Tooltip */
     .module-hover-info, .review-hover-info {
       position: absolute;
@@ -454,7 +466,7 @@
       display: none;
       z-index: 10000;
       box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      pointer-events: auto;
+      pointer-events: auto; /* Cho phép nhận chuột để giữ menu không bị đóng */
       transition: all 0.3s;
       opacity: 0;
     }
@@ -519,18 +531,53 @@
       opacity: 0.5;
     }
 
-    /* Nhãn đã hoàn thành cho PET */
-    .completed-badge {
-      display: inline-block;
-      margin-left: 8px;
-      padding: 2px 8px;
-      background-color: #10b981;
-      color: white;
-      font-size: 11px;
+    /* ========== STATUS BADGES ========== */
+    .status-badge {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 12px;
       font-weight: 700;
-      border-radius: 20px;
-      letter-spacing: 0.3px;
-      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-left: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    
+    .status-badge.completed {
+      background: #dcfce7;
+      color: #16a34a;
+      border: 1px solid #86efac;
+    }
+    
+    .status-badge.in-progress {
+      background: #fef3c7;
+      color: #d97706;
+      border: 1px solid #fcd34d;
+    }
+    
+    [data-theme="dark"] .status-badge.completed {
+      background: #166534;
+      color: #86efac;
+      border-color: #22c55e;
+    }
+    
+    [data-theme="dark"] .status-badge.in-progress {
+      background: #92400e;
+      color: #fcd34d;
+      border-color: #f59e0b;
+    }
+    
+    /* Badge cho details summary */
+    details summary .status-badge {
+      margin-left: auto;
+      margin-right: 12px;
+      order: 1;
+    }
+    
+    details summary::after {
+      order: 2;
     }
 
     footer {
@@ -877,6 +924,7 @@
   }
 
   // ========== 3. DYNAMIC STACKING COORDINATION ==========
+  // Xử lý triệt để lỗi "Stacking Context Trap" do animation tạo ra
   function initGlobalStacking() {
     const main = document.querySelector('main');
     const interactiveElements = document.querySelectorAll('details, .review-button, .test-button');
@@ -895,7 +943,7 @@
     });
   }
   
-  // ========== 4. CHUYỂN TAB (MƯỢT MÀ HƠN) ==========
+  // ========== 3. CHUYỂN TAB (MƯỢT MÀ HƠN) ==========
   function initTabs() {
     const tabs = document.querySelectorAll('.tab-btn');
     const panels = {
@@ -932,7 +980,7 @@
     activateTab(savedTab);
   }
 
-  // ========== 5. DARK MODE LOGIC ==========
+  // ========== 4. DARK MODE LOGIC ==========
   function initTheme() {
     const themeToggle = document.getElementById('theme-toggle');
     const currentTheme = localStorage.getItem('theme');
@@ -962,45 +1010,140 @@
       }
     });
   }
-
-  // ========== 6. ĐÁNH DẤU BÀI PET ĐÃ HOÀN THÀNH ==========
-  function markCompletedPETParts() {
-    // Regex khớp: lis-pet1-test2-part3.html hoặc read-pet2-test4-part1.html
-    const petLinkPattern = /^(lis|read)-pet(\d+)-test(\d+)-part(\d+)\.html$/;
-
-    document.querySelectorAll('a[href]').forEach(link => {
+  
+  // ========== 5. STATUS BADGES - KIỂM TRA DRAFT VÀ COMPLETED ==========
+  function initStatusBadges() {
+    // Parse filename để lấy book, test, part, type
+    function parseTestFromFilename(filename) {
+      // Listening: lis-pet{book}-test{test}-part{part}.html
+      const lisMatch = filename.match(/lis-pet(\d+)-test(\d+)-part(\d+)/i);
+      if (lisMatch) {
+        return {
+          type: 'listening',
+          book: parseInt(lisMatch[1]),
+          test: parseInt(lisMatch[2]),
+          part: parseInt(lisMatch[3])
+        };
+      }
+      // Reading: read-pet{book}-test{test}-part{part}.html
+      const readMatch = filename.match(/read-pet(\d+)-test(\d+)-part(\d+)/i);
+      if (readMatch) {
+        return {
+          type: 'reading',
+          book: parseInt(readMatch[1]),
+          test: parseInt(readMatch[2]),
+          part: parseInt(readMatch[3])
+        };
+      }
+      return null;
+    }
+    
+    // Tạo storage key từ test info
+    function getStorageKey(testInfo, isDraft = false) {
+      const prefix = testInfo.type === 'listening' ? 'pet_listening' : 'pet_reading';
+      let key = `${prefix}_book${testInfo.book}_test${testInfo.test}_part${testInfo.part}`;
+      if (isDraft) key += '_draft';
+      return key;
+    }
+    
+    // Kiểm tra và thêm badge cho một link
+    function checkAndAddBadge(link) {
       const href = link.getAttribute('href');
-      const match = href.match(petLinkPattern);
-      if (!match) return;
-
-      const [, skill, book, test, part] = match;
-      const storageKey = skill === 'lis'
-        ? `pet_listening_book${book}_test${test}_part${part}`
-        : `pet_reading_book${book}_test${test}_part${part}`;
-
-      // Nếu đã có dữ liệu kết quả trong localStorage
-      if (localStorage.getItem(storageKey)) {
-        // Tránh thêm nhiều lần nếu link đã được đánh dấu
-        if (link.querySelector('.completed-badge')) return;
-
-        // Tạo badge
+      if (!href) return;
+      
+      const testInfo = parseTestFromFilename(href);
+      if (!testInfo) return; // Không phải link PET test
+      
+      const completedKey = getStorageKey(testInfo, false);
+      const draftKey = getStorageKey(testInfo, true);
+      
+      const hasCompleted = localStorage.getItem(completedKey) !== null;
+      const hasDraft = localStorage.getItem(draftKey) !== null;
+      
+      // Xóa badge cũ nếu có
+      const existingBadge = link.querySelector('.status-badge');
+      if (existingBadge) existingBadge.remove();
+      
+      // Thêm badge mới
+      if (hasCompleted) {
         const badge = document.createElement('span');
-        badge.className = 'completed-badge';
-        badge.textContent = '✓ đã hoàn thành';
-        
-        // Chèn vào sau nội dung text của link
+        badge.className = 'status-badge completed';
+        badge.innerHTML = '✓ Đã xong';
+        link.appendChild(badge);
+      } else if (hasDraft) {
+        const badge = document.createElement('span');
+        badge.className = 'status-badge in-progress';
+        badge.innerHTML = '⏳ Đang làm';
         link.appendChild(badge);
       }
-    });
+    }
+    
+    // Kiểm tra và thêm badge cho summary của details (tổng hợp)
+    function checkAndAddBadgeForDetails(details) {
+      const summary = details.querySelector('summary');
+      if (!summary) return;
+      
+      const allLinks = details.querySelectorAll('ul li a');
+      let hasCompletedCount = 0;
+      let hasDraftCount = 0;
+      let totalTests = 0;
+      
+      allLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+        
+        const testInfo = parseTestFromFilename(href);
+        if (!testInfo) return;
+        
+        totalTests++;
+        const completedKey = getStorageKey(testInfo, false);
+        const draftKey = getStorageKey(testInfo, true);
+        
+        if (localStorage.getItem(completedKey)) hasCompletedCount++;
+        else if (localStorage.getItem(draftKey)) hasDraftCount++;
+      });
+      
+      // Xóa badge cũ trên summary
+      const existingBadge = summary.querySelector('.status-badge');
+      if (existingBadge) existingBadge.remove();
+      
+      // Thêm badge tổng hợp vào summary
+      if (totalTests > 0) {
+        if (hasCompletedCount === totalTests && totalTests > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'status-badge completed';
+          badge.innerHTML = `✓ ${hasCompletedCount}/${totalTests}`;
+          summary.appendChild(badge);
+        } else if (hasCompletedCount > 0 || hasDraftCount > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'status-badge in-progress';
+          const inProgress = hasCompletedCount + hasDraftCount;
+          badge.innerHTML = `⏳ ${inProgress}/${totalTests}`;
+          summary.appendChild(badge);
+        }
+      }
+    }
+    
+    // Quét tất cả các link và details
+    const petPanel = document.getElementById('pet-panel');
+    if (petPanel) {
+      // Badge cho từng link
+      const links = petPanel.querySelectorAll('a[href*="pet"]');
+      links.forEach(link => checkAndAddBadge(link));
+      
+      // Badge cho details summary
+      const allDetails = petPanel.querySelectorAll('details');
+      allDetails.forEach(details => checkAndAddBadgeForDetails(details));
+    }
   }
-  
+
   document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     enableHoverForAllDetails();
     checkBrokenLinks();
     initTheme();
     initGlobalStacking();
-    markCompletedPETParts(); // Gọi hàm đánh dấu hoàn thành
+    initStatusBadges(); // <-- THÊM DÒNG NÀY
     
     // Hiệu ứng Fade in cho header khi load
     const header = document.querySelector('header');
