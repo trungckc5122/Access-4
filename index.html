@@ -71,7 +71,21 @@
       position: sticky;
       top: 0;
       z-index: 500;
-      transition: all 0.3s ease;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  margin-bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.3s ease;
+    }
+
+    header.collapsed {
+      transform: translateY(-92%); /* Để lại một chút gờ để rê chuột vào */
+      margin-bottom: -150px; /* Thu nhỏ khoảng trống trống (tương đương chiều cao header) */
+      opacity: 0.95;
+    }
+
+    header:hover {
+      transform: translateY(0) !important;
+      margin-bottom: 0 !important;
+      opacity: 1 !important;
     }
 
     .header-inner {
@@ -1842,24 +1856,14 @@
       const interactiveElements = document.querySelectorAll('details, .review-button, .test-button');
 
       interactiveElements.forEach(el => {
-        let scrollTimeout = null;
-
         el.addEventListener('mouseenter', () => {
-          // 1. Stacking context fix
+          // Khi đang hover bài tập, nhấc cả vùng main lên trên header
           main.style.zIndex = '2000';
           main.style.position = 'relative';
-
-          // 2. Auto-scroll logic (with 2000ms debounce)
-          scrollTimeout = setTimeout(() => {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 2000);
         });
 
         el.addEventListener('mouseleave', () => {
-          // 1. Clear scroll timeout to prevent jumpy UI
-          if (scrollTimeout) clearTimeout(scrollTimeout);
-
-          // 2. Restore main stacking
+          // Trả main về mặc định
           main.style.zIndex = 'auto';
           main.style.position = 'static';
         });
@@ -2149,6 +2153,7 @@
       initStatusBadges();
       initDashboardFilters();
       initResumeButton();
+      initHeaderAutoHide();
 
       // Khai báo BroadcastChannel trong DOMContentLoaded để ổn định
       try {
@@ -2383,6 +2388,49 @@
         initStatusBadges();
       }
     });
+
+    // ========== 7. AUTO-HIDE HEADER (SHRINK TECHNIQUE) ==========
+    function initHeaderAutoHide() {
+      const header = document.querySelector('header');
+      if (!header) return;
+
+      let hideTimer = null;
+      const HIDE_DELAY = 5000; // 5 giây
+
+      const collapse = () => {
+        // Không ẩn nếu chuột đang ở trong header
+        if (header.matches(':hover')) return;
+        header.classList.add('collapsed');
+      };
+
+      const expand = () => {
+        header.classList.remove('collapsed');
+        if (hideTimer) clearTimeout(hideTimer);
+      };
+
+      // Sự kiện chuột vào/ra header
+      header.addEventListener('mouseenter', expand);
+      header.addEventListener('mouseleave', () => {
+        if (hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(collapse, HIDE_DELAY);
+      });
+
+      // Mở rộng khi cuộn chuột lên (hữu ích trên mobile/trackpad)
+      let lastScroll = 0;
+      window.addEventListener('scroll', () => {
+        const currentScroll = window.pageYOffset;
+        if (currentScroll < lastScroll && currentScroll > 50) {
+          expand();
+          // Sau khi hiện ra do cuộn, đặt lại timer ẩn
+          if (hideTimer) clearTimeout(hideTimer);
+          hideTimer = setTimeout(collapse, HIDE_DELAY);
+        }
+        lastScroll = currentScroll;
+      }, { passive: true });
+
+      // Khởi động đếm ngược lần đầu
+      hideTimer = setTimeout(collapse, HIDE_DELAY);
+    }
   </script>
 
   <!-- MỚI: Footer & Reset UI (Bên ngoài script) -->
