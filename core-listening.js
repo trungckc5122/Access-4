@@ -6,6 +6,7 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
+ * - Fixed: draft is only saved if at least one answer is non-empty
  */
 
 class ListeningCore {
@@ -19,8 +20,8 @@ class ListeningCore {
         this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
         this.debounceTimer = null;
-        this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
-        this._isResetting = false;
+        this.DEBOUNCE_MS = 300;
+        this._isResetting = false;   // Cờ báo đang trong quá trình reset
     }
 
     /**
@@ -44,13 +45,13 @@ class ListeningCore {
         // Setup event listeners
         this.setupEventListeners();
         
-        // === MỚI: Lưu draft khi rời trang ===
+        // Setup beforeunload and visibility change handlers
         this.setupBeforeUnload();
         
         // Initialize navigation
         this.createNavigation();
         
-        // === MỚI: Khôi phục draft nếu chưa nộp bài ===
+        // Khôi phục draft nếu chưa nộp bài
         if (!this.isCompleted()) {
             this.loadDraft();
         }
@@ -65,14 +66,9 @@ class ListeningCore {
      * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
      */
     isCompleted() {
-        if (!this.currentTestData) {
-            console.log('[Draft] isCompleted: no test data');
-            return false;
-        }
+        if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        const completed = localStorage.getItem(key) !== null;
-        console.log('[Draft] isCompleted check - key:', key, 'completed:', completed);
-        return completed;
+        return localStorage.getItem(key) !== null;
     }
 
     /**
@@ -82,7 +78,6 @@ class ListeningCore {
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
         
-        // Nếu thiếu metadata, parse từ title
         if (!book || !test || !part) {
             const parsed = this.storageManager.parseTestInfo(d.title);
             book = book || parsed.book;
@@ -92,8 +87,6 @@ class ListeningCore {
         
         let key = `pet_listening_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
-        
-        console.log('[Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
     }
 
@@ -111,6 +104,7 @@ class ListeningCore {
 
     /**
      * Lưu nháp vào localStorage (có debounce)
+     * CHỈ LƯU NẾU CÓ ÍT NHẤT MỘT CÂU TRẢ LỜI KHÔNG RỖNG
      */
     saveDraft() {
         if (this.examSubmitted || this._isResetting) {
@@ -128,9 +122,19 @@ class ListeningCore {
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
+                
+                // Chỉ lưu nếu có ít nhất một câu trả lời không rỗng
+                const hasAnyAnswer = Object.values(draft).some(val => val && val.trim() !== '');
+                
                 const key = this.getStorageKey(true);
-                localStorage.setItem(key, JSON.stringify(draft));
-                console.log('[Draft] SAVED to key:', key, 'data:', draft);
+                if (hasAnyAnswer) {
+                    localStorage.setItem(key, JSON.stringify(draft));
+                    console.log('[Draft] SAVED to key:', key, 'data:', draft);
+                } else {
+                    // Nếu không có câu trả lời nào, xóa draft cũ (nếu có)
+                    localStorage.removeItem(key);
+                    console.log('[Draft] No answers, removed draft key:', key);
+                }
             } catch (e) {
                 console.error('[Draft] FAILED to save:', e);
             }
@@ -139,15 +143,24 @@ class ListeningCore {
 
     /**
      * Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang
+     * CHỈ LƯU NẾU CÓ ÍT NHẤT MỘT CÂU TRẢ LỜI KHÔNG RỖNG
      */
     saveDraftImmediate() {
         if (this.examSubmitted || !this.currentTestData || this._isResetting) return;
         clearTimeout(this.debounceTimer);
         try {
             const draft = this.getDraftData();
+            
+            const hasAnyAnswer = Object.values(draft).some(val => val && val.trim() !== '');
+            
             const key = this.getStorageKey(true);
-            localStorage.setItem(key, JSON.stringify(draft));
-            console.log('[Draft] SAVED IMMEDIATELY to key:', key);
+            if (hasAnyAnswer) {
+                localStorage.setItem(key, JSON.stringify(draft));
+                console.log('[Draft] SAVED IMMEDIATELY to key:', key);
+            } else {
+                localStorage.removeItem(key);
+                console.log('[Draft] No answers, removed draft key:', key);
+            }
         } catch (e) {
             console.error('[Draft] Immediate save failed:', e);
         }
@@ -219,22 +232,11 @@ class ListeningCore {
      * Setup UI components and interactions
      */
     setupUI() {
-        // Setup font size controls
         this.uiManager.setupFontControls();
-        
-        // Setup theme toggle
         this.uiManager.setupThemeToggle();
-        
-        // Setup mode toggle (classic/modern)
         this.uiManager.setupModeToggle();
-        
-        // Setup resizer for transcript panel
         this.uiManager.setupResizer();
-        
-        // Setup explanation panel
         this.uiManager.setupExplanationPanel();
-        
-        // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
     }
 
@@ -287,12 +289,10 @@ class ListeningCore {
         const template = this.currentTestData.template;
         container.innerHTML = template;
 
-        // Add eye icons to existing inputs (only if not already present)
         container.querySelectorAll('.fill-input').forEach(input => {
             const questionNum = input.id.replace('q', '');
             const parent = input.parentNode;
 
-            // Check if eye icon already exists
             if (!parent.querySelector('.eye-icon')) {
                 const eyeIcon = document.createElement('span');
                 eyeIcon.className = 'eye-icon';
@@ -305,20 +305,16 @@ class ListeningCore {
 
     /**
      * Setup handlers để lưu draft khi rời trang
-     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
      */
     setupBeforeUnload() {
-        // 1. beforeunload - desktop browsers thông thường
         window.addEventListener('beforeunload', () => {
             this.saveDraftImmediate();
         });
 
-        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
         window.addEventListener('pagehide', () => {
             this.saveDraftImmediate();
         });
 
-        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 this.saveDraftImmediate();
@@ -330,7 +326,7 @@ class ListeningCore {
      * Setup all event listeners
      */
     setupEventListeners() {
-        // Radio button changes - lưu NGAY, không debounce
+        // Radio button changes
         document.addEventListener('change', (e) => {
             if (this._isResetting) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
@@ -352,36 +348,24 @@ class ListeningCore {
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.addEventListener('click', () => {
-                console.log('[UI] Submit button clicked');
                 this.handleSubmit();
             });
-            console.log('[UI] Submit event attached');
-        } else {
-            console.error('[UI] submitBtn not found');
         }
 
         // Explain button
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.addEventListener('click', () => {
-                console.log('[UI] Explain button clicked');
                 this.handleExplain();
             });
-            console.log('[UI] Explain event attached');
-        } else {
-            console.error('[UI] explainBtn not found');
         }
 
         // Reset button
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                console.log('[UI] Reset button clicked');
                 this.handleReset();
             });
-            console.log('[UI] Reset event attached');
-        } else {
-            console.error('[UI] resetBtn not found');
         }
 
         // Eye icon clicks
@@ -485,7 +469,6 @@ class ListeningCore {
         const correctAnswer = this.currentTestData.answerKey[`q${questionNum}`];
         
         if (Array.isArray(correctAnswer)) {
-            // Handle multiple possible answers
             return correctAnswer.includes(userAnswer);
         } else {
             return userAnswer === correctAnswer;
@@ -505,7 +488,6 @@ class ListeningCore {
 
         const total = questionRange.end - questionRange.start + 1;
         
-        // Update badges
         const answeredBadge = document.getElementById('answeredCount');
         if (answeredBadge) {
             answeredBadge.textContent = `${answered}/${total} answered`;
@@ -516,7 +498,6 @@ class ListeningCore {
             progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
         }
 
-        // Update navigation buttons
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
             if (btn) {
@@ -556,18 +537,13 @@ class ListeningCore {
     submitExam() {
         this.examSubmitted = true;
 
-        // Expand header/footer when submitted (don't auto-collapse)
         document.querySelector('.ielts-header')?.classList.remove('collapsed');
         document.querySelector('.question-nav')?.classList.remove('collapsed');
         document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
-        // Show transcript
         this.showTranscript();
-
-        // Mark answers
         this.markAnswers();
 
-        // Update UI
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -579,16 +555,13 @@ class ListeningCore {
             explainBtn.disabled = false;
         }
 
-        // Calculate and show results
         this.showResults();
 
-        // Save to dashboard
         this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
         
-        // === MỚI: Xóa draft sau khi nộp bài ===
+        // Xóa draft sau khi nộp bài
         this.clearDraft();
 
-        // Disable inputs
         this.disableInputs();
     }
 
@@ -615,12 +588,10 @@ class ListeningCore {
             const userAnswer = this.getUserAnswer(i);
             const isCorrect = this.isAnswerCorrect(i, userAnswer);
 
-            // Handle multiple-choice questions
             const questionDiv = document.getElementById(`question-${i}`);
             if (questionDiv) {
                 questionDiv.classList.remove('correct', 'incorrect');
                 
-                // Remove existing badge
                 const oldBadge = questionDiv.querySelector('.correct-answer-badge');
                 if (oldBadge) oldBadge.remove();
 
@@ -629,7 +600,6 @@ class ListeningCore {
                 } else {
                     questionDiv.classList.add('incorrect');
                     
-                    // Show correct answer badge
                     const badge = document.createElement('span');
                     badge.className = 'correct-answer-badge';
                     const correctAnswer = this.currentTestData.displayAnswers[`q${i}`];
@@ -638,13 +608,11 @@ class ListeningCore {
                 }
             }
 
-            // Handle fill-in-the-blank questions
             const input = document.getElementById(`q${i}`);
             if (input) {
                 input.classList.remove('correct', 'incorrect');
                 const wrapper = input.closest('.blank-line');
                 
-                // Remove existing badge from wrapper
                 if (wrapper) {
                     const oldBadge = wrapper.querySelector('.correct-answer-badge');
                     if (oldBadge) oldBadge.remove();
@@ -655,7 +623,6 @@ class ListeningCore {
                 } else {
                     input.classList.add('incorrect');
                     if (wrapper) {
-                        // Show correct answer badge next to input
                         const badge = document.createElement('span');
                         badge.className = 'correct-answer-badge';
                         const correctAnswer = this.currentTestData.displayAnswers[`q${i}`];
@@ -705,7 +672,6 @@ class ListeningCore {
 
         this.explanationMode = true;
         
-        // Show eye icons and answer badges
         document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => {
             el.style.display = 'inline-block';
         });
@@ -726,7 +692,6 @@ class ListeningCore {
      * Handle reset button click
      */
     handleReset() {
-        console.log('[handleReset] called');
         this.resetAll();
     }
 
@@ -737,12 +702,7 @@ class ListeningCore {
         console.log('[resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
-        // ========== KHÓA CỨNG LƯU DRAFT ==========
-        const originalSaveDraft = this.saveDraft;
-        const originalSaveDraftImmediate = this.saveDraftImmediate;
-        this.saveDraft = function() {};
-        this.saveDraftImmediate = function() {};
-
+        // Bật cờ đang reset để ngăn mọi hành động lưu draft
         this._isResetting = true;
 
         const book = this.currentTestData.book || 1;
@@ -752,17 +712,19 @@ class ListeningCore {
         const completedKey = `pet_listening_book${book}_test${test}_part${part}`;
         const draftKey = completedKey + '_draft';
 
+        // Xóa cả kết quả đã nộp và draft
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         console.log('[Reset] Deleted completedKey:', completedKey);
         console.log('[Reset] Deleted draftKey:', draftKey);
 
-        // === Reset UI ===
+        // Reset trạng thái
         this.examSubmitted = false;
         this.explanationMode = false;
 
         const questionRange = this.getQuestionRange();
 
+        // Xóa tất cả câu trả lời trên giao diện
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             if (this.currentTestData.type === 'multiple-choice') {
                 const radios = document.getElementsByName(`q${i}`);
@@ -778,7 +740,7 @@ class ListeningCore {
                 }
             }
 
-            // Xóa class correct/incorrect và badge
+            // Xóa class và badge cho multiple-choice
             const questionDiv = document.getElementById(`question-${i}`);
             if (questionDiv) {
                 questionDiv.classList.remove('correct', 'incorrect');
@@ -786,6 +748,7 @@ class ListeningCore {
                 if (badge) badge.remove();
             }
 
+            // Xóa badge cho fill-blank
             if (this.currentTestData.type === 'fill-blank') {
                 const input = document.getElementById(`q${i}`);
                 if (input) {
@@ -799,7 +762,7 @@ class ListeningCore {
             }
         }
 
-        // Hide transcript
+        // Ẩn transcript
         const mainArea = document.getElementById('mainArea');
         const transcriptContent = document.getElementById('transcriptContent');
         if (mainArea && transcriptContent) {
@@ -807,14 +770,15 @@ class ListeningCore {
             transcriptContent.innerHTML = '';
         }
 
-        // Hide eye icons
+        // Ẩn eye icons
         document.querySelectorAll('.eye-icon').forEach(icon => {
             icon.style.display = 'none';
         });
 
+        // Xóa highlight
         this.highlightManager.clearAllHighlights();
 
-        // Reset buttons
+        // Kích hoạt lại nút
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -832,7 +796,7 @@ class ListeningCore {
             explanationPanel.classList.remove('show');
         }
 
-        // Gửi BroadcastChannel
+        // Gửi tín hiệu reset qua BroadcastChannel để index cập nhật badge
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
             channel.postMessage({ action: 'reset', type: 'listening', book, test, part });
@@ -841,10 +805,8 @@ class ListeningCore {
             console.warn('BroadcastChannel error:', e);
         }
 
-        // ========== KHÔI PHỤC LƯU DRAFT ==========
+        // Tắt cờ reset sau khi mọi thứ đã hoàn tất (dùng setTimeout để tránh sự kiện đồng bộ)
         setTimeout(() => {
-            this.saveDraft = originalSaveDraft;
-            this.saveDraftImmediate = originalSaveDraftImmediate;
             this._isResetting = false;
             console.log('[Reset] Draft saving re-enabled');
         }, 0);
@@ -858,13 +820,9 @@ class ListeningCore {
     showExplanation(questionNum) {
         if (!this.explanationMode && !this.examSubmitted) return;
 
-        // Clear previous highlights
         this.highlightManager.clearAllHighlights();
-
-        // Highlight transcript sections
         this.highlightManager.highlightQuestion(questionNum);
 
-        // Show explanation panel
         const explanationPanel = document.getElementById('explanationPanel');
         const explanationTitle = document.getElementById('explanationTitle');
         const explanationText = document.getElementById('explanationText');
@@ -936,6 +894,8 @@ class ListeningCore {
     }
 }
 
+// ==================== CÁC LỚP HỖ TRỢ ====================
+
 /**
  * Highlight Manager - Handles transcript highlighting
  */
@@ -944,19 +904,13 @@ class HighlightManager {
         this.setupContextMenu();
     }
 
-    /**
-     * Setup context menu for manual highlighting
-     * FIXED: Use event delegation to handle dynamic DOM changes and allow highlighting in questions
-     */
     setupContextMenu() {
         document.addEventListener('contextmenu', (e) => {
-            // Kiểm tra target có nằm trong vùng transcript hoặc vùng câu hỏi không
             const highlightArea = e.target.closest('#transcriptContent, .transcript-content, .reading-content, #questionsContainer, .questions-panel, .question-item, .questions-list, #mainArea');
             if (highlightArea) {
                 const selection = window.getSelection();
                 if (selection.toString().trim()) {
                     e.preventDefault();
-                    // Save the selection to use when applying highlight
                     this.savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
                     this.showContextMenu(e.pageX, e.pageY);
                 }
@@ -971,9 +925,6 @@ class HighlightManager {
         });
     }
 
-    /**
-     * Show context menu
-     */
     showContextMenu(x, y) {
         const contextMenu = document.getElementById('contextMenu');
         if (contextMenu) {
@@ -983,9 +934,6 @@ class HighlightManager {
         }
     }
 
-    /**
-     * Highlight question in transcript
-     */
     highlightQuestion(questionNum) {
         const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
         
@@ -998,7 +946,6 @@ class HighlightManager {
             span.classList.add('keyword-highlight');
             span.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // Add scroll highlight effect
             span.classList.add('scroll-highlight');
             setTimeout(() => {
                 span.classList.remove('scroll-highlight');
@@ -1006,9 +953,6 @@ class HighlightManager {
         });
     }
 
-    /**
-     * Clear all highlights
-     */
     clearAllHighlights() {
         document.querySelectorAll('.transcript-highlight').forEach(el => {
             el.classList.remove('transcript-highlight');
@@ -1019,10 +963,6 @@ class HighlightManager {
         });
     }
 
-    /**
-     * Apply manual highlight
-     * FIXED: Use saved range when available
-     */
     applyHighlight(color) {
         let range = this.savedRange;
         if (!range) {
@@ -1037,7 +977,6 @@ class HighlightManager {
         try {
             range.surroundContents(span);
         } catch (e) {
-            // Handle complex selections
             const contents = range.extractContents();
             span.appendChild(contents);
             range.insertNode(span);
@@ -1048,10 +987,6 @@ class HighlightManager {
         this.savedRange = null;
     }
 
-    /**
-     * Remove manual highlight
-     * FIXED: Use saved range and TreeWalker on commonAncestorContainer
-     */
     removeHighlight() {
         let range = this.savedRange;
         if (!range) {
@@ -1060,7 +995,6 @@ class HighlightManager {
             range = selection.getRangeAt(0);
         }
 
-        // Tìm tất cả các highlight span nằm trong range
         const walker = document.createTreeWalker(
             range.commonAncestorContainer,
             NodeFilter.SHOW_ELEMENT,
@@ -1098,9 +1032,6 @@ class HighlightManager {
         this.savedRange = null;
     }
 
-    /**
-     * Hide context menu
-     */
     hideContextMenu() {
         const contextMenu = document.getElementById('contextMenu');
         if (contextMenu) {
@@ -1113,9 +1044,6 @@ class HighlightManager {
  * Storage Manager - Handles saving results to localStorage
  */
 class StorageManager {
-    /**
-     * Save test results to localStorage
-     */
     saveResults(testData, userAnswers) {
         const details = [];
         let correctCount = 0;
@@ -1152,9 +1080,6 @@ class StorageManager {
         console.log(`Results saved with key: ${key}`);
     }
 
-    /**
-     * Get question range from test data
-     */
     getQuestionRange(testData) {
         const questions = testData.questions;
         const numbers = questions.map(q => q.num).sort((a, b) => a - b);
@@ -1164,9 +1089,6 @@ class StorageManager {
         };
     }
 
-    /**
-     * Check if answer is correct
-     */
     checkAnswer(userAnswer, correctAnswer) {
         if (!userAnswer) return false;
         
@@ -1177,9 +1099,6 @@ class StorageManager {
         }
     }
 
-    /**
-     * Parse test information from title
-     */
     parseTestInfo(title) {
         let book = 1, test = 1, part = 1;
         
@@ -1200,9 +1119,6 @@ class StorageManager {
  * UI Manager - Handles UI interactions and controls
  */
 class UIManager {
-    /**
-     * Setup font size controls
-     */
     setupFontControls() {
         const fontButtons = {
             fontSmall: 'small',
@@ -1217,15 +1133,10 @@ class UIManager {
             }
         });
 
-        // Set default large font
         this.setFontSize('large');
     }
 
-    /**
-     * Set font size
-     */
     setFontSize(size) {
-        // Update button states
         document.querySelectorAll('.font-btn').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -1235,7 +1146,6 @@ class UIManager {
             activeBtn.classList.add('active');
         }
 
-        // Update content font sizes
         document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
             el.className = `transcript-content font-${size}`;
             if (el.classList.contains('questions-list')) {
@@ -1244,9 +1154,6 @@ class UIManager {
         });
     }
 
-    /**
-     * Setup theme toggle
-     */
     setupThemeToggle() {
         const themeToggle = document.getElementById('themeToggle');
         if (!themeToggle) return;
@@ -1259,14 +1166,10 @@ class UIManager {
             localStorage.setItem('theme', newTheme);
         });
 
-        // Load saved theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
     }
 
-    /**
-     * Setup mode toggle (classic/modern)
-     */
     setupModeToggle() {
         const modeToggle = document.getElementById('modeToggle');
         const styleLink = document.getElementById('styleLink');
@@ -1277,23 +1180,17 @@ class UIManager {
 
         function setMode(isClassic) {
             if (isClassic) {
-                // Switch to classic mode
                 styleLink.href = styleLink.href.replace('listening-pet-common.css', 'listening-pet-common1.css');
-                // Hide theme toggle in classic mode
                 if (themeToggle) themeToggle.style.display = 'none';
-                // Remove dark theme
                 html.removeAttribute('data-theme');
                 localStorage.removeItem('pet-theme');
             } else {
-                // Switch to modern mode
                 styleLink.href = styleLink.href.replace('listening-pet-common1.css', 'listening-pet-common.css');
-                // Show theme toggle in modern mode
                 if (themeToggle) themeToggle.style.display = 'flex';
             }
             localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
         }
 
-        // Restore saved mode
         const savedMode = localStorage.getItem('pet-mode');
         if (savedMode === 'classic') {
             modeToggle.checked = true;
@@ -1308,9 +1205,6 @@ class UIManager {
         });
     }
 
-    /**
-     * Setup resizer for transcript panel
-     */
     setupResizer() {
         const transcriptPanel = document.getElementById('transcriptPanel');
         const questionsPanel = document.getElementById('questionsPanel');
@@ -1347,9 +1241,6 @@ class UIManager {
         });
     }
 
-    /**
-     * Setup explanation panel
-     */
     setupExplanationPanel() {
         const explanationPanel = document.getElementById('explanationPanel');
         const explanationResizer = document.getElementById('explanationResizer');
@@ -1381,9 +1272,6 @@ class UIManager {
         });
     }
 
-    /**
-     * Setup auto-collapse for header and footer after 5s of mouse leave
-     */
     setupAutoCollapse(coreInstance) {
         const header = document.querySelector('.ielts-header');
         const footer = document.querySelector('.bottom-bar');
@@ -1391,12 +1279,11 @@ class UIManager {
         
         if (!header && !footer) return;
 
-        // Add toggle button to header
         this.addAutoCollapseToggle(header, coreInstance);
 
         let headerTimer = null;
         let footerTimer = null;
-        const COLLAPSE_DELAY = 5000; // 5 seconds
+        const COLLAPSE_DELAY = 5000;
 
         const isAutoCollapseEnabled = () => {
             return localStorage.getItem('pet-autocollapse-enabled') !== 'false';
@@ -1422,7 +1309,6 @@ class UIManager {
             footer?.classList.remove('collapsed');
         };
 
-        // Header hover handling
         if (header) {
             header.addEventListener('mouseenter', () => {
                 clearTimeout(headerTimer);
@@ -1435,7 +1321,6 @@ class UIManager {
             });
         }
 
-        // Question nav hover handling - hover to expand header, but don't collapse question nav itself
         if (questionNav) {
             questionNav.addEventListener('mouseenter', () => {
                 clearTimeout(headerTimer);
@@ -1448,7 +1333,6 @@ class UIManager {
             });
         }
 
-        // Footer hover handling
         if (footer) {
             footer.addEventListener('mouseenter', () => {
                 clearTimeout(footerTimer);
@@ -1461,7 +1345,6 @@ class UIManager {
             });
         }
 
-        // Start collapsed after initial delay only if enabled
         setTimeout(() => {
             if (!coreInstance.examSubmitted && isAutoCollapseEnabled()) {
                 collapseHeader();
@@ -1470,20 +1353,14 @@ class UIManager {
         }, COLLAPSE_DELAY);
     }
 
-    /**
-     * Add auto-collapse toggle button to header
-     */
     addAutoCollapseToggle(header, coreInstance) {
         if (!header) return;
-        
-        // Check if toggle already exists
         if (header.querySelector('.autocollapse-toggle')) return;
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'autocollapse-toggle';
         toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
         
-        // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
         const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
         </svg>`;
@@ -1504,13 +1381,11 @@ class UIManager {
             toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
             
             if (!newEnabled) {
-                // Expand header and footer when disabled (keep question-nav visible)
                 header?.classList.remove('collapsed');
                 document.querySelector('.bottom-bar')?.classList.remove('collapsed');
             }
         });
 
-        // Find a good place to insert the button - right after mode toggle (modern/classic)
         const modeToggle = header.querySelector('#modeToggleContainer');
         const themeToggle = header.querySelector('.theme-toggle-btn');
         
@@ -1538,5 +1413,4 @@ window.removeHighlight = function() {
 };
 
 // Export for use in HTML files
-window.ListeningCore = ListeningCore;
 window.ListeningCore = ListeningCore;
