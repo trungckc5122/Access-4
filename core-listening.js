@@ -769,17 +769,23 @@ class ListeningCore {
         console.log('[resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
-        const book = this.currentTestData.book || 1;
-        const test = this.currentTestData.test || 1;
-        const part = this.currentTestData.part || 1;
-
-        const completedKey = `pet_listening_book${book}_test${test}_part${part}`;
-        const draftKey = completedKey + '_draft';
+        const completedKey = this.getStorageKey(false);
+        const draftKey = this.getStorageKey(true);
 
         // ✅ FIX: Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        console.log('[Reset] Deleted keys:', completedKey, draftKey);
+        console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
+
+        // ✅ FIX: Get book/test/part for BroadcastChannel
+        const d = this.currentTestData;
+        let book = d.book, test = d.test, part = d.part;
+        if (!book || !test || !part) {
+            const parsed = this.storageManager.parseTestInfo(d.title);
+            book = book || parsed.book;
+            test = test || parsed.test;
+            part = part || parsed.part;
+        }
 
         // ✅ FIX: SET FLAG TRƯỚC KHI LÀM ĐIỀU GÌ KHÁC
         this._isResetting = true;
