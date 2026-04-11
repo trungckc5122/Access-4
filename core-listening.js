@@ -6,7 +6,7 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
- * - ✅ FIX: Fixed autosave issue when resetting (v2.1)
+ * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
  */
 
 class ListeningCore {
@@ -111,7 +111,8 @@ class ListeningCore {
     }
 
     /**
-     * Lưu nháp vào localStorage (có debounce)
+     * ✅ FIX v2.1: Lưu nháp vào localStorage (có debounce)
+     * Thêm kiểm tra: 1. _isResetting early return
      */
     saveDraft() {
         if (this.examSubmitted || this._isResetting) {
@@ -148,28 +149,10 @@ class ListeningCore {
             console.log('[Draft] Blocked: currently resetting');
             return;
         }
-        
-        if (this.examSubmitted || !this.currentTestData) {
-            console.log('[Draft] Blocked: exam submitted or no test data');
-            return;
-        }
-        
+        if (this.examSubmitted || !this.currentTestData) return;
         clearTimeout(this.debounceTimer);
-        
         try {
             const draft = this.getDraftData();
-            
-            // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
-            // Nếu tất cả answer đều null/undefined/'' thì không lưu
-            const hasAnswers = Object.values(draft).some(v => {
-                return v !== null && v !== undefined && v !== '';
-            });
-            
-            if (!hasAnswers) {
-                console.log('[Draft] No answers to save, skipping immediate save');
-                return;  // ✅ Không lưu nếu trống!
-            }
-            
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Draft] SAVED IMMEDIATELY to key:', key);
@@ -306,48 +289,32 @@ class ListeningCore {
     }
 
     /**
-     * Render fill blank questions (Part 3)
+     * Render fill-in-the-blank questions (Part 3)
      */
     renderFillBlankQuestions(container) {
-        this.currentTestData.questions.forEach(q => {
-            const div = document.createElement('div');
-            div.className = 'question-item';
-            div.id = `question-${q.num}`;
-            
-            div.innerHTML = `
-                <div class="question-text">${q.num}. ${q.text}</div>
-                <div class="blank-line">
-                    <input type="text" id="q${q.num}" class="fill-input" placeholder="Nhập câu trả lời...">
-                    <span class="eye-icon" data-question="${q.num}">👁️</span>
-                </div>
-            `;
-            
-            container.appendChild(div);
+        const template = this.currentTestData.template;
+        container.innerHTML = template;
+
+        // Add eye icons to existing inputs (only if not already present)
+        container.querySelectorAll('.fill-input').forEach(input => {
+            const questionNum = input.id.replace('q', '');
+            const parent = input.parentNode;
+
+            // Check if eye icon already exists
+            if (!parent.querySelector('.eye-icon')) {
+                const eyeIcon = document.createElement('span');
+                eyeIcon.className = 'eye-icon';
+                eyeIcon.setAttribute('data-question', questionNum);
+                eyeIcon.textContent = '👁️';
+                parent.appendChild(eyeIcon);
+            }
         });
     }
 
     /**
-     * Get question range for current part
-     */
-    getQuestionRange() {
-        const part = this.currentTestData.part;
-        
-        if (this.currentTestData.type === 'multiple-choice') {
-            switch(part) {
-                case 1: return { start: 1, end: 7 };
-                case 2: return { start: 8, end: 13 };
-                case 4: return { start: 25, end: 30 };
-                default: return { start: 1, end: 30 };
-            }
-        } else if (this.currentTestData.type === 'fill-blank') {
-            return { start: 14, end: 24 };
-        }
-        
-        return { start: 1, end: 30 };
-    }
-
-    /**
-     * ✅ FIX v2.1: Setup before unload - kiểm tra _isResetting trong mỗi listener
+     * Setup handlers để lưu draft khi rời trang
+     * ✅ FIX v2.1: Thêm kiểm tra _isResetting vào mỗi listener
+     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
      */
     setupBeforeUnload() {
         // 1. beforeunload - desktop browsers
@@ -360,7 +327,7 @@ class ListeningCore {
             }
         });
 
-        // 2. pagehide - iOS Safari, bfcache
+        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
         window.addEventListener('pagehide', () => {
             // ✅ FIX: Kiểm tra _isResetting
             if (!this._isResetting) {
@@ -370,7 +337,7 @@ class ListeningCore {
             }
         });
 
-        // 3. visibilitychange - chuyển tab, minimize, mobile app background
+        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
         document.addEventListener('visibilitychange', () => {
             // ✅ FIX: Kiểm tra visibility STATE và _isResetting
             if (document.visibilityState === 'hidden' && !this._isResetting) {
@@ -382,7 +349,7 @@ class ListeningCore {
     }
 
     /**
-     * Setup all event listeners
+     * ✅ FIX v2.1: Setup event listeners - kiểm tra _isResetting
      */
     setupEventListeners() {
         // Radio button changes - lưu NGAY, không debounce
@@ -407,45 +374,24 @@ class ListeningCore {
             }
             if (e.target && e.target.matches('.fill-input')) {
                 this.updateAnswerCount();
-                this.saveDraft();
+                this.saveDraft(); // Debounce: lưu sau 0.3s
             }
         });
 
         // Submit button
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => {
-                console.log('[UI] Submit button clicked');
-                this.handleSubmit();
-            });
-            console.log('[UI] Submit event attached');
-        } else {
-            console.error('[UI] submitBtn not found');
-        }
+        document.getElementById('submitBtn')?.addEventListener('click', () => {
+            this.handleSubmit();
+        });
 
         // Explain button
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) {
-            explainBtn.addEventListener('click', () => {
-                console.log('[UI] Explain button clicked');
-                this.handleExplain();
-            });
-            console.log('[UI] Explain event attached');
-        } else {
-            console.error('[UI] explainBtn not found');
-        }
+        document.getElementById('explainBtn')?.addEventListener('click', () => {
+            this.handleExplain();
+        });
 
         // Reset button
-        const resetBtn = document.getElementById('resetBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                console.log('[UI] Reset button clicked');
-                this.handleReset();
-            });
-            console.log('[UI] Reset event attached');
-        } else {
-            console.error('[UI] resetBtn not found');
-        }
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+            this.handleReset();
+        });
 
         // Eye icon clicks
         document.addEventListener('click', (e) => {
@@ -462,37 +408,130 @@ class ListeningCore {
     }
 
     /**
-     * Get user answer for specific question
+     * Create navigation buttons
+     */
+    createNavigation() {
+        const nav = document.getElementById('navButtons');
+        if (!nav || !this.currentTestData) return;
+
+        nav.innerHTML = '';
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn unanswered';
+            btn.textContent = i;
+            btn.dataset.question = i;
+            
+            btn.addEventListener('click', () => {
+                this.scrollToQuestion(i);
+                this.setActiveNavButton(i);
+            });
+            
+            nav.appendChild(btn);
+        }
+    }
+
+    /**
+     * Get question range based on current test
+     */
+    getQuestionRange() {
+        if (!this.currentTestData) return { start: 1, end: 7 };
+        
+        const questions = this.currentTestData.questions;
+        const numbers = questions.map(q => q.num).sort((a, b) => a - b);
+        return {
+            start: numbers[0] || 1,
+            end: numbers[numbers.length - 1] || 7
+        };
+    }
+
+    /**
+     * Scroll to specific question
+     */
+    scrollToQuestion(questionNum) {
+        const questionElement = document.getElementById(`question-${questionNum}`);
+        if (questionElement) {
+            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    /**
+     * Set active navigation button
+     */
+    setActiveNavButton(questionNum) {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    /**
+     * Get user's answer for a question
      */
     getUserAnswer(questionNum) {
         if (this.currentTestData.type === 'multiple-choice') {
-            const radio = document.querySelector(`input[name="q${questionNum}"]:checked`);
-            return radio ? radio.value : null;
+            const radios = document.getElementsByName(`q${questionNum}`);
+            for (let radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return null;
         } else if (this.currentTestData.type === 'fill-blank') {
             const input = document.getElementById(`q${questionNum}`);
-            return input ? input.value.trim() : null;
+            return input ? input.value.trim().toLowerCase() : null;
         }
         return null;
     }
 
     /**
-     * Update answer count display
+     * Check if answer is correct
+     */
+    isAnswerCorrect(questionNum, userAnswer) {
+        const correctAnswer = this.currentTestData.answerKey[`q${questionNum}`];
+        
+        if (Array.isArray(correctAnswer)) {
+            // Handle multiple possible answers
+            return correctAnswer.includes(userAnswer);
+        } else {
+            return userAnswer === correctAnswer;
+        }
+    }
+
+    /**
+     * Update answer count and navigation colors
      */
     updateAnswerCount() {
         const questionRange = this.getQuestionRange();
-        let answeredCount = 0;
-        
+        let answered = 0;
+
         for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const answer = this.getUserAnswer(i);
-            if (answer !== null && answer !== '') {
-                answeredCount++;
-            }
+            if (this.getUserAnswer(i)) answered++;
         }
-        
+
         const total = questionRange.end - questionRange.start + 1;
-        const answerCountDisplay = document.getElementById('answerCount');
-        if (answerCountDisplay) {
-            answerCountDisplay.textContent = `${answeredCount}/${total}`;
+        
+        // Update badges
+        const answeredBadge = document.getElementById('answeredCount');
+        if (answeredBadge) {
+            answeredBadge.textContent = `${answered}/${total} answered`;
+        }
+
+        const progressDisplay = document.getElementById('progressDisplay');
+        if (progressDisplay) {
+            progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
+        }
+
+        // Update navigation buttons
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`);
+            if (btn) {
+                btn.classList.remove('answered', 'unanswered');
+                btn.classList.add(this.getUserAnswer(i) ? 'answered' : 'unanswered');
+            }
         }
     }
 
@@ -500,133 +539,171 @@ class ListeningCore {
      * Handle submit button click
      */
     handleSubmit() {
-        console.log('[handleSubmit] called');
-        
-        if (this.examSubmitted) {
-            console.log('[Submit] Already submitted');
-            return;
+        if (this.examSubmitted) return;
+
+        const questionRange = this.getQuestionRange();
+        const unanswered = [];
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            if (!this.getUserAnswer(i)) {
+                unanswered.push(i);
+            }
         }
 
-        const answers = this.collectAnswers();
-        
-        // Mark as submitted
+        if (unanswered.length > 0) {
+            if (!confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) {
+                return;
+            }
+        }
+
+        this.submitExam();
+    }
+
+    /**
+     * Submit the exam
+     */
+    submitExam() {
         this.examSubmitted = true;
 
-        // Save result to localStorage
-        const resultData = {
-            title: this.currentTestData.title,
-            answers: answers,
-            correctCount: this.calculateCorrectCount(answers),
-            totalQuestions: this.currentTestData.questions.length,
-            timestamp: new Date().toISOString()
-        };
+        // Expand header/footer when submitted (don't auto-collapse)
+        document.querySelector('.ielts-header')?.classList.remove('collapsed');
+        document.querySelector('.question-nav')?.classList.remove('collapsed');
+        document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
-        const key = this.getStorageKey(false);
-        localStorage.setItem(key, JSON.stringify(resultData));
-        console.log('[Submit] Result saved to key:', key);
+        // Show transcript
+        this.showTranscript();
 
-        // Remove draft after submission
-        this.clearDraft();
+        // Mark answers
+        this.markAnswers();
 
-        // Show results
-        this.showResults(answers);
-
-        // Enable explain button
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) {
-            explainBtn.disabled = false;
-            explainBtn.textContent = 'Xem giải thích';
-        }
-
-        // Disable submit button
+        // Update UI
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Đã nộp bài';
+            submitBtn.textContent = 'Đã nộp';
         }
 
-        // Send broadcast to update other tabs
-        try {
-            const channel = new BroadcastChannel('pet_reset_channel');
-            const d = this.currentTestData;
-            channel.postMessage({ action: 'submit', type: 'listening', book: d.book, test: d.test, part: d.part });
-            channel.close();
-        } catch(e) {
-            console.warn('BroadcastChannel error:', e);
+        const explainBtn = document.getElementById('explainBtn');
+        if (explainBtn) {
+            explainBtn.disabled = false;
+        }
+
+        // Calculate and show results
+        this.showResults();
+
+        // Save to dashboard
+        this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
+        
+        // === MỚI: Xóa draft sau khi nộp bài ===
+        this.clearDraft();
+
+        // Disable inputs
+        this.disableInputs();
+    }
+
+    /**
+     * Show transcript panel
+     */
+    showTranscript() {
+        const mainArea = document.getElementById('mainArea');
+        const transcriptContent = document.getElementById('transcriptContent');
+        
+        if (mainArea && transcriptContent && this.currentTestData.transcript) {
+            mainArea.classList.add('show-transcript');
+            transcriptContent.innerHTML = this.currentTestData.transcript;
         }
     }
 
     /**
-     * Collect all user answers
+     * Mark answers as correct/incorrect
      */
-    collectAnswers() {
-        const questionRange = this.getQuestionRange();
-        const answers = {};
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            answers[i] = this.getUserAnswer(i);
-        }
-        
-        return answers;
-    }
-
-    /**
-     * Calculate correct count
-     */
-    calculateCorrectCount(userAnswers) {
-        let correctCount = 0;
-        
-        for (const q of this.currentTestData.questions) {
-            const userAnswer = userAnswers[q.num];
-            if (userAnswer === q.correctAnswer) {
-                correctCount++;
-            }
-        }
-        
-        return correctCount;
-    }
-
-    /**
-     * Show results after submission
-     */
-    showResults(userAnswers) {
+    markAnswers() {
         const questionRange = this.getQuestionRange();
 
         for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const userAnswer = userAnswers[i];
-            const question = this.currentTestData.questions.find(q => q.num === i);
-            
-            if (!question) continue;
-            
-            const isCorrect = userAnswer === question.correctAnswer;
+            const userAnswer = this.getUserAnswer(i);
+            const isCorrect = this.isAnswerCorrect(i, userAnswer);
+
+            // Handle multiple-choice questions
             const questionDiv = document.getElementById(`question-${i}`);
-            
             if (questionDiv) {
-                // Add correct/incorrect class
-                questionDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
+                questionDiv.classList.remove('correct', 'incorrect');
                 
-                // Add correct answer badge
-                const badge = document.createElement('span');
-                badge.className = 'correct-answer-badge';
-                badge.innerHTML = `✓ ${question.correctAnswer}`;
-                
-                if (this.currentTestData.type === 'multiple-choice') {
+                // Remove existing badge
+                const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+                if (oldBadge) oldBadge.remove();
+
+                if (isCorrect) {
+                    questionDiv.classList.add('correct');
+                } else {
+                    questionDiv.classList.add('incorrect');
+                    
+                    // Show correct answer badge
+                    const badge = document.createElement('span');
+                    badge.className = 'correct-answer-badge';
+                    const correctAnswer = this.currentTestData.displayAnswers[`q${i}`];
+                    badge.textContent = correctAnswer;
                     questionDiv.appendChild(badge);
-                } else if (this.currentTestData.type === 'fill-blank') {
-                    const input = document.getElementById(`q${i}`);
-                    if (input) {
-                        input.classList.add(isCorrect ? 'correct' : 'incorrect');
-                        const wrapper = input.closest('.blank-line');
-                        if (wrapper) {
-                            wrapper.appendChild(badge);
-                        }
+                }
+            }
+
+            // Handle fill-in-the-blank questions
+            const input = document.getElementById(`q${i}`);
+            if (input) {
+                input.classList.remove('correct', 'incorrect');
+                const wrapper = input.closest('.blank-line');
+                
+                // Remove existing badge from wrapper
+                if (wrapper) {
+                    const oldBadge = wrapper.querySelector('.correct-answer-badge');
+                    if (oldBadge) oldBadge.remove();
+                }
+
+                if (isCorrect) {
+                    input.classList.add('correct');
+                } else {
+                    input.classList.add('incorrect');
+                    if (wrapper) {
+                        // Show correct answer badge next to input
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        const correctAnswer = this.currentTestData.displayAnswers[`q${i}`];
+                        badge.textContent = correctAnswer;
+                        wrapper.appendChild(badge);
                     }
                 }
             }
         }
+    }
 
-        // Update explanation mode
-        this.explanationMode = true;
+    /**
+     * Show results panel
+     */
+    showResults() {
+        const questionRange = this.getQuestionRange();
+        let correctCount = 0;
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            if (this.isAnswerCorrect(i, this.getUserAnswer(i))) {
+                correctCount++;
+            }
+        }
+
+        const total = questionRange.end - questionRange.start + 1;
+
+        const explanationPanel = document.getElementById('explanationPanel');
+        const explanationTitle = document.getElementById('explanationTitle');
+        const explanationText = document.getElementById('explanationText');
+
+        if (explanationPanel && explanationTitle && explanationText) {
+            explanationPanel.classList.add('show');
+            explanationTitle.textContent = 'KẾT QUẢ';
+            explanationText.innerHTML = `
+                <h4>Đã nộp bài</h4>
+                <p><strong>Đúng:</strong> ${correctCount}/${total}</p>
+                <p>Click <strong>Xem giải thích</strong> để xem giải thích chi tiết.</p>
+            `;
+        }
     }
 
     /**
@@ -655,7 +732,7 @@ class ListeningCore {
     }
 
     /**
-     * Handle reset button click
+     * ✅ FIX v2.1: Handle reset button click
      */
     handleReset() {
         console.log('[handleReset] called');
@@ -773,7 +850,7 @@ class ListeningCore {
             console.warn('BroadcastChannel error:', e);
         }
 
-        // ✅ FIX: DELAY LÂUHƠN - 500ms thay vì 0ms
+        // ✅ FIX: DELAY LÂU HƠN - 500ms thay vì 0ms
         setTimeout(() => {
             this._isResetting = false;
             // ✅ FIX: Xóa lần nữa để chắc chắn (defensive)
@@ -790,25 +867,39 @@ class ListeningCore {
     showExplanation(questionNum) {
         if (!this.explanationMode && !this.examSubmitted) return;
 
-        const question = this.currentTestData.questions.find(q => q.num === parseInt(questionNum));
-        if (!question) return;
+        // Clear previous highlights
+        this.highlightManager.clearAllHighlights();
 
+        // Highlight transcript sections
+        this.highlightManager.highlightQuestion(questionNum);
+
+        // Show explanation panel
         const explanationPanel = document.getElementById('explanationPanel');
-        const explanationContent = document.getElementById('explanationContent');
-        
-        if (explanationPanel && explanationContent) {
-            explanationContent.innerHTML = `
-                <div class="explanation-item">
-                    <div class="explanation-header">
-                        <span class="question-num">Câu ${questionNum}</span>
-                        <span class="correct-answer">Đáp án đúng: <strong>${question.correctAnswer}</strong></span>
-                    </div>
-                    <div class="explanation-text">
-                        ${question.explanation || 'Chưa có giải thích cho câu hỏi này.'}
-                    </div>
-                </div>
-            `;
+        const explanationTitle = document.getElementById('explanationTitle');
+        const explanationText = document.getElementById('explanationText');
+
+        if (explanationPanel && explanationTitle && explanationText) {
             explanationPanel.classList.add('show');
+            explanationTitle.textContent = `Giải thích Câu ${questionNum}`;
+            
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                      `<strong>Đáp án:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}</strong><br>`;
+            
+            if (this.examSubmitted) {
+                const userAnswer = this.getUserAnswer(questionNum) || '(chưa trả lời)';
+                const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
+                
+                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Đáp án của bạn:</strong> ${userAnswer}<br>`;
+                if (!isCorrect) {
+                    html += `<strong>Đáp án đúng:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}`;
+                } else {
+                    html += `<strong>Đúng!</strong>`;
+                }
+                html += `</div>`;
+            }
+            
+            explanationText.innerHTML = html;
         }
     }
 
@@ -820,57 +911,624 @@ class ListeningCore {
         if (explanationPanel) {
             explanationPanel.classList.remove('show');
         }
+        
+        this.highlightManager.clearAllHighlights();
     }
 
     /**
-     * Create navigation between questions
+     * Disable all input elements
      */
-    createNavigation() {
-        const questionRange = this.getQuestionRange();
-        const navContainer = document.getElementById('questionNav');
-        
-        if (!navContainer) return;
-
-        navContainer.innerHTML = '';
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const navBtn = document.createElement('button');
-            navBtn.className = 'nav-btn';
-            navBtn.textContent = i;
-            navBtn.dataset.question = i;
-            
-            navBtn.addEventListener('click', () => {
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (questionDiv) {
-                    questionDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
+    disableInputs() {
+        if (this.currentTestData.type === 'multiple-choice') {
+            document.querySelectorAll('input[type="radio"]').forEach(input => {
+                input.disabled = true;
             });
-            
-            navContainer.appendChild(navBtn);
+        } else if (this.currentTestData.type === 'fill-blank') {
+            document.querySelectorAll('.fill-input').forEach(input => {
+                input.disabled = true;
+            });
+        }
+    }
+
+    /**
+     * Get all user answers
+     */
+    getUserAnswers() {
+        const answers = {};
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            answers[i] = this.getUserAnswer(i);
         }
 
-        // Update nav buttons as user answers questions
-        document.addEventListener('change', () => this.updateNavButtons());
-        document.addEventListener('input', () => this.updateNavButtons());
+        return answers;
+    }
+}
+
+/**
+ * Highlight Manager - Handles transcript highlighting
+ */
+class HighlightManager {
+    constructor() {
+        this.setupContextMenu();
     }
 
     /**
-     * Update navigation buttons to show answered/unanswered status
+     * Setup context menu for manual highlighting
+     * FIXED: Use event delegation to handle dynamic DOM changes and allow highlighting in questions
      */
-    updateNavButtons() {
-        const questionRange = this.getQuestionRange();
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const answer = this.getUserAnswer(i);
-            const navBtn = document.querySelector(`[data-question="${i}"]`);
-            
-            if (navBtn) {
-                if (answer && answer !== '') {
-                    navBtn.classList.add('answered');
-                } else {
-                    navBtn.classList.remove('answered');
+    setupContextMenu() {
+        document.addEventListener('contextmenu', (e) => {
+            // Kiểm tra target có nằm trong vùng transcript hoặc vùng câu hỏi không
+            const highlightArea = e.target.closest('#transcriptContent, .transcript-content, .reading-content, #questionsContainer, .questions-panel, .question-item, .questions-list, #mainArea');
+            if (highlightArea) {
+                const selection = window.getSelection();
+                if (selection.toString().trim()) {
+                    e.preventDefault();
+                    // Save the selection to use when applying highlight
+                    this.savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+                    this.showContextMenu(e.pageX, e.pageY);
                 }
             }
+        });
+
+        document.addEventListener('click', (e) => {
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && !contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+            }
+        });
+    }
+
+    /**
+     * Show context menu
+     */
+    showContextMenu(x, y) {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
+        }
+    }
+
+    /**
+     * Highlight question in transcript
+     */
+    highlightQuestion(questionNum) {
+        const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
+        
+        highlightSpans.forEach(span => {
+            const parentP = span.closest('p');
+            if (parentP) {
+                parentP.classList.add('transcript-highlight');
+            }
+            
+            span.classList.add('keyword-highlight');
+            span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add scroll highlight effect
+            span.classList.add('scroll-highlight');
+            setTimeout(() => {
+                span.classList.remove('scroll-highlight');
+            }, 1000);
+        });
+    }
+
+    /**
+     * Clear all highlights
+     */
+    clearAllHighlights() {
+        document.querySelectorAll('.transcript-highlight').forEach(el => {
+            el.classList.remove('transcript-highlight');
+        });
+        
+        document.querySelectorAll('.keyword-highlight').forEach(el => {
+            el.classList.remove('keyword-highlight');
+        });
+    }
+
+    /**
+     * Apply manual highlight
+     * FIXED: Use saved range when available
+     */
+    applyHighlight(color) {
+        let range = this.savedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
+
+        const span = document.createElement('span');
+        span.className = `highlight-${color}`;
+        
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            // Handle complex selections
+            const contents = range.extractContents();
+            span.appendChild(contents);
+            range.insertNode(span);
+        }
+        
+        window.getSelection().removeAllRanges();
+        this.hideContextMenu();
+        this.savedRange = null;
+    }
+
+    /**
+     * Remove manual highlight
+     * FIXED: Use saved range and TreeWalker on commonAncestorContainer
+     */
+    removeHighlight() {
+        let range = this.savedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
+
+        // Tìm tất cả các highlight span nằm trong range
+        const walker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: (node) => {
+                    if (node.classList && 
+                        (node.classList.contains('highlight-yellow') || 
+                         node.classList.contains('highlight-green') || 
+                         node.classList.contains('highlight-pink'))) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+
+        const toRemove = [];
+        let node;
+        while (node = walker.nextNode()) {
+            if (range.intersectsNode(node)) {
+                toRemove.push(node);
+            }
+        }
+
+        toRemove.forEach(span => {
+            const parent = span.parentNode;
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
+            }
+            parent.removeChild(span);
+        });
+
+        window.getSelection().removeAllRanges();
+        this.hideContextMenu();
+        this.savedRange = null;
+    }
+
+    /**
+     * Hide context menu
+     */
+    hideContextMenu() {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Storage Manager - Handles saving results to localStorage
+ */
+class StorageManager {
+    /**
+     * Save test results to localStorage
+     */
+    saveResults(testData, userAnswers) {
+        const details = [];
+        let correctCount = 0;
+
+        const questionRange = this.getQuestionRange(testData);
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const userAnswer = userAnswers[i];
+            const correctAnswer = testData.answerKey[`q${i}`];
+            const isCorrect = this.checkAnswer(userAnswer, correctAnswer);
+            
+            if (isCorrect) correctCount++;
+
+            details.push({
+                question: i,
+                user: userAnswer || '(empty)',
+                correct: testData.displayAnswers[`q${i}`] || correctAnswer,
+                isCorrect: isCorrect
+            });
+        }
+
+        const partData = {
+            partId: testData.part,
+            name: `Part ${testData.part}`,
+            totalQuestions: details.length,
+            correctCount: correctCount,
+            details: details
+        };
+
+        const { book, test, part } = this.parseTestInfo(testData.title);
+        const key = `pet_listening_book${book}_test${test}_part${part}`;
+        
+        localStorage.setItem(key, JSON.stringify(partData));
+        console.log(`Results saved with key: ${key}`);
+    }
+
+    /**
+     * Get question range from test data
+     */
+    getQuestionRange(testData) {
+        const questions = testData.questions;
+        const numbers = questions.map(q => q.num).sort((a, b) => a - b);
+        return {
+            start: numbers[0] || 1,
+            end: numbers[numbers.length - 1] || 7
+        };
+    }
+
+    /**
+     * Check if answer is correct
+     */
+    checkAnswer(userAnswer, correctAnswer) {
+        if (!userAnswer) return false;
+        
+        if (Array.isArray(correctAnswer)) {
+            return correctAnswer.includes(userAnswer.toLowerCase());
+        } else {
+            return userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+        }
+    }
+
+    /**
+     * Parse test information from title
+     */
+    parseTestInfo(title) {
+        let book = 1, test = 1, part = 1;
+        
+        const bookMatch = title.match(/Preliminary\s+(\d+)/i);
+        if (bookMatch) book = parseInt(bookMatch[1]);
+        
+        const testMatch = title.match(/Test\s+(\d+)/i);
+        if (testMatch) test = parseInt(testMatch[1]);
+        
+        const partMatch = title.match(/Part\s+(\d+)/i);
+        if (partMatch) part = parseInt(partMatch[1]);
+        
+        return { book, test, part };
+    }
+}
+
+/**
+ * UI Manager - Handles UI interactions and controls
+ */
+class UIManager {
+    /**
+     * Setup font size controls
+     */
+    setupFontControls() {
+        const fontButtons = {
+            fontSmall: 'small',
+            fontMedium: 'medium', 
+            fontLarge: 'large'
+        };
+
+        Object.entries(fontButtons).forEach(([id, size]) => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.addEventListener('click', () => this.setFontSize(size));
+            }
+        });
+
+        // Set default large font
+        this.setFontSize('large');
+    }
+
+    /**
+     * Set font size
+     */
+    setFontSize(size) {
+        // Update button states
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+
+        // Update content font sizes
+        document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
+            el.className = `transcript-content font-${size}`;
+            if (el.classList.contains('questions-list')) {
+                el.classList.add('centered');
+            }
+        });
+    }
+
+    /**
+     * Setup theme toggle
+     */
+    setupThemeToggle() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    /**
+     * Setup mode toggle (classic/modern)
+     */
+    setupModeToggle() {
+        const modeToggle = document.getElementById('modeToggle');
+        const styleLink = document.getElementById('styleLink');
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        if (!modeToggle || !styleLink) return;
+
+        function setMode(isClassic) {
+            if (isClassic) {
+                // Switch to classic mode
+                styleLink.href = styleLink.href.replace('listening-pet-common.css', 'listening-pet-common1.css');
+                // Hide theme toggle in classic mode
+                if (themeToggle) themeToggle.style.display = 'none';
+                // Remove dark theme
+                html.removeAttribute('data-theme');
+                localStorage.removeItem('pet-theme');
+            } else {
+                // Switch to modern mode
+                styleLink.href = styleLink.href.replace('listening-pet-common1.css', 'listening-pet-common.css');
+                // Show theme toggle in modern mode
+                if (themeToggle) themeToggle.style.display = 'flex';
+            }
+            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+        }
+
+        // Restore saved mode
+        const savedMode = localStorage.getItem('pet-mode');
+        if (savedMode === 'classic') {
+            modeToggle.checked = true;
+            setMode(true);
+        } else {
+            modeToggle.checked = false;
+            setMode(false);
+        }
+
+        modeToggle.addEventListener('change', () => {
+            setMode(modeToggle.checked);
+        });
+    }
+
+    /**
+     * Setup resizer for transcript panel
+     */
+    setupResizer() {
+        const transcriptPanel = document.getElementById('transcriptPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        
+        if (!transcriptPanel || !questionsPanel || !resizer) return;
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', () => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const mainArea = document.getElementById('mainArea');
+            if (!mainArea) return;
+
+            const rect = mainArea.getBoundingClientRect();
+            let leftWidth = e.clientX - rect.left - 4;
+            
+            if (leftWidth < 250) leftWidth = 250;
+            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
+            
+            transcriptPanel.style.width = leftWidth + 'px';
+            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
+    }
+
+    /**
+     * Setup explanation panel
+     */
+    setupExplanationPanel() {
+        const explanationPanel = document.getElementById('explanationPanel');
+        const explanationResizer = document.getElementById('explanationResizer');
+        
+        if (!explanationPanel || !explanationResizer) return;
+
+        let isResizing = false;
+
+        explanationResizer.addEventListener('mousedown', () => {
+            isResizing = true;
+            document.body.style.cursor = 'ns-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const rect = explanationPanel.getBoundingClientRect();
+            let newHeight = e.clientY - rect.top;
+            
+            if (newHeight < 150) newHeight = 150;
+            if (newHeight > 500) newHeight = 500;
+            
+            explanationPanel.style.height = newHeight + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
+    }
+
+    /**
+     * Setup auto-collapse for header and footer after 5s of mouse leave
+     */
+    setupAutoCollapse(coreInstance) {
+        const header = document.querySelector('.ielts-header');
+        const footer = document.querySelector('.bottom-bar');
+        const questionNav = document.querySelector('.question-nav');
+        
+        if (!header && !footer) return;
+
+        // Add toggle button to header
+        this.addAutoCollapseToggle(header, coreInstance);
+
+        let headerTimer = null;
+        let footerTimer = null;
+        const COLLAPSE_DELAY = 5000; // 5 seconds
+
+        const isAutoCollapseEnabled = () => {
+            return localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        };
+
+        const collapseHeader = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            header?.classList.add('collapsed');
+        };
+
+        const expandHeader = () => {
+            header?.classList.remove('collapsed');
+        };
+
+        const collapseFooter = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            footer?.classList.add('collapsed');
+        };
+
+        const expandFooter = () => {
+            footer?.classList.remove('collapsed');
+        };
+
+        // Header hover handling
+        if (header) {
+            header.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            header.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Question nav hover handling - hover to expand header, but don't collapse question nav itself
+        if (questionNav) {
+            questionNav.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            questionNav.addEventListener('mouseleave', () => {
+                if (!header?.matches(':hover') && isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Footer hover handling
+        if (footer) {
+            footer.addEventListener('mouseenter', () => {
+                clearTimeout(footerTimer);
+                expandFooter();
+            });
+            footer.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    footerTimer = setTimeout(collapseFooter, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Start collapsed after initial delay only if enabled
+        setTimeout(() => {
+            if (!coreInstance.examSubmitted && isAutoCollapseEnabled()) {
+                collapseHeader();
+                collapseFooter();
+            }
+        }, COLLAPSE_DELAY);
+    }
+
+    /**
+     * Add auto-collapse toggle button to header
+     */
+    addAutoCollapseToggle(header, coreInstance) {
+        if (!header) return;
+        
+        // Check if toggle already exists
+        if (header.querySelector('.autocollapse-toggle')) return;
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'autocollapse-toggle';
+        toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
+        
+        // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
+        const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
+        </svg>`;
+        const iconExpand = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>`;
+        
+        const isEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        toggleBtn.innerHTML = isEnabled ? iconShrink : iconExpand;
+        toggleBtn.classList.toggle('active', isEnabled);
+
+        toggleBtn.addEventListener('click', () => {
+            const currentlyEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+            const newEnabled = !currentlyEnabled;
+            localStorage.setItem('pet-autocollapse-enabled', newEnabled.toString());
+            
+            toggleBtn.classList.toggle('active', newEnabled);
+            toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
+            
+            if (!newEnabled) {
+                // Expand header and footer when disabled (keep question-nav visible)
+                header?.classList.remove('collapsed');
+                document.querySelector('.bottom-bar')?.classList.remove('collapsed');
+            }
+        });
+
+        // Find a good place to insert the button - right after mode toggle (modern/classic)
+        const modeToggle = header.querySelector('#modeToggleContainer');
+        const themeToggle = header.querySelector('.theme-toggle-btn');
+        
+        if (modeToggle) {
+            modeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else if (themeToggle) {
+            themeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else {
+            header.appendChild(toggleBtn);
         }
     }
 }
