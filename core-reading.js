@@ -174,16 +174,51 @@ class ReadingCore {
             console.log('[Reading Draft] Blocked: currently resetting');
             return;
         }
-        if (this.examSubmitted || !this.currentTestData) return;
+        
+        if (this.examSubmitted || !this.currentTestData) {
+            console.log('[Reading Draft] Blocked: exam submitted or no test data');
+            return;
+        }
+        
         clearTimeout(this.debounceTimer);
+        
         try {
             const draft = this.getDraftData();
+            
+            // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
+            const hasAnswers = this.draftHasAnswers(draft);
+            
+            if (!hasAnswers) {
+                console.log('[Reading Draft] No answers to save, skipping immediate save');
+                return;  // ✅ Không lưu nếu trống!
+            }
+            
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Reading Draft] Saved immediately to key:', key);
         } catch (e) {
             console.error('[Reading Draft] Immediate save failed:', e);
         }
+    }
+
+    /**
+     * ✅ FIX v2.1: Helper function - check if draft has real answers
+     */
+    draftHasAnswers(draft) {
+        // Loại bỏ 'type' key, chỉ kiểm tra câu trả lời thực
+        const { type, slotState, ...answers } = draft;
+        
+        // Kiểm tra multiple-choice / inline-radio
+        const radioAnswers = Object.entries(answers).some(([key, val]) => {
+            return val !== null && val !== undefined && val !== '';
+        });
+        
+        // Kiểm tra drag-drop
+        if (slotState && Object.keys(slotState).length > 0) {
+            return true;
+        }
+        
+        return radioAnswers;
     }
 
     /**

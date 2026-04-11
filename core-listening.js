@@ -149,10 +149,28 @@ class ListeningCore {
             console.log('[Draft] Blocked: currently resetting');
             return;
         }
-        if (this.examSubmitted || !this.currentTestData) return;
+        
+        if (this.examSubmitted || !this.currentTestData) {
+            console.log('[Draft] Blocked: exam submitted or no test data');
+            return;
+        }
+        
         clearTimeout(this.debounceTimer);
+        
         try {
             const draft = this.getDraftData();
+            
+            // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
+            // Nếu tất cả answer đều null/undefined/'' thì không lưu
+            const hasAnswers = Object.values(draft).some(v => {
+                return v !== null && v !== undefined && v !== '';
+            });
+            
+            if (!hasAnswers) {
+                console.log('[Draft] No answers to save, skipping immediate save');
+                return;  // ✅ Không lưu nếu trống!
+            }
+            
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Draft] SAVED IMMEDIATELY to key:', key);
