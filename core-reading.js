@@ -302,16 +302,45 @@ class ReadingCore {
      * Lấy storage key (có hoặc không có hậu tố _draft)
      */
     getStorageKey(isDraft = false) {
-        const meta = this.currentTestData.metadata || this.storageManager.parseTestInfo(
-            document.querySelector('.candidate')?.textContent || ''
-        );
-        const book = meta.book || 1;
-        const test = meta.test || 1;
-        const part = this.currentTestData.part || meta.part || 1;
+        const { book, test, part } = this.getTestMeta();
+        
         let key = `pet_reading_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
         console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
+    }
+
+    /**
+     * Lấy thông tin metadata của test hiện tại
+     */
+    getTestMeta() {
+        const d = this.currentTestData;
+        if (!d) return { book: 1, test: 1, part: 1 };
+        
+        const meta = d.metadata || this.storageManager.parseTestInfo(
+            document.querySelector('.candidate')?.textContent || document.title || ''
+        );
+        
+        const book = meta.book || 1;
+        const test = meta.test || 1;
+        const part = d.part || meta.part || 1;
+        
+        return { book, test, part };
+    }
+
+    /**
+     * Chuyển sang Part khác trong cùng Test
+     */
+    goToPart(direction) {
+        const { book, test, part } = this.getTestMeta();
+        const targetPart = part + direction;
+        
+        // Reading PET có 6 part
+        if (targetPart < 1 || targetPart > 6) return;
+        
+        const targetUrl = `read-pet${book}-test${test}-part${targetPart}.html`;
+        console.log(`[Navigation] Redirecting to: ${targetUrl}`);
+        window.location.href = targetUrl;
     }
 
     /**
@@ -993,9 +1022,41 @@ class ReadingCore {
         const nav = document.getElementById('navButtons');
         if (!nav || !this.currentTestData) return;
 
-        nav.innerHTML = '';
-        const questionRange = this.getQuestionRange();
+        // Xóa các nhãn văn bản không liên quan trong thanh điều hướng
+        const parent = nav.parentElement;
+        if (parent && parent.classList.contains('question-nav')) {
+            parent.querySelectorAll('span').forEach(s => {
+                // Giữ lại các badge thông tin quan trọng nếu có
+                if (!s.classList.contains('answer-badge')) {
+                    s.remove();
+                }
+            });
+        }
 
+        nav.innerHTML = '';
+        
+        const { part } = this.getTestMeta();
+        
+        // Nút Part trước
+        const prevPartBtn = document.createElement('button');
+        prevPartBtn.className = 'nav-arrow-btn nav-prev-part';
+        prevPartBtn.title = 'Part trước';
+        prevPartBtn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Previous Part</span>
+        `;
+        if (part <= 1) {
+            prevPartBtn.disabled = true;
+        } else {
+            prevPartBtn.addEventListener('click', () => {
+                if (confirm('Bạn có muốn chuyển sang Part trước đó không?')) {
+                    this.goToPart(-1);
+                }
+            });
+        }
+        nav.appendChild(prevPartBtn);
+
+        const questionRange = this.getQuestionRange();
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             const btn = document.createElement('button');
             btn.className = 'nav-btn unanswered';
@@ -1012,6 +1073,25 @@ class ReadingCore {
             
             nav.appendChild(btn);
         }
+        
+        // Nút Part sau
+        const nextPartBtn = document.createElement('button');
+        nextPartBtn.className = 'nav-arrow-btn nav-next-part';
+        nextPartBtn.title = 'Part tiếp theo';
+        nextPartBtn.innerHTML = `
+            <span>Next Part</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        `;
+        if (part >= 6) {
+            nextPartBtn.disabled = true;
+        } else {
+            nextPartBtn.addEventListener('click', () => {
+                if (confirm('Bạn có muốn chuyển sang Part tiếp theo không?')) {
+                    this.goToPart(1);
+                }
+            });
+        }
+        nav.appendChild(nextPartBtn);
     }
 
     /**
