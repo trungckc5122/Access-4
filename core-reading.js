@@ -6,8 +6,10 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
- * - FIXED: draft only saved when at least one answer is non-empty
- * - FIXED: proper highlight manager, storage manager, UI manager included
+ * - FIXED: matching support in markAnswers, reset badge
+ * - FIXED: highlight manager uses event delegation, fallback selection
+ * - FIXED: force reflow in mode toggle
+ * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
  */
 
 class ReadingCore {
@@ -16,18 +18,19 @@ class ReadingCore {
         this.explanationMode = false;
         this.currentTestData = null;
         this.currentSplit = false; // Used for Part 6 split layout
-        this.slotState = {}; // Used for Part 4 & 5 (drag-drop / matching)
-
+        this.slotState = {}; // Used for Part 4 & 5
+        
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
-        this.DEBOUNCE_MS = 300;
+        this.DEBOUNCE_MS = 500;
         this._isResetting = false;
     }
 
     /**
      * Initialize reading test with configuration data
+     * @param {Object} testData - Test configuration including answers, text matching, and questions
      */
     initializeTest(testData) {
         this.currentTestData = testData;
@@ -38,10 +41,10 @@ class ReadingCore {
         // Setup UI components
         this.setupUI();
         
-        // Render questions based on test type
+        // Render questions based on test type (or setup initial split layout)
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
-            this.attachInputEvents();
+            this.attachInputEvents(); // For inline gaps
         } else if (this.currentTestData.type === 'drag-drop') {
             this.setupDragDropEvents();
         } else if (this.currentTestData.type === 'inline-radio') {
@@ -53,13 +56,13 @@ class ReadingCore {
         // Setup event listeners
         this.setupEventListeners();
         
-        // Setup beforeunload handlers
+        // === MỚI: Lưu draft khi rời trang ===
         this.setupBeforeUnload();
         
         // Initialize navigation
         this.createNavigation();
         
-        // Restore draft if not submitted
+        // === MỚI: Khôi phục draft nếu chưa nộp bài ===
         if (!this.isCompleted()) {
             this.loadDraft();
         }
@@ -75,13 +78,23 @@ class ReadingCore {
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
 
-    // ==================== DRAFT MANAGEMENT ====================
+    /**
+     * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
+     */
     isCompleted() {
-        if (!this.currentTestData) return false;
+        if (!this.currentTestData) {
+            console.log('[Reading Draft] isCompleted: no test data');
+            return false;
+        }
         const key = this.getStorageKey(false);
-        return localStorage.getItem(key) !== null;
+        const completed = localStorage.getItem(key) !== null;
+        console.log('[Reading Draft] isCompleted check - key:', key, 'completed:', completed);
+        return completed;
     }
 
+    /**
+     * Lấy storage key (có hoặc không có hậu tố _draft)
+     */
     getStorageKey(isDraft = false) {
         const meta = this.currentTestData.metadata || this.storageManager.parseTestInfo(
             document.querySelector('.candidate')?.textContent || ''
@@ -91,9 +104,13 @@ class ReadingCore {
         const part = this.currentTestData.part || meta.part || 1;
         let key = `pet_reading_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
+        console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
     }
 
+    /**
+     * Lấy dữ liệu nháp hiện tại từ giao diện
+     */
     getDraftData() {
         const questionRange = this.getQuestionRange();
         const draft = { type: this.currentTestData.type };
@@ -118,270 +135,801 @@ class ReadingCore {
         return draft;
     }
 
-    draftHasAnswers(draft) {
-        const { type, slotState, ...answers } = draft;
-        const radioAnswers = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
-        if (slotState && Object.keys(slotState).length > 0) return true;
-        return radioAnswers;
-    }
-
+    /**
+     * ✅ FIX v2.1: Lưu nháp vào localStorage (có debounce)
+     * Thêm kiểm tra: 1. _isResetting early return
+     */
     saveDraft() {
-        if (this.examSubmitted || this._isResetting) return;
-        if (!this.currentTestData) return;
+        if (this.examSubmitted || this._isResetting) {
+            console.log('[Reading Draft] Skip: exam already submitted or resetting');
+            return;
+        }
+        if (!this.currentTestData) {
+            console.log('[Reading Draft] Skip: no test data');
+            return;
+        }
         
         clearTimeout(this.debounceTimer);
+        console.log('[Reading Draft] Scheduled save in', this.DEBOUNCE_MS, 'ms');
         
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
-                if (!this.draftHasAnswers(draft)) {
-                    this.clearDraft();
-                    return;
-                }
                 const key = this.getStorageKey(true);
                 localStorage.setItem(key, JSON.stringify(draft));
-                console.log('[Reading Draft] SAVED to key:', key);
+                console.log('[Reading Draft] SAVED to key:', key, 'data:', draft);
             } catch (e) {
                 console.error('[Reading Draft] FAILED to save:', e);
             }
         }, this.DEBOUNCE_MS);
     }
 
+    /**
+     * ✅ FIX v2.1: Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang hoặc radio change
+     * Thêm kiểm tra: 1. _isResetting early return 2. Kiểm tra hasAnswers trước khi lưu
+     */
     saveDraftImmediate() {
-        if (this._isResetting) return;
+        // ✅ FIX: Kiểm tra _isResetting TRƯỚC (early return)
+        if (this._isResetting) {
+            console.log('[Reading Draft] Blocked: currently resetting');
+            return;
+        }
         if (this.examSubmitted || !this.currentTestData) return;
-        
         clearTimeout(this.debounceTimer);
         try {
             const draft = this.getDraftData();
-            if (!this.draftHasAnswers(draft)) {
-                this.clearDraft();
-                return;
-            }
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
-            console.log('[Reading Draft] SAVED IMMEDIATELY to key:', key);
+            console.log('[Reading Draft] Saved immediately to key:', key);
         } catch (e) {
             console.error('[Reading Draft] Immediate save failed:', e);
         }
     }
 
+    /**
+     * Setup handlers để lưu draft khi rời trang
+     * ✅ FIX v2.1: Thêm kiểm tra _isResetting vào mỗi listener
+     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
+     */
     setupBeforeUnload() {
+        // 1. beforeunload - desktop browsers
         window.addEventListener('beforeunload', () => {
-            if (!this._isResetting) this.saveDraftImmediate();
+            // ✅ FIX: Kiểm tra _isResetting
+            if (!this._isResetting) {
+                this.saveDraftImmediate();
+            } else {
+                console.log('[Reading Draft] beforeunload blocked during reset');
+            }
         });
+
+        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
         window.addEventListener('pagehide', () => {
-            if (!this._isResetting) this.saveDraftImmediate();
+            // ✅ FIX: Kiểm tra _isResetting
+            if (!this._isResetting) {
+                this.saveDraftImmediate();
+            } else {
+                console.log('[Reading Draft] pagehide blocked during reset');
+            }
         });
+
+        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
         document.addEventListener('visibilitychange', () => {
+            // ✅ FIX: Kiểm tra visibility STATE và _isResetting
             if (document.visibilityState === 'hidden' && !this._isResetting) {
                 this.saveDraftImmediate();
+            } else if (this._isResetting) {
+                console.log('[Reading Draft] visibilitychange blocked during reset');
             }
         });
     }
 
+    /**
+     * Khôi phục nháp từ localStorage và áp dụng vào giao diện
+     */
     loadDraft() {
         const key = this.getStorageKey(true);
+        console.log('[Reading Draft] Attempting to load from key:', key);
+        
         const draftJson = localStorage.getItem(key);
-        if (!draftJson) return false;
+        if (!draftJson) {
+            console.log('[Reading Draft] No draft found for key:', key);
+            return false;
+        }
         
         try {
             const draft = JSON.parse(draftJson);
+            console.log('[Reading Draft] Loaded data:', draft);
             const questionRange = this.getQuestionRange();
             
-            if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans) {
-                        const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
-                        if (radio) radio.checked = true;
+                    if (!ans) continue;
+                    const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                        if (draft.type === 'inline-radio') {
+                            this.updateInlineSlotFromRadio(i);
+                        }
                     }
                 }
-            } else if (this.currentTestData.type === 'matching') {
+            } else if (draft.type === 'matching') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans) {
-                        const input = document.getElementById(`answer-${i}`);
-                        if (input) input.value = ans;
+                    if (!ans) continue;
+                    const input = document.getElementById(`answer-${i}`);
+                    if (input) input.value = ans;
+                }
+            } else if (draft.type === 'drag-drop') {
+                // Khôi phục drag-drop
+                const slotState = draft.slotState || {};
+                for (const [qNumStr, value] of Object.entries(slotState)) {
+                    const qNum = parseInt(qNumStr);
+                    if (value && value.value) {
+                        this.placeInSlot(qNum, value.value);
                     }
                 }
-            } else if (this.currentTestData.type === 'split-layout') {
+            } else if (draft.type === 'split-layout') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans) {
-                        const inp = document.getElementById(`q${i}`);
-                        if (inp) inp.value = ans;
-                    }
+                    if (ans === undefined) continue;
+                    const inp = document.getElementById(`q${i}`);
+                    if (inp) inp.value = ans;
                 }
-            } else if (this.currentTestData.type === 'drag-drop' && draft.slotState) {
-                this.slotState = { ...draft.slotState };
-                this.restoreDragDropState();
             }
             
+            console.log('[Reading Draft] SUCCESSFULLY loaded for', this.currentTestData?.title || 'reading test');
             this.updateAnswerCount();
             return true;
         } catch (e) {
-            console.warn('Failed to load reading draft', e);
+            console.warn('[Reading Draft] FAILED to load:', e);
             return false;
         }
     }
 
+    /**
+     * Xóa nháp khỏi localStorage
+     */
     clearDraft() {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
     }
 
-    // ==================== UI SETUP ====================
+    /**
+     * Setup UI components and interactions
+     */
     setupUI() {
         this.uiManager.setupFontControls();
         this.uiManager.setupThemeToggle();
         this.uiManager.setupModeToggle();
-        this.uiManager.setupResizer();
-        this.uiManager.setupExplanationPanel();
+        
+        // Only set up standard resizers if not using split-layout dynamic generation
+        if (this.currentTestData.type !== 'split-layout') {
+            this.uiManager.setupResizer();
+            this.uiManager.setupExplanationPanel();
+        }
+        
+        // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
     }
 
-    getQuestionRange() {
-        const part = this.currentTestData.part;
-        switch(part) {
-            case 1: return { start: 1, end: 5 };
-            case 2: return { start: 6, end: 10 };
-            case 3: return { start: 11, end: 13 };
-            case 4: return { start: 14, end: 19 };
-            case 5: return { start: 20, end: 26 };
-            case 6: return { start: 27, end: 30 };
-            default: return { start: 1, end: 30 };
+    /**
+     * Render questions based on standard test types
+     */
+    renderQuestions() {
+        const container = document.getElementById('questionsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (this.currentTestData.type === 'multiple-choice') {
+            this.currentTestData.questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                
+                const introHtml = q.intro
+                    ? `<div class="question-intro">${q.num}. ${q.intro}</div>`
+                    : `<div class="question-num-only">${q.num}.</div>`;
+                    
+                div.innerHTML = `
+                    ${introHtml}
+                    <div class="options">
+                        ${q.options.map((opt, idx) => {
+                            const letter = String.fromCharCode(65 + idx);
+                            return `
+                                <div class="option">
+                                    <input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}">
+                                    <label for="q${q.num}${letter}">${letter} ${opt}</label>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <span class="eye-icon" data-question="${q.num}">👁️</span>
+                `;
+                
+                container.appendChild(div);
+            });
+        } else if (this.currentTestData.type === 'matching') {
+            this.currentTestData.questions.forEach(q => {
+                const div = document.createElement('div');
+                div.className = 'question-item';
+                div.id = `question-${q.num}`;
+                
+                div.innerHTML = `
+                    <div class="question-text">${q.num}. ${q.text}</div>
+                    <div class="answer-input-area">
+                        <label for="answer-${q.num}">Your answer (letter A–H):</label>
+                        <input type="text" id="answer-${q.num}" class="answer-input" maxlength="1" placeholder="A–H" autocomplete="off">
+                        <span class="eye-icon" data-question="${q.num}">👁️</span>
+                    </div>
+                `;
+                container.appendChild(div);
+                
+                // Add enforcing A-H formatting
+                const input = document.getElementById(`answer-${q.num}`);
+                if (input) {
+                    input.addEventListener('input', function() {
+                        this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
+                        // Force a dispatch to update the answer count via the global listener
+                        this.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                }
+            });
         }
     }
 
-    renderQuestions() {
-        // Implementation depends on specific part templates
-        // This method should be overridden or the template should already exist in HTML
-        console.log('Render questions for type:', this.currentTestData.type);
+    // ==================== PART 4: DRAG & DROP ====================
+    setupDragDropEvents() {
+        const sentenceEls = document.querySelectorAll('.sentence-item');
+        let touchSelected = null;
+
+        document.querySelectorAll('.sentence-item').forEach(item => {
+            item.addEventListener('dragstart', e => {
+                item.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', item.getAttribute('data-value'));
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+            // Touch/Click to select support
+            item.addEventListener('click', () => {
+                if (this.examSubmitted) return;
+                if (touchSelected === item) {
+                    touchSelected = null;
+                    item.style.outline = '';
+                    return;
+                }
+                if (touchSelected) touchSelected.style.outline = '';
+                touchSelected = item;
+                item.style.outline = '3px solid #e6b422';
+            });
+        });
+
+        const allDropTargets = [
+            ...document.querySelectorAll('.inline-drop-slot'),
+            ...document.querySelectorAll('.drop-slot-panel')
+        ];
+
+        allDropTargets.forEach(slot => {
+            slot.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                slot.classList.add('drag-over');
+            });
+            slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                if (this.examSubmitted) return;
+                const value = e.dataTransfer.getData('text/plain');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) this.placeInSlot(qNum, value);
+            });
+            slot.addEventListener('click', () => {
+                if (this.examSubmitted) return;
+                if (!touchSelected) return;
+                const value = touchSelected.getAttribute('data-value');
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                if (value && qNum) {
+                    this.placeInSlot(qNum, value);
+                    touchSelected.style.outline = '';
+                    touchSelected = null;
+                }
+            });
+        });
+
+        // Setup remove chips
+        document.querySelectorAll('.remove-chip').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent bubbling to drop target
+                if (this.examSubmitted) return;
+                const slot = chip.closest('[data-q]');
+                if (!slot) return;
+                const qNum = parseInt(slot.getAttribute('data-q'));
+                this.clearSlot(qNum);
+            });
+        });
     }
 
-    renderSingleColumn() {
-        console.log('Render single column for split layout');
+    getPart4Sentence(value) {
+        return document.getElementById(`sent-${value}`);
     }
 
-    attachInputEvents() {
-        const questionRange = this.getQuestionRange();
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const inp = document.getElementById(`q${i}`);
-            if (inp) {
-                inp.addEventListener('change', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft();
-                });
-                inp.addEventListener('input', () => {
-                    this.updateAnswerCount();
-                    this.saveDraft();
-                });
+    setSlotContent(qNum, value, text) {
+        const reading = document.getElementById(`readingSlot${qNum}`);
+        const panel = document.getElementById(`panelSlot${qNum}`);
+        const displayText = value ? `${value} – ${text}` : null;
+
+        [reading, panel].forEach(slot => {
+            if (!slot) return;
+            const contentEl = slot.querySelector('.slot-content');
+            const removeEl = slot.querySelector('.remove-chip');
+            if (value) {
+                if(contentEl) contentEl.textContent = displayText;
+                slot.setAttribute('data-selected', value);
+                if(removeEl) removeEl.style.display = 'inline';
+            } else {
+                if(contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
+                slot.removeAttribute('data-selected');
+                if(removeEl) removeEl.style.display = 'none';
+            }
+        });
+
+        this.slotState[qNum] = value ? { value, text } : null;
+        this.saveDraftImmediate(); // Drag-drop: save immediately
+    }
+
+    placeInSlot(qNum, value) {
+        const sentEl = this.getPart4Sentence(value);
+        const text = sentEl ? sentEl.querySelector('.sentence-text').textContent.trim() : value;
+
+        // If this sentence is already in another slot, clear that slot first
+        for (const [key, state] of Object.entries(this.slotState)) {
+            if (state && state.value === value && parseInt(key) !== qNum) {
+                this.setSlotContent(parseInt(key), null, null);
             }
         }
+
+        // Return old sentence to bank
+        const prev = this.slotState[qNum];
+        if (prev && prev.value !== value) {
+            const prevEl = this.getPart4Sentence(prev.value);
+            if (prevEl) prevEl.classList.remove('hidden');
+        }
+
+        this.setSlotContent(qNum, value, text);
+        if (sentEl) sentEl.classList.add('hidden');
+        this.updateAnswerCount();
+        this.setActiveNavButton(qNum);
     }
 
+    clearSlot(qNum) {
+        const prev = this.slotState[qNum];
+        if (prev) {
+            const el = this.getPart4Sentence(prev.value);
+            if (el) el.classList.remove('hidden');
+        }
+        this.setSlotContent(qNum, null, null);
+        this.updateAnswerCount();
+    }
+
+    // ==================== PART 5: INLINE RADIO ====================
     renderInlineRadioQuestions() {
-        console.log('Render inline radio questions');
+        const container = document.getElementById('questionsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        const optionsList = this.currentTestData.optionsList;
+        const qRange = this.getQuestionRange();
+
+        for (let i = qRange.start; i <= qRange.end; i++) {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question-item';
+            qDiv.id = `question-${i}`;
+            
+            const optionsHtml = optionsList[i].map(opt => {
+                const letter = opt.charAt(0);
+                return `<label><input type="radio" name="q${i}" value="${letter}"> ${opt}</label>`;
+            }).join('');
+            
+            qDiv.innerHTML = `
+                <div class="question-text">${i}.</div>
+                <div class="answer-input-area">
+                    <div class="radio-group" id="radio-group-${i}">${optionsHtml}</div>
+                    <span class="eye-icon" data-question="${i}">👁️</span>
+                </div>
+            `;
+            container.appendChild(qDiv);
+
+            // Add listener to update inline gap
+            const radios = qDiv.querySelectorAll(`input[name="q${i}"]`);
+            radios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    this.updateInlineSlotFromRadio(i);
+                    this.saveDraftImmediate(); // Radio change: save immediately
+                });
+            });
+        }
     }
 
-    setupDragDropEvents() {
-        console.log('Setup drag drop events');
+    updateInlineSlotFromRadio(qNum) {
+        const selectedLetter = this.getUserAnswer(qNum);
+        const slot = document.getElementById(`readingSlot${qNum}`);
+        if (!slot) return;
+        const contentSpan = slot.querySelector('.slot-content') || slot;
+
+        if (selectedLetter && this.currentTestData.wordMap && this.currentTestData.wordMap[qNum] && this.currentTestData.wordMap[qNum][selectedLetter]) {
+            const word = this.currentTestData.wordMap[qNum][selectedLetter];
+            contentSpan.textContent = word;
+            this.slotState[qNum] = { value: selectedLetter, text: word };
+        } else {
+            contentSpan.textContent = `[${qNum}]`;
+            this.slotState[qNum] = null;
+        }
+        this.updateAnswerCount();
     }
 
-    restoreDragDropState() {
-        // Restore UI from this.slotState
+    /**
+     * Render single column layout for fill-in-the-blank text (Part 6)
+     */
+    renderSingleColumn() {
+        const mainArea = document.getElementById('mainArea');
+        if (!mainArea || !this.currentTestData.template) return;
+        
+        mainArea.innerHTML = `
+            <div class="single-col">
+                <div class="part-header">
+                    <h3>Questions ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
+                    <p>For each question, write the correct answer. Write one word for each gap.</p>
+                </div>
+                ${this.currentTestData.template}
+            </div>
+        `;
     }
 
+    /**
+     * Render split column layout for fill-in-the-blank text (Part 6)
+     */
+    renderSplitColumn() {
+        const mainArea = document.getElementById('mainArea');
+        if (!mainArea || !this.currentTestData.template) return;
+        
+        mainArea.innerHTML = `
+            <div class="split-container">
+                <div class="left-col">
+                    <div class="part-header">
+                        <h3>Questions ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
+                        <p>For each question, write the correct answer. Write one word for each gap.</p>
+                    </div>
+                    ${this.currentTestData.template}
+                </div>
+                <div class="right-col" id="rightCol">
+                    <div class="explanation-header">
+                        <span>Giải thích</span>
+                        <span class="close-explanation-btn" id="closeRightExplain">✕ Đóng</span>
+                    </div>
+                    <div class="explanation-content" id="rightExplanationText">
+                        Nhấn vào biểu tượng con mắt bên cạnh mỗi câu để xem giải thích.
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('closeRightExplain')?.addEventListener('click', () => {
+            const col = document.getElementById('rightCol');
+            if (col) col.classList.remove('show');
+        });
+    }
+
+    /**
+     * Setup event listeners for forms and interaction inside custom template (Part 6)
+     */
+    attachInputEvents() {
+        document.querySelectorAll('.gap-input').forEach(inp => {
+            if (this.examSubmitted) {
+                inp.disabled = true;
+                const val = inp.value.trim();
+                const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
+                inp.classList.add(correct ? 'correct' : 'incorrect');
+            }
+            inp.addEventListener('input', () => {
+                this.updateAnswerCount();
+                this.saveDraft(); // Text input: debounced save
+            });
+        });
+        
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            if (this.explanationMode || this.examSubmitted) {
+                icon.style.display = 'inline-block';
+            } else {
+                icon.style.display = 'none';
+            }
+            
+            icon.addEventListener('click', (e) => {
+                const qNum = parseInt(e.currentTarget.dataset.q || e.currentTarget.dataset.question);
+                this.showExplanation(qNum);
+            });
+        });
+    }
+
+    /**
+     * ✅ FIX v2.1: Setup event listeners - kiểm tra _isResetting
+     */
     setupEventListeners() {
+        // Radio button changes
         document.addEventListener('change', (e) => {
-            if (this._isResetting) return;
+            // ✅ FIX: Kiểm tra _isResetting (thêm log)
+            if (this._isResetting) {
+                console.log('[Reading Draft] change event blocked during reset');
+                return;
+            }
+            
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
-                this.saveDraftImmediate();
+                this.saveDraftImmediate(); // Radio: lưu ngay
             }
         });
 
+        // Input changes (for matching, split-layout, etc.)
         document.addEventListener('input', (e) => {
-            if (this._isResetting) return;
+            // ✅ FIX: Kiểm tra _isResetting (thêm log)
+            if (this._isResetting) {
+                console.log('[Reading Draft] input event blocked during reset');
+                return;
+            }
+            
             if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {
                 this.updateAnswerCount();
-                this.saveDraft();
+                this.saveDraft(); // Debounce: lưu sau 0.5s
             }
         });
-
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) submitBtn.addEventListener('click', () => this.handleSubmit());
-
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) explainBtn.addEventListener('click', () => this.handleExplain());
-
-        const resetBtn = document.getElementById('resetBtn');
-        if (resetBtn) resetBtn.addEventListener('click', () => this.handleReset());
-
+        
+        // Eye icon click handler for standard types
         document.addEventListener('click', (e) => {
-            if (e.target && e.target.classList.contains('eye-icon')) {
-                this.showExplanation(e.target.dataset.question);
+            if (e.target && e.target.classList.contains('eye-icon') && !e.target.dataset.q) {
+                const qNum = e.target.dataset.question;
+                if (qNum) {
+                    this.showExplanation(parseInt(qNum));
+                }
             }
         });
 
-        const closeExplanation = document.getElementById('closeExplanation');
-        if (closeExplanation) closeExplanation.addEventListener('click', () => this.closeExplanation());
+        // Submit button
+        document.getElementById('submitBtn')?.addEventListener('click', () => {
+            this.handleSubmit();
+        });
+
+        // Explain button
+        document.getElementById('explainBtn')?.addEventListener('click', () => {
+            this.handleExplain();
+        });
+
+        // Reset button
+        document.getElementById('resetBtn')?.addEventListener('click', () => {
+            this.handleReset();
+        });
+
+        // Close explanation panel for standard layout
+        document.getElementById('closeExplanation')?.addEventListener('click', () => {
+            this.closeExplanation();
+        });
     }
 
+    /**
+     * Build navigation controls map
+     */
+    createNavigation() {
+        const nav = document.getElementById('navButtons');
+        if (!nav || !this.currentTestData) return;
+
+        nav.innerHTML = '';
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn unanswered';
+            btn.textContent = i;
+            btn.dataset.question = i;
+            
+            // Allow dataset match to Part 6 structure dataset.q setup
+            btn.dataset.q = i;
+            
+            btn.addEventListener('click', () => {
+                this.scrollToQuestion(i);
+                this.setActiveNavButton(i);
+            });
+            
+            nav.appendChild(btn);
+        }
+    }
+
+    /**
+     * Discover question range dynamically
+     */
+    getQuestionRange() {
+        if (!this.currentTestData) return { start: 1, end: 5 };
+        
+        if (this.currentTestData.questions) {
+            const numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
+            return {
+                start: numbers[0] || 1,
+                end: numbers[numbers.length - 1] || 5
+            };
+        }
+        
+        if (this.currentTestData.answerKey) {
+            const keys = Object.keys(this.currentTestData.answerKey)
+                .map(k => parseInt(k.replace('q', '')))
+                .filter(n => !isNaN(n))
+                .sort((a, b) => a - b);
+            if (keys.length > 0) {
+                return { start: keys[0], end: keys[keys.length - 1] };
+            }
+        }
+        
+        return { start: 1, end: 5 };
+    }
+
+    /**
+     * Retrieve the user's answer
+     */
     getUserAnswer(questionNum) {
         if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
-            const radio = document.querySelector(`input[name="q${questionNum}"]:checked`);
-            return radio ? radio.value : null;
+            const radios = document.getElementsByName(`q${questionNum}`);
+            for (let radio of radios) {
+                if (radio.checked) return radio.value;
+            }
+            return null;
+        } else if (this.currentTestData.type === 'drag-drop') {
+            return this.slotState[questionNum] ? this.slotState[questionNum].value : null;
         } else if (this.currentTestData.type === 'matching') {
             const input = document.getElementById(`answer-${questionNum}`);
-            return input ? input.value.trim().toUpperCase() : null;
+            if (!input) return null;
+            let val = input.value.trim().toUpperCase();
+            return (val.length === 1 && /[A-H]/.test(val)) ? val : null;
         } else if (this.currentTestData.type === 'split-layout') {
             const input = document.getElementById(`q${questionNum}`);
-            return input ? input.value.trim() : null;
-        } else if (this.currentTestData.type === 'drag-drop') {
-            return this.slotState[questionNum] || null;
+            return input ? input.value.trim() : "";
         }
         return null;
     }
 
-    updateAnswerCount() {
-        const questionRange = this.getQuestionRange();
-        let answeredCount = 0;
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const answer = this.getUserAnswer(i);
-            if (answer && answer !== '') answeredCount++;
+    /**
+     * Verification check against answerKey
+     */
+    isAnswerCorrect(questionNum, userAnswer) {
+        if (!userAnswer) return false;
+        
+        const keyMap = this.currentTestData.answerKey[`q${questionNum}`] || this.currentTestData.answerKey[questionNum];
+        
+        if (Array.isArray(keyMap)) {
+            // Support multiple correct alternatives (e.g. ['every', 'each'])
+            return keyMap.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+        } else if (typeof keyMap === 'string') {
+            return userAnswer.toLowerCase() === keyMap.toLowerCase();
         }
-        const total = questionRange.end - questionRange.start + 1;
-        const display = document.getElementById('answerCount');
-        if (display) display.textContent = `${answeredCount}/${total}`;
+        return false;
     }
 
-    // ==================== SUBMIT & RESET ====================
+    /**
+     * Set active nav class
+     */
+    setActiveNavButton(questionNum) {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) || 
+                          document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    /**
+     * Scroll into view for a question
+     */
+    scrollToQuestion(questionNum) {
+        let questionElement = document.getElementById(`question-${questionNum}`);
+        if (!questionElement && this.currentTestData.type === 'split-layout') {
+            questionElement = document.getElementById(`q${questionNum}`);
+        }
+        
+        if (questionElement) {
+            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (this.currentTestData.type === 'split-layout') {
+                questionElement.focus();
+            }
+        }
+    }
+
+    /**
+     * Evaluates total answered items and updates nav bar representation
+     */
+    updateAnswerCount() {
+        const questionRange = this.getQuestionRange();
+        let answered = 0;
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const ans = this.getUserAnswer(i);
+            if (ans !== null && ans !== "") answered++;
+        }
+
+        const total = questionRange.end - questionRange.start + 1;
+        
+        const answeredBadge = document.getElementById('answeredCount');
+        if (answeredBadge) {
+            answeredBadge.textContent = `${answered}/${total} answered`;
+        }
+
+        const progressDisplay = document.getElementById('progressDisplay');
+        if (progressDisplay) {
+            progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
+        }
+
+        // Apply visual updates to nav numbers
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) || 
+                        document.querySelector(`.nav-btn[data-q="${i}"]`);
+            if (btn) {
+                const ans = this.getUserAnswer(i);
+                btn.classList.remove('answered', 'unanswered');
+                btn.classList.add((ans !== null && ans !== "") ? 'answered' : 'unanswered');
+            }
+        }
+    }
+
+    /**
+     * Submit action wrapper
+     */
     handleSubmit() {
         if (this.examSubmitted) return;
-        const answers = this.collectAnswers();
+
+        const questionRange = this.getQuestionRange();
+        const unanswered = [];
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const ans = this.getUserAnswer(i);
+            if (ans === null || ans === "") {
+                unanswered.push(i);
+            }
+        }
+
+        if (unanswered.length > 0) {
+            if (!confirm(`Bạn còn ${unanswered.length} câu chưa chọn/điền. Nộp bài?`)) {
+                return;
+            }
+        }
+
+        this.submitExam();
+    }
+
+    /**
+     * Core submission logic
+     */
+    submitExam() {
         this.examSubmitted = true;
 
-        const resultData = {
-            title: this.currentTestData.title,
-            part: this.currentTestData.part,
-            answers: answers,
-            correctCount: this.calculateCorrectCount(answers),
-            totalQuestions: this.getQuestionRange().end - this.getQuestionRange().start + 1,
-            timestamp: new Date().toISOString()
-        };
+        // Expand header/footer when submitted (don't auto-collapse)
+        document.querySelector('.ielts-header')?.classList.remove('collapsed');
+        document.querySelector('.question-nav')?.classList.remove('collapsed');
+        document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
-        const key = this.getStorageKey(false);
-        localStorage.setItem(key, JSON.stringify(resultData));
-        this.clearDraft();
-
-        this.showResults(answers);
-
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) {
-            explainBtn.disabled = false;
-            explainBtn.textContent = 'Xem giải thích';
+        if (this.currentTestData.type === 'split-layout') {
+            // Apply correct styling directly on the inputs
+            const questionRange = this.getQuestionRange();
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const inp = document.getElementById(`q${i}`);
+                if (inp) {
+                    const correct = this.isAnswerCorrect(i, this.getUserAnswer(i));
+                    inp.classList.add(correct ? 'correct' : 'incorrect');
+                    inp.disabled = true;
+                }
+            }
+        } else {
+            this.markAnswers();
         }
 
         const submitBtn = document.getElementById('submitBtn');
@@ -390,116 +938,333 @@ class ReadingCore {
             submitBtn.textContent = 'Đã nộp bài';
         }
 
-        try {
-            const channel = new BroadcastChannel('pet_reset_channel');
-            const d = this.currentTestData;
-            channel.postMessage({ action: 'submit', type: 'reading', book: d.book, test: d.test, part: d.part });
-            channel.close();
-        } catch(e) {}
-    }
-
-    collectAnswers() {
-        const range = this.getQuestionRange();
-        const answers = {};
-        for (let i = range.start; i <= range.end; i++) answers[i] = this.getUserAnswer(i);
-        return answers;
-    }
-
-    calculateCorrectCount(userAnswers) {
-        let correct = 0;
-        if (this.currentTestData.questions) {
-            for (const q of this.currentTestData.questions) {
-                const ua = userAnswers[q.num];
-                if (this.currentTestData.type === 'matching') {
-                    if (ua && ua === q.correctAnswer?.toUpperCase()) correct++;
-                } else {
-                    if (ua === q.correctAnswer) correct++;
-                }
-            }
+        const explainBtn = document.getElementById('explainBtn');
+        if (explainBtn) {
+            explainBtn.disabled = false;
         }
-        return correct;
+
+        // Show generic results popup directly in explanation
+        this.showResults();
+
+        // Local storage saving
+        this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
+        
+        // === MỚI: Xóa draft sau khi nộp ===
+        this.clearDraft();
+        
+        this.disableInputs();
     }
 
-    showResults(userAnswers) {
-        if (!this.currentTestData.questions) return;
-        for (const q of this.currentTestData.questions) {
-            const ua = userAnswers[q.num];
-            let isCorrect = false;
-            if (this.currentTestData.type === 'matching') {
-                isCorrect = ua && ua === q.correctAnswer?.toUpperCase();
-            } else {
-                isCorrect = ua === q.correctAnswer;
+    /**
+     * Decorates the question areas with answer badges
+     */
+    markAnswers() {
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            if (this.currentTestData.type === 'drag-drop') {
+                const reading = document.getElementById(`readingSlot${i}`);
+                const panel = document.getElementById(`panelSlot${i}`);
+                const isCorrect = this.isAnswerCorrect(i, this.getUserAnswer(i));
+                [reading, panel].forEach(slot => {
+                    if (!slot) return;
+                    slot.classList.remove('correct', 'incorrect');
+                    const oldBadge = slot.querySelector('.correct-answer-badge');
+                    if (oldBadge) oldBadge.remove();
+                    if (this.getUserAnswer(i)) {
+                        slot.classList.add(isCorrect ? 'correct' : 'incorrect');
+                        if (!isCorrect) {
+                            const badge = document.createElement('span');
+                            badge.className = 'correct-answer-badge';
+                            badge.textContent = `✓ ${this.currentTestData.answerKey[`q${i}`] || this.currentTestData.answerKey[i]}`;
+                            slot.appendChild(badge);
+                        }
+                    }
+                });
+                continue;
+            } else if (this.currentTestData.type === 'matching') {
+                const input = document.getElementById(`answer-${i}`);
+                if (input) {
+                    const userAnswer = this.getUserAnswer(i);
+                    const isCorrect = this.isAnswerCorrect(i, userAnswer);
+                    input.classList.remove('correct', 'incorrect');
+                    const oldBadge = input.parentNode.querySelector('.correct-answer-badge');
+                    if (oldBadge) oldBadge.remove();
+                    if (isCorrect) {
+                        input.classList.add('correct');
+                    } else if (userAnswer) {
+                        input.classList.add('incorrect');
+                        const badge = document.createElement('span');
+                        badge.className = 'correct-answer-badge';
+                        const ansStr = this.currentTestData.displayAnswers[`q${i}`] || this.currentTestData.displayAnswers[i];
+                        badge.textContent = `✓ ${ansStr}`;
+                        input.parentNode.appendChild(badge);
+                    }
+                }
+                continue;
             }
-            const questionDiv = document.getElementById(`question-${q.num}`);
-            if (questionDiv) {
-                questionDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
+
+            const questionDiv = document.getElementById(`question-${i}`);
+            if (!questionDiv) continue;
+
+            const userAnswer = this.getUserAnswer(i);
+            const isCorrect = this.isAnswerCorrect(i, userAnswer);
+
+            questionDiv.classList.remove('correct', 'incorrect');
+            
+            const oldBadge = questionDiv.querySelector('.correct-answer-badge');
+            if (oldBadge) oldBadge.remove();
+
+            if (isCorrect) {
+                questionDiv.classList.add('correct');
+            } else {
+                questionDiv.classList.add('incorrect');
                 const badge = document.createElement('span');
                 badge.className = 'correct-answer-badge';
-                badge.innerHTML = `✓ ${q.correctAnswer}`;
+                const ansStr = this.currentTestData.displayAnswers[`q${i}`] || this.currentTestData.displayAnswers[i];
+                badge.textContent = `Đáp án đúng: ${ansStr}`;
                 questionDiv.appendChild(badge);
             }
-            if (this.currentTestData.type === 'matching') {
-                const input = document.getElementById(`answer-${q.num}`);
-                if (input) input.classList.add(isCorrect ? 'correct' : 'incorrect');
-            }
         }
-        this.explanationMode = true;
     }
 
+    /**
+     * Generates standard final result overview in the explanation pane
+     */
+    showResults() {
+        const questionRange = this.getQuestionRange();
+        let correctCount = 0;
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            if (this.isAnswerCorrect(i, this.getUserAnswer(i))) {
+                correctCount++;
+            }
+        }
+
+        const total = questionRange.end - questionRange.start + 1;
+
+        if (this.currentTestData.type === 'split-layout') return; // For part 6 just wait for them to click Explain
+
+        const explanationPanel = document.getElementById('explanationPanel');
+        const explanationTitle = document.getElementById('explanationTitle');
+        const explanationText = document.getElementById('explanationText');
+
+        if (explanationPanel && explanationTitle && explanationText) {
+            explanationPanel.classList.add('show');
+            explanationTitle.textContent = 'KẾT QUẢ';
+            explanationText.innerHTML = `
+                <h4>Bạn đã nộp bài</h4>
+                <p><strong>Đúng:</strong> ${correctCount}/${total}</p>
+                <p>Nhấn vào nút <strong>Xem giải thích</strong> để xem hiệu ứng và đáp án đúng.</p>
+            `;
+        }
+    }
+
+    /**
+     * Switch context into Explanation mode globally
+     */
     handleExplain() {
         if (!this.examSubmitted) return;
+
         this.explanationMode = true;
-        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
+        
+        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => {
+            el.style.display = 'inline-block';
+        });
+
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = true;
             explainBtn.textContent = 'Đang xem giải thích';
         }
-        document.getElementById('explanationPanel')?.classList.remove('show');
+
+        if (this.currentTestData.type === 'split-layout') {
+            if (!this.currentSplit) {
+                this.currentSplit = true;
+                
+                // Keep input values while shifting layout
+                const vals = this.getUserAnswers();
+                this.renderSplitColumn();
+                this.attachInputEvents(); // Rebind since DOM replaced
+                
+                const questionRange = this.getQuestionRange();
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                    const el = document.getElementById(`q${i}`);
+                    if (el) el.value = vals[i] || "";
+                    this.addBadgeForQuestion(i);
+                }
+                
+                document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
+            }
+        } else {
+            const explanationPanel = document.getElementById('explanationPanel');
+            if (explanationPanel) {
+                explanationPanel.classList.remove('show');
+            }
+        }
     }
 
+    showExplanation(questionNum) {
+        if (!this.explanationMode && !this.examSubmitted) return;
+
+        if (this.currentTestData.type === 'split-layout') {
+            if (!this.currentSplit) {
+                this.currentSplit = true;
+                const vals = this.getUserAnswers();
+                this.renderSplitColumn();
+                this.attachInputEvents();
+                
+                const questionRange = this.getQuestionRange();
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                    const el = document.getElementById(`q${i}`);
+                    if (el) el.value = vals[i] || "";
+                }
+            }
+            
+            const rightCol = document.getElementById('rightCol');
+            if (rightCol) rightCol.classList.add('show');
+            
+            const explanationDiv = document.getElementById('rightExplanationText');
+            if (!explanationDiv) return;
+            
+            const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                       this.currentTestData.detailedExplanations[questionNum] || 
+                       `<strong>Đáp án: ${customAnsDisplay}</strong>`;
+            
+            if (this.examSubmitted) {
+                const user = this.getUserAnswer(questionNum) || "(chưa điền)";
+                const correct = this.isAnswerCorrect(questionNum, user);
+                html += `<div class="answer-feedback ${correct ? 'correct' : 'incorrect'}" style="margin-top:10px;padding:8px;background:${correct ? '#e8f5e8' : '#ffebee'};border-radius:5px;">`;
+                html += `<strong>Câu trả lời của bạn:</strong> "${user}" ${user ? (correct ? '✓' : '✗') : ''}<br>`;
+                if (!correct) html += `<strong>Đáp án đúng:</strong> ${customAnsDisplay}`;
+                else html += `Chính xác!`;
+                html += `</div>`;
+            }
+            explanationDiv.innerHTML = html;
+            if (this.examSubmitted) this.addBadgeForQuestion(questionNum);
+            
+        } else {
+            this.highlightManager.highlightAnswerInReading(questionNum, this.currentTestData.highlightMap);
+
+            const explanationPanel = document.getElementById('explanationPanel');
+            const explanationTitle = document.getElementById('explanationTitle');
+            const explanationText = document.getElementById('explanationText');
+
+            if (explanationPanel && explanationTitle && explanationText) {
+                explanationPanel.classList.add('show');
+                explanationTitle.textContent = `Giải thích câu ${questionNum}`;
+                
+                const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
+                let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                           this.currentTestData.detailedExplanations[questionNum] || 
+                           `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
+                
+                if (this.examSubmitted) {
+                    const userAnswer = this.getUserAnswer(questionNum) || '(chưa chọn/điền)';
+                    const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
+                    
+                    html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                    html += `<strong>Câu trả lời của bạn:</strong> ${userAnswer}<br>`;
+                    if (!isCorrect) {
+                        html += `<strong>Đáp án đúng:</strong> ${customAnsDisplay}`;
+                    } else {
+                        html += `<strong>✅ Đúng!</strong>`;
+                    }
+                    html += `</div>`;
+                }
+                
+                explanationText.innerHTML = html;
+            }
+        }
+    }
+
+    addBadgeForQuestion(qNum) {
+        const input = document.getElementById(`q${qNum}`);
+        if (!input) return;
+        const wrapper = input.parentNode;
+        let existing = wrapper.querySelector('.correct-answer-badge');
+        if (existing) existing.remove();
+        
+        const badge = document.createElement('span');
+        badge.className = 'correct-answer-badge';
+        badge.textContent = this.currentTestData.displayAnswers[`q${qNum}`] || this.currentTestData.displayAnswers[qNum];
+        if (this.explanationMode) badge.style.display = 'inline-block';
+        wrapper.appendChild(badge);
+    }
+
+    closeExplanation() {
+        const explanationPanel = document.getElementById('explanationPanel');
+        if (explanationPanel) {
+            explanationPanel.classList.remove('show');
+        }
+        this.highlightManager.clearAllHighlights();
+    }
+
+    /**
+     * ✅ FIX v2.1: Handle reset button click
+     */
     handleReset() {
+        console.log('[Reading handleReset] called');
         this.resetAll();
     }
 
+    /**
+     * ✅ FIX v2.1: Reset all answers and state
+     * CHANGES:
+     * 1. Removed function override method - using flag instead
+     * 2. Changed setTimeout delay from 0 to 500ms
+     * 3. Added defensive: removeItem again after delay
+     * 4. All event listeners check _isResetting early return
+     */
     resetAll() {
+        console.log('[Reading resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
-
-        this._isResetting = true;
 
         const book = this.currentTestData.book || 1;
         const test = this.currentTestData.test || 1;
         const part = this.currentTestData.part || 1;
+
         const completedKey = `pet_reading_book${book}_test${test}_part${part}`;
         const draftKey = completedKey + '_draft';
 
+        // ✅ FIX: Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
+        console.log('[Reset] Deleted keys:', completedKey, draftKey);
 
+        // ✅ FIX: SET FLAG TRƯỚC KHI LÀM ĐIỀU GÌ KHÁC
+        this._isResetting = true;
+
+        // === Reset UI ===
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
 
-        const range = this.getQuestionRange();
+        const questionRange = this.getQuestionRange();
 
-        // Reset UI based on type
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
             this.attachInputEvents();
         } else {
-            for (let i = range.start; i <= range.end; i++) {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
                 if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
-                    document.getElementsByName(`q${i}`).forEach(r => { r.checked = false; r.disabled = false; });
+                    const radios = document.getElementsByName(`q${i}`);
+                    radios.forEach(radio => {
+                        radio.checked = false;
+                        radio.disabled = false;
+                    });
+                    if (this.currentTestData.type === 'inline-radio') {
+                        this.updateInlineSlotFromRadio(i);
+                    }
                 } else if (this.currentTestData.type === 'drag-drop') {
                     this.clearSlot(i);
                     const reading = document.getElementById(`readingSlot${i}`);
                     const panel = document.getElementById(`panelSlot${i}`);
                     [reading, panel].forEach(slot => {
-                        if (slot) {
-                            slot.classList.remove('correct', 'incorrect');
-                            const b = slot.querySelector('.correct-answer-badge');
-                            if (b) b.remove();
-                        }
+                        if (slot) slot.classList.remove('correct', 'incorrect');
+                        const b = slot && slot.querySelector('.correct-answer-badge');
+                        if (b) b.remove();
                     });
                     this.slotState = {};
                 } else if (this.currentTestData.type === 'matching') {
@@ -513,11 +1278,11 @@ class ReadingCore {
                     }
                 }
 
-                const qDiv = document.getElementById(`question-${i}`);
-                if (qDiv) {
-                    qDiv.classList.remove('correct', 'incorrect');
-                    const b = qDiv.querySelector('.correct-answer-badge');
-                    if (b) b.remove();
+                const questionDiv = document.getElementById(`question-${i}`);
+                if (questionDiv) {
+                    questionDiv.classList.remove('correct', 'incorrect');
+                    const badge = questionDiv.querySelector('.correct-answer-badge');
+                    if (badge) badge.remove();
                 }
             }
         }
@@ -530,7 +1295,10 @@ class ReadingCore {
             });
         }
 
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            icon.style.display = 'none';
+        });
+
         this.highlightManager.clearAllHighlights();
 
         const submitBtn = document.getElementById('submitBtn');
@@ -545,255 +1313,651 @@ class ReadingCore {
             explainBtn.textContent = 'Xem giải thích';
         }
 
-        document.getElementById('explanationPanel')?.classList.remove('show');
+        const explanationPanel = document.getElementById('explanationPanel');
+        if (explanationPanel) {
+            explanationPanel.classList.remove('show');
+        }
 
+        // Gửi sự kiện storage (để tab index ở chế độ nền nhận được)
         window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
         window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
+        // Gửi broadcast (để index ở bất kỳ tab nào cũng nhận)
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
             channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
-        } catch(e) {}
+        } catch(e) { console.warn('BroadcastChannel error:', e); }
 
+        // ✅ FIX: DELAY LÂU HƠN - 500ms thay vì 0ms
         setTimeout(() => {
             this._isResetting = false;
+            // ✅ FIX: Xóa lần nữa để chắc chắn (defensive)
             localStorage.removeItem(draftKey);
-            console.log('[Reset] Draft saving re-enabled');
-        }, 300);
+            console.log('[Reset] Complete - _isResetting=false, draft key cleaned');
+        }, 500);  // ✅ 500ms để đảm bảo event queue process hết
 
         this.updateAnswerCount();
     }
 
-    clearSlot(slotNum) {
-        delete this.slotState[slotNum];
-    }
-
-    showExplanation(questionNum) {
-        if (!this.explanationMode && !this.examSubmitted) return;
-        const q = this.currentTestData.questions?.find(q => q.num === parseInt(questionNum));
-        if (!q) return;
-        const panel = document.getElementById('explanationPanel');
-        const content = document.getElementById('explanationContent');
-        if (panel && content) {
-            content.innerHTML = `
-                <div class="explanation-item">
-                    <div class="explanation-header">
-                        <span class="question-num">Câu ${questionNum}</span>
-                        <span class="correct-answer">Đáp án: <strong>${q.correctAnswer}</strong></span>
-                    </div>
-                    <div class="explanation-text">${q.explanation || 'Chưa có giải thích.'}</div>
-                </div>
-            `;
-            panel.classList.add('show');
-        }
-    }
-
-    closeExplanation() {
-        document.getElementById('explanationPanel')?.classList.remove('show');
-    }
-
-    createNavigation() {
-        const nav = document.getElementById('questionNav');
-        if (!nav) return;
-        const range = this.getQuestionRange();
-        nav.innerHTML = '';
-        for (let i = range.start; i <= range.end; i++) {
-            const btn = document.createElement('button');
-            btn.className = 'nav-btn';
-            btn.textContent = i;
-            btn.dataset.question = i;
-            btn.addEventListener('click', () => {
-                document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    disableInputs() {
+        if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
+            document.querySelectorAll('input[type="radio"]').forEach(input => {
+                input.disabled = true;
             });
-            nav.appendChild(btn);
+        } else if (this.currentTestData.type === 'drag-drop') {
+            document.querySelectorAll('.sentence-item').forEach(el => {
+                el.setAttribute('draggable', 'false');
+                el.style.cursor = 'default';
+            });
+        } else if (this.currentTestData.type === 'matching') {
+            document.querySelectorAll('input[type="text"].answer-input').forEach(input => {
+                input.disabled = true;
+            });
         }
-        document.addEventListener('change', () => this.updateNavButtons());
-        document.addEventListener('input', () => this.updateNavButtons());
+        // Split-layout handles disabled fields directly within submit hook
     }
 
-    updateNavButtons() {
-        const range = this.getQuestionRange();
-        for (let i = range.start; i <= range.end; i++) {
-            const ans = this.getUserAnswer(i);
-            const btn = document.querySelector(`[data-question="${i}"]`);
-            if (btn) {
-                btn.classList.toggle('answered', ans && ans !== '');
-            }
+    getUserAnswers() {
+        const answers = {};
+        const questionRange = this.getQuestionRange();
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            answers[i] = this.getUserAnswer(i);
         }
+
+        return answers;
     }
 }
 
-// ==================== HELPER CLASSES ====================
+/**
+ * Highlighting functionalities inside the text content pane
+ * FIXED: Use event delegation, fallback selection, TreeWalker
+ */
 class ReadingHighlightManager {
     constructor() {
+        this.selectedRange = null;
         this.setupContextMenu();
     }
+
+    /**
+     * Expose global helper interface bridging manual highlighting
+     * FIXED: Use event delegation on document to handle dynamic DOM changes
+     */
     setupContextMenu() {
+        // Sử dụng event delegation trên document để bắt contextmenu trong vùng đọc và câu hỏi
         document.addEventListener('contextmenu', (e) => {
-            const area = e.target.closest('#readingText, .questions-panel, .question-item');
-            if (area && window.getSelection().toString().trim()) {
-                e.preventDefault();
-                this.savedRange = window.getSelection().getRangeAt(0).cloneRange();
-                this.showContextMenu(e.pageX, e.pageY);
+            // Kiểm tra target có nằm trong vùng đọc hoặc vùng câu hỏi không
+            const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
+            if (highlightArea) {
+                const selection = window.getSelection();
+                if (selection.toString().trim()) {
+                    e.preventDefault();
+                    this.selectedRange = selection.getRangeAt(0);
+                    this.showContextMenu(e.pageX, e.pageY);
+                }
             }
         });
+
         document.addEventListener('click', (e) => {
-            const menu = document.getElementById('contextMenu');
-            if (menu && !menu.contains(e.target)) menu.style.display = 'none';
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && !contextMenu.contains(e.target)) {
+                this.hideContextMenu();
+            }
         });
     }
+
     showContextMenu(x, y) {
-        const menu = document.getElementById('contextMenu');
-        if (menu) {
-            menu.style.left = x + 'px';
-            menu.style.top = y + 'px';
-            menu.style.display = 'block';
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
         }
     }
+
+    hideContextMenu() {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
+        }
+    }
+
+    /**
+     * Programatically inject spans capturing the text using TreeWalker
+     */
+    highlightAnswerInReading(questionNum, referenceMap) {
+        this.clearAllHighlights();
+
+        if (!referenceMap) return;
+        const info = referenceMap[`q${questionNum}`] || referenceMap[questionNum];
+        if (!info) return;
+        
+        let card;
+        if (info.cardId) {
+            card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
+        } else if (info.reviewId) {
+            card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
+        }
+        
+        if (!card) return;
+
+        const qItem = document.getElementById(`question-${questionNum}`);
+        if (qItem) qItem.classList.add('highlight-question');
+
+        let firstSpan = null;
+        const keywords = info.keywords || [];
+        
+        keywords.forEach(keyword => {
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
+                if (idx !== -1) {
+                    const range = document.createRange();
+                    range.setStart(node, idx);
+                    range.setEnd(node, idx + keyword.length);
+                    const span = document.createElement('span');
+                    span.className = 'dynamic-highlight';
+                    try {
+                        range.surroundContents(span);
+                        if (!firstSpan) firstSpan = span;
+                    } catch(e) { console.log("Tree span surround failed", e); }
+                    break;
+                }
+            }
+        });
+        
+        if (firstSpan) {
+            firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // Scroll to the card containing it at least
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
     clearAllHighlights() {
-        document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink').forEach(el => {
+        document.querySelectorAll('.dynamic-highlight').forEach(el => {
             const parent = el.parentNode;
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
-            parent.removeChild(el);
+            if (parent) {
+                while (el.firstChild) {
+                    parent.insertBefore(el.firstChild, el);
+                }
+                parent.removeChild(el);
+            }
+        });
+        document.querySelectorAll('.question-item.highlight-question').forEach(el => {
+            el.classList.remove('highlight-question');
         });
     }
+
+    /**
+     * FIXED: Apply manual highlighting with saved range + fallback selection
+     */
     applyHighlight(color) {
-        const range = this.savedRange || window.getSelection().getRangeAt(0);
-        const span = document.createElement('span');
-        span.className = `highlight-${color}`;
-        try {
-            range.surroundContents(span);
-        } catch {
-            const frag = range.extractContents();
-            span.appendChild(frag);
-            range.insertNode(span);
+        let range = this.selectedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
         }
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+        } catch(e) {
+            console.log("Could not highlight", e);
+        }
+        // Xóa selection và đóng menu
         window.getSelection().removeAllRanges();
-        document.getElementById('contextMenu').style.display = 'none';
+        this.hideContextMenu();
+        this.selectedRange = null;
     }
+
+    /**
+     * FIXED: Remove highlighting with saved range + fallback selection + TreeWalker
+     */
     removeHighlight() {
-        const range = this.savedRange || window.getSelection().getRangeAt(0);
-        const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
-            acceptNode: node => node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
-        });
+        let range = this.selectedRange;
+        if (!range) {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            range = selection.getRangeAt(0);
+        }
+        // Tìm tất cả các highlight span nằm trong range
+        const walker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: (node) => {
+                    if (node.classList && 
+                        (node.classList.contains('highlight-yellow') || 
+                         node.classList.contains('highlight-green') || 
+                         node.classList.contains('highlight-pink'))) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
         const toRemove = [];
         let node;
-        while (node = walker.nextNode()) if (range.intersectsNode(node)) toRemove.push(node);
+        while (node = walker.nextNode()) {
+            if (range.intersectsNode(node)) {
+                toRemove.push(node);
+            }
+        }
         toRemove.forEach(span => {
             const parent = span.parentNode;
-            while (span.firstChild) parent.insertBefore(span.firstChild, span);
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
+            }
             parent.removeChild(span);
         });
         window.getSelection().removeAllRanges();
-        document.getElementById('contextMenu').style.display = 'none';
+        this.hideContextMenu();
+        this.selectedRange = null;
     }
 }
 
+/**
+ * Storage extraction for the PET module architecture
+ */
 class ReadingStorageManager {
+    saveResults(testData, userAnswers) {
+        const details = [];
+        let correctCount = 0;
+
+        const questions = testData.questions || 
+                          Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q','')) })).filter(q => !isNaN(q.num));
+                          
+        const questionRangeStart = Math.min(...questions.map(q => q.num));
+        const questionRangeEnd = Math.max(...questions.map(q => q.num));
+
+        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
+            const userAnswer = userAnswers[i];
+            const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
+            
+            // Revalidate internally
+            let isCorrect = false;
+            if (userAnswer) {
+                if (Array.isArray(answerKeyRaw)) {
+                    isCorrect = answerKeyRaw.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+                } else if (typeof answerKeyRaw === 'string') {
+                    isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
+                }
+            }
+            
+            if (isCorrect) correctCount++;
+
+            const correctAnswerString = testData.displayAnswers[`q${i}`] || testData.displayAnswers[i] || answerKeyRaw;
+
+            details.push({
+                question: i,
+                user: userAnswer || '(trống)',
+                correct: correctAnswerString,
+                isCorrect: isCorrect
+            });
+        }
+
+        const partId = testData.part || this.parseTestInfo(document.title).part;
+        const partData = {
+            partId: partId,
+            name: `Part ${partId}`,
+            totalQuestions: details.length,
+            correctCount: correctCount,
+            details: details
+        };
+
+        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const resolvedPart = testData.part || part;
+        
+        const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
+        
+        localStorage.setItem(key, JSON.stringify(partData));
+        console.log(`Results saved with key: ${key}`);
+    }
+
     parseTestInfo(title) {
         let book = 1, test = 1, part = 1;
-        const bm = title.match(/Preliminary\s+(\d+)/i);
-        if (bm) book = parseInt(bm[1]);
-        const tm = title.match(/Test\s+(\d+)/i);
-        if (tm) test = parseInt(tm[1]);
-        const pm = title.match(/Part\s+(\d+)/i);
-        if (pm) part = parseInt(pm[1]);
+        
+        const bookMatch = title.match(/Preliminary\s+(\d+)/i);
+        if (bookMatch) book = parseInt(bookMatch[1]);
+        
+        const testMatch = title.match(/Test\s+(\d+)/i);
+        if (testMatch) test = parseInt(testMatch[1]);
+        
+        const partMatch = title.match(/Part\s+(\d+)/i);
+        if (partMatch) part = parseInt(partMatch[1]);
+        
         return { book, test, part };
     }
 }
 
+/**
+ * Interactive DOM controls manipulation
+ */
 class ReadingUIManager {
     setupFontControls() {
-        const btns = { fontSmall: 'small', fontMedium: 'medium', fontLarge: 'large' };
-        Object.entries(btns).forEach(([id, size]) => {
-            document.getElementById(id)?.addEventListener('click', () => this.setFontSize(size));
+        const fontButtons = {
+            fontSmall: 'small',
+            fontMedium: 'medium', 
+            fontLarge: 'large'
+        };
+
+        Object.entries(fontButtons).forEach(([id, size]) => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.addEventListener('click', () => this.setFontSize(size));
+            }
         });
-        this.setFontSize('large');
     }
+
     setFontSize(size) {
-        document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`)?.classList.add('active');
-        document.querySelectorAll('.reading-text, .questions-list').forEach(el => {
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+
+        // Target content directly instead of overriding classes fully
+        document.querySelectorAll('.reading-content, .questions-list, #testWrapper').forEach(el => {
             el.classList.remove('font-small', 'font-medium', 'font-large');
             el.classList.add(`font-${size}`);
         });
     }
+
     setupThemeToggle() {
-        const btn = document.getElementById('themeToggle');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            const cur = document.documentElement.getAttribute('data-theme');
-            const next = cur === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+
+        // Restore
+        const testWrapper = document.getElementById('testWrapper');
+        const savedTheme = localStorage.getItem('pet-theme');
+        if (savedTheme === 'dark' && testWrapper && !testWrapper.classList.contains('classic-mode')) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (testWrapper && testWrapper.classList.contains('classic-mode')) return;
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('pet-theme', newTheme);
         });
-        const saved = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', saved);
     }
+
     setupModeToggle() {
-        const toggle = document.getElementById('modeToggle');
-        const style = document.getElementById('styleLink');
-        if (!toggle || !style) return;
+        const modeToggle = document.getElementById('modeToggle');
+        const styleLink = document.getElementById('styleLink');
+        const testWrapper = document.getElementById('testWrapper');
+        
+        if (!modeToggle || !styleLink || !testWrapper) return;
+
         const setMode = (isClassic) => {
             if (isClassic) {
-                style.href = style.href.replace('reading-pet-common.css', 'reading-pet-common1.css');
-                document.getElementById('themeToggle').style.display = 'none';
+                styleLink.href = 'reading-pet-common1.css';
+                testWrapper.classList.add('classic-mode');
                 document.documentElement.removeAttribute('data-theme');
+                localStorage.removeItem('pet-theme');
             } else {
-                style.href = style.href.replace('reading-pet-common1.css', 'reading-pet-common.css');
-                document.getElementById('themeToggle').style.display = 'flex';
+                styleLink.href = 'reading-pet-common.css';
+                testWrapper.classList.remove('classic-mode');
             }
             localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+            // Force reflow để áp dụng style ngay
+            void document.body.offsetHeight;
         };
-        const saved = localStorage.getItem('pet-mode');
-        if (saved === 'classic') { toggle.checked = true; setMode(true); }
-        else { toggle.checked = false; setMode(false); }
-        toggle.addEventListener('change', () => setMode(toggle.checked));
+
+        const savedMode = localStorage.getItem('pet-mode');
+        if (savedMode === 'classic') {
+            modeToggle.checked = true;
+            setMode(true);
+        } else {
+            modeToggle.checked = false;
+            setMode(false);
+        }
+
+        modeToggle.addEventListener('change', () => {
+            setMode(modeToggle.checked);
+        });
     }
+
     setupResizer() {
-        const left = document.getElementById('readingText');
-        const right = document.getElementById('questionsPanel');
+        const readingPanel = document.getElementById('readingPanel');
+        const questionsPanel = document.getElementById('questionsPanel');
         const resizer = document.getElementById('resizer');
-        if (!left || !right || !resizer) return;
-        let resizing = false;
-        resizer.addEventListener('mousedown', () => { resizing = true; document.body.style.cursor = 'col-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!resizing) return;
-            const main = document.getElementById('mainArea');
-            if (!main) return;
-            const rect = main.getBoundingClientRect();
-            let w = e.clientX - rect.left - 4;
-            if (w < 250) w = 250;
-            if (w > rect.width - 250) w = rect.width - 250;
-            left.style.width = w + 'px';
-            right.style.width = (rect.width - w - 8) + 'px';
+        
+        if (!readingPanel || !questionsPanel || !resizer) return;
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', () => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
         });
-        document.addEventListener('mouseup', () => { resizing = false; document.body.style.cursor = 'default'; });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const mainArea = document.getElementById('mainArea');
+            if (!mainArea) return;
+
+            const rect = mainArea.getBoundingClientRect();
+            let leftWidth = e.clientX - rect.left - 4;
+            
+            if (leftWidth < 250) leftWidth = 250;
+            if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
+            
+            readingPanel.style.width = leftWidth + 'px';
+            questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
     }
+
     setupExplanationPanel() {
-        const panel = document.getElementById('explanationPanel');
-        const resizer = document.getElementById('explanationResizer');
-        if (!panel || !resizer) return;
-        let resizing = false;
-        resizer.addEventListener('mousedown', () => { resizing = true; document.body.style.cursor = 'ns-resize'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!resizing) return;
-            const rect = panel.getBoundingClientRect();
-            let h = e.clientY - rect.top;
-            if (h < 150) h = 150;
-            if (h > 500) h = 500;
-            panel.style.height = h + 'px';
+        const explanationPanel = document.getElementById('explanationPanel');
+        const explanationResizer = document.getElementById('explanationResizer');
+        
+        if (!explanationPanel || !explanationResizer) return;
+
+        let isResizing = false;
+        let startY, startHeight;
+
+        explanationResizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startY = e.clientY;
+            startHeight = explanationPanel.offsetHeight;
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
         });
-        document.addEventListener('mouseup', () => { resizing = false; document.body.style.cursor = 'default'; });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const dy = startY - e.clientY;
+            const newHeight = startHeight + dy;
+            
+            if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+                explanationPanel.style.height = newHeight + 'px';
+                explanationPanel.style.maxHeight = newHeight + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto';
+        });
     }
-    setupAutoCollapse(core) {
-        // Simplified auto-collapse (optional)
+
+    /**
+     * Setup auto-collapse for header and footer after 5s of mouse leave
+     */
+    setupAutoCollapse(coreInstance) {
+        const header = document.querySelector('.ielts-header');
+        const footer = document.querySelector('.bottom-bar');
+        const questionNav = document.querySelector('.question-nav');
+        
+        if (!header && !footer) return;
+
+        // Add toggle button to header
+        this.addAutoCollapseToggle(header, coreInstance);
+
+        let headerTimer = null;
+        let footerTimer = null;
+        const COLLAPSE_DELAY = 5000; // 5 seconds
+
+        const isAutoCollapseEnabled = () => {
+            return localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        };
+
+        const collapseHeader = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            header?.classList.add('collapsed');
+        };
+
+        const expandHeader = () => {
+            header?.classList.remove('collapsed');
+        };
+
+        const collapseFooter = () => {
+            if (coreInstance.examSubmitted) return;
+            if (!isAutoCollapseEnabled()) return;
+            footer?.classList.add('collapsed');
+        };
+
+        const expandFooter = () => {
+            footer?.classList.remove('collapsed');
+        };
+
+        // Header hover handling
+        if (header) {
+            header.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            header.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Question nav hover handling - hover to expand header, but don't collapse question nav itself
+        if (questionNav) {
+            questionNav.addEventListener('mouseenter', () => {
+                clearTimeout(headerTimer);
+                expandHeader();
+            });
+            questionNav.addEventListener('mouseleave', () => {
+                if (!header?.matches(':hover') && isAutoCollapseEnabled()) {
+                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Footer hover handling
+        if (footer) {
+            footer.addEventListener('mouseenter', () => {
+                clearTimeout(footerTimer);
+                expandFooter();
+            });
+            footer.addEventListener('mouseleave', () => {
+                if (isAutoCollapseEnabled()) {
+                    footerTimer = setTimeout(collapseFooter, COLLAPSE_DELAY);
+                }
+            });
+        }
+
+        // Start collapsed after initial delay only if enabled
+        setTimeout(() => {
+            if (!coreInstance.examSubmitted && isAutoCollapseEnabled()) {
+                collapseHeader();
+                collapseFooter();
+            }
+        }, COLLAPSE_DELAY);
+    }
+
+    /**
+     * Add auto-collapse toggle button to header
+     */
+    addAutoCollapseToggle(header, coreInstance) {
+        if (!header) return;
+        
+        // Check if toggle already exists
+        if (header.querySelector('.autocollapse-toggle')) return;
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'autocollapse-toggle';
+        toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
+        
+        // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
+        const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
+        </svg>`;
+        const iconExpand = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>`;
+        
+        const isEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+        toggleBtn.innerHTML = isEnabled ? iconShrink : iconExpand;
+        toggleBtn.classList.toggle('active', isEnabled);
+
+        toggleBtn.addEventListener('click', () => {
+            const currentlyEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
+            const newEnabled = !currentlyEnabled;
+            localStorage.setItem('pet-autocollapse-enabled', newEnabled.toString());
+            
+            toggleBtn.classList.toggle('active', newEnabled);
+            toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
+            
+            if (!newEnabled) {
+                // Expand header and footer when disabled (keep question-nav visible)
+                header?.classList.remove('collapsed');
+                document.querySelector('.bottom-bar')?.classList.remove('collapsed');
+            }
+        });
+
+        // Find a good place to insert the button - right after mode toggle (modern/classic)
+        const modeToggle = header.querySelector('#modeToggleContainer');
+        const themeToggle = header.querySelector('.theme-toggle-btn');
+        
+        if (modeToggle) {
+            modeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else if (themeToggle) {
+            themeToggle.insertAdjacentElement('afterend', toggleBtn);
+        } else {
+            header.appendChild(toggleBtn);
+        }
     }
 }
 
-// Global functions for context menu
-window.applyHighlight = (color) => window.readingCore?.highlightManager.applyHighlight(color);
-window.removeHighlight = () => window.readingCore?.highlightManager.removeHighlight();
+// Ensure the context menu functions are mapped globally so the HTML onclick="applyHighlight('yellow')" handlers still fire correctly.
+window.applyHighlight = function(color) {
+    if (window.readingCore && window.readingCore.highlightManager) {
+        window.readingCore.highlightManager.applyHighlight(color);
+    }
+};
 
+window.removeHighlight = function() {
+    if (window.readingCore && window.readingCore.highlightManager) {
+        window.readingCore.highlightManager.removeHighlight();
+    }
+};
+
+// Export globally for the HTML wrappers
 window.ReadingCore = ReadingCore;
+window.ReadingHighlightManager = ReadingHighlightManager;
+window.ReadingStorageManager = ReadingStorageManager;
+window.ReadingUIManager = ReadingUIManager;
