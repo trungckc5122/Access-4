@@ -252,6 +252,9 @@ class ListeningCore {
         
         // Initialize navigation
         this.createNavigation();
+
+        // Khởi tạo trình chuyển đổi giao diện Modern/Classic
+        this.initModeToggle();
         
         // === MỚI: Khôi phục draft nếu chưa nộp bài ===
         if (!this.isCompleted()) {
@@ -759,6 +762,74 @@ class ListeningCore {
             });
         }
         nav.appendChild(nextPartBtn);
+    }
+
+    /**
+     * Khởi tạo trình chuyển đổi giao diện Modern/Classic
+     */
+    initModeToggle() {
+        const header = document.querySelector('.ielts-header .brand') || document.querySelector('.ielts-header');
+        if (!header) return;
+
+        let container = document.getElementById('modeToggleContainer');
+        
+        // Nếu đã có sẵn trong HTML (do file cũ chưa xóa), chỉ cần gán sự kiện
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'mode-toggle';
+            container.id = 'modeToggleContainer';
+            container.innerHTML = `
+                <span class="mode-label">Hiện đại</span>
+                <label class="mode-switch" title="Chuyển đổi giao diện Cổ điển/Hiện đại">
+                    <input type="checkbox" id="modeToggle">
+                    <span class="mode-slider"></span>
+                </label>
+                <span class="mode-label">Cổ điển</span>
+            `;
+            
+            // Tìm vị trí chèn: sau font-controls hoặc ở cuối brand
+            const fontControls = header.querySelector('.font-controls');
+            if (fontControls) {
+                fontControls.insertAdjacentElement('afterend', container);
+            } else {
+                header.appendChild(container);
+            }
+        }
+
+        this.setupModeToggleEvents(container);
+    }
+
+    /**
+     * Thiết lập sự kiện và trạng thái cho Mode Toggle
+     */
+    setupModeToggleEvents(container) {
+        const toggle = container.querySelector('#modeToggle');
+        if (!toggle) return;
+
+        const styleLink = document.getElementById('styleLink');
+        const storageKey = 'pet-listening-theme';
+        
+        // Khôi phục trạng thái đã lưu
+        const savedTheme = localStorage.getItem(storageKey);
+        if (savedTheme === 'classic') {
+            toggle.checked = true;
+            if (styleLink) styleLink.href = 'listening-pet-common1.css';
+            document.body.classList.add('classic-mode');
+        }
+
+        toggle.addEventListener('change', () => {
+            const isClassic = toggle.checked;
+            localStorage.setItem(storageKey, isClassic ? 'classic' : 'modern');
+            
+            if (styleLink) {
+                styleLink.href = isClassic ? 'listening-pet-common1.css' : 'listening-pet-common.css';
+            }
+            
+            document.body.classList.toggle('classic-mode', isClassic);
+            
+            // Thông báo cập nhật layout
+            window.dispatchEvent(new Event('resize'));
+        });
     }
 
     /**
