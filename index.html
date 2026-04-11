@@ -1243,8 +1243,24 @@
     checkBrokenLinks();
     initTheme();
     initGlobalStacking();
-    initStatusBadges(); // <-- THÊM DÒNG NÀY
+    initStatusBadges();
     
+    // Khai báo BroadcastChannel trong DOMContentLoaded để ổn định
+    try {
+      const resetChannel = new BroadcastChannel('pet_reset_channel');
+      resetChannel.onmessage = (event) => {
+        console.log('[Index] Broadcast received:', event.data);
+        if (event.data.action === 'reset') {
+          // Xóa triệt để các badge hiện tại
+          document.querySelectorAll('.status-badge, .score-badge').forEach(b => b.remove());
+          // Cập nhật lại toàn bộ
+          initStatusBadges();
+        }
+      };
+    } catch (e) {
+      console.warn('BroadcastChannel not supported', e);
+    }
+
     // Hiệu ứng Fade in cho header khi load
     const header = document.querySelector('header');
     header.style.opacity = '0';
@@ -1256,43 +1272,20 @@
 
   // Tự động cập nhật badge khi quay lại tab hoặc có thay đổi từ tab khác
   window.addEventListener('focus', () => {
-    initStatusBadges();  // Quét lại toàn bộ link PET và cập nhật badge
+    initStatusBadges();
   });
 
-  // ✅ FIX v2.1: Enhanced storage listener with better logging
+  // Cập nhật khi có thay đổi localStorage
   window.addEventListener('storage', (e) => {
-    console.log('[Index] storage event:', e.key);
-    // Nếu có thay đổi liên quan đến dữ liệu PET (reading/listening)
     if (e.key && (e.key.includes('pet_reading') || e.key.includes('pet_listening'))) {
-      // ✅ FIX: Track if key was deleted or updated
-      const stillExists = e.newValue !== null;
-      console.log('[Index] Key:', e.key, 'exists:', stillExists, 'newValue length:', e.newValue?.length || 0);
-      
-      // Cập nhật badge
+      console.log('[Index] Storage change detected for:', e.key);
       initStatusBadges();
     }
   });
 
-  // Khai báo BroadcastChannel toàn cục (để tránh tạo nhiều lần)
-  let resetChannel;
-  try {
-    resetChannel = new BroadcastChannel('pet_reset_channel');
-    resetChannel.onmessage = (event) => {
-      console.log('[Index] broadcast received:', event.data);
-      if (event.data.action === 'reset') {
-        // Xóa tất cả badge hiện tại trước khi tạo lại
-        document.querySelectorAll('.status-badge, .score-badge').forEach(b => b.remove());
-        initStatusBadges();
-      }
-    };
-  } catch (e) {
-    console.warn('BroadcastChannel not supported', e);
-  }
-
-  // Thêm event visibilitychange để cập nhật khi tab được hiển thị trở lại
+  // Cập nhật khi tab được hiển thị trở lại
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      // Khi tab trở nên visible, quét lại toàn bộ badge
       initStatusBadges();
     }
   });
