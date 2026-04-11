@@ -6,10 +6,8 @@
  * CHANGELOG:
  * - Added autosave draft feature (save progress automatically)
  * - Reset now also clears saved results and draft
- * - FIXED: matching support in markAnswers, reset badge
- * - FIXED: highlight manager uses event delegation, fallback selection
- * - FIXED: force reflow in mode toggle
- * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
+ * - FIXED: draft only saved when at least one answer is non-empty
+ * - FIXED: proper highlight manager, storage manager, UI manager included
  */
 
 class ReadingCore {
@@ -18,19 +16,18 @@ class ReadingCore {
         this.explanationMode = false;
         this.currentTestData = null;
         this.currentSplit = false; // Used for Part 6 split layout
-        this.slotState = {}; // Used for Part 4 & 5
+        this.slotState = {}; // Used for Part 4 & 5 (drag-drop / matching)
 
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
-        this.DEBOUNCE_MS = 500;
+        this.DEBOUNCE_MS = 300;
         this._isResetting = false;
     }
 
     /**
      * Initialize reading test with configuration data
-     * @param {Object} testData - Test configuration including answers, text matching, and questions
      */
     initializeTest(testData) {
         this.currentTestData = testData;
@@ -41,10 +38,10 @@ class ReadingCore {
         // Setup UI components
         this.setupUI();
         
-        // Render questions based on test type (or setup initial split layout)
+        // Render questions based on test type
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
-            this.attachInputEvents(); // For inline gaps
+            this.attachInputEvents();
         } else if (this.currentTestData.type === 'drag-drop') {
             this.setupDragDropEvents();
         } else if (this.currentTestData.type === 'inline-radio') {
@@ -56,13 +53,13 @@ class ReadingCore {
         // Setup event listeners
         this.setupEventListeners();
         
-        // === MỚI: Lưu draft khi rời trang ===
+        // Setup beforeunload handlers
         this.setupBeforeUnload();
         
         // Initialize navigation
         this.createNavigation();
         
-        // === MỚI: Khôi phục draft nếu chưa nộp bài ===
+        // Restore draft if not submitted
         if (!this.isCompleted()) {
             this.loadDraft();
         }
@@ -78,23 +75,13 @@ class ReadingCore {
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
 
-    /**
-     * Kiểm tra xem bài này đã được nộp (có kết quả lưu) chưa
-     */
+    // ==================== DRAFT MANAGEMENT ====================
     isCompleted() {
-        if (!this.currentTestData) {
-            console.log('[Reading Draft] isCompleted: no test data');
-            return false;
-        }
+        if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        const completed = localStorage.getItem(key) !== null;
-        console.log('[Reading Draft] isCompleted check - key:', key, 'completed:', completed);
-        return completed;
+        return localStorage.getItem(key) !== null;
     }
 
-    /**
-     * Lấy storage key (có hoặc không có hậu tố _draft)
-     */
     getStorageKey(isDraft = false) {
         const meta = this.currentTestData.metadata || this.storageManager.parseTestInfo(
             document.querySelector('.candidate')?.textContent || ''
@@ -104,13 +91,9 @@ class ReadingCore {
         const part = this.currentTestData.part || meta.part || 1;
         let key = `pet_reading_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
-        console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
     }
 
-    /**
-     * Lấy dữ liệu nháp hiện tại từ giao diện
-     */
     getDraftData() {
         const questionRange = this.getQuestionRange();
         const draft = { type: this.currentTestData.type };
@@ -135,179 +118,106 @@ class ReadingCore {
         return draft;
     }
 
-    /**
-     * Lưu nháp vào localStorage (có debounce)
-     */
+    draftHasAnswers(draft) {
+        const { type, slotState, ...answers } = draft;
+        const radioAnswers = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        if (slotState && Object.keys(slotState).length > 0) return true;
+        return radioAnswers;
+    }
+
     saveDraft() {
-        if (this.examSubmitted || this._isResetting) {
-            console.log('[Reading Draft] Skip: exam already submitted or resetting');
-            return;
-        }
-        if (!this.currentTestData) {
-            console.log('[Reading Draft] Skip: no test data');
-            return;
-        }
+        if (this.examSubmitted || this._isResetting) return;
+        if (!this.currentTestData) return;
         
         clearTimeout(this.debounceTimer);
-        console.log('[Reading Draft] Scheduled save in', this.DEBOUNCE_MS, 'ms');
         
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
+                if (!this.draftHasAnswers(draft)) {
+                    this.clearDraft();
+                    return;
+                }
                 const key = this.getStorageKey(true);
                 localStorage.setItem(key, JSON.stringify(draft));
-                console.log('[Reading Draft] SAVED to key:', key, 'data:', draft);
+                console.log('[Reading Draft] SAVED to key:', key);
             } catch (e) {
                 console.error('[Reading Draft] FAILED to save:', e);
             }
         }, this.DEBOUNCE_MS);
     }
 
-    /**
-     * ✅ FIX v2.1: Lưu nháp ngay lập tức (không debounce) - dùng khi rời trang hoặc radio change
-     * Thêm kiểm tra: 1. _isResetting early return 2. Kiểm tra hasAnswers trước khi lưu
-     */
     saveDraftImmediate() {
-        // ✅ FIX: Kiểm tra _isResetting TRƯỚC (early return)
-        if (this._isResetting) {
-            console.log('[Reading Draft] Blocked: currently resetting');
-            return;
-        }
-        
-        if (this.examSubmitted || !this.currentTestData) {
-            console.log('[Reading Draft] Blocked: exam submitted or no test data');
-            return;
-        }
+        if (this._isResetting) return;
+        if (this.examSubmitted || !this.currentTestData) return;
         
         clearTimeout(this.debounceTimer);
-        
         try {
             const draft = this.getDraftData();
-            
-            // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
-            const hasAnswers = this.draftHasAnswers(draft);
-            
-            if (!hasAnswers) {
-                console.log('[Reading Draft] No answers to save, skipping immediate save');
-                return;  // ✅ Không lưu nếu trống!
+            if (!this.draftHasAnswers(draft)) {
+                this.clearDraft();
+                return;
             }
-            
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
-            console.log('[Reading Draft] Saved immediately to key:', key);
+            console.log('[Reading Draft] SAVED IMMEDIATELY to key:', key);
         } catch (e) {
             console.error('[Reading Draft] Immediate save failed:', e);
         }
     }
 
-    /**
-     * ✅ FIX v2.1: Helper function - check if draft has real answers
-     */
-    draftHasAnswers(draft) {
-        // Loại bỏ 'type' key, chỉ kiểm tra câu trả lời thực
-        const { type, slotState, ...answers } = draft;
-        
-        // Kiểm tra multiple-choice / inline-radio
-        const radioAnswers = Object.entries(answers).some(([key, val]) => {
-            return val !== null && val !== undefined && val !== '';
-        });
-        
-        // Kiểm tra drag-drop
-        if (slotState && Object.keys(slotState).length > 0) {
-            return true;
-        }
-        
-        return radioAnswers;
-    }
-
-    /**
-     * Setup handlers để lưu draft khi rời trang
-     * ✅ FIX v2.1: Thêm kiểm tra _isResetting vào mỗi listener
-     * Dùng nhiều event vì beforeunload không đáng tin trên mobile/bfcache
-     */
     setupBeforeUnload() {
-        // 1. beforeunload - desktop browsers
         window.addEventListener('beforeunload', () => {
-            // ✅ FIX: Kiểm tra _isResetting
-            if (!this._isResetting) {
-                this.saveDraftImmediate();
-            } else {
-                console.log('[Reading Draft] beforeunload blocked during reset');
-            }
+            if (!this._isResetting) this.saveDraftImmediate();
         });
-
-        // 2. pagehide - iOS Safari, bfcache (Chrome/Firefox khi bấm Back)
         window.addEventListener('pagehide', () => {
-            // ✅ FIX: Kiểm tra _isResetting
-            if (!this._isResetting) {
-                this.saveDraftImmediate();
-            } else {
-                console.log('[Reading Draft] pagehide blocked during reset');
-            }
+            if (!this._isResetting) this.saveDraftImmediate();
         });
-
-        // 3. visibilitychange - khi chuyển tab, minimize, hoặc app chuyển nền (mobile)
         document.addEventListener('visibilitychange', () => {
-            // ✅ FIX: Kiểm tra visibility STATE và _isResetting
             if (document.visibilityState === 'hidden' && !this._isResetting) {
                 this.saveDraftImmediate();
-            } else if (this._isResetting) {
-                console.log('[Reading Draft] visibilitychange blocked during reset');
             }
         });
     }
 
-    /**
-     * Khôi phục nháp từ localStorage và áp dụng vào giao diện
-     */
     loadDraft() {
         const key = this.getStorageKey(true);
-        console.log('[Reading Draft] Attempting to load from key:', key);
-        
         const draftJson = localStorage.getItem(key);
-        if (!draftJson) {
-            console.log('[Reading Draft] No draft found for key:', key);
-            return false;
-        }
+        if (!draftJson) return false;
         
         try {
             const draft = JSON.parse(draftJson);
-            console.log('[Reading Draft] Loaded data:', draft);
-            
             const questionRange = this.getQuestionRange();
             
-            // Load multiple-choice / inline-radio
             if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans === undefined || ans === null) continue;
-                    
-                    const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
-                    if (radio) radio.checked = true;
+                    if (ans) {
+                        const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
+                        if (radio) radio.checked = true;
+                    }
                 }
             } else if (this.currentTestData.type === 'matching') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans === undefined || ans === null) continue;
-                    
-                    const input = document.getElementById(`answer-${i}`);
-                    if (input) input.value = ans;
+                    if (ans) {
+                        const input = document.getElementById(`answer-${i}`);
+                        if (input) input.value = ans;
+                    }
                 }
             } else if (this.currentTestData.type === 'split-layout') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
-                    if (ans === undefined || ans === null) continue;
-                    
-                    const inp = document.getElementById(`q${i}`);
-                    if (inp) inp.value = ans;
+                    if (ans) {
+                        const inp = document.getElementById(`q${i}`);
+                        if (inp) inp.value = ans;
+                    }
                 }
             } else if (this.currentTestData.type === 'drag-drop' && draft.slotState) {
                 this.slotState = { ...draft.slotState };
-                // Restore drag-drop state
                 this.restoreDragDropState();
             }
             
-            console.log('[Reading Draft] SUCCESSFULLY loaded for', this.currentTestData.title || this.currentTestData.part);
             this.updateAnswerCount();
             return true;
         } catch (e) {
@@ -316,43 +226,23 @@ class ReadingCore {
         }
     }
 
-    /**
-     * Xóa nháp khỏi localStorage
-     */
     clearDraft() {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
     }
 
-    /**
-     * Setup UI components and interactions
-     */
+    // ==================== UI SETUP ====================
     setupUI() {
-        // Setup font size controls
         this.uiManager.setupFontControls();
-        
-        // Setup theme toggle
         this.uiManager.setupThemeToggle();
-        
-        // Setup mode toggle (classic/modern)
         this.uiManager.setupModeToggle();
-        
-        // Setup resizer for text/questions
         this.uiManager.setupResizer();
-        
-        // Setup explanation panel
         this.uiManager.setupExplanationPanel();
-        
-        // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
     }
 
-    /**
-     * Get question range for current part
-     */
     getQuestionRange() {
         const part = this.currentTestData.part;
-        
         switch(part) {
             case 1: return { start: 1, end: 5 };
             case 2: return { start: 6, end: 10 };
@@ -364,25 +254,16 @@ class ReadingCore {
         }
     }
 
-    /**
-     * Render questions based on test type
-     */
     renderQuestions() {
-        // This would be implemented by subclass or via the rendering template
+        // Implementation depends on specific part templates
+        // This method should be overridden or the template should already exist in HTML
         console.log('Render questions for type:', this.currentTestData.type);
     }
 
-    /**
-     * Render split layout (Part 6)
-     */
     renderSingleColumn() {
-        // This would be implemented by subclass
         console.log('Render single column for split layout');
     }
 
-    /**
-     * Attach input events for split layout
-     */
     attachInputEvents() {
         const questionRange = this.getQuestionRange();
         for (let i = questionRange.start; i <= questionRange.end; i++) {
@@ -400,99 +281,54 @@ class ReadingCore {
         }
     }
 
-    /**
-     * Render inline radio questions
-     */
     renderInlineRadioQuestions() {
         console.log('Render inline radio questions');
     }
 
-    /**
-     * Setup drag drop events
-     */
     setupDragDropEvents() {
         console.log('Setup drag drop events');
     }
 
-    /**
-     * ✅ FIX v2.1: Setup event listeners - kiểm tra _isResetting
-     */
-    setupEventListeners() {
-        // Radio button changes
-        document.addEventListener('change', (e) => {
-            // ✅ FIX: Kiểm tra _isResetting (thêm log)
-            if (this._isResetting) {
-                console.log('[Reading Draft] change event blocked during reset');
-                return;
-            }
-            
-            if (e.target && e.target.matches('input[type="radio"]')) {
-                this.updateAnswerCount();
-                this.saveDraftImmediate(); // Radio: lưu ngay
-            }
-        });
-
-        // Input changes (for matching, split-layout, etc.)
-        document.addEventListener('input', (e) => {
-            // ✅ FIX: Kiểm tra _isResetting (thêm log)
-            if (this._isResetting) {
-                console.log('[Reading Draft] input event blocked during reset');
-                return;
-            }
-            
-            if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {
-                this.updateAnswerCount();
-                this.saveDraft(); // Debounce: lưu sau 0.5s
-            }
-        });
-
-        // Submit button
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => {
-                console.log('[Reading UI] Submit button clicked');
-                this.handleSubmit();
-            });
-        }
-
-        // Explain button
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) {
-            explainBtn.addEventListener('click', () => {
-                console.log('[Reading UI] Explain button clicked');
-                this.handleExplain();
-            });
-        }
-
-        // Reset button
-        const resetBtn = document.getElementById('resetBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                console.log('[Reading UI] Reset button clicked');
-                this.handleReset();
-            });
-        }
-
-        // Eye icon clicks for explanations
-        document.addEventListener('click', (e) => {
-            if (e.target && e.target.classList.contains('eye-icon')) {
-                const questionNum = e.target.dataset.question;
-                this.showExplanation(questionNum);
-            }
-        });
-
-        // Close explanation
-        const closeExplanation = document.getElementById('closeExplanation');
-        if (closeExplanation) {
-            closeExplanation.addEventListener('click', () => {
-                this.closeExplanation();
-            });
-        }
+    restoreDragDropState() {
+        // Restore UI from this.slotState
     }
 
-    /**
-     * Get user answer for specific question
-     */
+    setupEventListeners() {
+        document.addEventListener('change', (e) => {
+            if (this._isResetting) return;
+            if (e.target && e.target.matches('input[type="radio"]')) {
+                this.updateAnswerCount();
+                this.saveDraftImmediate();
+            }
+        });
+
+        document.addEventListener('input', (e) => {
+            if (this._isResetting) return;
+            if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {
+                this.updateAnswerCount();
+                this.saveDraft();
+            }
+        });
+
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) submitBtn.addEventListener('click', () => this.handleSubmit());
+
+        const explainBtn = document.getElementById('explainBtn');
+        if (explainBtn) explainBtn.addEventListener('click', () => this.handleExplain());
+
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) resetBtn.addEventListener('click', () => this.handleReset());
+
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('eye-icon')) {
+                this.showExplanation(e.target.dataset.question);
+            }
+        });
+
+        const closeExplanation = document.getElementById('closeExplanation');
+        if (closeExplanation) closeExplanation.addEventListener('click', () => this.closeExplanation());
+    }
+
     getUserAnswer(questionNum) {
         if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
             const radio = document.querySelector(`input[name="q${questionNum}"]:checked`);
@@ -509,262 +345,161 @@ class ReadingCore {
         return null;
     }
 
-    /**
-     * Update answer count display
-     */
     updateAnswerCount() {
         const questionRange = this.getQuestionRange();
         let answeredCount = 0;
-        
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             const answer = this.getUserAnswer(i);
-            if (answer && answer !== '') {
-                answeredCount++;
-            }
+            if (answer && answer !== '') answeredCount++;
         }
-        
         const total = questionRange.end - questionRange.start + 1;
-        const answerCountDisplay = document.getElementById('answerCount');
-        if (answerCountDisplay) {
-            answerCountDisplay.textContent = `${answeredCount}/${total}`;
-        }
+        const display = document.getElementById('answerCount');
+        if (display) display.textContent = `${answeredCount}/${total}`;
     }
 
-    /**
-     * Handle submit button click
-     */
+    // ==================== SUBMIT & RESET ====================
     handleSubmit() {
-        console.log('[Reading handleSubmit] called');
-        
-        if (this.examSubmitted) {
-            console.log('[Submit] Already submitted');
-            return;
-        }
-
+        if (this.examSubmitted) return;
         const answers = this.collectAnswers();
-        
-        // Mark as submitted
         this.examSubmitted = true;
 
-        // Save result to localStorage
         const resultData = {
             title: this.currentTestData.title,
             part: this.currentTestData.part,
             answers: answers,
             correctCount: this.calculateCorrectCount(answers),
-            totalQuestions: this.currentTestData.questions ? this.currentTestData.questions.length : this.getQuestionRange().end - this.getQuestionRange().start + 1,
+            totalQuestions: this.getQuestionRange().end - this.getQuestionRange().start + 1,
             timestamp: new Date().toISOString()
         };
 
         const key = this.getStorageKey(false);
         localStorage.setItem(key, JSON.stringify(resultData));
-        console.log('[Reading Submit] Result saved to key:', key);
-
-        // Remove draft after submission
         this.clearDraft();
 
-        // Show results
         this.showResults(answers);
 
-        // Enable explain button
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = false;
             explainBtn.textContent = 'Xem giải thích';
         }
 
-        // Disable submit button
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Đã nộp bài';
         }
 
-        // Send broadcast to update other tabs
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
             const d = this.currentTestData;
             channel.postMessage({ action: 'submit', type: 'reading', book: d.book, test: d.test, part: d.part });
             channel.close();
-        } catch(e) {
-            console.warn('BroadcastChannel error:', e);
-        }
+        } catch(e) {}
     }
 
-    /**
-     * Collect all user answers
-     */
     collectAnswers() {
-        const questionRange = this.getQuestionRange();
+        const range = this.getQuestionRange();
         const answers = {};
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            answers[i] = this.getUserAnswer(i);
-        }
-        
+        for (let i = range.start; i <= range.end; i++) answers[i] = this.getUserAnswer(i);
         return answers;
     }
 
-    /**
-     * Calculate correct count
-     */
     calculateCorrectCount(userAnswers) {
-        let correctCount = 0;
-        
+        let correct = 0;
         if (this.currentTestData.questions) {
             for (const q of this.currentTestData.questions) {
-                const userAnswer = userAnswers[q.num];
+                const ua = userAnswers[q.num];
                 if (this.currentTestData.type === 'matching') {
-                    if (userAnswer && userAnswer === q.correctAnswer?.toUpperCase()) {
-                        correctCount++;
-                    }
+                    if (ua && ua === q.correctAnswer?.toUpperCase()) correct++;
                 } else {
-                    if (userAnswer === q.correctAnswer) {
-                        correctCount++;
-                    }
+                    if (ua === q.correctAnswer) correct++;
                 }
             }
         }
-        
-        return correctCount;
+        return correct;
     }
 
-    /**
-     * Show results after submission
-     */
     showResults(userAnswers) {
-        const questionRange = this.getQuestionRange();
-
-        if (this.currentTestData.questions) {
-            for (let i of this.currentTestData.questions) {
-                const userAnswer = userAnswers[i.num];
-                let isCorrect = false;
-                
-                if (this.currentTestData.type === 'matching') {
-                    isCorrect = userAnswer && userAnswer === i.correctAnswer?.toUpperCase();
-                } else {
-                    isCorrect = userAnswer === i.correctAnswer;
-                }
-                
-                const questionDiv = document.getElementById(`question-${i.num}`);
-                
-                if (questionDiv) {
-                    questionDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
-                    
-                    const badge = document.createElement('span');
-                    badge.className = 'correct-answer-badge';
-                    badge.innerHTML = `✓ ${i.correctAnswer}`;
-                    questionDiv.appendChild(badge);
-                }
-                
-                // Mark inputs
-                if (this.currentTestData.type === 'matching') {
-                    const input = document.getElementById(`answer-${i.num}`);
-                    if (input) {
-                        input.classList.add(isCorrect ? 'correct' : 'incorrect');
-                    }
-                } else if (this.currentTestData.type === 'drag-drop') {
-                    const readingSlot = document.getElementById(`readingSlot${i.num}`);
-                    const panelSlot = document.getElementById(`panelSlot${i.num}`);
-                    [readingSlot, panelSlot].forEach(slot => {
-                        if (slot) slot.classList.add(isCorrect ? 'correct' : 'incorrect');
-                    });
-                }
+        if (!this.currentTestData.questions) return;
+        for (const q of this.currentTestData.questions) {
+            const ua = userAnswers[q.num];
+            let isCorrect = false;
+            if (this.currentTestData.type === 'matching') {
+                isCorrect = ua && ua === q.correctAnswer?.toUpperCase();
+            } else {
+                isCorrect = ua === q.correctAnswer;
+            }
+            const questionDiv = document.getElementById(`question-${q.num}`);
+            if (questionDiv) {
+                questionDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
+                const badge = document.createElement('span');
+                badge.className = 'correct-answer-badge';
+                badge.innerHTML = `✓ ${q.correctAnswer}`;
+                questionDiv.appendChild(badge);
+            }
+            if (this.currentTestData.type === 'matching') {
+                const input = document.getElementById(`answer-${q.num}`);
+                if (input) input.classList.add(isCorrect ? 'correct' : 'incorrect');
             }
         }
-
-        // Update explanation mode
         this.explanationMode = true;
     }
 
-    /**
-     * Handle explain button click
-     */
     handleExplain() {
         if (!this.examSubmitted) return;
-
         this.explanationMode = true;
-        
-        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => {
-            el.style.display = 'inline-block';
-        });
-
+        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = true;
             explainBtn.textContent = 'Đang xem giải thích';
         }
-
-        const explanationPanel = document.getElementById('explanationPanel');
-        if (explanationPanel) {
-            explanationPanel.classList.remove('show');
-        }
+        document.getElementById('explanationPanel')?.classList.remove('show');
     }
 
-    /**
-     * Handle reset button click
-     */
     handleReset() {
-        console.log('[Reading handleReset] called');
         this.resetAll();
     }
 
-    /**
-     * ✅ FIX v2.1: Reset all answers and state
-     * CHANGES:
-     * 1. Removed function override method - using flag instead
-     * 2. Changed setTimeout delay from 0 to 500ms
-     * 3. Added defensive: removeItem again after delay
-     * 4. All event listeners check _isResetting early return
-     */
     resetAll() {
-        console.log('[Reading resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+
+        this._isResetting = true;
 
         const book = this.currentTestData.book || 1;
         const test = this.currentTestData.test || 1;
         const part = this.currentTestData.part || 1;
-
         const completedKey = `pet_reading_book${book}_test${test}_part${part}`;
         const draftKey = completedKey + '_draft';
 
-        // ✅ FIX: Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        console.log('[Reset] Deleted keys:', completedKey, draftKey);
 
-        // ✅ FIX: SET FLAG TRƯỚC KHI LÀM ĐIỀU GÌ KHÁC
-        this._isResetting = true;
-
-        // === Reset UI ===
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
 
-        const questionRange = this.getQuestionRange();
+        const range = this.getQuestionRange();
 
+        // Reset UI based on type
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
             this.attachInputEvents();
         } else {
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
+            for (let i = range.start; i <= range.end; i++) {
                 if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
-                    const radios = document.getElementsByName(`q${i}`);
-                    radios.forEach(radio => {
-                        radio.checked = false;
-                        radio.disabled = false;
-                    });
-                    if (this.currentTestData.type === 'inline-radio') {
-                        this.updateInlineSlotFromRadio(i);
-                    }
+                    document.getElementsByName(`q${i}`).forEach(r => { r.checked = false; r.disabled = false; });
                 } else if (this.currentTestData.type === 'drag-drop') {
                     this.clearSlot(i);
                     const reading = document.getElementById(`readingSlot${i}`);
                     const panel = document.getElementById(`panelSlot${i}`);
                     [reading, panel].forEach(slot => {
-                        if (slot) slot.classList.remove('correct', 'incorrect');
-                        const b = slot && slot.querySelector('.correct-answer-badge');
-                        if (b) b.remove();
+                        if (slot) {
+                            slot.classList.remove('correct', 'incorrect');
+                            const b = slot.querySelector('.correct-answer-badge');
+                            if (b) b.remove();
+                        }
                     });
                     this.slotState = {};
                 } else if (this.currentTestData.type === 'matching') {
@@ -778,11 +513,11 @@ class ReadingCore {
                     }
                 }
 
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (questionDiv) {
-                    questionDiv.classList.remove('correct', 'incorrect');
-                    const badge = questionDiv.querySelector('.correct-answer-badge');
-                    if (badge) badge.remove();
+                const qDiv = document.getElementById(`question-${i}`);
+                if (qDiv) {
+                    qDiv.classList.remove('correct', 'incorrect');
+                    const b = qDiv.querySelector('.correct-answer-badge');
+                    if (b) b.remove();
                 }
             }
         }
@@ -795,10 +530,7 @@ class ReadingCore {
             });
         }
 
-        document.querySelectorAll('.eye-icon').forEach(icon => {
-            icon.style.display = 'none';
-        });
-
+        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
         this.highlightManager.clearAllHighlights();
 
         const submitBtn = document.getElementById('submitBtn');
@@ -813,166 +545,255 @@ class ReadingCore {
             explainBtn.textContent = 'Xem giải thích';
         }
 
-        const explanationPanel = document.getElementById('explanationPanel');
-        if (explanationPanel) {
-            explanationPanel.classList.remove('show');
-        }
+        document.getElementById('explanationPanel')?.classList.remove('show');
 
-        // Gửi sự kiện storage (để tab index ở chế độ nền nhận được)
         window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
         window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
-        // Gửi broadcast (để index ở bất kỳ tab nào cũng nhận)
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
             channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
-        } catch(e) { console.warn('BroadcastChannel error:', e); }
+        } catch(e) {}
 
-        // ✅ FIX: DELAY LÂUHƠN - 500ms thay vì 0ms
         setTimeout(() => {
             this._isResetting = false;
-            // ✅ FIX: Xóa lần nữa để chắc chắn (defensive)
             localStorage.removeItem(draftKey);
-            console.log('[Reset] Complete - _isResetting=false, draft key cleaned');
-        }, 500);  // ✅ 500ms để đảm bảo event queue process hết
+            console.log('[Reset] Draft saving re-enabled');
+        }, 300);
 
         this.updateAnswerCount();
     }
 
-    /**
-     * Clear a specific slot
-     */
     clearSlot(slotNum) {
-        if (this.slotState[slotNum]) {
-            delete this.slotState[slotNum];
-        }
+        delete this.slotState[slotNum];
     }
 
-    /**
-     * Update inline slot from radio
-     */
-    updateInlineSlotFromRadio(questionNum) {
-        // Subclass implementation
-    }
-
-    /**
-     * Restore drag-drop state
-     */
-    restoreDragDropState() {
-        // Subclass implementation
-    }
-
-    /**
-     * Show explanation for specific question
-     */
     showExplanation(questionNum) {
         if (!this.explanationMode && !this.examSubmitted) return;
-
-        const question = this.currentTestData.questions?.find(q => q.num === parseInt(questionNum));
-        if (!question) return;
-
-        const explanationPanel = document.getElementById('explanationPanel');
-        const explanationContent = document.getElementById('explanationContent');
-        
-        if (explanationPanel && explanationContent) {
-            explanationContent.innerHTML = `
+        const q = this.currentTestData.questions?.find(q => q.num === parseInt(questionNum));
+        if (!q) return;
+        const panel = document.getElementById('explanationPanel');
+        const content = document.getElementById('explanationContent');
+        if (panel && content) {
+            content.innerHTML = `
                 <div class="explanation-item">
                     <div class="explanation-header">
                         <span class="question-num">Câu ${questionNum}</span>
-                        <span class="correct-answer">Đáp án đúng: <strong>${question.correctAnswer}</strong></span>
+                        <span class="correct-answer">Đáp án: <strong>${q.correctAnswer}</strong></span>
                     </div>
-                    <div class="explanation-text">
-                        ${question.explanation || 'Chưa có giải thích cho câu hỏi này.'}
-                    </div>
+                    <div class="explanation-text">${q.explanation || 'Chưa có giải thích.'}</div>
                 </div>
             `;
-            explanationPanel.classList.add('show');
+            panel.classList.add('show');
         }
     }
 
-    /**
-     * Close explanation panel
-     */
     closeExplanation() {
-        const explanationPanel = document.getElementById('explanationPanel');
-        if (explanationPanel) {
-            explanationPanel.classList.remove('show');
-        }
+        document.getElementById('explanationPanel')?.classList.remove('show');
     }
 
-    /**
-     * Disable all inputs
-     */
-    disableInputs() {
-        if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
-            document.querySelectorAll('input[type="radio"]').forEach(input => {
-                input.disabled = true;
-            });
-        } else if (this.currentTestData.type === 'drag-drop') {
-            document.querySelectorAll('.sentence-item').forEach(el => {
-                el.setAttribute('draggable', 'false');
-                el.style.cursor = 'default';
-            });
-        } else if (this.currentTestData.type === 'matching') {
-            document.querySelectorAll('input[type="text"]').forEach(input => {
-                input.disabled = true;
-            });
-        }
-    }
-
-    /**
-     * Create navigation between questions
-     */
     createNavigation() {
-        const questionRange = this.getQuestionRange();
-        const navContainer = document.getElementById('questionNav');
-        
-        if (!navContainer) return;
-
-        navContainer.innerHTML = '';
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const navBtn = document.createElement('button');
-            navBtn.className = 'nav-btn';
-            navBtn.textContent = i;
-            navBtn.dataset.question = i;
-            
-            navBtn.addEventListener('click', () => {
-                const questionDiv = document.getElementById(`question-${i}`);
-                if (questionDiv) {
-                    questionDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
+        const nav = document.getElementById('questionNav');
+        if (!nav) return;
+        const range = this.getQuestionRange();
+        nav.innerHTML = '';
+        for (let i = range.start; i <= range.end; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'nav-btn';
+            btn.textContent = i;
+            btn.dataset.question = i;
+            btn.addEventListener('click', () => {
+                document.getElementById(`question-${i}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             });
-            
-            navContainer.appendChild(navBtn);
+            nav.appendChild(btn);
         }
-
-        // Update nav buttons as user answers questions
         document.addEventListener('change', () => this.updateNavButtons());
         document.addEventListener('input', () => this.updateNavButtons());
     }
 
-    /**
-     * Update navigation buttons to show answered/unanswered status
-     */
     updateNavButtons() {
-        const questionRange = this.getQuestionRange();
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const answer = this.getUserAnswer(i);
-            const navBtn = document.querySelector(`[data-question="${i}"]`);
-            
-            if (navBtn) {
-                if (answer && answer !== '') {
-                    navBtn.classList.add('answered');
-                } else {
-                    navBtn.classList.remove('answered');
-                }
+        const range = this.getQuestionRange();
+        for (let i = range.start; i <= range.end; i++) {
+            const ans = this.getUserAnswer(i);
+            const btn = document.querySelector(`[data-question="${i}"]`);
+            if (btn) {
+                btn.classList.toggle('answered', ans && ans !== '');
             }
         }
     }
 }
 
-// Export for use in HTML files
+// ==================== HELPER CLASSES ====================
+class ReadingHighlightManager {
+    constructor() {
+        this.setupContextMenu();
+    }
+    setupContextMenu() {
+        document.addEventListener('contextmenu', (e) => {
+            const area = e.target.closest('#readingText, .questions-panel, .question-item');
+            if (area && window.getSelection().toString().trim()) {
+                e.preventDefault();
+                this.savedRange = window.getSelection().getRangeAt(0).cloneRange();
+                this.showContextMenu(e.pageX, e.pageY);
+            }
+        });
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('contextMenu');
+            if (menu && !menu.contains(e.target)) menu.style.display = 'none';
+        });
+    }
+    showContextMenu(x, y) {
+        const menu = document.getElementById('contextMenu');
+        if (menu) {
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.style.display = 'block';
+        }
+    }
+    clearAllHighlights() {
+        document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink').forEach(el => {
+            const parent = el.parentNode;
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+        });
+    }
+    applyHighlight(color) {
+        const range = this.savedRange || window.getSelection().getRangeAt(0);
+        const span = document.createElement('span');
+        span.className = `highlight-${color}`;
+        try {
+            range.surroundContents(span);
+        } catch {
+            const frag = range.extractContents();
+            span.appendChild(frag);
+            range.insertNode(span);
+        }
+        window.getSelection().removeAllRanges();
+        document.getElementById('contextMenu').style.display = 'none';
+    }
+    removeHighlight() {
+        const range = this.savedRange || window.getSelection().getRangeAt(0);
+        const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+            acceptNode: node => node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+        });
+        const toRemove = [];
+        let node;
+        while (node = walker.nextNode()) if (range.intersectsNode(node)) toRemove.push(node);
+        toRemove.forEach(span => {
+            const parent = span.parentNode;
+            while (span.firstChild) parent.insertBefore(span.firstChild, span);
+            parent.removeChild(span);
+        });
+        window.getSelection().removeAllRanges();
+        document.getElementById('contextMenu').style.display = 'none';
+    }
+}
+
+class ReadingStorageManager {
+    parseTestInfo(title) {
+        let book = 1, test = 1, part = 1;
+        const bm = title.match(/Preliminary\s+(\d+)/i);
+        if (bm) book = parseInt(bm[1]);
+        const tm = title.match(/Test\s+(\d+)/i);
+        if (tm) test = parseInt(tm[1]);
+        const pm = title.match(/Part\s+(\d+)/i);
+        if (pm) part = parseInt(pm[1]);
+        return { book, test, part };
+    }
+}
+
+class ReadingUIManager {
+    setupFontControls() {
+        const btns = { fontSmall: 'small', fontMedium: 'medium', fontLarge: 'large' };
+        Object.entries(btns).forEach(([id, size]) => {
+            document.getElementById(id)?.addEventListener('click', () => this.setFontSize(size));
+        });
+        this.setFontSize('large');
+    }
+    setFontSize(size) {
+        document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`)?.classList.add('active');
+        document.querySelectorAll('.reading-text, .questions-list').forEach(el => {
+            el.classList.remove('font-small', 'font-medium', 'font-large');
+            el.classList.add(`font-${size}`);
+        });
+    }
+    setupThemeToggle() {
+        const btn = document.getElementById('themeToggle');
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const cur = document.documentElement.getAttribute('data-theme');
+            const next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+        const saved = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+    }
+    setupModeToggle() {
+        const toggle = document.getElementById('modeToggle');
+        const style = document.getElementById('styleLink');
+        if (!toggle || !style) return;
+        const setMode = (isClassic) => {
+            if (isClassic) {
+                style.href = style.href.replace('reading-pet-common.css', 'reading-pet-common1.css');
+                document.getElementById('themeToggle').style.display = 'none';
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                style.href = style.href.replace('reading-pet-common1.css', 'reading-pet-common.css');
+                document.getElementById('themeToggle').style.display = 'flex';
+            }
+            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
+        };
+        const saved = localStorage.getItem('pet-mode');
+        if (saved === 'classic') { toggle.checked = true; setMode(true); }
+        else { toggle.checked = false; setMode(false); }
+        toggle.addEventListener('change', () => setMode(toggle.checked));
+    }
+    setupResizer() {
+        const left = document.getElementById('readingText');
+        const right = document.getElementById('questionsPanel');
+        const resizer = document.getElementById('resizer');
+        if (!left || !right || !resizer) return;
+        let resizing = false;
+        resizer.addEventListener('mousedown', () => { resizing = true; document.body.style.cursor = 'col-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!resizing) return;
+            const main = document.getElementById('mainArea');
+            if (!main) return;
+            const rect = main.getBoundingClientRect();
+            let w = e.clientX - rect.left - 4;
+            if (w < 250) w = 250;
+            if (w > rect.width - 250) w = rect.width - 250;
+            left.style.width = w + 'px';
+            right.style.width = (rect.width - w - 8) + 'px';
+        });
+        document.addEventListener('mouseup', () => { resizing = false; document.body.style.cursor = 'default'; });
+    }
+    setupExplanationPanel() {
+        const panel = document.getElementById('explanationPanel');
+        const resizer = document.getElementById('explanationResizer');
+        if (!panel || !resizer) return;
+        let resizing = false;
+        resizer.addEventListener('mousedown', () => { resizing = true; document.body.style.cursor = 'ns-resize'; });
+        document.addEventListener('mousemove', (e) => {
+            if (!resizing) return;
+            const rect = panel.getBoundingClientRect();
+            let h = e.clientY - rect.top;
+            if (h < 150) h = 150;
+            if (h > 500) h = 500;
+            panel.style.height = h + 'px';
+        });
+        document.addEventListener('mouseup', () => { resizing = false; document.body.style.cursor = 'default'; });
+    }
+    setupAutoCollapse(core) {
+        // Simplified auto-collapse (optional)
+    }
+}
+
+// Global functions for context menu
+window.applyHighlight = (color) => window.readingCore?.highlightManager.applyHighlight(color);
+window.removeHighlight = () => window.readingCore?.highlightManager.removeHighlight();
+
 window.ReadingCore = ReadingCore;
