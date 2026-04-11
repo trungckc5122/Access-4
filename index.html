@@ -731,6 +731,31 @@
       box-shadow: var(--card-hover-shadow);
       animation: slideDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
       display: none; /* Hiển thị qua JS */
+      position: relative; /* Để đặt nút X */
+    }
+    
+    .close-resume-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-size: 24px;
+      line-height: 1;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .close-resume-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: rotate(90deg);
     }
     
     @keyframes slideDown {
@@ -970,6 +995,7 @@
   <div id="pet-panel" class="content-panel">
     <!-- MỚI: Resume Banner -->
     <div id="resume-banner" class="resume-banner">
+      <button id="close-resume" class="close-resume-btn" title="Đóng thông báo">×</button>
       <div class="resume-info">
         <h4>Chào mừng bạn quay lại! 👋</h4>
         <p id="resume-text">Bạn đang làm dở bài tập PET. Nhấn nút để tiếp tục ngay nhé.</p>
@@ -1256,33 +1282,35 @@
     });
   }
   
+  // Parse filename để lấy book, test, part, type
+  function parseTestFromFilename(filename) {
+    if (!filename) return null;
+    // Listening: lis-pet{book}-test{test}-part{part}.html
+    const lisMatch = filename.match(/lis-pet(\d+)-test(\d+)-part(\d+)/i);
+    if (lisMatch) {
+      return {
+        type: 'listening',
+        book: parseInt(lisMatch[1]),
+        test: parseInt(lisMatch[2]),
+        part: parseInt(lisMatch[3])
+      };
+    }
+    // Reading: read-pet{book}-test{test}-part{part}.html
+    const readMatch = filename.match(/read-pet(\d+)-test(\d+)-part(\d+)/i);
+    if (readMatch) {
+      return {
+        type: 'reading',
+        book: parseInt(readMatch[1]),
+        test: parseInt(readMatch[2]),
+        part: parseInt(readMatch[3])
+      };
+    }
+    return null;
+  }
+
   // ========== 5. STATUS BADGES - KIỂM TRA DRAFT VÀ COMPLETED ==========
   function initStatusBadges() {
     console.log('initStatusBadges called');
-    // Parse filename để lấy book, test, part, type
-    function parseTestFromFilename(filename) {
-      // Listening: lis-pet{book}-test{test}-part{part}.html
-      const lisMatch = filename.match(/lis-pet(\d+)-test(\d+)-part(\d+)/i);
-      if (lisMatch) {
-        return {
-          type: 'listening',
-          book: parseInt(lisMatch[1]),
-          test: parseInt(lisMatch[2]),
-          part: parseInt(lisMatch[3])
-        };
-      }
-      // Reading: read-pet{book}-test{test}-part{part}.html
-      const readMatch = filename.match(/read-pet(\d+)-test(\d+)-part(\d+)/i);
-      if (readMatch) {
-        return {
-          type: 'reading',
-          book: parseInt(readMatch[1]),
-          test: parseInt(readMatch[2]),
-          part: parseInt(readMatch[3])
-        };
-      }
-      return null;
-    }
     
     // Tạo storage key từ test info
     function getStorageKey(testInfo, isDraft = false) {
@@ -1492,7 +1520,7 @@
     const petPanel = document.getElementById('pet-panel');
     if (!petPanel) return;
 
-    const stats = { total: 0, notStarted: 0, inProgress: 0, completed: 0 };
+    const stats = { 'total': 0, 'not-started': 0, 'in-progress': 0, 'completed': 0 };
     const tests = petPanel.querySelectorAll('details');
 
     tests.forEach(test => {
@@ -1537,9 +1565,9 @@
 
     // Cập nhật số lượng trên các nút lọc
     document.getElementById('count-all').textContent = stats.total;
-    document.getElementById('count-not-started').textContent = stats.notStarted;
-    document.getElementById('count-in-progress').textContent = stats.inProgress;
-    document.getElementById('count-completed').textContent = stats.completed;
+    document.getElementById('count-not-started').textContent = stats['not-started'];
+    document.getElementById('count-in-progress').textContent = stats['in-progress'];
+    document.getElementById('count-completed').textContent = stats['completed'];
   }
 
   // Khởi tạo bộ lọc
@@ -1586,16 +1614,39 @@
       }
     }
 
+    // Nút đóng banner
+    const closeBtn = document.getElementById('close-resume');
+    if (closeBtn && banner) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+          banner.style.display = 'none';
+        }, 300);
+      });
+    }
+
     // Lắng nghe click vào bất kỳ link bài tập nào để lưu lại
     document.addEventListener('click', (e) => {
       const a = e.target.closest('a');
-      if (a && a.href && (a.href.includes('lis-pet') || a.href.includes('read-pet'))) {
-        localStorage.setItem('pet_last_activity_url', a.href);
-        // Lấy tiêu đề: text của thẻ a + tiêu đề của details cha
-        const details = a.closest('details');
-        const testTitle = details ? details.querySelector('summary').textContent.split('%')[0].trim() : '';
-        const partTitle = a.textContent.replace('✓ Đã xong', '').replace('Đang làm', '').trim();
-        localStorage.setItem('pet_last_activity_title', `${testTitle} - ${partTitle}`);
+      if (a && a.href) {
+        const testInfo = parseTestFromFilename(a.href);
+        if (testInfo) {
+          localStorage.setItem('pet_last_activity_url', a.href);
+          
+          const typeStr = testInfo.type === 'listening' ? 'Phần Nghe' : 'Phần Đọc';
+          const titleStr = `${typeStr} - Preliminary ${testInfo.book} - Test ${testInfo.test} - Part ${testInfo.part}`;
+          
+          localStorage.setItem('pet_last_activity_title', titleStr);
+          
+          // Cập nhật banner ngay lập tức nếu đang hiển thị
+          if (banner && text) {
+            banner.style.display = 'flex';
+            link.href = a.href;
+            text.innerHTML = `Bạn đang xem dở: <strong>${titleStr}</strong>. Nhấn nút để tiếp tục ngay nhé.`;
+          }
+        }
       }
     });
   }
