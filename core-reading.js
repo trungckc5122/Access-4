@@ -10,7 +10,209 @@
  * - FIXED: highlight manager uses event delegation, fallback selection
  * - FIXED: force reflow in mode toggle
  * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
+ * - ✅ NEW: Added Floating Sticky Note feature
  */
+
+/**
+ * PETNoteManager - Handles the draggable, resizable sticky notes
+ */
+class PETNoteManager {
+    constructor(core) {
+        this.core = core;
+        this.panel = null;
+        this.textarea = null;
+        this.isMinimized = false;
+        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
+        this.resizeData = { isResizing: false, startWidth: 0, startHeight: 0, startX: 0, startY: 0 };
+    }
+
+    getNoteKey() {
+        return this.core.getStorageKey() + '_note';
+    }
+
+    init() {
+        if (document.querySelector('.pet-note-panel')) return;
+        this.createPanel();
+        this.loadNote();
+        this.setupEvents();
+        console.log('[Note] Initialized');
+    }
+
+    createPanel() {
+        const panel = document.createElement('div');
+        panel.className = 'pet-note-panel';
+        panel.innerHTML = `
+            <div class="pet-note-header">
+                <div class="pet-note-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+                    Quick Note
+                </div>
+                <div class="pet-note-controls">
+                    <button class="pet-note-btn clear-btn" title="Xóa toàn bộ">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                    <button class="pet-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+                    </button>
+                    <button class="pet-note-btn close-btn" title="Đóng">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="pet-note-content">
+                <textarea class="pet-note-textarea" placeholder="Ghi chú tại đây..."></textarea>
+            </div>
+            <div class="pet-note-resize-handle"></div>
+        `;
+        document.body.appendChild(panel);
+        this.panel = panel;
+        this.textarea = panel.querySelector('.pet-note-textarea');
+
+        // Restore position
+        const posStr = localStorage.getItem(this.getNoteKey() + '_pos');
+        if (posStr) {
+            try {
+                const pos = JSON.parse(posStr);
+                Object.assign(this.panel.style, pos);
+            } catch(e) {}
+        }
+    }
+
+    setupEvents() {
+        const header = this.panel.querySelector('.pet-note-header');
+        const minBtn = this.panel.querySelector('.minimize-btn');
+        const closeBtn = this.panel.querySelector('.close-btn');
+        const handle = this.panel.querySelector('.pet-note-resize-handle');
+
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const dx = e.clientX - this.dragData.startX;
+            const dy = e.clientY - this.dragData.startY;
+            this.panel.style.left = `${this.dragData.initialX + dx}px`;
+            this.panel.style.top = `${this.dragData.initialY + dy}px`;
+            this.panel.style.right = 'auto';
+        };
+
+        const onResize = (e) => {
+            if (!this.resizeData.isResizing) return;
+            const dw = e.clientX - this.resizeData.startX;
+            const dh = e.clientY - this.resizeData.startY;
+            const newW = Math.max(200, this.resizeData.startWidth + dw);
+            const newH = Math.max(100, this.resizeData.startHeight + dh);
+            this.panel.style.width = `${newW}px`;
+            this.panel.style.height = `${newH}px`;
+        };
+
+        const stopActions = () => {
+            if (this.dragData.isDragging || this.resizeData.isResizing) {
+                this.dragData.isDragging = false;
+                this.resizeData.isResizing = false;
+                this.panel.style.transition = '';
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mousemove', onResize);
+                document.removeEventListener('mouseup', stopActions);
+                
+                const rect = this.panel.getBoundingClientRect();
+                localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
+                    left: `${rect.left}px`,
+                    top: `${rect.top}px`,
+                    width: `${this.panel.style.width}`,
+                    height: `${this.panel.style.height}`
+                }));
+            }
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.pet-note-btn')) return;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = this.panel.getBoundingClientRect();
+            this.dragData.initialX = rect.left;
+            this.dragData.initialY = rect.top;
+            this.panel.style.transition = 'none';
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopActions);
+        });
+
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.resizeData.isResizing = true;
+            this.resizeData.startX = e.clientX;
+            this.resizeData.startY = e.clientY;
+            this.resizeData.startWidth = this.panel.offsetWidth;
+            this.resizeData.startHeight = this.panel.offsetHeight;
+            document.addEventListener('mousemove', onResize);
+            document.addEventListener('mouseup', stopActions);
+        });
+
+        minBtn.addEventListener('click', () => {
+            this.isMinimized = !this.isMinimized;
+            this.panel.classList.toggle('minimized', this.isMinimized);
+        });
+
+        closeBtn.addEventListener('click', () => {
+            this.panel.style.display = 'none';
+        });
+
+        this.textarea.addEventListener('input', () => {
+            this.saveNote();
+            this.autoExpand();
+            this.updateBadge();
+        });
+
+        const clearBtn = this.panel.querySelector('.clear-btn');
+        clearBtn.addEventListener('click', () => {
+            if (this.textarea.value && confirm('Xóa toàn bộ nội dung ghi chú?')) {
+                this.textarea.value = '';
+                this.saveNote();
+                this.autoExpand();
+                this.updateBadge();
+                console.log('[Note] Content cleared');
+            }
+        });
+    }
+
+    autoExpand() {
+        if (this.isMinimized) return;
+        this.textarea.style.height = 'auto';
+        this.textarea.style.height = (this.textarea.scrollHeight) + 'px';
+        if (this.panel.offsetHeight < this.textarea.scrollHeight + 50) {
+            this.panel.style.height = (this.textarea.scrollHeight + 100) + 'px';
+        }
+    }
+
+    saveNote() {
+        localStorage.setItem(this.getNoteKey(), this.textarea.value);
+    }
+
+    loadNote() {
+        const saved = localStorage.getItem(this.getNoteKey());
+        if (saved) {
+            this.textarea.value = saved;
+            this.autoExpand();
+        }
+        this.updateBadge();
+    }
+
+    updateBadge() {
+        const toggleBtn = document.querySelector('.note-toggle-btn');
+        if (!toggleBtn) return;
+        
+        const hasContent = this.textarea.value.trim().length > 0;
+        toggleBtn.classList.toggle('has-content', hasContent);
+    }
+
+    toggle() {
+        if (this.panel.style.display === 'flex') {
+            this.panel.style.display = 'none';
+        } else {
+            this.panel.style.display = 'flex';
+            this.autoExpand();
+        }
+    }
+}
+
 
 class ReadingCore {
     constructor() {
@@ -66,6 +268,10 @@ class ReadingCore {
         if (!this.isCompleted()) {
             this.loadDraft();
         }
+        
+        // === MỚI: Note Manager ===
+        this.noteManager = new PETNoteManager(this);
+        this.noteManager.init();
         
         // Update initial state
         this.updateAnswerCount();
@@ -346,6 +552,34 @@ class ReadingCore {
         
         // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
+
+        // Inject Note button into bottom-bar
+        this.injectNoteButton();
+    }
+
+    /**
+     * Inject Note button into the bottom bar dynamically
+     */
+    injectNoteButton() {
+        const bottomBar = document.querySelector('.bottom-bar');
+        if (!bottomBar || bottomBar.querySelector('.note-toggle-btn')) return;
+
+        const noteBtn = document.createElement('button');
+        noteBtn.className = 'btn btn-primary note-toggle-btn';
+        noteBtn.style.marginLeft = '8px';
+        noteBtn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+            Note
+        `;
+        noteBtn.onclick = () => this.noteManager.toggle();
+        
+        // Insert before submit button if possible
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
+        } else {
+            bottomBar.appendChild(noteBtn);
+        }
     }
 
     /**
@@ -1259,7 +1493,7 @@ class ReadingCore {
         const completedKey = this.getStorageKey(false);
         const draftKey = this.getStorageKey(true);
 
-        // ✅ FIX: Xóa localStorage ngay
+        // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
