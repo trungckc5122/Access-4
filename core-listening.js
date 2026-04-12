@@ -32,7 +32,7 @@ class PETNoteManager {
         this.createPanel();
         this.loadNote();
         this.setupEvents();
-        this.core.log('[Note] Initialized');
+        console.log('[Note] Initialized');
     }
 
     createPanel() {
@@ -106,11 +106,8 @@ class PETNoteManager {
                 this.resizeData.isResizing = false;
                 this.panel.style.transition = '';
                 document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('touchmove', onDrag);
                 document.removeEventListener('mousemove', onResize);
-                document.removeEventListener('touchmove', onResize);
                 document.removeEventListener('mouseup', stopActions);
-                document.removeEventListener('touchend', stopActions);
                 
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
@@ -122,43 +119,29 @@ class PETNoteManager {
             }
         };
 
-        const onStartDrag = (e) => {
+        header.addEventListener('mousedown', (e) => {
             if (e.target.closest('.pet-note-btn')) return;
             this.dragData.isDragging = true;
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            this.dragData.startX = clientX;
-            this.dragData.startY = clientY;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
             const rect = this.panel.getBoundingClientRect();
             this.dragData.initialX = rect.left;
             this.dragData.initialY = rect.top;
             this.panel.style.transition = 'none';
             document.addEventListener('mousemove', onDrag);
-            document.addEventListener('touchmove', onDrag, { passive: false });
             document.addEventListener('mouseup', stopActions);
-            document.addEventListener('touchend', stopActions);
-        };
+        });
 
-        const onStartResize = (e) => {
+        handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             this.resizeData.isResizing = true;
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            this.resizeData.startX = clientX;
-            this.resizeData.startY = clientY;
+            this.resizeData.startX = e.clientX;
+            this.resizeData.startY = e.clientY;
             this.resizeData.startWidth = this.panel.offsetWidth;
             this.resizeData.startHeight = this.panel.offsetHeight;
             document.addEventListener('mousemove', onResize);
-            document.addEventListener('touchmove', onResize, { passive: false });
             document.addEventListener('mouseup', stopActions);
-            document.addEventListener('touchend', stopActions);
-        };
-
-        header.addEventListener('mousedown', onStartDrag);
-        header.addEventListener('touchstart', onStartDrag, { passive: false });
-
-        handle.addEventListener('mousedown', onStartResize);
-        handle.addEventListener('touchstart', onStartResize, { passive: false });
+        });
 
         minBtn.addEventListener('click', () => {
             this.isMinimized = !this.isMinimized;
@@ -182,7 +165,7 @@ class PETNoteManager {
                 this.saveNote();
                 this.autoExpand();
                 this.updateBadge();
-                this.core.log('[Note] Content cleared');
+                console.log('[Note] Content cleared');
             }
         });
     }
@@ -210,13 +193,11 @@ class PETNoteManager {
     }
 
     updateBadge() {
-        if (!this.toggleBtn) {
-            this.toggleBtn = document.querySelector('.note-toggle-btn');
-        }
-        if (!this.toggleBtn) return;
+        const toggleBtn = document.querySelector('.note-toggle-btn');
+        if (!toggleBtn) return;
         
         const hasContent = this.textarea.value.trim().length > 0;
-        this.toggleBtn.classList.toggle('has-content', hasContent);
+        toggleBtn.classList.toggle('has-content', hasContent);
     }
 
     toggle() {
@@ -232,22 +213,17 @@ class PETNoteManager {
 
 class ListeningCore {
     constructor() {
-        this.debug = true; // Set to false in production
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentTestData = null;
         this.audio = null;
         this.speedSelect = null;
         this.highlightManager = new HighlightManager();
-        this.storageManager = new StorageManager(this); // Pass core to storage manager
+        this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
         this.debounceTimer = null;
-        this.DEBOUNCE_MS = 300; 
+        this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
         this._isResetting = false;
-    }
-
-    log(...args) {
-        if (this.debug) console.log('[ListeningCore]', ...args);
     }
 
     /**
@@ -277,8 +253,8 @@ class ListeningCore {
         // Initialize navigation
         this.createNavigation();
 
-        // Mode toggle is now handled within setupUI -> uiManager.setupModeToggle
-        // Remove direct call to redundant this.initModeToggle();
+        // Khởi tạo trình chuyển đổi giao diện Modern/Classic
+        this.initModeToggle();
         
         // === MỚI: Khôi phục draft nếu chưa nộp bài ===
         if (!this.isCompleted()) {
@@ -805,9 +781,72 @@ class ListeningCore {
     }
 
     /**
-     * Redundant Mode Toggle initialization removed.
-     * Managed by UIManager.setupModeToggle.
+     * Khởi tạo trình chuyển đổi giao diện Modern/Classic
      */
+    initModeToggle() {
+        const header = document.querySelector('.ielts-header .brand') || document.querySelector('.ielts-header');
+        if (!header) return;
+
+        let container = document.getElementById('modeToggleContainer');
+        
+        // Nếu đã có sẵn trong HTML (do file cũ chưa xóa), chỉ cần gán sự kiện
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'mode-toggle';
+            container.id = 'modeToggleContainer';
+            container.innerHTML = `
+                <span class="mode-label">Hiện đại</span>
+                <label class="mode-switch" title="Chuyển đổi giao diện Cổ điển/Hiện đại">
+                    <input type="checkbox" id="modeToggle">
+                    <span class="mode-slider"></span>
+                </label>
+                <span class="mode-label">Cổ điển</span>
+            `;
+            
+            // Tìm vị trí chèn: sau font-controls hoặc ở cuối brand
+            const fontControls = header.querySelector('.font-controls');
+            if (fontControls) {
+                fontControls.insertAdjacentElement('afterend', container);
+            } else {
+                header.appendChild(container);
+            }
+        }
+
+        this.setupModeToggleEvents(container);
+    }
+
+    /**
+     * Thiết lập sự kiện và trạng thái cho Mode Toggle
+     */
+    setupModeToggleEvents(container) {
+        const toggle = container.querySelector('#modeToggle');
+        if (!toggle) return;
+
+        const styleLink = document.getElementById('styleLink');
+        const storageKey = 'pet-listening-theme';
+        
+        // Khôi phục trạng thái đã lưu
+        const savedTheme = localStorage.getItem(storageKey);
+        if (savedTheme === 'classic') {
+            toggle.checked = true;
+            if (styleLink) styleLink.href = 'listening-pet-common1.css';
+            document.body.classList.add('classic-mode');
+        }
+
+        toggle.addEventListener('change', () => {
+            const isClassic = toggle.checked;
+            localStorage.setItem(storageKey, isClassic ? 'classic' : 'modern');
+            
+            if (styleLink) {
+                styleLink.href = isClassic ? 'listening-pet-common1.css' : 'listening-pet-common.css';
+            }
+            
+            document.body.classList.toggle('classic-mode', isClassic);
+            
+            // Thông báo cập nhật layout
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
 
     /**
      * Get question range based on current test
@@ -1141,7 +1180,7 @@ class ListeningCore {
      * 4. All event listeners check _isResetting early return
      */
     resetAll() {
-        this.log('[resetAll] started');
+        console.log('[resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
         const completedKey = this.getStorageKey(false);
@@ -1150,7 +1189,7 @@ class ListeningCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        this.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
+        console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel
         const d = this.currentTestData;
@@ -1521,9 +1560,6 @@ class HighlightManager {
  * Storage Manager - Handles saving results to localStorage
  */
 class StorageManager {
-    constructor(core) {
-        this.core = core;
-    }
     /**
      * Save test results to localStorage
      */
@@ -1556,10 +1592,11 @@ class StorageManager {
             details: details
         };
 
-        const key = this.core.getStorageKey(false);
+        const { book, test, part } = this.parseTestInfo(testData.title);
+        const key = `pet_listening_book${book}_test${test}_part${part}`;
         
         localStorage.setItem(key, JSON.stringify(partData));
-        this.core.log(`Results saved with key: ${key}`);
+        console.log(`Results saved with key: ${key}`);
     }
 
     /**
@@ -1647,8 +1684,10 @@ class UIManager {
 
         // Update content font sizes
         document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-            el.classList.remove('font-small', 'font-medium', 'font-large');
-            el.classList.add(`font-${size}`);
+            el.className = `transcript-content font-${size}`;
+            if (el.classList.contains('questions-list')) {
+                el.classList.add('centered');
+            }
         });
     }
 
@@ -1728,44 +1767,31 @@ class UIManager {
 
         let isResizing = false;
 
-        const startResizing = (e) => {
+        resizer.addEventListener('mousedown', () => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
-            e.preventDefault();
-        };
+        });
 
-        const onMouseMove = (e) => {
+        document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
 
             const mainArea = document.getElementById('mainArea');
             if (!mainArea) return;
 
             const rect = mainArea.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            if (clientX === undefined) return;
-
-            let leftWidth = clientX - rect.left - 4;
+            let leftWidth = e.clientX - rect.left - 4;
             
             if (leftWidth < 250) leftWidth = 250;
             if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
             
             transcriptPanel.style.width = leftWidth + 'px';
             questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        };
+        });
 
-        const stopResizing = () => {
+        document.addEventListener('mouseup', () => {
             isResizing = false;
             document.body.style.cursor = 'default';
-        };
-
-        resizer.addEventListener('mousedown', startResizing);
-        resizer.addEventListener('touchstart', startResizing, { passive: false });
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('touchmove', onMouseMove, { passive: false });
-        
-        document.addEventListener('mouseup', stopResizing);
-        document.addEventListener('touchend', stopResizing);
+        });
     }
 
     /**
@@ -1779,40 +1805,27 @@ class UIManager {
 
         let isResizing = false;
 
-        const startResizing = (e) => {
+        explanationResizer.addEventListener('mousedown', () => {
             isResizing = true;
             document.body.style.cursor = 'ns-resize';
-            e.preventDefault();
-        };
+        });
 
-        const onMouseMove = (e) => {
+        document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
 
             const rect = explanationPanel.getBoundingClientRect();
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            if (clientY === undefined) return;
-
-            let newHeight = clientY - rect.top;
+            let newHeight = e.clientY - rect.top;
             
             if (newHeight < 150) newHeight = 150;
             if (newHeight > 500) newHeight = 500;
             
             explanationPanel.style.height = newHeight + 'px';
-        };
+        });
 
-        const stopResizing = () => {
+        document.addEventListener('mouseup', () => {
             isResizing = false;
             document.body.style.cursor = 'default';
-        };
-
-        explanationResizer.addEventListener('mousedown', startResizing);
-        explanationResizer.addEventListener('touchstart', startResizing, { passive: false });
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('touchmove', onMouseMove, { passive: false });
-        
-        document.addEventListener('mouseup', stopResizing);
-        document.addEventListener('touchend', stopResizing);
+        });
     }
 
     /**
