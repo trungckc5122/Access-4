@@ -1973,12 +1973,12 @@
     // ========== 4. DARK MODE LOGIC ==========
     function initTheme() {
       const themeToggle = document.getElementById('theme-toggle');
-      const currentTheme = localStorage.getItem('theme');
+      const currentTheme = localStorage.getItem('pet-theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
       function setTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
+        localStorage.setItem('pet-theme', theme);
       }
 
       // Set initial theme
@@ -1995,7 +1995,7 @@
 
       // Theo dõi hệ thống nếu người dùng chưa đặt manual
       prefersDark.addEventListener('change', (e) => {
-        if (!localStorage.getItem('theme')) {
+        if (!localStorage.getItem('pet-theme')) {
           setTheme(e.matches ? 'dark' : 'light');
         }
       });
@@ -2171,11 +2171,17 @@
             badge.className = 'status-badge completed';
             badge.innerHTML = `✓ ${hasCompletedCount}/${totalTests}`;
             summary.appendChild(badge);
-          } else if (hasCompletedCount > 0 || hasDraftCount > 0) {
+          } else if (hasCompletedCount > 0) {
+            // Có ít nhất 1 bài đã xong -> Hiện xanh lá nhạt cho tích cực
+            const badge = document.createElement('span');
+            badge.className = 'status-badge completed';
+            badge.style.opacity = '0.8';
+            badge.innerHTML = `✓ ${hasCompletedCount}/${totalTests}`;
+            summary.appendChild(badge);
+          } else if (hasDraftCount > 0) {
             const badge = document.createElement('span');
             badge.className = 'status-badge in-progress';
-            const inProgress = hasCompletedCount + hasDraftCount;
-            badge.innerHTML = `⏳ ${inProgress}/${totalTests}`;
+            badge.innerHTML = `⏳ ${hasDraftCount}/${totalTests}`;
             summary.appendChild(badge);
           }
         }
@@ -2298,14 +2304,19 @@
         <span class="prog-text">${percent}%</span>
       `;
 
-        // Gán thuộc tính trạng thái để lọc
+        // Logic trạng thái của Nhóm (để lọc hiển thị)
+        // Ưu tiên: Đã nộp ít nhất 1 bài -> Hiện ở mục Hoàn thành
         let status = 'not-started';
-        if (percent === 100) status = 'completed';
-        else if (percent > 0 || inProgressParts > 0) status = 'in-progress';
+        if (completedParts > 0) status = 'completed';
+        else if (inProgressParts > 0) status = 'in-progress';
 
         test.dataset.status = status;
-        stats.total++;
-        stats[status]++;
+        
+        // Thống kê đếm theo từng đầu mục bài tập (Links) thay vì đếm theo Nhóm (Details)
+        stats.total += totalParts;
+        stats.completed += completedParts;
+        stats['in-progress'] += inProgressParts;
+        stats['not-started'] += (totalParts - completedParts - inProgressParts);
       });
 
       // Cập nhật số lượng trên các nút lọc
