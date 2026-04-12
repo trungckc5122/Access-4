@@ -2329,17 +2329,32 @@
     // Helper: Check if draft has valid answers (used by both initResumeButton and initStatusBadges)
     function hasValidDraftData(key) {
       const draft = localStorage.getItem(key);
-      if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') return false;
+      console.log('[hasValidDraftData] Checking key:', key, 'raw draft:', draft);
+      if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') {
+        console.log('[hasValidDraftData] Empty or invalid draft');
+        return false;
+      }
       try {
         const data = JSON.parse(draft);
-        if (!data || typeof data !== 'object') return false;
-        return Object.values(data).some(v => {
+        if (!data || typeof data !== 'object') {
+          console.log('[hasValidDraftData] Parsed data not an object');
+          return false;
+        }
+        // Exclude metadata fields like 'type' and 'slotState', only check actual answers (q1, q2, etc.)
+        const answerKeys = Object.keys(data).filter(k => k.match(/^q\d+$/));
+        console.log('[hasValidDraftData] Answer keys found:', answerKeys);
+        const hasValid = answerKeys.some(k => {
+          const v = data[k];
           if (v === null || v === undefined) return false;
           if (typeof v === 'number') return true;
           if (typeof v === 'string') return v.trim() !== '';
+          if (typeof v === 'object' && v !== null) return v.value !== null && v.value !== undefined && String(v.value).trim() !== '';
           return false;
         });
+        console.log('[hasValidDraftData] Has valid answers:', hasValid);
+        return hasValid;
       } catch (e) {
+        console.error('[hasValidDraftData] Parse error:', e);
         return false;
       }
     }
@@ -2356,25 +2371,46 @@
       const lastTitle = localStorage.getItem('pet_last_activity_title');
       const ignoredUrl = localStorage.getItem('pet_resume_ignored_url');
 
+      // ✅ THÊM: Lấy URL hiện tại từ page
+      const currentPageUrl = window.location.href;
+
       // Parse test info from URL to get draft key
-      let hasDraftData = false;
+      let hasDraftForLastUrl = false;
+      console.log('[initResumeButton] lastUrl:', lastUrl, 'ignoredUrl:', ignoredUrl);
+      console.log('[initResumeButton] currentPageUrl:', currentPageUrl);
+
       if (lastUrl) {
         const testInfo = parseTestFromFilename(lastUrl);
+        console.log('[initResumeButton] Parsed testInfo:', testInfo);
         if (testInfo) {
           const prefix = testInfo.type === 'listening' ? 'pet_listening' : 'pet_reading';
           const draftKey = `${prefix}_book${testInfo.book}_test${testInfo.test}_part${testInfo.part}_draft`;
-          hasDraftData = hasValidDraftData(draftKey);
+          console.log('[initResumeButton] Checking draftKey:', draftKey);
+          hasDraftForLastUrl = hasValidDraftData(draftKey);
+          console.log('[initResumeButton] hasDraftForLastUrl result:', hasDraftForLastUrl);
         }
       }
 
-      // Chỉ hiện nếu có URL, URL chưa bị "Bỏ qua", VÀ draft có dữ liệu thực
-      if (lastUrl && banner && link && lastUrl !== ignoredUrl && hasDraftData) {
+      // ✅ KEY FIX: Kiểm tra 4 điều kiện:
+      // 1. Có lastUrl
+      // 2. lastUrl khác URL hiện tại (không hiện banner nếu đang trên cùng trang)
+      // 3. Có draft data thực của bài lastUrl
+      // 4. lastUrl không bị "Bỏ qua"
+      const isCurrentPage = lastUrl && currentPageUrl.includes(lastUrl.split('/').pop());
+      console.log('[initResumeButton] isCurrentPage:', isCurrentPage);
+
+      console.log('[initResumeButton] Show banner?', { lastUrl: !!lastUrl, banner: !!banner, link: !!link, ignored: lastUrl === ignoredUrl, hasDraftForLastUrl, isCurrentPage });
+
+      if (lastUrl && banner && link && lastUrl !== ignoredUrl && hasDraftForLastUrl && !isCurrentPage) {
         banner.style.display = 'flex';
         link.href = lastUrl;
         if (lastTitle) {
           const statusIcon = lastTitle.includes('Đã xong') ? '✅' : '⏳';
           text.innerHTML = `Bạn đang làm: <strong>${lastTitle}</strong> ${statusIcon}. Nhấn nút để tiếp tục ngay.`;
         }
+      } else {
+        // ✅ THÊM: Ẩn banner nếu không đáp ứng điều kiện
+        if (banner) banner.style.display = 'none';
       }
 
       const hideBanner = (isPermanentIgnore = false) => {
@@ -2397,6 +2433,7 @@
         if (a && a.href) {
           const testInfo = parseTestFromFilename(a.href);
           if (testInfo) {
+            // ✅ LƯU GHI CHÚ: Cập nhật lastUrl để lần sau khi quay lại có thể hiện banner
             localStorage.setItem('pet_last_activity_url', a.href);
 
             const typeStr = testInfo.type === 'listening' ? 'Phần Nghe' : 'Phần Đọc';
@@ -2404,17 +2441,11 @@
 
             localStorage.setItem('pet_last_activity_title', titleStr);
 
-            // Khi mở file mới, xóa trạng thái bị Ignore để hiện banner lần sau khi quay lại
+            // ✅ THÊM: Xóa ignore flag khi mở bài mới
             localStorage.removeItem('pet_resume_ignored_url');
 
-            // Cập nhật banner ngay lập tức nếu đang hiển thị
-            if (banner && text) {
-              banner.style.display = 'flex';
-              banner.style.opacity = '1';
-              banner.style.transform = 'translateY(0)';
-              link.href = a.href;
-              text.innerHTML = `Bạn đang xem dở: <strong>${titleStr}</strong> ⏳. Nhấn nút để tiếp tục ngay nhé.`;
-            }
+            // ✅ KHÔNG cập nhật banner ngay - chỉ cập nhật nếu người dùng quay lại index.html
+            // (Banner sẽ cập nhật tự động lần sau khi initResumeButton() được gọi lại)
           }
         }
       });
