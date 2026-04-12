@@ -434,6 +434,22 @@ class ReadingCore {
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Reading Draft] Saved immediately to key:', key);
+
+            // Notify dashboard of draft update via BroadcastChannel
+            try {
+                const channel = new BroadcastChannel('pet_update_channel');
+                channel.postMessage({
+                    action: 'status_updated',
+                    type: 'reading',
+                    book: this.currentTestData.book,
+                    test: this.currentTestData.test,
+                    part: this.currentTestData.part,
+                    status: 'in-progress'
+                });
+                channel.close();
+            } catch (e) {
+                console.warn('BroadcastChannel error:', e);
+            }
         } catch (e) {
             console.error('[Reading Draft] Immediate save failed:', e);
         }
@@ -1368,10 +1384,26 @@ class ReadingCore {
 
         // Local storage saving
         this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
-        
+
+        // Notify dashboard of status update via BroadcastChannel
+        try {
+            const channel = new BroadcastChannel('pet_update_channel');
+            channel.postMessage({
+                action: 'status_updated',
+                type: 'reading',
+                book: this.currentTestData.book,
+                test: this.currentTestData.test,
+                part: this.currentTestData.part,
+                status: 'completed'
+            });
+            channel.close();
+        } catch (e) {
+            console.warn('BroadcastChannel error:', e);
+        }
+
         // === MỚI: Xóa draft sau khi nộp ===
         this.clearDraft();
-        
+
         this.disableInputs();
     }
 

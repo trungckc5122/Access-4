@@ -409,6 +409,22 @@ class ListeningCore {
             const key = this.getStorageKey(true);
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Draft] SAVED IMMEDIATELY to key:', key);
+
+            // Notify dashboard of draft update via BroadcastChannel
+            try {
+                const channel = new BroadcastChannel('pet_update_channel');
+                channel.postMessage({
+                    action: 'status_updated',
+                    type: 'listening',
+                    book: this.currentTestData.book,
+                    test: this.currentTestData.test,
+                    part: this.currentTestData.part,
+                    status: 'in-progress'
+                });
+                channel.close();
+            } catch (e) {
+                console.warn('BroadcastChannel error:', e);
+            }
         } catch (e) {
             console.error('[Draft] Immediate save failed:', e);
         }
@@ -993,7 +1009,23 @@ class ListeningCore {
 
         // Save to dashboard
         this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
-        
+
+        // Notify dashboard of status update via BroadcastChannel
+        try {
+            const channel = new BroadcastChannel('pet_update_channel');
+            channel.postMessage({
+                action: 'status_updated',
+                type: 'listening',
+                book: this.currentTestData.book,
+                test: this.currentTestData.test,
+                part: this.currentTestData.part,
+                status: 'completed'
+            });
+            channel.close();
+        } catch (e) {
+            console.warn('BroadcastChannel error:', e);
+        }
+
         // === MỚI: Xóa draft sau khi nộp bài ===
         this.clearDraft();
 

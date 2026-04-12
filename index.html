@@ -2021,6 +2021,25 @@
         return key;
       }
 
+      // Kiểm tra xem draft có câu trả lời thực không
+      function isValidDraft(key) {
+        const draft = localStorage.getItem(key);
+        if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') return false;
+        try {
+          const data = JSON.parse(draft);
+          if (!data || typeof data !== 'object') return false;
+          // Check if any value is a non-empty string or a number
+          return Object.values(data).some(v => {
+            if (v === null || v === undefined) return false;
+            if (typeof v === 'number') return true;
+            if (typeof v === 'string') return v.trim() !== '';
+            return false;
+          });
+        } catch (e) {
+          return false;
+        }
+      }
+
       // Kiểm tra và thêm badge cho một link
       function checkAndAddBadge(link) {
         const href = link.getAttribute('href');
@@ -2033,7 +2052,7 @@
         const draftKey = getStorageKey(testInfo, true);
 
         const hasCompleted = localStorage.getItem(completedKey) !== null;
-        const hasDraft = localStorage.getItem(draftKey) !== null;
+        const hasDraft = isValidDraft(draftKey);
 
         // Xóa badge cũ nếu có
         // Xóa tất cả các badge cũ nếu có
@@ -2111,7 +2130,7 @@
           const draftKey = getStorageKey(testInfo, true);
 
           if (localStorage.getItem(completedKey)) hasCompletedCount++;
-          else if (localStorage.getItem(draftKey)) hasDraftCount++;
+          else if (isValidDraft(draftKey)) hasDraftCount++;
         });
 
         // Xóa badge cũ trên summary
@@ -2172,6 +2191,25 @@
         // MỚI: Cập nhật thanh tiến độ và số lượng lọc
         updatePetProgress();
       }
+    }
+
+    // Global variable to track current filter state
+    let currentFilter = 'all';
+
+    // Áp dụng bộ lọc đang hoạt động
+    function applyActiveFilter() {
+      const petPanel = document.getElementById('pet-panel');
+      if (!petPanel) return;
+
+      const tests = petPanel.querySelectorAll('details');
+      tests.forEach(test => {
+        if (currentFilter === 'all' || test.dataset.status === currentFilter) {
+          test.style.display = 'block';
+          test.style.opacity = '1';
+        } else {
+          test.style.display = 'none';
+        }
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2271,12 +2309,21 @@
       document.getElementById('count-not-started').textContent = stats['not-started'];
       document.getElementById('count-in-progress').textContent = stats['in-progress'];
       document.getElementById('count-completed').textContent = stats['completed'];
+
+      // Luôn áp dụng lại bộ lọc hiện tại sau khi cập nhật status
+      applyActiveFilter();
     }
 
     // Khởi tạo bộ lọc
     function initDashboardFilters() {
       const filterBtns = document.querySelectorAll('.filter-btn');
       const petPanel = document.getElementById('pet-panel');
+
+      // Initialize currentFilter from the active button on page load
+      const activeBtn = document.querySelector('.filter-btn.active');
+      if (activeBtn) {
+        currentFilter = activeBtn.dataset.filter;
+      }
 
       filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2286,17 +2333,9 @@
           filterBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
 
-          // Thực hiện lọc các block details
-          const tests = petPanel.querySelectorAll('details');
-          tests.forEach(test => {
-            if (filter === 'all' || test.dataset.status === filter) {
-              test.style.display = 'block';
-              // Hiệu ứng hiện nhẹ
-              test.style.opacity = '1';
-            } else {
-              test.style.display = 'none';
-            }
-          });
+          // Cập nhật global filter và thực hiện lọc
+          currentFilter = filter;
+          applyActiveFilter();
         });
       });
     }
@@ -2373,6 +2412,20 @@
         initStatusBadges();
       }
     });
+
+    // BroadcastChannel for cross-tab communication (draft and completion updates)
+    let petUpdateChannel;
+    try {
+      petUpdateChannel = new BroadcastChannel('pet_update_channel');
+      petUpdateChannel.onmessage = (event) => {
+        if (event.data.action === 'status_updated') {
+          console.log('[Index] Status update received from another tab:', event.data);
+          initStatusBadges();
+        }
+      };
+    } catch (e) {
+      console.warn('BroadcastChannel not supported', e);
+    }
 
     // ========== 7. DATA RESET LOGIC ==========
     function initDataReset() {
