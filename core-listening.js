@@ -253,9 +253,6 @@ class ListeningCore {
         // Initialize navigation
         this.createNavigation();
 
-        // Khởi tạo trình chuyển đổi giao diện Modern/Classic
-        this.initModeToggle();
-        
         // === MỚI: Khôi phục draft nếu chưa nộp bài ===
         if (!this.isCompleted()) {
             this.loadDraft();
@@ -496,26 +493,20 @@ class ListeningCore {
      * Setup UI components and interactions
      */
     setupUI() {
-        // Setup font size controls
+        // 1. Inject UI elements before setting up events
+        this.uiManager.injectHeaderControls(this);
+        this.uiManager.injectModeToggle();
+        this.injectNoteButton();
+
+        // 2. Setup behaviors
         this.uiManager.setupFontControls();
-        
-        // Setup theme toggle
         this.uiManager.setupThemeToggle();
-        
-        // Setup mode toggle (classic/modern)
         this.uiManager.setupModeToggle();
-        
-        // Setup resizer for transcript panel
         this.uiManager.setupResizer();
-        
-        // Setup explanation panel
         this.uiManager.setupExplanationPanel();
         
         // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
-
-        // Inject Note button into bottom-bar
-        this.injectNoteButton();
     }
 
     /**
@@ -780,73 +771,6 @@ class ListeningCore {
         nav.appendChild(nextPartBtn);
     }
 
-    /**
-     * Khởi tạo trình chuyển đổi giao diện Modern/Classic
-     */
-    initModeToggle() {
-        const header = document.querySelector('.ielts-header .brand') || document.querySelector('.ielts-header');
-        if (!header) return;
-
-        let container = document.getElementById('modeToggleContainer');
-        
-        // Nếu đã có sẵn trong HTML (do file cũ chưa xóa), chỉ cần gán sự kiện
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'mode-toggle';
-            container.id = 'modeToggleContainer';
-            container.innerHTML = `
-                <span class="mode-label">Hiện đại</span>
-                <label class="mode-switch" title="Chuyển đổi giao diện Cổ điển/Hiện đại">
-                    <input type="checkbox" id="modeToggle">
-                    <span class="mode-slider"></span>
-                </label>
-                <span class="mode-label">Cổ điển</span>
-            `;
-            
-            // Tìm vị trí chèn: sau font-controls hoặc ở cuối brand
-            const fontControls = header.querySelector('.font-controls');
-            if (fontControls) {
-                fontControls.insertAdjacentElement('afterend', container);
-            } else {
-                header.appendChild(container);
-            }
-        }
-
-        this.setupModeToggleEvents(container);
-    }
-
-    /**
-     * Thiết lập sự kiện và trạng thái cho Mode Toggle
-     */
-    setupModeToggleEvents(container) {
-        const toggle = container.querySelector('#modeToggle');
-        if (!toggle) return;
-
-        const styleLink = document.getElementById('styleLink');
-        const storageKey = 'pet-listening-theme';
-        
-        // Khôi phục trạng thái đã lưu
-        const savedTheme = localStorage.getItem(storageKey);
-        if (savedTheme === 'classic') {
-            toggle.checked = true;
-            if (styleLink) styleLink.href = 'listening-pet-common1.css';
-            document.body.classList.add('classic-mode');
-        }
-
-        toggle.addEventListener('change', () => {
-            const isClassic = toggle.checked;
-            localStorage.setItem(storageKey, isClassic ? 'classic' : 'modern');
-            
-            if (styleLink) {
-                styleLink.href = isClassic ? 'listening-pet-common1.css' : 'listening-pet-common.css';
-            }
-            
-            document.body.classList.toggle('classic-mode', isClassic);
-            
-            // Thông báo cập nhật layout
-            window.dispatchEvent(new Event('resize'));
-        });
-    }
 
     /**
      * Get question range based on current test
@@ -1692,56 +1616,147 @@ class UIManager {
     }
 
     /**
+     * Inject header controls (Font buttons, Theme toggle)
+     */
+    injectHeaderControls(coreInstance) {
+        const header = document.querySelector('.ielts-header');
+        if (!header) return;
+
+        // 1. Update Candidate Name from testData if possible
+        const candidateEl = header.querySelector('.candidate');
+        if (candidateEl && coreInstance.currentTestData && coreInstance.currentTestData.title) {
+            candidateEl.textContent = coreInstance.currentTestData.title;
+        }
+
+        // 2. Inject Font Controls if not present
+        if (!header.querySelector('.font-controls')) {
+            const fontControls = document.createElement('div');
+            fontControls.className = 'font-controls';
+            fontControls.innerHTML = `
+                <button class="font-btn" id="fontSmall">A-</button>
+                <button class="font-btn" id="fontMedium">A</button>
+                <button class="font-btn active" id="fontLarge">A+</button>
+            `;
+            header.appendChild(fontControls);
+        }
+
+        // 3. Inject Theme Toggle if not present
+        if (!document.getElementById('themeToggle')) {
+            const themeBtn = document.createElement('button');
+            themeBtn.className = 'theme-toggle-btn';
+            themeBtn.id = 'themeToggle';
+            themeBtn.title = 'Chuyển đổi Dark/Light mode';
+            themeBtn.innerHTML = `
+                <span class="icon-moon">🌙</span>
+                <span class="icon-sun">☀️</span>
+            `;
+            header.appendChild(themeBtn);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('pet-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    /**
      * Setup theme toggle
      */
     setupThemeToggle() {
         const themeToggle = document.getElementById('themeToggle');
         if (!themeToggle) return;
 
+        const html = document.documentElement;
+        const testWrapper = document.getElementById('testWrapper');
+
         themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
+            // Dark mode is not allowed in classic mode
+            if (testWrapper && testWrapper.classList.contains('classic-mode')) return;
+            
+            const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('pet-theme', newTheme);
         });
 
         // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedTheme = localStorage.getItem('pet-theme') || 'light';
+        // Only apply dark theme if not in classic mode
+        if (savedTheme === 'dark' && testWrapper && !testWrapper.classList.contains('classic-mode')) {
+            html.setAttribute('data-theme', 'dark');
+        } else if (savedTheme === 'dark' && !testWrapper) {
+            // Fallback for pages without testWrapper
+            html.setAttribute('data-theme', 'dark');
+        } else {
+            html.setAttribute('data-theme', 'light');
+        }
+    }
+    injectModeToggle() {
+        const header = document.querySelector('.ielts-header .brand') || document.querySelector('.ielts-header');
+        if (!header) return;
+
+        if (document.getElementById('modeToggleContainer')) return;
+
+        const container = document.createElement('div');
+        container.className = 'mode-toggle';
+        container.id = 'modeToggleContainer';
+        container.innerHTML = `
+            <span class="mode-label">Hiện đại</span>
+            <label class="mode-switch" title="Chuyển đổi giao diện Cổ điển/Hiện đại">
+                <input type="checkbox" id="modeToggle">
+                <span class="mode-slider"></span>
+            </label>
+            <span class="mode-label">Cổ điển</span>
+        `;
+        
+        // Tìm vị trí chèn: sau font-controls hoặc ở cuối brand
+        const fontControls = header.querySelector('.font-controls');
+        if (fontControls) {
+            fontControls.insertAdjacentElement('afterend', container);
+        } else {
+            header.appendChild(container);
+        }
     }
 
     /**
-     * Setup mode toggle (classic/modern)
+     * Setup mode toggle (classic/modern) events and initial state
      */
     setupModeToggle() {
         const modeToggle = document.getElementById('modeToggle');
         const styleLink = document.getElementById('styleLink');
-        const themeToggle = document.getElementById('themeToggle');
+        const themeToggle = document.getElementById('themeToggle'); // Dark mode button
         const html = document.documentElement;
+        const storageKey = 'pet-mode'; // Unified key
 
         if (!modeToggle || !styleLink) return;
 
-        function setMode(isClassic) {
+        const setMode = (isClassic) => {
             if (isClassic) {
                 // Switch to classic mode
                 styleLink.href = styleLink.href.replace('listening-pet-common.css', 'listening-pet-common1.css');
-                // Hide theme toggle in classic mode
+                // Hide dark mode button in classic mode
                 if (themeToggle) themeToggle.style.display = 'none';
-                // Remove dark theme
+                // Remove dark theme attribute
                 html.removeAttribute('data-theme');
-                localStorage.removeItem('pet-theme');
             } else {
                 // Switch to modern mode
                 styleLink.href = styleLink.href.replace('listening-pet-common1.css', 'listening-pet-common.css');
-                // Show theme toggle in modern mode
+                // Show dark mode button in modern mode
                 if (themeToggle) themeToggle.style.display = 'flex';
+                
+                // Restore saved dark mode preference if in modern mode
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                }
             }
-            localStorage.setItem('pet-mode', isClassic ? 'classic' : 'modern');
-        }
+            localStorage.setItem(storageKey, isClassic ? 'classic' : 'modern');
+            // Force reflow
+            void document.body.offsetHeight;
+        };
 
         // Restore saved mode
-        const savedMode = localStorage.getItem('pet-mode');
+        const savedMode = localStorage.getItem(storageKey);
         if (savedMode === 'classic') {
             modeToggle.checked = true;
             setMode(true);
@@ -1750,10 +1765,12 @@ class UIManager {
             setMode(false);
         }
 
+        // Handle toggle change
         modeToggle.addEventListener('change', () => {
             setMode(modeToggle.checked);
         });
     }
+
 
     /**
      * Setup resizer for transcript panel

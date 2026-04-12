@@ -1855,24 +1855,42 @@
 
       if (allLinks.length === 0) return;
 
-      // Đánh dấu đã kiểm tra để tránh kiểm tra lại
+      // Đánh dấu đã kiểm tra để tránh kiểm tra lại trong cùng một lần chạy
       allLinks.forEach(link => link.dataset.checked = 'true');
 
-      // Sử dụng queue để tránh spam request đồng thời
+      // Batch processing with sessionStorage caching
       const queue = [...allLinks];
       const BATCH_SIZE = 5;
 
       async function processBatch() {
         if (queue.length === 0) return;
         const batch = queue.splice(0, BATCH_SIZE);
+        
         await Promise.all(batch.map(async (link) => {
+          const cacheKey = `broken_link_${link.href}`;
+          const cachedStatus = sessionStorage.getItem(cacheKey);
+
+          if (cachedStatus === 'broken') {
+            link.classList.add('broken-link');
+            return;
+          } else if (cachedStatus === 'ok') {
+            return;
+          }
+
           try {
             const response = await fetch(link.href, { method: 'HEAD', cache: 'no-cache' });
-            if (!response.ok) link.classList.add('broken-link');
+            if (!response.ok) {
+              link.classList.add('broken-link');
+              sessionStorage.setItem(cacheKey, 'broken');
+            } else {
+              sessionStorage.setItem(cacheKey, 'ok');
+            }
           } catch {
             link.classList.add('broken-link');
+            sessionStorage.setItem(cacheKey, 'broken');
           }
         }));
+        
         processBatch();
       }
 
@@ -2021,23 +2039,9 @@
         return key;
       }
 
-      // Kiểm tra xem draft có câu trả lời thực không
+      // Kiểm tra xem draft có câu trả lời thực không (sử dụng helper function)
       function isValidDraft(key) {
-        const draft = localStorage.getItem(key);
-        if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') return false;
-        try {
-          const data = JSON.parse(draft);
-          if (!data || typeof data !== 'object') return false;
-          // Check if any value is a non-empty string or a number
-          return Object.values(data).some(v => {
-            if (v === null || v === undefined) return false;
-            if (typeof v === 'number') return true;
-            if (typeof v === 'string') return v.trim() !== '';
-            return false;
-          });
-        } catch (e) {
-          return false;
-        }
+        return hasValidDraftData(key);
       }
 
       // Kiểm tra và thêm badge cho một link
@@ -2340,6 +2344,39 @@
       });
     }
 
+    // Helper: Check if draft has valid answers (used by both initResumeButton and initStatusBadges)
+    function hasValidDraftData(key) {
+      const draft = localStorage.getItem(key);
+      console.log('[hasValidDraftData] Checking key:', key, 'raw draft:', draft);
+      if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') {
+        console.log('[hasValidDraftData] Empty or invalid draft');
+        return false;
+      }
+      try {
+        const data = JSON.parse(draft);
+        if (!data || typeof data !== 'object') {
+          console.log('[hasValidDraftData] Parsed data not an object');
+          return false;
+        }
+        // Exclude metadata fields like 'type' and 'slotState', only check actual answers (q1, q2, etc.)
+        const answerKeys = Object.keys(data).filter(k => k.match(/^q\d+$/));
+        console.log('[hasValidDraftData] Answer keys found:', answerKeys);
+        const hasValid = answerKeys.some(k => {
+          const v = data[k];
+          if (v === null || v === undefined) return false;
+          if (typeof v === 'number') return true;
+          if (typeof v === 'string') return v.trim() !== '';
+          if (typeof v === 'object' && v !== null) return v.value !== null && v.value !== undefined && String(v.value).trim() !== '';
+          return false;
+        });
+        console.log('[hasValidDraftData] Has valid answers:', hasValid);
+        return hasValid;
+      } catch (e) {
+        console.error('[hasValidDraftData] Parse error:', e);
+        return false;
+      }
+    }
+
     // Tính năng "Tiếp tục bài làm"
     function initResumeButton() {
       const banner = document.getElementById('resume-banner');
@@ -2352,14 +2389,46 @@
       const lastTitle = localStorage.getItem('pet_last_activity_title');
       const ignoredUrl = localStorage.getItem('pet_resume_ignored_url');
 
-      // Chỉ hiện nếu có URL và URL này chưa bị "Bỏ qua"
-      if (lastUrl && banner && link && lastUrl !== ignoredUrl) {
+      // ✅ THÊM: Lấy URL hiện tại từ page
+      const currentPageUrl = window.location.href;
+
+      // Parse test info from URL to get draft key
+      let hasDraftForLastUrl = false;
+      console.log('[initResumeButton] lastUrl:', lastUrl, 'ignoredUrl:', ignoredUrl);
+      console.log('[initResumeButton] currentPageUrl:', currentPageUrl);
+
+      if (lastUrl) {
+        const testInfo = parseTestFromFilename(lastUrl);
+        console.log('[initResumeButton] Parsed testInfo:', testInfo);
+        if (testInfo) {
+          const prefix = testInfo.type === 'listening' ? 'pet_listening' : 'pet_reading';
+          const draftKey = `${prefix}_book${testInfo.book}_test${testInfo.test}_part${testInfo.part}_draft`;
+          console.log('[initResumeButton] Checking draftKey:', draftKey);
+          hasDraftForLastUrl = hasValidDraftData(draftKey);
+          console.log('[initResumeButton] hasDraftForLastUrl result:', hasDraftForLastUrl);
+        }
+      }
+
+      // ✅ KEY FIX: Kiểm tra 4 điều kiện:
+      // 1. Có lastUrl
+      // 2. lastUrl khác URL hiện tại (không hiện banner nếu đang trên cùng trang)
+      // 3. Có draft data thực của bài lastUrl
+      // 4. lastUrl không bị "Bỏ qua"
+      const isCurrentPage = lastUrl && currentPageUrl.includes(lastUrl.split('/').pop());
+      console.log('[initResumeButton] isCurrentPage:', isCurrentPage);
+
+      console.log('[initResumeButton] Show banner?', { lastUrl: !!lastUrl, banner: !!banner, link: !!link, ignored: lastUrl === ignoredUrl, hasDraftForLastUrl, isCurrentPage });
+
+      if (lastUrl && banner && link && lastUrl !== ignoredUrl && hasDraftForLastUrl && !isCurrentPage) {
         banner.style.display = 'flex';
         link.href = lastUrl;
         if (lastTitle) {
           const statusIcon = lastTitle.includes('Đã xong') ? '✅' : '⏳';
-          text.innerHTML = `Bạn đang xem dở: <strong>${lastTitle}</strong> ${statusIcon}. Nhấn nút để tiếp tục ngay nhé.`;
+          text.innerHTML = `Bạn đang làm: <strong>${lastTitle}</strong> ${statusIcon}. Nhấn nút để tiếp tục ngay.`;
         }
+      } else {
+        // ✅ THÊM: Ẩn banner nếu không đáp ứng điều kiện
+        if (banner) banner.style.display = 'none';
       }
 
       const hideBanner = (isPermanentIgnore = false) => {
@@ -2382,6 +2451,7 @@
         if (a && a.href) {
           const testInfo = parseTestFromFilename(a.href);
           if (testInfo) {
+            // ✅ LƯU GHI CHÚ: Cập nhật lastUrl để lần sau khi quay lại có thể hiện banner
             localStorage.setItem('pet_last_activity_url', a.href);
 
             const typeStr = testInfo.type === 'listening' ? 'Phần Nghe' : 'Phần Đọc';
@@ -2389,17 +2459,11 @@
 
             localStorage.setItem('pet_last_activity_title', titleStr);
 
-            // Khi mở file mới, xóa trạng thái bị Ignore để hiện banner lần sau khi quay lại
+            // ✅ THÊM: Xóa ignore flag khi mở bài mới
             localStorage.removeItem('pet_resume_ignored_url');
 
-            // Cập nhật banner ngay lập tức nếu đang hiển thị
-            if (banner && text) {
-              banner.style.display = 'flex';
-              banner.style.opacity = '1';
-              banner.style.transform = 'translateY(0)';
-              link.href = a.href;
-              text.innerHTML = `Bạn đang xem dở: <strong>${titleStr}</strong> ⏳. Nhấn nút để tiếp tục ngay nhé.`;
-            }
+            // ✅ KHÔNG cập nhật banner ngay - chỉ cập nhật nếu người dùng quay lại index.html
+            // (Banner sẽ cập nhật tự động lần sau khi initResumeButton() được gọi lại)
           }
         }
       });
