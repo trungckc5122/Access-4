@@ -35,7 +35,7 @@ class PETNoteManager {
         this.createPanel();
         this.loadNote();
         this.setupEvents();
-        console.log('[Note] Initialized');
+        this.core.log('[Note] Initialized');
     }
 
     createPanel() {
@@ -109,8 +109,11 @@ class PETNoteManager {
                 this.resizeData.isResizing = false;
                 this.panel.style.transition = '';
                 document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('touchmove', onDrag);
                 document.removeEventListener('mousemove', onResize);
+                document.removeEventListener('touchmove', onResize);
                 document.removeEventListener('mouseup', stopActions);
+                document.removeEventListener('touchend', stopActions);
                 
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
@@ -122,29 +125,43 @@ class PETNoteManager {
             }
         };
 
-        header.addEventListener('mousedown', (e) => {
+        const onStartDrag = (e) => {
             if (e.target.closest('.pet-note-btn')) return;
             this.dragData.isDragging = true;
-            this.dragData.startX = e.clientX;
-            this.dragData.startY = e.clientY;
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            this.dragData.startX = clientX;
+            this.dragData.startY = clientY;
             const rect = this.panel.getBoundingClientRect();
             this.dragData.initialX = rect.left;
             this.dragData.initialY = rect.top;
             this.panel.style.transition = 'none';
             document.addEventListener('mousemove', onDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
             document.addEventListener('mouseup', stopActions);
-        });
+            document.addEventListener('touchend', stopActions);
+        };
 
-        handle.addEventListener('mousedown', (e) => {
+        const onStartResize = (e) => {
             e.preventDefault();
             this.resizeData.isResizing = true;
-            this.resizeData.startX = e.clientX;
-            this.resizeData.startY = e.clientY;
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            this.resizeData.startX = clientX;
+            this.resizeData.startY = clientY;
             this.resizeData.startWidth = this.panel.offsetWidth;
             this.resizeData.startHeight = this.panel.offsetHeight;
             document.addEventListener('mousemove', onResize);
+            document.addEventListener('touchmove', onResize, { passive: false });
             document.addEventListener('mouseup', stopActions);
-        });
+            document.addEventListener('touchend', stopActions);
+        };
+
+        header.addEventListener('mousedown', onStartDrag);
+        header.addEventListener('touchstart', onStartDrag, { passive: false });
+
+        handle.addEventListener('mousedown', onStartResize);
+        handle.addEventListener('touchstart', onStartResize, { passive: false });
 
         minBtn.addEventListener('click', () => {
             this.isMinimized = !this.isMinimized;
@@ -168,7 +185,7 @@ class PETNoteManager {
                 this.saveNote();
                 this.autoExpand();
                 this.updateBadge();
-                console.log('[Note] Content cleared');
+                this.core.log('[Note] Content cleared');
             }
         });
     }
@@ -196,11 +213,13 @@ class PETNoteManager {
     }
 
     updateBadge() {
-        const toggleBtn = document.querySelector('.note-toggle-btn');
-        if (!toggleBtn) return;
+        if (!this.toggleBtn) {
+            this.toggleBtn = document.querySelector('.note-toggle-btn');
+        }
+        if (!this.toggleBtn) return;
         
         const hasContent = this.textarea.value.trim().length > 0;
-        toggleBtn.classList.toggle('has-content', hasContent);
+        this.toggleBtn.classList.toggle('has-content', hasContent);
     }
 
     toggle() {
@@ -216,6 +235,7 @@ class PETNoteManager {
 
 class ReadingCore {
     constructor() {
+        this.debug = true;
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentTestData = null;
@@ -223,11 +243,15 @@ class ReadingCore {
         this.slotState = {}; // Used for Part 4 & 5
         
         this.highlightManager = new ReadingHighlightManager();
-        this.storageManager = new ReadingStorageManager();
+        this.storageManager = new ReadingStorageManager(this);
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 500;
         this._isResetting = false;
+    }
+
+    log(...args) {
+        if (this.debug) console.log('[ReadingCore]', ...args);
     }
 
     /**
@@ -264,8 +288,8 @@ class ReadingCore {
         // Initialize navigation
         this.createNavigation();
 
-        // Khởi tạo trình chuyển đổi giao diện Modern/Classic
-        this.initModeToggle();
+        // Mode toggle is now handled within setupUI -> uiManager.setupModeToggle
+        // Remove direct call to redundant this.initModeToggle();
         
         // === MỚI: Khôi phục draft nếu chưa nộp bài ===
         if (!this.isCompleted()) {
@@ -2064,13 +2088,10 @@ class ReadingStorageManager {
             details: details
         };
 
-        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
-        const resolvedPart = testData.part || part;
-        
-        const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
+        const key = this.core.getStorageKey(false);
         
         localStorage.setItem(key, JSON.stringify(partData));
-        console.log(`Results saved with key: ${key}`);
+        this.core.log(`Results saved with key: ${key}`);
     }
 
     parseTestInfo(title) {
@@ -2119,7 +2140,7 @@ class ReadingUIManager {
         }
 
         // Target content directly instead of overriding classes fully
-        document.querySelectorAll('.reading-content, .questions-list, #testWrapper').forEach(el => {
+        document.querySelectorAll('.reading-content, .reading-text, .questions-list, .matching-questions, .drag-drop-container, #testWrapper').forEach(el => {
             el.classList.remove('font-small', 'font-medium', 'font-large');
             el.classList.add(`font-${size}`);
         });
@@ -2191,31 +2212,44 @@ class ReadingUIManager {
 
         let isResizing = false;
 
-        resizer.addEventListener('mousedown', () => {
+        const startResizing = (e) => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
-        });
+            e.preventDefault();
+        };
 
-        document.addEventListener('mousemove', (e) => {
+        const onMouseMove = (e) => {
             if (!isResizing) return;
 
             const mainArea = document.getElementById('mainArea');
             if (!mainArea) return;
 
             const rect = mainArea.getBoundingClientRect();
-            let leftWidth = e.clientX - rect.left - 4;
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            if (clientX === undefined) return;
+
+            let leftWidth = clientX - rect.left - 4;
             
             if (leftWidth < 250) leftWidth = 250;
             if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
             
             readingPanel.style.width = leftWidth + 'px';
             questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
-        });
+        };
 
-        document.addEventListener('mouseup', () => {
+        const stopResizing = () => {
             isResizing = false;
             document.body.style.cursor = 'default';
-        });
+        };
+
+        resizer.addEventListener('mousedown', startResizing);
+        resizer.addEventListener('touchstart', startResizing, { passive: false });
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('touchmove', onMouseMove, { passive: false });
+        
+        document.addEventListener('mouseup', stopResizing);
+        document.addEventListener('touchend', stopResizing);
     }
 
     setupExplanationPanel() {
@@ -2225,33 +2259,41 @@ class ReadingUIManager {
         if (!explanationPanel || !explanationResizer) return;
 
         let isResizing = false;
-        let startY, startHeight;
 
-        explanationResizer.addEventListener('mousedown', (e) => {
+        const startResizing = (e) => {
             isResizing = true;
-            startY = e.clientY;
-            startHeight = explanationPanel.offsetHeight;
             document.body.style.cursor = 'ns-resize';
-            document.body.style.userSelect = 'none';
-        });
+            e.preventDefault();
+        };
 
-        document.addEventListener('mousemove', (e) => {
+        const onMouseMove = (e) => {
             if (!isResizing) return;
 
-            const dy = startY - e.clientY;
-            const newHeight = startHeight + dy;
-            
-            if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-                explanationPanel.style.height = newHeight + 'px';
-                explanationPanel.style.maxHeight = newHeight + 'px';
-            }
-        });
+            const rect = explanationPanel.getBoundingClientRect();
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            if (clientY === undefined) return;
 
-        document.addEventListener('mouseup', () => {
+            let newHeight = clientY - rect.top;
+            
+            if (newHeight < 150) newHeight = 150;
+            if (newHeight > 500) newHeight = 500;
+            
+            explanationPanel.style.height = newHeight + 'px';
+        };
+
+        const stopResizing = () => {
             isResizing = false;
             document.body.style.cursor = 'default';
-            document.body.style.userSelect = 'auto';
-        });
+        };
+
+        explanationResizer.addEventListener('mousedown', startResizing);
+        explanationResizer.addEventListener('touchstart', startResizing, { passive: false });
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('touchmove', onMouseMove, { passive: false });
+        
+        document.addEventListener('mouseup', stopResizing);
+        document.addEventListener('touchend', stopResizing);
     }
 
     /**

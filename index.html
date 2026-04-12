@@ -1855,24 +1855,42 @@
 
       if (allLinks.length === 0) return;
 
-      // Đánh dấu đã kiểm tra để tránh kiểm tra lại
+      // Đánh dấu đã kiểm tra để tránh kiểm tra lại trong cùng một lần chạy
       allLinks.forEach(link => link.dataset.checked = 'true');
 
-      // Sử dụng queue để tránh spam request đồng thời
+      // Batch processing with sessionStorage caching
       const queue = [...allLinks];
       const BATCH_SIZE = 5;
 
       async function processBatch() {
         if (queue.length === 0) return;
         const batch = queue.splice(0, BATCH_SIZE);
+        
         await Promise.all(batch.map(async (link) => {
+          const cacheKey = `broken_link_${link.href}`;
+          const cachedStatus = sessionStorage.getItem(cacheKey);
+
+          if (cachedStatus === 'broken') {
+            link.classList.add('broken-link');
+            return;
+          } else if (cachedStatus === 'ok') {
+            return;
+          }
+
           try {
             const response = await fetch(link.href, { method: 'HEAD', cache: 'no-cache' });
-            if (!response.ok) link.classList.add('broken-link');
+            if (!response.ok) {
+              link.classList.add('broken-link');
+              sessionStorage.setItem(cacheKey, 'broken');
+            } else {
+              sessionStorage.setItem(cacheKey, 'ok');
+            }
           } catch {
             link.classList.add('broken-link');
+            sessionStorage.setItem(cacheKey, 'broken');
           }
         }));
+        
         processBatch();
       }
 
