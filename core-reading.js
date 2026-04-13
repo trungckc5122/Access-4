@@ -2066,8 +2066,17 @@ class ReadingUIManager {
 
         // 1. Update Candidate Name from testData if possible
         const candidateEl = header.querySelector('.candidate');
-        if (candidateEl && coreInstance.currentTestData && coreInstance.currentTestData.title) {
-            candidateEl.textContent = coreInstance.currentTestData.title;
+        if (candidateEl && coreInstance.currentTestData) {
+            let title = coreInstance.currentTestData.title;
+            // Auto-generate title if missing
+            if (!title) {
+                const { part } = coreInstance.currentTestData;
+                const meta = this.parseTestInfo(document.title || '');
+                const book = meta.book || 1;
+                const test = meta.test || 1;
+                title = `B1 Preliminary ${book} · Test ${test} · Part ${part}`;
+            }
+            candidateEl.textContent = title;
         }
 
         // 2. Inject Font Controls if not present
