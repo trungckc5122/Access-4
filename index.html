@@ -2458,11 +2458,21 @@
         test.dataset.status = status;
 
         
-        // Thống kê đếm theo từng đầu mục bài tập (Links) thay vì đếm theo Nhóm (Details)
+        // Thống kê đếm theo từng đầu mục bài tập (Links) nhưng tôn trọng trạng thái của Nhóm
         stats.total += totalParts;
-        stats.completed += completedParts;
-        stats['in-progress'] += inProgressParts;
-        stats['not-started'] += (totalParts - completedParts - inProgressParts);
+        
+        if (status === 'completed') {
+            // Nếu nhóm đã xong 100%, tất cả các part trong đó đều là "Hoàn thành"
+            stats.completed += totalParts;
+        } else if (status === 'in-progress') {
+            // Nếu nhóm đang làm dở, những part đã nộp hoặc đang làm nháp được tính vào "Đang làm"
+            const activeParts = completedParts + inProgressParts;
+            stats['in-progress'] += activeParts;
+            stats['not-started'] += (totalParts - activeParts);
+        } else {
+            // Nhóm chưa bắt đầu
+            stats['not-started'] += totalParts;
+        }
       });
 
       // Cập nhật số lượng trên các nút lọc
@@ -2679,8 +2689,14 @@
       });
 
       confirmBtn.addEventListener('click', () => {
-        // CLEAR ALL
+        // MỚI: Chỉ xóa dữ liệu bài làm, giữ lại tùy chọn người dùng (Theme, Active Tab)
+        const currentTab = localStorage.getItem('activeTab');
+        const currentTheme = localStorage.getItem('theme');
+        
         localStorage.clear();
+        
+        if (currentTab) localStorage.setItem('activeTab', currentTab);
+        if (currentTheme) localStorage.setItem('theme', currentTheme);
 
         // Reload page to refresh all badges and status
         window.location.reload();
@@ -2843,7 +2859,9 @@
             const item = document.createElement('div');
             item.className = 'suggestion-item';
             item.innerHTML = `<span>${s}</span><span class="type-badge">${s.split(' ')[0]}</span>`;
-            item.onclick = () => {
+            item.onclick = (e) => {
+              e.stopPropagation(); // Ngăn sự kiện click lan ra ngoài làm đóng menu
+              
               let nextVal = s;
               const info = parseInput(s);
               
@@ -2861,6 +2879,10 @@
               input.value = nextVal;
               updateSuggestions(false);
               input.focus();
+              
+              // Đảm bảo menu vẫn hiện và cuộn lên đầu cho bước tiếp theo
+              suggestionsBox.style.display = 'block';
+              suggestionsBox.scrollTop = 0;
             };
             suggestionsBox.appendChild(item);
           });
