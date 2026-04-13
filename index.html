@@ -1619,7 +1619,7 @@
         <button id="close-resume" class="close-resume-btn" title="Đóng thông báo">×</button>
         <div class="resume-info">
           <h4>Chào mừng bạn quay lại! 👋</h4>
-          <p id="resume-text">Bạn đang làm bài tập PET. Nhấn nút để tiếp tục ngay nhé.</p>
+          <p id="resume-text">Bạn đang làm dở bài tập PET. Nhấn nút để tiếp tục ngay nhé.</p>
         </div>
         <div class="resume-action">
           <button id="skip-resume" class="skip-resume-btn">Bỏ qua</button>
@@ -2102,8 +2102,12 @@
         // Lưu tab vào localStorage
         localStorage.setItem('activeTab', tabId);
 
-        // Kiểm tra link lỗi trong panel mới sau khi chuyển tab
-        setTimeout(checkBrokenLinks, 100);
+        // Kiểm tra link lỗi trong panel mới sau khi chuyển tab, sau đó re-scan để cập nhật suggestions
+        setTimeout(async () => {
+          await checkBrokenLinks();
+          // Dispatch event để initSmartSearch re-scan
+          window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
+        }, 100);
       }
 
       tabs.forEach(btn => {
@@ -2362,10 +2366,12 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       initTabs();
       enableHoverForAllDetails();
-      checkBrokenLinks();
+      await checkBrokenLinks();
+      // Dispatch event sau khi check lần đầu để initSmartSearch cập nhật
+      window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
       initTheme();
       initGlobalStacking();
       initStatusBadges();
@@ -2775,8 +2781,12 @@
         
         links.forEach(a => {
           const href = a.getAttribute('href');
-          // Không lấy các bài tập bị đánh dấu là link lỗi (soon)
-          if (!a.classList.contains('broken-link') && href) {
+          // Không lấy các bài tập bị đánh dấu là link lỗi (soon) hoặc link không hợp lệ
+          if (!a.classList.contains('broken-link') && href && 
+              href !== '#' && !href.startsWith('#') && 
+              !href.startsWith('javascript:') && 
+              !href.startsWith('mailto:') &&
+              !href.startsWith('http')) {
             const filename = href.split('/').pop();
             existingLinks.add(filename);
             
@@ -3134,6 +3144,9 @@
       // Khởi tạo link index
       scanExistingLinks();
       window.addEventListener('focus', scanExistingLinks);
+      
+      // Lắng nghe sự kiện khi checkBrokenLinks hoàn thành để re-scan
+      window.addEventListener('brokenLinksChecked', scanExistingLinks);
     }
 
 
