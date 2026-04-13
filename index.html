@@ -2850,13 +2850,18 @@
         // Access 4: Variant a/b/c
         let variant = parts.find(p => p === 'A' || p === 'B' || p === 'C') || '';
 
-        return { skill, book, test, part, course, category, type, variant };
+        const result = { skill, book, test, part, course, category, type, variant };
+        console.log('[SmartSearch] parseInput result:', result);
+        return result;
       }
 
       function updateSuggestions(isDeleting = false) {
         const rawVal = input.value;
         const val = rawVal.trim().toUpperCase();
         suggestionsBox.innerHTML = '';
+        
+        // DEBUG
+        console.log('[SmartSearch] updateSuggestions called, val:', val);
         
         // Nếu ô tìm kiếm trống, hiện gợi ý mặc định
         if (!val) {
@@ -2922,37 +2927,46 @@
         }
 
         // ACCESS 4 CASCADING SUGGESTIONS
+        console.log('[SmartSearch] Access4 check:', { course: info.course, category: info.category, type: info.type, variant: info.variant });
+        console.log('[SmartSearch] Access4 data:', { modules: Array.from(access4Modules), reviews: Array.from(access4Reviews), variants: access4Variants });
         if (info.course) {
           if (!info.category) {
+            console.log('[SmartSearch] Level 2: Adding Review/Module options');
             // Level 2: Chọn Review hoặc Module (chỉ hiện nếu có files)
             if (access4Reviews.size > 0) suggestions.push('Access 4 Review');
             if (access4Modules.size > 0) suggestions.push('Access 4 Module');
           } else if (info.category === 'Review') {
+            console.log('[SmartSearch] Level 3 Review, type:', info.type);
             if (!info.type) {
               // Level 3: Review -> chỉ hiện các type có thật (Midterm/Final)
               const reviewSuggestions = Array.from(access4Reviews).sort().map(type => 
                 `Access 4 Review ${type.charAt(0).toUpperCase() + type.slice(1)}`
               );
+              console.log('[SmartSearch] Adding review suggestions:', reviewSuggestions);
               suggestions = suggestions.concat(reviewSuggestions);
             } else {
               // Level 4: Chọn variant thực tế từ files đã scan
               const reviewType = info.type.toLowerCase();
               const variants = access4Variants[reviewType] || [];
               const variantSuggestions = variants.sort().map(v => `Access 4 Review ${info.type} ${v}`);
+              console.log('[SmartSearch] Adding review variant suggestions:', variantSuggestions);
               suggestions = suggestions.concat(variantSuggestions);
             }
           } else if (info.category === 'Module') {
+            console.log('[SmartSearch] Level 3 Module, type:', info.type);
             if (!info.type) {
               // Level 3: Chọn Module từ các modules thực tế đã scan
               const moduleSuggestions = Array.from(access4Modules).sort((a,b) => a-b).map(m => 
                 `Access 4 Module ${m}`
               );
+              console.log('[SmartSearch] Adding module suggestions:', moduleSuggestions);
               suggestions = suggestions.concat(moduleSuggestions);
             } else if (!info.variant) {
               // Level 4: Chọn variant thực tế từ module đã chọn
               const modNum = info.type;
               const variants = access4Variants[modNum] || [];
               const variantSuggestions = variants.sort().map(v => `Access 4 Module ${info.type} ${v}`);
+              console.log('[SmartSearch] Adding module variant suggestions:', variantSuggestions);
               suggestions = suggestions.concat(variantSuggestions);
             }
           }
