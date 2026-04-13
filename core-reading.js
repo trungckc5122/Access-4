@@ -619,7 +619,7 @@ class ReadingCore {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
             Note
         `;
-        noteBtn.onclick = () => this.noteManager.toggle();
+        noteBtn.onclick = () => this.noteManager?.toggle();
         
         // Insert before submit button if possible
         const submitBtn = document.getElementById('submitBtn');
@@ -645,8 +645,8 @@ class ReadingCore {
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
                 
-                const introHtml = q.intro
-                    ? `<div class="question-intro">${q.num}. ${q.intro}</div>`
+                const introHtml = (q.intro || q.text)
+                    ? `<div class="question-intro">${q.num}. ${q.intro || q.text}</div>`
                     : `<div class="question-num-only">${q.num}.</div>`;
                     
                 div.innerHTML = `
@@ -2008,7 +2008,7 @@ class ReadingStorageManager {
     parseTestInfo(title) {
         let book = 1, test = 1, part = 1;
         
-        const bookMatch = title.match(/Preliminary\s+(\d+)/i);
+        const bookMatch = title.match(/Preliminary\s+(\d+)/i) || title.match(/PET\s*(\d+)/i);
         if (bookMatch) book = parseInt(bookMatch[1]);
         
         const testMatch = title.match(/Test\s+(\d+)/i);
