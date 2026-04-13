@@ -1316,7 +1316,7 @@
       <div class="header-right">
         <div class="search-and-toggle">
           <div class="search-container">
-            <input type="text" id="smart-search-input" placeholder="Tìm kiếm (VD: R 2 T 1 P 3)..." autocomplete="off">
+            <input type="text" id="smart-search-input" placeholder="Tìm kiếm" autocomplete="off">
             <div id="search-suggestions" class="search-suggestions"></div>
             <button class="search-btn" id="search-go-btn" title="Đi đến bài tập">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -2761,19 +2761,47 @@
 
       let selectedUrl = '';
       let existingLinks = new Set();
+      let access4Modules = new Set(); // Các module numbers có (1-10)
+      let access4Reviews = new Set(); // Các review types có (midterm, final)
+      let access4Variants = {}; // { '1': ['a','b','c'], 'midterm': ['a','b'], ... }
 
       // Quét tất cả bài tập thực tế trên Dashboard để bộ lọc chỉ hiện các bài có thật
       function scanExistingLinks() {
         const links = document.querySelectorAll('main a[href*=".html"]');
         existingLinks.clear();
+        access4Modules.clear();
+        access4Reviews.clear();
+        access4Variants = {};
+        
         links.forEach(a => {
           const href = a.getAttribute('href');
           // Không lấy các bài tập bị đánh dấu là link lỗi (soon)
           if (!a.classList.contains('broken-link') && href) {
-            existingLinks.add(href.split('/').pop());
+            const filename = href.split('/').pop();
+            existingLinks.add(filename);
+            
+            // Nhận diện Access 4 Module: 1a.html, 5b.html, 10c.html
+            const moduleMatch = filename.match(/^(\d+)([abc])\.html$/i);
+            if (moduleMatch) {
+              const modNum = moduleMatch[1];
+              const variant = moduleMatch[2].toLowerCase();
+              access4Modules.add(parseInt(modNum));
+              if (!access4Variants[modNum]) access4Variants[modNum] = [];
+              if (!access4Variants[modNum].includes(variant)) access4Variants[modNum].push(variant);
+            }
+            
+            // Nhận diện Access 4 Review: midterm4a.html, final4b.html
+            const reviewMatch = filename.match(/^(midterm|final)4([abc])\.html$/i);
+            if (reviewMatch) {
+              const reviewType = reviewMatch[1].toLowerCase();
+              const variant = reviewMatch[2].toLowerCase();
+              access4Reviews.add(reviewType);
+              if (!access4Variants[reviewType]) access4Variants[reviewType] = [];
+              if (!access4Variants[reviewType].includes(variant)) access4Variants[reviewType].push(variant);
+            }
           }
         });
-        console.log(`[SmartSearch] Indexed ${existingLinks.size} valid exercise links.`);
+        console.log(`[SmartSearch] Indexed ${existingLinks.size} links, ${access4Modules.size} modules, ${access4Reviews.size} review types.`);
       }
 
       function parseInput(val) {
@@ -2781,6 +2809,12 @@
         if (!val) return null;
 
         const parts = val.split(/\s+/);
+        
+        // Check for Access 4
+        let course = '';
+        if (val.includes('ACCESS') || val.startsWith('A')) course = 'Access 4';
+        
+        // PET
         let skill = '';
         if (val.includes('READING')) skill = 'Reading';
         else if (val.includes('LISTENING')) skill = 'Listening';
@@ -2795,8 +2829,28 @@
         // Tìm số Part
         const partMatch = val.match(/PART\s+(\d)/i) || val.match(/P\s+(\d)/i);
         const part = partMatch ? partMatch[1] : '';
+        
+        // Access 4: Review or Module
+        let category = '';
+        if (val.includes('REVIEW')) category = 'Review';
+        else if (val.includes('MODULE')) category = 'Module';
+        
+        // Access 4: Type (Midterm/Final) or Module Number
+        let type = '';
+        if (val.includes('MIDTERM')) type = 'Midterm';
+        else if (val.includes('FINAL')) type = 'Final';
+        else {
+          // Check for module number 1-10
+          const modMatch = val.match(/MODULE\s+(\d+)/i) || val.match(/\b(\d{1,2})\b/);
+          if (modMatch && parseInt(modMatch[1]) >= 1 && parseInt(modMatch[1]) <= 10) {
+            type = modMatch[1];
+          }
+        }
+        
+        // Access 4: Variant a/b/c
+        let variant = parts.find(p => p === 'A' || p === 'B' || p === 'C') || '';
 
-        return { skill, book, test, part };
+        return { skill, book, test, part, course, category, type, variant };
       }
 
       function updateSuggestions(isDeleting = false) {
@@ -2804,19 +2858,43 @@
         const val = rawVal.trim().toUpperCase();
         suggestionsBox.innerHTML = '';
         
+        // Nếu ô tìm kiếm trống, hiện gợi ý mặc định
         if (!val) {
-            suggestionsBox.style.display = 'none';
+            const defaultSuggestions = [
+                { text: 'Access 4', badge: 'ACCESS', next: 'Access 4 ' },
+                { text: 'Reading PET', badge: 'PET', next: 'Reading Pet ' },
+                { text: 'Listening PET', badge: 'PET', next: 'Listening Pet ' }
+            ];
+            defaultSuggestions.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `<span>${s.text}</span><span class="type-badge">${s.badge}</span>`;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    input.value = s.next;
+                    updateSuggestions(false);
+                    input.focus();
+                    suggestionsBox.style.display = 'block';
+                    suggestionsBox.scrollTop = 0;
+                };
+                suggestionsBox.appendChild(item);
+            });
+            suggestionsBox.style.display = 'block';
             goBtn.classList.remove('active');
             return;
         }
 
-        // Tự động điền Reading/Listening khi gõ chữ cái đầu (Chỉ khi không phải hành động xóa)
+        // Tự động điền Reading/Listening/Access khi gõ chữ cái đầu (Chỉ khi không phải hành động xóa)
         if (!isDeleting && val === 'R') {
             input.value = 'Reading Pet ';
             setTimeout(() => updateSuggestions(false), 0);
             return;
         } else if (!isDeleting && val === 'L') {
             input.value = 'Listening Pet ';
+            setTimeout(() => updateSuggestions(false), 0);
+            return;
+        } else if (!isDeleting && val === 'A') {
+            input.value = 'Access 4 ';
             setTimeout(() => updateSuggestions(false), 0);
             return;
         }
@@ -2843,15 +2921,66 @@
           }
         }
 
+        // ACCESS 4 CASCADING SUGGESTIONS
+        if (info.course) {
+          if (!info.category) {
+            // Level 2: Chọn Review hoặc Module (chỉ hiện nếu có files)
+            if (access4Reviews.size > 0) suggestions.push('Access 4 Review');
+            if (access4Modules.size > 0) suggestions.push('Access 4 Module');
+          } else if (info.category === 'REVIEW') {
+            if (!info.type) {
+              // Level 3: Review -> chỉ hiện các type có thật (Midterm/Final)
+              const reviewSuggestions = Array.from(access4Reviews).sort().map(type => 
+                `Access 4 Review ${type.charAt(0).toUpperCase() + type.slice(1)}`
+              );
+              suggestions = suggestions.concat(reviewSuggestions);
+            } else {
+              // Level 4: Chọn variant thực tế từ files đã scan
+              const reviewType = info.type.toLowerCase();
+              const variants = access4Variants[reviewType] || [];
+              const variantSuggestions = variants.sort().map(v => `Access 4 Review ${info.type} ${v}`);
+              suggestions = suggestions.concat(variantSuggestions);
+            }
+          } else if (info.category === 'MODULE') {
+            if (!info.type) {
+              // Level 3: Chọn Module từ các modules thực tế đã scan
+              const moduleSuggestions = Array.from(access4Modules).sort((a,b) => a-b).map(m => 
+                `Access 4 Module ${m}`
+              );
+              suggestions = suggestions.concat(moduleSuggestions);
+            } else if (!info.variant) {
+              // Level 4: Chọn variant thực tế từ module đã chọn
+              const modNum = info.type;
+              const variants = access4Variants[modNum] || [];
+              const variantSuggestions = variants.sort().map(v => `Access 4 Module ${info.type} ${v}`);
+              suggestions = suggestions.concat(variantSuggestions);
+            }
+          }
+        }
+
         // LỌC: Chỉ giữ lại các gợi ý có Part thực sự tồn tại (link không lỗi)
         const filteredSuggestions = suggestions.filter(s => {
-            const match = s.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
-            if (match) {
-                const prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
-                const url = `${prefix}-pet${match[2]}-test${match[3]}-part${match[4]}.html`;
+            const petMatch = s.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+            if (petMatch) {
+                const prefix = petMatch[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
+                const url = `${prefix}-pet${petMatch[2]}-test${petMatch[3]}-part${petMatch[4]}.html`;
                 return existingLinks.has(url);
             }
-            return true; // Luôn hiện level Book và Test để người dùng chọn tiếp
+            // Access 4 filtering
+            const accessMatch = s.match(/ACCESS\s*4\s+(REVIEW|MODULE)\s+(MIDTERM|FINAL|\d+)\s+([ABC])/i);
+            if (accessMatch) {
+                const category = accessMatch[1].toLowerCase();
+                const typeOrNum = accessMatch[2].toLowerCase();
+                const variant = accessMatch[3].toLowerCase();
+                let url = '';
+                if (category === 'review') {
+                    url = `${typeOrNum}4${variant}.html`;
+                } else if (category === 'module') {
+                    url = `${typeOrNum}${variant}.html`;
+                }
+                return existingLinks.has(url);
+            }
+            return true; // Luôn hiện level Book, Test, Review, Module để người dùng chọn tiếp
         });
 
         if (filteredSuggestions.length > 0) {
@@ -2872,6 +3001,17 @@
               // Nếu người dùng chọn Test (VD: Test 1) -> Tự động điền thêm chữ " Part "
               else if (info.skill && info.book && info.test && !info.part) {
                   nextVal += ' Part ';
+              }
+              // Access 4 cascading
+              else if (info.course && !info.category) {
+                  // Vừa chọn Review/Module -> thêm space
+                  nextVal += ' ';
+              } else if (info.course && info.category === 'MODULE' && !info.type) {
+                  // Vừa chọn Module number -> thêm space cho variant a/b/c
+                  nextVal += ' ';
+              } else if (info.course && info.category === 'REVIEW' && !info.type) {
+                  // Vừa chọn Midterm/Final -> thêm space cho variant a/b
+                  nextVal += ' ';
               } else {
                   nextVal += ' ';
               }
@@ -2896,22 +3036,37 @@
 
       function checkFinalUrl() {
         const val = input.value.trim().toUpperCase();
-        const match = val.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+        selectedUrl = '';
         
-        if (match) {
-          const type = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
-          const book = match[2];
-          const test = match[3];
-          const part = match[4];
+        // PET pattern
+        const petMatch = val.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+        if (petMatch) {
+          const type = petMatch[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
+          const book = petMatch[2];
+          const test = petMatch[3];
+          const part = petMatch[4];
           selectedUrl = `${type}-pet${book}-test${test}-part${part}.html`;
-          
-          // Kiểm tra xem link có tồn tại không trước khi kích hoạt nút Go
-          if (existingLinks.has(selectedUrl)) {
-            goBtn.classList.add('active');
-          } else {
-            selectedUrl = '';
-            goBtn.classList.remove('active');
-          }
+        }
+        
+        // Access 4 Review pattern: "Access 4 Review Midterm a" → midterm4a.html
+        const reviewMatch = val.match(/ACCESS\s*4\s+REVIEW\s+(MIDTERM|FINAL)\s+([ABC])/i);
+        if (reviewMatch) {
+          const examType = reviewMatch[1].toLowerCase();
+          const variant = reviewMatch[2].toLowerCase();
+          selectedUrl = `${examType}4${variant}.html`;
+        }
+        
+        // Access 4 Module pattern: "Access 4 Module 1 a" → 1a.html
+        const moduleMatch = val.match(/ACCESS\s*4\s+MODULE\s+(\d+)\s+([ABC])/i);
+        if (moduleMatch) {
+          const modNum = moduleMatch[1];
+          const variant = moduleMatch[2].toLowerCase();
+          selectedUrl = `${modNum}${variant}.html`;
+        }
+        
+        // Kiểm tra xem link có tồn tại không trước khi kích hoạt nút Go
+        if (selectedUrl && existingLinks.has(selectedUrl)) {
+          goBtn.classList.add('active');
         } else {
           selectedUrl = '';
           goBtn.classList.remove('active');
