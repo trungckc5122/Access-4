@@ -2071,7 +2071,7 @@ class ReadingUIManager {
             // Auto-generate title if missing
             if (!title) {
                 const { part } = coreInstance.currentTestData;
-                const meta = this.parseTestInfo(document.title || '');
+                const meta = coreInstance.storageManager?.parseTestInfo(document.title || '') || { book: 1, test: 1 };
                 const book = meta.book || 1;
                 const test = meta.test || 1;
                 title = `B1 Preliminary ${book} · Test ${test} · Part ${part}`;
