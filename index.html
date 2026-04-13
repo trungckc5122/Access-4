@@ -1156,7 +1156,147 @@
       border-color: var(--primary);
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     }
+    /* ========== SMART SEARCH ========== */
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .search-and-toggle {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .search-container {
+      position: relative;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 4px 8px 4px 16px;
+      display: flex;
+      align-items: center;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 280px;
+    }
+
+    .search-container:focus-within {
+      width: 380px;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
+    }
+
+    #smart-search-input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      width: 100%;
+      outline: none;
+      padding: 8px 0;
+    }
+
+    #smart-search-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .search-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .search-btn.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .search-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+    }
+
+    .search-suggestions {
+      position: absolute;
+      top: calc(100% + 12px);
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      max-height: 480px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      padding: 8px;
+    }
+
+    [data-theme="dark"] .search-suggestions {
+        background: #1e293b;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .suggestion-item {
+      padding: 12px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .suggestion-item:hover {
+      background: rgba(var(--primary-rgb), 0.1);
+      color: var(--primary);
+      padding-left: 20px;
+    }
+
+    .suggestion-item .type-badge {
+        font-size: 10px;
+        background: rgba(var(--primary-rgb), 0.1);
+        padding: 2px 6px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 768px) {
+        .header-right {
+            width: 100%;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .search-container {
+            flex: 1;
+            width: auto;
+        }
+        .search-container:focus-within {
+            width: auto;
+        }
+    }
   </style>
+
 </head>
 
 <body>
@@ -1171,21 +1311,31 @@
           <button class="tab-btn" data-tab="pre-sol">Solution Pre-Intermediate</button>
           <button class="tab-btn" data-tab="sol">Solution Intermediate</button>
           <button class="tab-btn" data-tab="faq">FAQ</button>
-          
-          <div class="header-separator"></div>
-          
-          <div class="filter-section header-filters" id="header-pet-filters">
-            <button class="filter-btn active" data-filter="all">Tất cả <span class="count" id="count-all">0</span></button>
-            <button class="filter-btn" data-filter="not-started">Chưa làm <span class="count" id="count-not-started">0</span></button>
-            <button class="filter-btn" data-filter="in-progress">Đang làm <span class="count" id="count-in-progress">0</span></button>
-            <button class="filter-btn" data-filter="completed">Hoàn thành <span class="count" id="count-completed">0</span></button>
-          </div>
         </div>
       </div>
-      <button id="theme-toggle" title="Chuyển chế độ Sáng/Tối">
-        <span class="icon-sun">☀️</span>
-        <span class="icon-moon">🌙</span>
-      </button>
+      <div class="header-right">
+        <div class="search-and-toggle">
+          <div class="search-container">
+            <input type="text" id="smart-search-input" placeholder="Tìm kiếm (VD: R 2 T 1 P 3)..." autocomplete="off">
+            <div id="search-suggestions" class="search-suggestions"></div>
+            <button class="search-btn" id="search-go-btn" title="Đi đến bài tập">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+          </div>
+          <button id="theme-toggle" title="Chuyển chế độ Sáng/Tối">
+            <span class="icon-sun">☀️</span>
+            <span class="icon-moon">🌙</span>
+          </button>
+        </div>
+
+        <div class="filter-section header-filters" id="header-pet-filters">
+          <button class="filter-btn active" data-filter="all">Tất cả <span class="count" id="count-all">0</span></button>
+          <button class="filter-btn" data-filter="not-started">Chưa làm <span class="count" id="count-not-started">0</span></button>
+          <button class="filter-btn" data-filter="in-progress">Đang làm <span class="count" id="count-in-progress">0</span></button>
+          <button class="filter-btn" data-filter="completed">Hoàn thành <span class="count" id="count-completed">0</span></button>
+        </div>
+      </div>
+
     </div>
   </header>
 
@@ -2171,20 +2321,15 @@
             badge.className = 'status-badge completed';
             badge.innerHTML = `✓ ${hasCompletedCount}/${totalTests}`;
             summary.appendChild(badge);
-          } else if (hasCompletedCount > 0) {
-            // Có ít nhất 1 bài đã xong -> Hiện xanh lá nhạt cho tích cực
-            const badge = document.createElement('span');
-            badge.className = 'status-badge completed';
-            badge.style.opacity = '0.8';
-            badge.innerHTML = `✓ ${hasCompletedCount}/${totalTests}`;
-            summary.appendChild(badge);
-          } else if (hasDraftCount > 0) {
+          } else if (hasCompletedCount > 0 || hasDraftCount > 0) {
+            // MỚI: Nếu chưa xong hết thì chỉ hiện "Đang làm" (vàng)
             const badge = document.createElement('span');
             badge.className = 'status-badge in-progress';
-            badge.innerHTML = `⏳ ${hasDraftCount}/${totalTests}`;
+            badge.innerHTML = `⏳ ${hasCompletedCount}/${totalTests}`;
             summary.appendChild(badge);
           }
         }
+
       }
 
       // Quét tất cả các link và details
@@ -2233,8 +2378,10 @@
       initResumeButton();
       initHeaderAutoHide();
       initDataReset();
+      initSmartSearch();
 
       // Khai báo BroadcastChannel trong DOMContentLoaded để ổn định
+
       try {
         const resetChannel = new BroadcastChannel('pet_reset_channel');
         resetChannel.onmessage = (event) => {
@@ -2305,12 +2452,16 @@
       `;
 
         // Logic trạng thái của Nhóm (để lọc hiển thị)
-        // Ưu tiên: Đã nộp ít nhất 1 bài -> Hiện ở mục Hoàn thành
+        // MỚI: Chỉ khi hoàn thành TẤT CẢ các part mới tính là Hoàn thành
         let status = 'not-started';
-        if (completedParts > 0) status = 'completed';
-        else if (inProgressParts > 0) status = 'in-progress';
+        if (completedParts === totalParts && totalParts > 0) {
+            status = 'completed';
+        } else if (completedParts > 0 || inProgressParts > 0) {
+            status = 'in-progress';
+        }
 
         test.dataset.status = status;
+
         
         // Thống kê đếm theo từng đầu mục bài tập (Links) thay vì đếm theo Nhóm (Details)
         stats.total += totalParts;
@@ -2588,6 +2739,193 @@
       // Khởi động đếm ngược lần đầu
       hideTimer = setTimeout(collapse, HIDE_DELAY);
     }
+
+    // ========== 8. SMART SEARCH NAVIGATION ==========
+    function initSmartSearch() {
+      const input = document.getElementById('smart-search-input');
+      const suggestionsBox = document.getElementById('search-suggestions');
+      const goBtn = document.getElementById('search-go-btn');
+
+      if (!input || !suggestionsBox || !goBtn) return;
+
+      let selectedUrl = '';
+      let existingLinks = new Set();
+
+      // Quét tất cả bài tập thực tế trên Dashboard để bộ lọc chỉ hiện các bài có thật
+      function scanExistingLinks() {
+        const links = document.querySelectorAll('main a[href*=".html"]');
+        existingLinks.clear();
+        links.forEach(a => {
+          const href = a.getAttribute('href');
+          // Không lấy các bài tập bị đánh dấu là link lỗi (soon)
+          if (!a.classList.contains('broken-link') && href) {
+            existingLinks.add(href.split('/').pop());
+          }
+        });
+        console.log(`[SmartSearch] Indexed ${existingLinks.size} valid exercise links.`);
+      }
+
+      function parseInput(val) {
+        val = val.trim().toUpperCase();
+        if (!val) return null;
+
+        const parts = val.split(/\s+/);
+        let skill = '';
+        if (val.includes('READING')) skill = 'Reading';
+        else if (val.includes('LISTENING')) skill = 'Listening';
+
+        // Tìm số Pet
+        const book = parts.find(p => p === '1' || p === '2') || '';
+        
+        // Tìm số Test
+        const testMatch = val.match(/TEST\s+(\d)/i) || val.match(/T\s+(\d)/i);
+        const test = testMatch ? testMatch[1] : (parts.find(p => ['1','2','3','4'].includes(p) && p !== book) || '');
+        
+        // Tìm số Part
+        const partMatch = val.match(/PART\s+(\d)/i) || val.match(/P\s+(\d)/i);
+        const part = partMatch ? partMatch[1] : '';
+
+        return { skill, book, test, part };
+      }
+
+      function updateSuggestions(isDeleting = false) {
+        const rawVal = input.value;
+        const val = rawVal.trim().toUpperCase();
+        suggestionsBox.innerHTML = '';
+        
+        if (!val) {
+            suggestionsBox.style.display = 'none';
+            goBtn.classList.remove('active');
+            return;
+        }
+
+        // Tự động điền Reading/Listening khi gõ chữ cái đầu (Chỉ khi không phải hành động xóa)
+        if (!isDeleting && val === 'R') {
+            input.value = 'Reading Pet ';
+            setTimeout(() => updateSuggestions(false), 0);
+            return;
+        } else if (!isDeleting && val === 'L') {
+            input.value = 'Listening Pet ';
+            setTimeout(() => updateSuggestions(false), 0);
+            return;
+        }
+
+        const info = parseInput(val);
+        let suggestions = [];
+
+        if (info.skill) {
+          const type = info.skill.toLowerCase();
+          const maxParts = type === 'reading' ? 6 : 4;
+          
+          if (!info.book) {
+            suggestions = [1, 2].map(b => `${info.skill} Pet ${b}`);
+          } else if (!info.test) {
+            // Đã có Book -> Tự động show danh sách Test
+            suggestions = [1, 2, 3, 4].map(t => `${info.skill} Pet ${info.book} Test ${t}`);
+          } else if (!info.part) {
+            // Đã có Test -> Tự động show danh sách Part
+            for(let p=1; p<=maxParts; p++) {
+                suggestions.push(`${info.skill} Pet ${info.book} Test ${info.test || '1'} Part ${p}`);
+            }
+          } else {
+            suggestions = [`${info.skill} Pet ${info.book} Test ${info.test || '1'} Part ${info.part}`];
+          }
+        }
+
+        // LỌC: Chỉ giữ lại các gợi ý có Part thực sự tồn tại (link không lỗi)
+        const filteredSuggestions = suggestions.filter(s => {
+            const match = s.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+            if (match) {
+                const prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
+                const url = `${prefix}-pet${match[2]}-test${match[3]}-part${match[4]}.html`;
+                return existingLinks.has(url);
+            }
+            return true; // Luôn hiện level Book và Test để người dùng chọn tiếp
+        });
+
+        if (filteredSuggestions.length > 0) {
+          filteredSuggestions.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.innerHTML = `<span>${s}</span><span class="type-badge">${s.split(' ')[0]}</span>`;
+            item.onclick = () => {
+              input.value = s + ' ';
+              updateSuggestions(false);
+              input.focus();
+            };
+            suggestionsBox.appendChild(item);
+          });
+          suggestionsBox.style.display = 'block';
+        } else {
+          suggestionsBox.style.display = 'none';
+        }
+
+        checkFinalUrl();
+      }
+
+      function checkFinalUrl() {
+        const val = input.value.trim().toUpperCase();
+        const match = val.match(/(READING|LISTENING)\s+PET\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+        
+        if (match) {
+          const type = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
+          const book = match[2];
+          const test = match[3];
+          const part = match[4];
+          selectedUrl = `${type}-pet${book}-test${test}-part${part}.html`;
+          
+          // Kiểm tra xem link có tồn tại không trước khi kích hoạt nút Go
+          if (existingLinks.has(selectedUrl)) {
+            goBtn.classList.add('active');
+          } else {
+            selectedUrl = '';
+            goBtn.classList.remove('active');
+          }
+        } else {
+          selectedUrl = '';
+          goBtn.classList.remove('active');
+        }
+      }
+
+      input.addEventListener('input', (e) => {
+        const isDeleting = e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward';
+        updateSuggestions(isDeleting);
+      });
+      
+      input.addEventListener('focus', () => updateSuggestions(false));
+
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (selectedUrl) {
+                goBtn.click();
+            } else {
+                const firstSugg = suggestionsBox.querySelector('.suggestion-item');
+                if (firstSugg) firstSugg.click();
+            }
+        }
+      });
+
+      goBtn.onclick = (e) => {
+        e.preventDefault();
+        if (selectedUrl) {
+            window.open(selectedUrl, '_blank');
+            suggestionsBox.style.display = 'none';
+        }
+      };
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-container')) {
+          suggestionsBox.style.display = 'none';
+        }
+      });
+
+      // Khởi tạo link index
+      scanExistingLinks();
+      window.addEventListener('focus', scanExistingLinks);
+    }
+
+
   </script>
 
   <!-- MỚI: Footer & Reset UI (Bên ngoài script) -->

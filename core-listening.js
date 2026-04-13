@@ -483,11 +483,51 @@ class ListeningCore {
         this.speedSelect = document.getElementById('speedSelect');
         
         if (this.audio && this.speedSelect) {
+            // Inject Skip Buttons if they don't exist
+            const controlsContainer = this.audio.parentElement;
+            if (controlsContainer && !controlsContainer.querySelector('.skip-btn')) {
+                const btnBack = document.createElement('button');
+                btnBack.className = 'skip-btn skip-back';
+                btnBack.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg><span>5s</span>`;
+                btnBack.title = 'Lùi lại 5 giây';
+                btnBack.onclick = (e) => {
+                    e.preventDefault();
+                    this.skipAudio(-5);
+                };
+
+                const btnForward = document.createElement('button');
+                btnForward.className = 'skip-btn skip-forward';
+                btnForward.innerHTML = `<span>5s</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>`;
+                btnForward.title = 'Tua nhanh 5 giây';
+                btnForward.onclick = (e) => {
+                    e.preventDefault();
+                    this.skipAudio(5);
+                };
+
+                // Insert buttons around audio element
+                if (this.audio) {
+                    controlsContainer.insertBefore(btnBack, this.audio);
+                    this.audio.after(btnForward);
+                }
+            }
+
             this.speedSelect.addEventListener('change', () => {
                 this.audio.playbackRate = parseFloat(this.speedSelect.value);
             });
         }
     }
+
+    /**
+     * Skip audio by specified seconds
+     */
+    skipAudio(seconds) {
+        if (!this.audio) return;
+        let newTime = this.audio.currentTime + seconds;
+        if (newTime < 0) newTime = 0;
+        if (this.audio.duration && newTime > this.audio.duration) newTime = this.audio.duration;
+        this.audio.currentTime = newTime;
+    }
+
 
     /**
      * Setup UI components and interactions
