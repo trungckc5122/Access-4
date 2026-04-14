@@ -231,6 +231,13 @@ class ListeningCore {
      * @param {Object} testData - Test configuration including answers, transcript, questions
      */
     initializeTest(testData) {
+        // Dynamically load firebase-config if not present
+        if (!window.firebaseBridge) {
+            const script = document.createElement('script');
+            script.src = '../../firebase-config.js';
+            document.head.appendChild(script);
+        }
+
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
@@ -365,6 +372,11 @@ class ListeningCore {
                 const key = this.getStorageKey(true);
                 localStorage.setItem(key, JSON.stringify(draft));
                 console.log('[Draft] SAVED to key:', key, 'data:', draft);
+
+                // Cloud Sync
+                if (window.firebaseBridge) {
+                    window.firebaseBridge.syncToCloud(key, draft);
+                }
             } catch (e) {
                 console.error('[Draft] FAILED to save:', e);
             }
@@ -407,6 +419,11 @@ class ListeningCore {
             localStorage.setItem(key, JSON.stringify(draft));
             console.log('[Draft] SAVED IMMEDIATELY to key:', key);
 
+            // Cloud Sync
+            if (window.firebaseBridge) {
+                window.firebaseBridge.syncToCloud(key, draft);
+            }
+
             // Notify dashboard of draft update via BroadcastChannel
             try {
                 const channel = new BroadcastChannel('pet_update_channel');
@@ -429,10 +446,21 @@ class ListeningCore {
 
     /**
      * Khôi phục nháp từ localStorage và áp dụng vào giao diện
+     * Nếu user đã đăng nhập, sẽ ưu tiên pull từ Firebase trước
      */
-    loadDraft() {
+    async loadDraft() {
         const key = this.getStorageKey(true);
         console.log('[Draft] Attempting to load from key:', key);
+        
+        // Nếu đã login, thử pull từ cloud trước
+        if (window.firebaseBridge?.currentUser) {
+            try {
+                const count = await window.firebaseBridge.downloadCloudData();
+                console.log(`[Draft] Downloaded ${count} records from cloud`);
+            } catch (e) {
+                console.error('[Draft] Failed to download from cloud:', e);
+            }
+        }
         
         const draftJson = localStorage.getItem(key);
         if (!draftJson) {
@@ -1561,6 +1589,11 @@ class StorageManager {
         
         localStorage.setItem(key, JSON.stringify(partData));
         console.log(`Results saved with key: ${key}`);
+
+        // Cloud Sync
+        if (window.firebaseBridge) {
+            window.firebaseBridge.syncToCloud(key, partData);
+        }
     }
 
     /**
