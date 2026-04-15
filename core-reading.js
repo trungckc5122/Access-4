@@ -1891,7 +1891,7 @@ class ReadingCore {
  */
 class ReadingHighlightManager {
     constructor() {
-        this.selectedRange = null;
+        this.selectedRange = null;  // ✅ Lưu range khi contextmenu
         this.setupContextMenu();
     }
 
@@ -1900,18 +1900,18 @@ class ReadingHighlightManager {
      * FIXED: Use event delegation on document to handle dynamic DOM changes
      */
     setupContextMenu() {
-        // Sử dụng event delegation trên document để bắt contextmenu trong vùng đọc và câu hỏi
+        // Show context menu on right-click - Đơn giản hóa như code mẫu
         document.addEventListener('contextmenu', (e) => {
-            // Kiểm tra target có nằm trong vùng đọc hoặc vùng câu hỏi không
             const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
-            if (highlightArea) {
-                const selection = window.getSelection();
-                if (selection.toString().trim()) {
-                    e.preventDefault();
-                    this.selectedRange = selection.getRangeAt(0);
-                    this.showContextMenu(e.pageX, e.pageY);
-                }
-            }
+            if (!highlightArea) return;
+            
+            const selection = window.getSelection();
+            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
+            
+            e.preventDefault();
+            this.selectedRange = selection.getRangeAt(0);
+            this.showContextMenu(e.pageX, e.pageY);
+            console.log('[ReadingHighlight] Range selected:', this.selectedRange.toString().substring(0, 30));
         });
 
         // FIXED: Prevent selection loss when clicking on context menu items
@@ -2018,31 +2018,107 @@ class ReadingHighlightManager {
      * Apply manual highlight (phiên bản hỗ trợ cross‑block selection)
      */
     applyHighlight(color) {
-        let range = this.selectedRange;
-        if (!range) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            range = selection.getRangeAt(0);
-        }
-        
-        // Hủy bỏ nếu vùng chọn trống
-        if (range.collapsed) {
-            window.getSelection().removeAllRanges();
+        if (!this.selectedRange) {
+            console.warn('[ReadingHighlight] No selected range');
             this.hideContextMenu();
-            this.selectedRange = null;
             return;
         }
-
-        // Lấy ancestor chung cao nhất của vùng chọn
-        const commonAncestor = range.commonAncestorContainer;
-
-        // Sử dụng TreeWalker để duyệt tất cả text node nằm trong ancestor
+        
+        try {
+            const range = this.selectedRange.cloneRange();
+            
+            // 1️⃣ Xóa highlight cũ trong vùng chọn (để lấy màu mới)
+            this.removeExistingHighlightsInRange(range);
+            
+            // 2️⃣ Chọn strategy dựa trên complexity
+            const isSimple = this.isSimpleRange(range);
+            console.log('[ReadingHighlight] Using', isSimple ? 'SIMPLE' : 'COMPLEX', 'strategy');
+            
+            if (isSimple) {
+                this.applyHighlightSimple(range, color);
+            } else {
+                this.applyHighlightComplex(range, color);
+            }
+            
+        } catch (e) {
+            console.log('[ReadingHighlight] Lỗi apply highlight:', e);
+        }
+        
+        window.getSelection().removeAllRanges();
+        this.hideContextMenu();
+        this.selectedRange = null;
+    }
+    
+    // 🎯 SIMPLE: 1 text node, dùng surroundContents
+    applyHighlightSimple(range, color) {
+        try {
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            
+            if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
+                span.classList.add('highlight-hidden');
+            }
+            
+            range.surroundContents(span);
+            console.log('[ReadingHighlight] Simple highlight applied:', span.textContent.substring(0, 30));
+        } catch (e) {
+            console.log('[ReadingHighlight] Simple failed, fallback to extract:', e);
+            // Fallback: extract + insert
+            const fragment = range.extractContents();
+            const span = document.createElement('span');
+            span.className = `highlight-${color}`;
+            if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
+                span.classList.add('highlight-hidden');
+            }
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+    }
+    
+    // 🚀 COMPLEX: Nhiều nodes, dùng TreeWalker
+    applyHighlightComplex(range, color) {
+        const textNodes = this.getTextNodesInRange(range);
+        
+        textNodes.forEach(textNode => {
+            const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
+            const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
+            
+            if (startOffset === endOffset) return;
+            
+            const subRange = document.createRange();
+            subRange.setStart(textNode, startOffset);
+            subRange.setEnd(textNode, endOffset);
+            
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
+                    span.classList.add('highlight-hidden');
+                }
+                subRange.surroundContents(span);
+            } catch (e) {
+                const fragment = subRange.extractContents();
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
+                    span.classList.add('highlight-hidden');
+                }
+                span.appendChild(fragment);
+                subRange.insertNode(span);
+            }
+        });
+        
+        console.log('[ReadingHighlight] Complex highlight applied on', textNodes.length, 'nodes');
+    }
+    
+    // Lấy tất cả text nodes trong range
+    getTextNodesInRange(range) {
+        const textNodes = [];
         const walker = document.createTreeWalker(
-            commonAncestor,
+            range.commonAncestorContainer,
             NodeFilter.SHOW_TEXT,
             {
                 acceptNode: function(node) {
-                    // Chỉ xử lý text node nằm trong vùng chọn
                     if (range.intersectsNode(node)) {
                         return NodeFilter.FILTER_ACCEPT;
                     }
@@ -2050,97 +2126,130 @@ class ReadingHighlightManager {
                 }
             }
         );
-
-        const textNodes = [];
+        
         let node;
         while (node = walker.nextNode()) {
             textNodes.push(node);
         }
-
-        // Với mỗi text node, tách phần text nằm trong range và bọc bằng span
-        textNodes.forEach(textNode => {
-            const nodeRange = document.createRange();
-            nodeRange.selectNodeContents(textNode);
-            
-            // Xác định phần giao giữa range và text node hiện tại
-            const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
-            const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
-            
-            if (startOffset === endOffset) return; // không có ký tự nào được chọn trong node này
-
-            // Tạo range con chỉ chứa phần text được chọn
-            const subRange = document.createRange();
-            subRange.setStart(textNode, startOffset);
-            subRange.setEnd(textNode, endOffset);
-
-            try {
-                const span = document.createElement('span');
-                span.className = `highlight-${color}`;
-                
-                // Ẩn highlight ngay nếu toggle đang OFF
-                if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
-                    span.classList.add('highlight-hidden');
+        
+        return textNodes;
+    }
+    
+    // Kiểm tra xem range có đơn giản (1 node) hay phức tạp (nhiều nodes)
+    isSimpleRange(range) {
+        const startContainer = range.startContainer;
+        const endContainer = range.endContainer;
+        
+        // Nếu cùng 1 text node -> đơn giản
+        if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) {
+            return true;
+        }
+        
+        // Nếu cùng parent và không có element tags ở giữa -> đơn giản
+        if (startContainer.parentNode === endContainer.parentNode) {
+            // Kiểm tra xem có element node nào giữa start và end không
+            const textNodes = this.getTextNodesInRange(range);
+            return textNodes.length <= 1;
+        }
+        
+        return false;
+    }
+    
+    // Xóa highlight cũ trong vùng chọn (để thay thế bằng màu mới)
+    removeExistingHighlightsInRange(range) {
+        try {
+            // Tìm tất cả highlight spans trong vùng chọn
+            const walker = document.createTreeWalker(
+                range.commonAncestorContainer,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: (node) => {
+                        if (node.classList && 
+                            (node.classList.contains('highlight-yellow') || 
+                             node.classList.contains('highlight-green') || 
+                             node.classList.contains('highlight-pink'))) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
                 }
-
-                // Sử dụng surroundContents cho sub‑range (chỉ chứa text node, không lo cross‑block)
-                subRange.surroundContents(span);
-            } catch (e) {
-                // Fallback: nếu vẫn lỗi (rất hiếm), dùng extract + insert
-                console.warn('surroundContents failed, using extractContents fallback', e);
-                const fragment = subRange.extractContents();
-                const span = document.createElement('span');
-                span.className = `highlight-${color}`;
-                span.appendChild(fragment);
-                subRange.insertNode(span);
+            );
+            
+            const toUnwrap = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (range.intersectsNode(node)) {
+                    toUnwrap.push(node);
+                }
             }
-        });
-
-        // Xóa selection gốc và đóng menu
-        window.getSelection().removeAllRanges();
-        this.hideContextMenu();
-        this.selectedRange = null;
+            
+            // Unwrap mà không làm mất text
+            toUnwrap.forEach(span => {
+                const parent = span.parentNode;
+                while (span.firstChild) {
+                    parent.insertBefore(span.firstChild, span);
+                }
+                parent.removeChild(span);
+            });
+            
+            console.log('[ReadingHighlight] Removed', toUnwrap.length, 'existing highlights');
+        } catch (e) {
+            console.log('[ReadingHighlight] Lỗi remove existing:', e);
+        }
     }
 
     /**
-     * FIXED: Remove highlighting with saved range + fallback selection + TreeWalker
+     * Remove highlighting - Hỗ trợ cross-node
      */
     removeHighlight() {
-        let range = this.selectedRange;
-        if (!range) {
-            const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            range = selection.getRangeAt(0);
+        if (!this.selectedRange) {
+            console.warn('[ReadingHighlight] No selected range to remove');
+            this.hideContextMenu();
+            return;
         }
-        // Tìm tất cả các highlight span nằm trong range
-        const walker = document.createTreeWalker(
-            range.commonAncestorContainer,
-            NodeFilter.SHOW_ELEMENT,
-            {
-                acceptNode: (node) => {
-                    if (node.classList && 
-                        (node.classList.contains('highlight-yellow') || 
-                         node.classList.contains('highlight-green') || 
-                         node.classList.contains('highlight-pink'))) {
-                        return NodeFilter.FILTER_ACCEPT;
+        
+        try {
+            const range = this.selectedRange.cloneRange();
+            
+            // Tìm tất cả highlight spans trong vùng chọn
+            const walker = document.createTreeWalker(
+                range.commonAncestorContainer,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: (node) => {
+                        if (node.classList && 
+                            (node.classList.contains('highlight-yellow') || 
+                             node.classList.contains('highlight-green') || 
+                             node.classList.contains('highlight-pink'))) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
                     }
-                    return NodeFilter.FILTER_SKIP;
+                }
+            );
+            
+            const toRemove = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (range.intersectsNode(node)) {
+                    toRemove.push(node);
                 }
             }
-        );
-        const toRemove = [];
-        let node;
-        while (node = walker.nextNode()) {
-            if (range.intersectsNode(node)) {
-                toRemove.push(node);
-            }
+            
+            // Xóa từng highlight
+            toRemove.forEach(span => {
+                const parent = span.parentNode;
+                while (span.firstChild) {
+                    parent.insertBefore(span.firstChild, span);
+                }
+                parent.removeChild(span);
+            });
+            
+            console.log('[ReadingHighlight] Removed', toRemove.length, 'highlights');
+        } catch (e) {
+            console.log('[ReadingHighlight] Lỗi remove highlight:', e);
         }
-        toRemove.forEach(span => {
-            const parent = span.parentNode;
-            while (span.firstChild) {
-                parent.insertBefore(span.firstChild, span);
-            }
-            parent.removeChild(span);
-        });
+        
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
