@@ -608,7 +608,7 @@ class ListeningCore {
                     ${q.options.map((opt, index) => `
                         <div class="option">
                             <input type="radio" name="q${q.num}" value="${String.fromCharCode(65 + index)}" id="q${q.num}${String.fromCharCode(65 + index)}">
-                            <label for="q${q.num}${String.fromCharCode(65 + index)}">${String.fromCharCode(65 + index)}. ${opt}</label>
+                            <label for="q${q.num}${String.fromCharCode(65 + index)}"><strong>${String.fromCharCode(65 + index)}</strong>. ${opt}</label>
                         </div>
                     `).join('')}
                 </div>

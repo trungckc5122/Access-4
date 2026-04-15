@@ -660,7 +660,7 @@ class ReadingCore {
                             return `
                                 <div class="option">
                                     <input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}">
-                                    <label for="q${q.num}${letter}">${letter} ${opt}</label>
+                                    <label for="q${q.num}${letter}"><strong>${letter}</strong>. ${opt}</label>
                                 </div>
                             `;
                         }).join('')}
@@ -851,7 +851,8 @@ class ReadingCore {
             
             const optionsHtml = optionsList[i].map(opt => {
                 const letter = opt.charAt(0);
-                return `<label><input type="radio" name="q${i}" value="${letter}"> ${opt}</label>`;
+                const text = opt.substring(2);
+                return `<label><input type="radio" name="q${i}" value="${letter}"> <strong>${letter}</strong>. ${text}</label>`;
             }).join('');
             
             qDiv.innerHTML = `
