@@ -868,20 +868,32 @@ class ListeningCore {
      * @param {boolean} visible - true: hiện, false: ẩn
      */
     togglePersonalHighlights(visible) {
-        // Listening module targets transcript content (ID là transcriptContent)
-        const transcriptContent = document.getElementById('transcriptContent');
-        if (transcriptContent) {
-            const personalHighlights = transcriptContent.querySelectorAll(
+        // Tìm highlights trong cả transcript và questions
+        const containers = [
+            document.getElementById('transcriptContent'),
+            document.getElementById('questionsContainer'),
+            document.querySelector('.questions-panel'),
+            document.querySelector('.reading-content')
+        ].filter(Boolean); // Lọc bỏ null
+        
+        const allHighlights = new Set();
+        
+        containers.forEach(container => {
+            const highlights = container.querySelectorAll(
                 '.highlight-yellow, .highlight-green, .highlight-pink'
             );
-            personalHighlights.forEach(highlight => {
-                if (visible) {
-                    highlight.classList.remove('highlight-hidden');
-                } else {
-                    highlight.classList.add('highlight-hidden');
-                }
-            });
-        }
+            highlights.forEach(h => allHighlights.add(h));
+        });
+        
+        allHighlights.forEach(highlight => {
+            if (visible) {
+                highlight.classList.remove('highlight-hidden');
+            } else {
+                highlight.classList.add('highlight-hidden');
+            }
+        });
+        
+        console.log(`[Listening] ${visible ? 'Hiện' : 'Ẩn'} ${allHighlights.size} highlights`);
     }
 
     /**

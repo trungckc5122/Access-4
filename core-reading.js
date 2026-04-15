@@ -1171,21 +1171,34 @@ class ReadingCore {
      * @param {boolean} visible - true: hiện, false: ẩn
      */
     togglePersonalHighlights(visible) {
-        const readingContent = document.getElementById('readingContent');
-        if (!readingContent) return;
-
-        // Tìm tất cả các highlight cá nhân (yellow, green, pink)
-        const personalHighlights = readingContent.querySelectorAll(
-            '.highlight-yellow, .highlight-green, .highlight-pink'
-        );
-
-        personalHighlights.forEach(highlight => {
+        // Tìm highlights trong cả reading content và questions
+        const containers = [
+            document.getElementById('readingContent'),
+            document.getElementById('questionsContainer'),
+            document.querySelector('.questions-panel'),
+            document.querySelector('.reading-card'),
+            document.querySelector('.left-col'),
+            document.querySelector('.single-col')
+        ].filter(Boolean); // Lọc bỏ null
+        
+        const allHighlights = new Set();
+        
+        containers.forEach(container => {
+            const highlights = container.querySelectorAll(
+                '.highlight-yellow, .highlight-green, .highlight-pink'
+            );
+            highlights.forEach(h => allHighlights.add(h));
+        });
+        
+        allHighlights.forEach(highlight => {
             if (visible) {
                 highlight.classList.remove('highlight-hidden');
             } else {
                 highlight.classList.add('highlight-hidden');
             }
         });
+        
+        console.log(`[Reading] ${visible ? 'Hiện' : 'Ẩn'} ${allHighlights.size} highlights`);
     }
 
     /**
