@@ -224,6 +224,9 @@ class ListeningCore {
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
         this._isResetting = false;
+        
+        // State cho toggle highlight cá nhân
+        this.personalHighlightsVisible = true;
     }
 
     /**
@@ -746,8 +749,8 @@ class ListeningCore {
         const parent = nav.parentElement;
         if (parent && parent.classList.contains('question-nav')) {
             parent.querySelectorAll('span').forEach(s => {
-                // Giữ lại các badge thông tin quan trọng nếu có (hiện tại PET không dùng nhiều)
-                if (!s.classList.contains('answer-badge')) {
+                // Giữ lại các badge thông tin quan trọng và toggle label
+                if (!s.classList.contains('answer-badge') && !s.classList.contains('toggle-label')) {
                     s.remove();
                 }
             });
@@ -809,8 +812,77 @@ class ListeningCore {
             });
         }
         nav.appendChild(nextPartBtn);
+        
+        // Inject highlight toggle into question-nav
+        this.injectHighlightToggle();
     }
 
+    /**
+     * Inject highlight toggle switch into question navigation
+     */
+    injectHighlightToggle() {
+        const questionNav = document.querySelector('.question-nav');
+        if (!questionNav) return;
+        
+        // Check if toggle already exists
+        if (questionNav.querySelector('#highlightToggle')) return;
+        
+        const toggleWrapper = document.createElement('div');
+        toggleWrapper.className = 'highlight-toggle-wrapper';
+        toggleWrapper.title = 'Ẩn/hiện highlight cá nhân (không ảnh hưởng highlight đáp án)';
+        toggleWrapper.innerHTML = `
+            <label class="toggle-switch">
+                <input type="checkbox" id="highlightToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Highlight</span>
+        `;
+        
+        questionNav.appendChild(toggleWrapper);
+        
+        // Initialize toggle functionality
+        this.initHighlightToggle();
+    }
+
+    /**
+     * Initialize highlight toggle functionality
+     */
+    initHighlightToggle() {
+        const toggleCheckbox = document.getElementById('highlightToggle');
+        if (!toggleCheckbox) return;
+
+        // Set initial state
+        this.personalHighlightsVisible = toggleCheckbox.checked;
+        
+        // Áp dụng trạng thái ngay sau khi khởi tạo
+        this.togglePersonalHighlights(this.personalHighlightsVisible);
+
+        toggleCheckbox.addEventListener('change', (e) => {
+            this.personalHighlightsVisible = e.target.checked;
+            this.togglePersonalHighlights(this.personalHighlightsVisible);
+        });
+    }
+
+    /**
+     * Ẩn/hiện tất cả personal highlights
+     * @param {boolean} visible - true: hiện, false: ẩn
+     */
+    togglePersonalHighlights(visible) {
+        // Listening module targets transcript content (ID là transcriptContent)
+        const transcriptContent = document.getElementById('transcriptContent');
+        if (transcriptContent) {
+            const personalHighlights = transcriptContent.querySelectorAll(
+                '.highlight-yellow, .highlight-green, .highlight-pink'
+            );
+            personalHighlights.forEach(highlight => {
+                if (visible) {
+                    highlight.classList.remove('highlight-hidden');
+                } else {
+                    highlight.classList.add('highlight-hidden');
+                }
+            });
+        }
+    }
 
     /**
      * Get question range based on current test
@@ -1441,6 +1513,14 @@ class HighlightManager {
             if (!selection.rangeCount) return;
             range = selection.getRangeAt(0);
         }
+        
+        // Validate selection - không cho phép highlight cross block elements
+        if (!this.isValidHighlightSelection(range)) {
+            window.getSelection().removeAllRanges();
+            this.hideContextMenu();
+            this.savedRange = null;
+            return;
+        }
 
         const span = document.createElement('span');
         span.className = `highlight-${color}`;
@@ -1454,9 +1534,53 @@ class HighlightManager {
             range.insertNode(span);
         }
         
+        // Ẩn highlight ngay nếu toggle đang OFF
+        if (window.listeningCore && !window.listeningCore.personalHighlightsVisible) {
+            span.classList.add('highlight-hidden');
+        }
+        
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.savedRange = null;
+    }
+
+    /**
+     * Kiểm tra selection có hợp lệ để highlight (không cross block elements)
+     * @param {Range} range 
+     * @returns {boolean}
+     */
+    isValidHighlightSelection(range) {
+        const startContainer = range.startContainer;
+        const endContainer = range.endContainer;
+        
+        // Nếu cùng node -> OK
+        if (startContainer === endContainer) return true;
+        
+        // Lấy parent element
+        const startEl = startContainer.nodeType === Node.ELEMENT_NODE ? startContainer : startContainer.parentElement;
+        const endEl = endContainer.nodeType === Node.ELEMENT_NODE ? endContainer : endContainer.parentElement;
+        
+        // Kiểm tra nếu cùng parent element
+        if (startEl && endEl && startEl.parentElement === endEl.parentElement) {
+            return true;
+        }
+        
+        // Kiểm tra nếu selection bao gồm block elements
+        const blockElements = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE'];
+        const commonAncestor = range.commonAncestorContainer;
+        
+        if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
+            const children = commonAncestor.children;
+            let crossedBlockCount = 0;
+            for (let child of children) {
+                if (range.intersectsNode(child) && blockElements.includes(child.tagName)) {
+                    crossedBlockCount++;
+                }
+            }
+            if (crossedBlockCount > 1) return false;
+        }
+        
+        return true;
     }
 
     /**
