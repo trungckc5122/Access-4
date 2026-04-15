@@ -1914,6 +1914,14 @@ class ReadingHighlightManager {
             }
         });
 
+        // FIXED: Prevent selection loss when clicking on context menu items
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevent selection loss
+            });
+        }
+
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
             if (contextMenu && !contextMenu.contains(e.target)) {
