@@ -1952,7 +1952,7 @@ class ReadingHighlightManager {
     }
 
     /**
-     * FIXED: Apply manual highlighting with saved range + fallback selection
+     * Apply manual highlight (phiên bản hỗ trợ cross‑block selection)
      */
     applyHighlight(color) {
         let range = this.selectedRange;
@@ -1962,78 +1962,80 @@ class ReadingHighlightManager {
             range = selection.getRangeAt(0);
         }
         
-        // Validate selection - không cho phép highlight cross block elements
-        if (!this.isValidHighlightSelection(range)) {
-            // Selection không hợp lệ (cross paragraphs/divs)
+        // Hủy bỏ nếu vùng chọn trống
+        if (range.collapsed) {
             window.getSelection().removeAllRanges();
             this.hideContextMenu();
             this.selectedRange = null;
             return;
         }
-        
-        try {
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            span.appendChild(range.extractContents());
-            range.insertNode(span);
-            
-            // Ẩn highlight ngay nếu toggle đang OFF
-            if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
-                span.classList.add('highlight-hidden');
+
+        // Lấy ancestor chung cao nhất của vùng chọn
+        const commonAncestor = range.commonAncestorContainer;
+
+        // Sử dụng TreeWalker để duyệt tất cả text node nằm trong ancestor
+        const walker = document.createTreeWalker(
+            commonAncestor,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function(node) {
+                    // Chỉ xử lý text node nằm trong vùng chọn
+                    if (range.intersectsNode(node)) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
             }
-        } catch(e) {
-            console.log("Could not highlight", e);
+        );
+
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
         }
-        // Xóa selection và đóng menu
+
+        // Với mỗi text node, tách phần text nằm trong range và bọc bằng span
+        textNodes.forEach(textNode => {
+            const nodeRange = document.createRange();
+            nodeRange.selectNodeContents(textNode);
+            
+            // Xác định phần giao giữa range và text node hiện tại
+            const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
+            const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
+            
+            if (startOffset === endOffset) return; // không có ký tự nào được chọn trong node này
+
+            // Tạo range con chỉ chứa phần text được chọn
+            const subRange = document.createRange();
+            subRange.setStart(textNode, startOffset);
+            subRange.setEnd(textNode, endOffset);
+
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                
+                // Ẩn highlight ngay nếu toggle đang OFF
+                if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
+                    span.classList.add('highlight-hidden');
+                }
+
+                // Sử dụng surroundContents cho sub‑range (chỉ chứa text node, không lo cross‑block)
+                subRange.surroundContents(span);
+            } catch (e) {
+                // Fallback: nếu vẫn lỗi (rất hiếm), dùng extract + insert
+                console.warn('surroundContents failed, using extractContents fallback', e);
+                const fragment = subRange.extractContents();
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(fragment);
+                subRange.insertNode(span);
+            }
+        });
+
+        // Xóa selection gốc và đóng menu
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
-    }
-
-    /**
-     * Kiểm tra selection có hợp lệ để highlight (không cross block elements)
-     * @param {Range} range 
-     * @returns {boolean}
-     */
-    isValidHighlightSelection(range) {
-        const startContainer = range.startContainer;
-        const endContainer = range.endContainer;
-        
-        // Nếu cùng node hoặc cùng parent element -> OK
-        if (startContainer === endContainer) return true;
-        
-        // Lấy parent element của start và end
-        const startEl = startContainer.nodeType === Node.ELEMENT_NODE ? startContainer : startContainer.parentElement;
-        const endEl = endContainer.nodeType === Node.ELEMENT_NODE ? endContainer : endContainer.parentElement;
-        
-        // Kiểm tra nếu cùng parent element trực tiếp
-        if (startEl && endEl && startEl.parentElement === endEl.parentElement) {
-            return true;
-        }
-        
-        // Kiểm tra nếu selection bao gồm block elements (p, div, etc.)
-        const blockElements = ['P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE'];
-        const commonAncestor = range.commonAncestorContainer;
-        
-        // Nếu common ancestor là một element, kiểm tra các children
-        if (commonAncestor.nodeType === Node.ELEMENT_NODE) {
-            const children = commonAncestor.children;
-            let crossedBlockCount = 0;
-            for (let child of children) {
-                // Kiểm tra xem child có nằm trong range không
-                if (range.intersectsNode(child)) {
-                    if (blockElements.includes(child.tagName)) {
-                        crossedBlockCount++;
-                    }
-                }
-            }
-            // Nếu range bao gồm nhiều block elements -> không hợp lệ
-            if (crossedBlockCount > 1) {
-                return false;
-            }
-        }
-        
-        return true;
     }
 
     /**
