@@ -1273,16 +1273,70 @@ class ReadingCore {
 
     /**
      * Scroll into view for a question
+     * UPDATED: Support synchronized scrolling for Part 1 and inline slot scrolling for Part 5
      */
     scrollToQuestion(questionNum) {
+        const type = this.currentTestData.type;
+        const part = this.currentTestData.part || this.getTestMeta().part;
+
+        // Part 5 (inline-radio): Scroll to inline slot in reading panel
+        if (type === 'inline-radio') {
+            const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
+                              document.querySelector(`[data-q="${questionNum}"]`);
+            if (slotElement) {
+                slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            // Also scroll questions panel to the question
+            let questionElement = document.getElementById(`question-${questionNum}`);
+            if (questionElement) {
+                questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+
+        // Part 4 (drag-drop): Scroll to slot in reading panel
+        if (type === 'drag-drop') {
+            const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
+                              document.querySelector(`#passageCard [data-q="${questionNum}"]`);
+            if (slotElement) {
+                slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            // Highlight the corresponding sentence item in the bank
+            const sentItem = document.getElementById(`sent-${this.getUserAnswer(questionNum) || ''}`);
+            if (sentItem) {
+                sentItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            return;
+        }
+
+        // Part 1 (multiple-choice): Scroll both reading and questions panels
+        if (type === 'multiple-choice' && part === 1) {
+            // Find the corresponding card in reading panel via highlightMap or direct mapping
+            let cardId = null;
+            if (this.currentTestData.highlightMap && this.currentTestData.highlightMap[`q${questionNum}`]) {
+                cardId = this.currentTestData.highlightMap[`q${questionNum}`].cardId;
+            }
+            // Fallback: assume question N maps to card N for Part 1
+            if (!cardId) {
+                cardId = questionNum;
+            }
+            
+            // Scroll reading panel to the card
+            const cardElement = document.querySelector(`.reading-card[data-text-id="${cardId}"]`);
+            if (cardElement) {
+                cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Default: Scroll questions panel to the question
         let questionElement = document.getElementById(`question-${questionNum}`);
-        if (!questionElement && this.currentTestData.type === 'split-layout') {
+        if (!questionElement && type === 'split-layout') {
             questionElement = document.getElementById(`q${questionNum}`);
         }
         
         if (questionElement) {
             questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            if (this.currentTestData.type === 'split-layout') {
+            if (type === 'split-layout') {
                 questionElement.focus();
             }
         }
