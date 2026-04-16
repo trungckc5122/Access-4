@@ -1458,6 +1458,14 @@ class ReadingCore {
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = false;
+            explainBtn.classList.add('btn-sm');
+        }
+
+        // Thay progress bar bằng badge "Hoàn thành"
+        const progressDisplay = document.getElementById('progressDisplay');
+        if (progressDisplay) {
+            progressDisplay.textContent = 'Hoàn thành';
+            progressDisplay.classList.add('completed');
         }
 
         // Show generic results popup directly in explanation
@@ -1846,6 +1854,13 @@ class ReadingCore {
         if (explainBtn) {
             explainBtn.disabled = true;
             explainBtn.textContent = 'Xem giải thích';
+            explainBtn.classList.remove('btn-sm');
+        }
+
+        // Reset progress badge
+        const progressDisplay = document.getElementById('progressDisplay');
+        if (progressDisplay) {
+            progressDisplay.classList.remove('completed');
         }
 
         const explanationPanel = document.getElementById('explanationPanel');
