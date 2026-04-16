@@ -724,6 +724,13 @@ class ListeningCore {
             this.handleReset();
         });
 
+        // PET logo - click to go home
+        document.querySelector('.ielts-logo')?.addEventListener('click', () => {
+            if (confirm('Bạn có chắc muốn về trang chủ? Dữ liệu bài làm sẽ được tự động lưu.')) {
+                window.location.href = 'index.html';
+            }
+        });
+
         // Eye icon clicks
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('eye-icon')) {

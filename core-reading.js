@@ -1032,6 +1032,13 @@ class ReadingCore {
             this.handleReset();
         });
 
+        // PET logo - click to go home
+        document.querySelector('.ielts-logo')?.addEventListener('click', () => {
+            if (confirm('Bạn có chắc muốn về trang chủ? Dữ liệu bài làm sẽ được tự động lưu.')) {
+                window.location.href = 'index.html';
+            }
+        });
+
         // Close explanation panel for standard layout
         document.getElementById('closeExplanation')?.addEventListener('click', () => {
             this.closeExplanation();
