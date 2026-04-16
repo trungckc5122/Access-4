@@ -1148,11 +1148,8 @@ class ReadingCore {
         }
         nav.appendChild(nextPartBtn);
         
-        // Inject highlight toggle into question-nav (trước help button)
+        // Inject highlight toggle into question-nav
         this.injectHighlightToggle();
-        
-        // Inject help button into question-nav (sau highlight toggle)
-        this.injectHelpButton();
     }
 
     /**
@@ -1199,124 +1196,6 @@ class ReadingCore {
             this.personalHighlightsVisible = e.target.checked;
             this.togglePersonalHighlights(this.personalHighlightsVisible);
         });
-    }
-
-    /**
-     * Inject help button into question-nav
-     */
-    injectHelpButton() {
-        const nav = document.querySelector('.question-nav');
-        if (!nav) return;
-        if (nav.querySelector('.help-toggle-btn')) return;
-
-        const helpBtn = document.createElement('button');
-        helpBtn.className = 'help-toggle-btn';
-        helpBtn.title = 'Hướng dẫn sử dụng';
-        helpBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-        `;
-        helpBtn.addEventListener('click', () => this.toggleHelpPanel());
-        
-        // Insert before highlight toggle wrapper
-        const highlightToggle = nav.querySelector('.highlight-toggle-wrapper');
-        if (highlightToggle) {
-            nav.insertBefore(helpBtn, highlightToggle);
-        } else {
-            nav.appendChild(helpBtn);
-        }
-
-        // Create help panel
-        this.createHelpPanel();
-    }
-
-    /**
-     * Create help panel
-     */
-    createHelpPanel() {
-        if (document.getElementById('helpPanel')) return;
-
-        const panel = document.createElement('div');
-        panel.id = 'helpPanel';
-        panel.className = 'help-panel';
-        panel.style.display = 'none';
-        panel.innerHTML = `
-            <div class="help-panel-header">
-                <h3>Hướng dẫn sử dụng</h3>
-                <button class="help-close-btn" onclick="document.getElementById('helpPanel').style.display='none'">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="help-panel-content">
-                <div class="help-item">
-                    <div class="help-icon">▶️</div>
-                    <div class="help-text">
-                        <strong>Audio Player</strong>
-                        <p>Điều khiển phát/dừng audio. Có thể điều chỉnh tốc độ (0.7x - 1.25x) và kéo thanh tiến trình.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">🔢</div>
-                    <div class="help-text">
-                        <strong>Số câu hỏi</strong>
-                        <p>Click vào số để nhảy đến câu đó. Màu xanh = đã trả lời, màu xám = chưa trả lời.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">💡</div>
-                    <div class="help-text">
-                        <strong>Highlight</strong>
-                        <p>Bôi đen văn bản và chọn màu để đánh dấu. Toggle để ẩn/hiện highlight cá nhân.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">📝</div>
-                    <div class="help-text">
-                        <strong>Quick Note</strong>
-                        <p>Nút Note ở thanh dưới mở ghi chú nổi. Có thể kéo thả, thu nhỏ, và tự động lưu.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">🎨</div>
-                    <div class="help-text">
-                        <strong>Chế độ sáng/tối</strong>
-                        <p>Toggle "Hiện đại/Cổ điển" để đổi theme. Chế độ tối giúp giảm mỏi mắt.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">➡️</div>
-                    <div class="help-text">
-                        <strong>Next Part</strong>
-                        <p>Chuyển sang phần thi tiếp theo. Tiến độ làm bài sẽ được lưu tự động.</p>
-                    </div>
-                </div>
-                <div class="help-item">
-                    <div class="help-icon">🏠</div>
-                    <div class="help-text">
-                        <strong>Về trang chủ</strong>
-                        <p>Rê chuột lên chữ "PET" ở góc trái trên cùng để hiện menu và về trang chủ.</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(panel);
-    }
-
-    /**
-     * Toggle help panel visibility
-     */
-    toggleHelpPanel() {
-        const panel = document.getElementById('helpPanel');
-        if (panel) {
-            const isVisible = panel.style.display === 'block';
-            panel.style.display = isVisible ? 'none' : 'block';
-        }
     }
 
     /**
