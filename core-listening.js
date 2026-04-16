@@ -724,12 +724,37 @@ class ListeningCore {
             this.handleReset();
         });
 
-        // PET logo - click to go home
-        document.querySelector('.ielts-logo')?.addEventListener('click', () => {
-            if (confirm('Bạn có chắc muốn về trang chủ? Dữ liệu bài làm sẽ được tự động lưu.')) {
-                window.location.href = 'index.html';
-            }
-        });
+        // PET logo - setup hover home icon and click to go home
+        const logoEl = document.querySelector('.ielts-logo');
+        if (logoEl) {
+            // Inject PET text and home icon
+            logoEl.innerHTML = `
+                <span class="logo-text">PET</span>
+                <span class="logo-home" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </span>
+            `;
+
+            // Hover events to toggle PET text and home icon
+            logoEl.addEventListener('mouseenter', () => {
+                logoEl.querySelector('.logo-text')?.style.setProperty('display', 'none');
+                logoEl.querySelector('.logo-home')?.style.setProperty('display', 'inline-flex');
+            });
+            logoEl.addEventListener('mouseleave', () => {
+                logoEl.querySelector('.logo-text')?.style.setProperty('display', 'inline');
+                logoEl.querySelector('.logo-home')?.style.setProperty('display', 'none');
+            });
+
+            // Click to go home
+            logoEl.addEventListener('click', () => {
+                if (confirm('Bạn có chắc muốn về trang chủ? Dữ liệu bài làm sẽ được tự động lưu.')) {
+                    window.location.href = 'index.html';
+                }
+            });
+        }
 
         // Eye icon clicks
         document.addEventListener('click', (e) => {
@@ -1057,14 +1082,6 @@ class ListeningCore {
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) {
             explainBtn.disabled = false;
-            explainBtn.classList.add('btn-sm');
-        }
-
-        // Thay progress bar bằng badge "Hoàn thành"
-        const progressDisplay = document.getElementById('progressDisplay');
-        if (progressDisplay) {
-            progressDisplay.textContent = 'Hoàn thành';
-            progressDisplay.classList.add('completed');
         }
 
         // Calculate and show results
@@ -1335,13 +1352,6 @@ class ListeningCore {
         if (explainBtn) {
             explainBtn.disabled = true;
             explainBtn.textContent = 'Xem giải thích';
-            explainBtn.classList.remove('btn-sm');
-        }
-
-        // Reset progress badge
-        const progressDisplay = document.getElementById('progressDisplay');
-        if (progressDisplay) {
-            progressDisplay.classList.remove('completed');
         }
 
         const explanationPanel = document.getElementById('explanationPanel');
