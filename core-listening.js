@@ -318,6 +318,33 @@ class ListeningCore {
         return { book, test, part };
     }
 
+    cleanup() {
+        // Gỡ bỏ các listener đã gắn trên document
+        if (this._boundChangeHandler) {
+            document.removeEventListener('change', this._boundChangeHandler);
+            this._boundChangeHandler = null;
+        }
+        if (this._boundInputHandler) {
+            document.removeEventListener('input', this._boundInputHandler);
+            this._boundInputHandler = null;
+        }
+
+        // Dừng audio nếu có
+        if (this.audio) {
+            this.audio.pause();
+            this.audio.src = '';
+        }
+
+        // Clear debounce timer
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
+
+        // Lưu draft lần cuối (nếu cần)
+        this.saveDraftImmediate();
+    }
+
     /**
      * Chuyển sang Part khác trong cùng Test
      */
@@ -328,6 +355,9 @@ class ListeningCore {
         // Listening PET có 4 part
         if (targetPart < 1 || targetPart > 4) return;
         
+        // === THÊM CLEANUP ===
+        this.cleanup();
+
         const targetUrl = `lis-pet${book}-test${test}-part${targetPart}.html`;
         console.log(`[Navigation] Redirecting to: ${targetUrl}`);
         window.location.href = targetUrl;
@@ -343,6 +373,45 @@ class ListeningCore {
             answers[`q${i}`] = this.getUserAnswer(i);
         }
         return answers;
+    }
+
+    /**
+     * Lưu an toàn vào localStorage với xử lý lỗi quota
+     */
+    _safeSetStorage(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                console.warn('[Storage] Quota exceeded, cleaning old drafts...');
+                this._cleanOldDrafts();
+                try {
+                    localStorage.setItem(key, value);
+                } catch (e2) {
+                    console.error('[Storage] Still failed after cleanup:', e2);
+                }
+            } else {
+                console.error('[Storage] Failed to save:', e);
+            }
+        }
+    }
+
+    /**
+     * Xóa các draft cũ hơn 30 ngày hoặc chỉ giữ lại 10 draft gần nhất
+     */
+    _cleanOldDrafts() {
+        const prefix = 'pet_listening_draft_';
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(prefix)) keys.push(key);
+        }
+        if (keys.length > 10) {
+            keys.sort(); // Xóa các key cũ nhất (theo thứ tự từ điển)
+            for (let i = 0; i < keys.length - 10; i++) {
+                localStorage.removeItem(keys[i]);
+            }
+        }
     }
 
     /**
@@ -366,7 +435,7 @@ class ListeningCore {
             try {
                 const draft = this.getDraftData();
                 const key = this.getStorageKey(true);
-                localStorage.setItem(key, JSON.stringify(draft));
+                this._safeSetStorage(key, JSON.stringify(draft));
                 console.log('[Draft] SAVED to key:', key, 'data:', draft);
             } catch (e) {
                 console.error('[Draft] FAILED to save:', e);
@@ -407,7 +476,7 @@ class ListeningCore {
             }
             
             const key = this.getStorageKey(true);
-            localStorage.setItem(key, JSON.stringify(draft));
+            this._safeSetStorage(key, JSON.stringify(draft));
             console.log('[Draft] SAVED IMMEDIATELY to key:', key);
 
             // Notify dashboard of draft update via BroadcastChannel
@@ -683,9 +752,8 @@ class ListeningCore {
      * ✅ FIX v2.1: Setup event listeners - kiểm tra _isResetting
      */
     setupEventListeners() {
-        // Radio button changes - lưu NGAY, không debounce
-        document.addEventListener('change', (e) => {
-            // ✅ FIX: Kiểm tra _isResetting (thêm log)
+        // Tạo bound handler và lưu vào this
+        this._boundChangeHandler = (e) => {
             if (this._isResetting) {
                 console.log('[Draft] change event blocked during reset');
                 return;
@@ -694,11 +762,11 @@ class ListeningCore {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
             }
-        });
+        };
+        // Radio button changes - lưu NGAY, không debounce
+        document.addEventListener('change', this._boundChangeHandler);
 
-        // Input field changes (for fill-in-blank)
-        document.addEventListener('input', (e) => {
-            // ✅ FIX: Kiểm tra _isResetting (thêm log)
+        this._boundInputHandler = (e) => {
             if (this._isResetting) {
                 console.log('[Draft] input event blocked during reset');
                 return;
@@ -707,7 +775,9 @@ class ListeningCore {
                 this.updateAnswerCount();
                 this.saveDraft(); // Debounce: lưu sau 0.3s
             }
-        });
+        };
+        // Input field changes (for fill-in-blank)
+        document.addEventListener('input', this._boundInputHandler);
 
         // Submit button
         document.getElementById('submitBtn')?.addEventListener('click', () => {
@@ -1010,6 +1080,10 @@ class ListeningCore {
 
         const total = questionRange.end - questionRange.start + 1;
         
+        // Chỉ cập nhật DOM nếu số lượng thay đổi
+        if (this._lastAnsweredCount === answered) return;
+        this._lastAnsweredCount = answered;
+
         // Update badges
         const answeredBadge = document.getElementById('answeredCount');
         if (answeredBadge) {
