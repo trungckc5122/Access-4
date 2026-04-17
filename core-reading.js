@@ -471,13 +471,20 @@ class ReadingCore {
         // Render questions based on test type (or setup initial split layout)
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
-            this.attachInputEvents(); // For inline gaps
         } else if (this.currentTestData.type === 'drag-drop') {
             this.setupDragDropEvents();
         } else if (this.currentTestData.type === 'inline-radio') {
             this.renderInlineRadioQuestions();
         } else {
             this.renderQuestions();
+        }
+
+        // === QUAN TRỌNG: Khôi phục highlight TRƯỚC khi load answers và attach events ===
+        // Việc này tránh việc innerHTML ghi đè lên các input đã điền đáp án
+        this.loadHighlightDraft();
+
+        if (this.currentTestData.type === 'split-layout') {
+            this.attachInputEvents(); // For inline gaps
         }
         
         // Setup event listeners
@@ -493,9 +500,6 @@ class ReadingCore {
         if (!this.isCompleted()) {
             this.loadDraft();
         }
-        
-        // Khôi phục highlight đã lưu (nếu có)
-        this.loadHighlightDraft();
         
         // === MỚI: Note Manager ===
         this.noteManager = new PETNoteManager(this);
@@ -696,10 +700,13 @@ class ReadingCore {
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.startsWith('pet_reading_draft_') || (key.startsWith('pet_reading_book') && key.endsWith('_highlights')))) keys.push(key);
+            // ✅ FIX: Nhận diện cả _draft và _highlights để dọn dẹp khi bộ nhớ đầy
+            if (key && key.startsWith('pet_reading_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+                keys.push(key);
+            }
         }
         if (keys.length > 20) {
-            keys.sort(); // Xóa các key cũ nhất (theo thứ tự từ điển)
+            keys.sort(); // Xóa các key cũ nhất
             for (let i = 0; i < keys.length - 20; i++) {
                 localStorage.removeItem(keys[i]);
             }
@@ -2139,7 +2146,8 @@ class ReadingCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        localStorage.removeItem(this.getHighlightStorageKey());
+        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
+        localStorage.removeItem(this.getHighlightStorageKey()); 
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel

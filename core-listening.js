@@ -468,6 +468,10 @@ class ListeningCore {
         
         // Render questions based on test type
         this.renderQuestions();
+
+        // === QUAN TRỌNG: Khôi phục highlight TRƯỚC khi load answers và attach events ===
+        // Việc này tránh việc innerHTML ghi đè lên các input đã điền đáp án
+        this.loadHighlightDraft();
         
         // Setup event listeners
         this.setupEventListeners();
@@ -482,9 +486,6 @@ class ListeningCore {
         if (!this.isCompleted()) {
             this.loadDraft();
         }
-
-        // Khôi phục highlight đã lưu (nếu có)
-        this.loadHighlightDraft();
 
         // === MỚI: Note Manager ===
         this.noteManager = new PETNoteManager(this);
@@ -669,10 +670,13 @@ class ListeningCore {
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.startsWith('pet_listening_draft_') || (key.startsWith('pet_listening_book') && key.endsWith('_highlights')))) keys.push(key);
+            // ✅ FIX: Nhận diện cả _draft và _highlights để dọn dẹp khi bộ nhớ đầy
+            if (key && key.startsWith('pet_listening_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+                keys.push(key);
+            }
         }
         if (keys.length > 20) {
-            keys.sort(); // Xóa các key cũ nhất (theo thứ tự từ điển)
+            keys.sort(); // Xóa các key cũ nhất
             for (let i = 0; i < keys.length - 20; i++) {
                 localStorage.removeItem(keys[i]);
             }
@@ -1608,7 +1612,8 @@ class ListeningCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        localStorage.removeItem(this.getHighlightStorageKey());
+        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
+        localStorage.removeItem(this.getHighlightStorageKey()); 
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel
