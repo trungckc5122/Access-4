@@ -11,9 +11,9 @@
  */
 
 /**
- * PETNoteManager - Handles the draggable, resizable sticky notes
+ * PETListeningNoteManager - Handles the draggable, resizable sticky notes
  */
-class PETNoteManager {
+class PETListeningNoteManager {
     constructor(core) {
         this.core = core;
         this.panel = null;
@@ -211,12 +211,11 @@ class PETNoteManager {
 }
 
 /**
- * MiniDashboardManager - Popup showing progress across all parts with PET scores
+ * ListeningDashboardManager - Handles the Mini Dashboard UI and logic
  */
-class MiniDashboardManager {
-    constructor(core, skillType) {
+class ListeningDashboardManager {
+    constructor(core) {
         this.core = core;
-        this.skillType = skillType;
         this.panel = null;
         this.isVisible = false;
         this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
@@ -226,7 +225,7 @@ class MiniDashboardManager {
         this.createPanel();
         this.injectToggleButton();
         this.setupEvents();
-        console.log('[MiniDashboard] Initialized for', this.skillType);
+        console.log('[MiniDashboard] Initialized');
     }
 
     createPanel() {
@@ -238,7 +237,7 @@ class MiniDashboardManager {
         this.panel.innerHTML = `
             <div class="mini-dashboard-header" id="mini-dashboard-header" style="cursor: move; user-select: none;">
                 <h3><span id="mini-dashboard-title">Dashboard</span></h3>
-                <button class="mini-dashboard-close" onclick="window.miniDashboard.hide()">✕</button>
+                <button class="mini-dashboard-close" onclick="window.listeningCore.dashboardManager.hide()">✕</button>
             </div>
             <div class="mini-dashboard-content" id="mini-dashboard-content"></div>
             <div class="mini-dashboard-footer">
@@ -247,16 +246,14 @@ class MiniDashboardManager {
         `;
 
         document.body.appendChild(this.panel);
-        window.miniDashboard = this;
         this.contentArea = document.getElementById('mini-dashboard-content');
 
-        // Restore position 
         const posStr = localStorage.getItem('mini-dashboard-pos');
         if (posStr) {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(this.panel.style, pos);
-            } catch(e) {}
+            } catch (e) { }
         }
     }
 
@@ -266,15 +263,17 @@ class MiniDashboardManager {
 
         const toggleBtn = document.createElement('button');
         toggleBtn.id = 'mini-dashboard-toggle';
+        toggleBtn.className = 'btn btn-secondary';
+        toggleBtn.style.marginLeft = '8px';
         toggleBtn.innerHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
             Tiến độ
         `;
         toggleBtn.onclick = () => this.toggle();
-        
+
         const noteBtn = document.querySelector('.note-toggle-btn');
         const submitBtn = document.getElementById('submitBtn');
-        
+
         if (noteBtn) {
             noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
         } else if (submitBtn) {
@@ -284,10 +283,8 @@ class MiniDashboardManager {
         }
     }
 
-    // Tính điểm PET scale (120-170) từ số câu đúng
     calculatePETScore(correct, maxQuestions) {
         if (correct === 0) return null;
-        // PET scale approximation: 120 + (correct/max) * 50
         const percentage = correct / maxQuestions;
         let score = Math.round(120 + percentage * 50);
         return Math.min(170, Math.max(120, score));
@@ -297,7 +294,7 @@ class MiniDashboardManager {
         const meta = this.core.getTestMeta();
         const book = meta.book;
         const test = meta.test;
-        
+
         const titleEl = document.getElementById('mini-dashboard-title');
         if (titleEl) titleEl.textContent = `PET ${book} - Test ${test}`;
 
@@ -308,12 +305,12 @@ class MiniDashboardManager {
     }
 
     fetchSkillData(skill, book, test) {
-        const parts = skill === 'reading' ? [1,2,3,4,5,6] : [1,2,3,4];
-        
+        const parts = skill === 'reading' ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4];
+
         return parts.map(part => {
             let keyCompleted = `pet_${skill}_book${book}_test${test}_part${part}`;
             let keyDraft = keyCompleted + '_draft';
-            
+
             let dataCompleted = localStorage.getItem(keyCompleted);
             let dataDraft = localStorage.getItem(keyDraft);
 
@@ -321,15 +318,15 @@ class MiniDashboardManager {
                 try {
                     const parsed = JSON.parse(dataCompleted);
                     return { part, type: 'completed', value: parsed.correctCount || 0, total: parsed.totalQuestions || 0 };
-                } catch(e) {}
-            } 
-            
+                } catch (e) { }
+            }
+
             if (dataDraft) {
                 try {
                     const parsed = JSON.parse(dataDraft);
                     const answered = Object.values(parsed).filter(v => v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object').length;
                     return { part, type: 'draft', value: answered, total: 0 };
-                } catch(e) {}
+                } catch (e) { }
             }
             return { part, type: 'empty', value: 0, total: 0 };
         });
@@ -340,7 +337,7 @@ class MiniDashboardManager {
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
         const totalAnswered = maxQuestions;
         const hasAnyData = data.some(d => d.type !== 'empty');
-        
+
         return {
             correct: totalCorrect,
             total: totalAnswered,
@@ -351,15 +348,12 @@ class MiniDashboardManager {
 
     renderContent(readingData, listeningData) {
         if (!this.contentArea) return;
-        
+
         const meta = this.core.getTestMeta();
-        
-        // Calculate stats for each skill
         const readingStats = this.calculateSkillStats(readingData, 35);
         const listeningStats = this.calculateSkillStats(listeningData, 25);
-        
+
         const renderSection = (title, data, stats, isReading) => {
-            // Determine score display
             let scoreHtml;
             if (!stats.hasData) {
                 scoreHtml = '<span class="not-done">Chưa làm</span>';
@@ -368,7 +362,7 @@ class MiniDashboardManager {
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
-            
+
             let sectionHtml = `
                 <div class="skill-section">
                     <div class="skill-header">
@@ -377,14 +371,14 @@ class MiniDashboardManager {
                     </div>
                     <div class="part-list">
             `;
-            
+
             data.forEach(d => {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
                 let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
-                
-                const isCurrent = Number(meta.part) === Number(d.part) && this.skillType === (isReading ? 'reading' : 'listening');
+
+                const isCurrent = Number(meta.part) === Number(d.part) && this.core.skillType === (isReading ? 'reading' : 'listening');
                 const currentClass = isCurrent ? 'current' : '';
 
                 if (isCurrent) {
@@ -433,7 +427,7 @@ class MiniDashboardManager {
 
     setupEvents() {
         const header = document.getElementById('mini-dashboard-header');
-        
+
         const onDrag = (e) => {
             if (!this.dragData.isDragging) return;
             const dx = e.clientX - this.dragData.startX;
@@ -449,7 +443,7 @@ class MiniDashboardManager {
                 this.dragData.isDragging = false;
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mouseup', stopDrag);
-                
+
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem('mini-dashboard-pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -470,7 +464,6 @@ class MiniDashboardManager {
             document.addEventListener('mouseup', stopDrag);
         });
 
-        // Broadcast channel listener
         try {
             this.channel = new BroadcastChannel('pet_update_channel');
             this.channel.addEventListener('message', () => {
@@ -480,14 +473,13 @@ class MiniDashboardManager {
             console.warn('BroadcastChannel not supported', e);
         }
 
-        // Window storage event
         window.addEventListener('storage', (e) => {
             if (e.key && (e.key.startsWith('pet_') || e.key === 'mini-dashboard-pos') && this.isVisible) {
                 if (e.key === 'mini-dashboard-pos') {
                     try {
                         const pos = JSON.parse(e.newValue);
                         Object.assign(this.panel.style, pos);
-                    } catch(err) {}
+                    } catch (err) { }
                 } else {
                     this.refreshData();
                 }
@@ -497,9 +489,9 @@ class MiniDashboardManager {
 }
 
 /**
- * PETHelpManager - Floating guide panel for core interactions
+ * PETListeningHelpManager - Handles the help instructions panel
  */
-class PETHelpManager {
+class PETListeningHelpManager {
     constructor(core) {
         this.core = core;
         this.panel = null;
@@ -516,7 +508,7 @@ class PETHelpManager {
     createPanel() {
         this.panel = document.createElement('div');
         this.panel.id = 'pet-help-panel';
-        this.panel.className = 'pet-note-panel'; // Reuse sticky note style
+        this.panel.className = 'pet-note-panel';
         this.panel.style.display = 'none';
         this.panel.style.width = '350px';
         this.panel.style.height = 'auto';
@@ -569,7 +561,7 @@ class PETHelpManager {
 
     setupEvents() {
         const header = this.panel.querySelector('.pet-note-header');
-        
+
         const onDrag = (e) => {
             if (!this.dragData.isDragging) return;
             const dx = e.clientX - this.dragData.startX;
@@ -618,6 +610,7 @@ class PETHelpManager {
 }
 
 
+
 class ListeningCore {
     constructor() {
         this.examSubmitted = false;
@@ -625,9 +618,9 @@ class ListeningCore {
         this.currentTestData = null;
         this.audio = null;
         this.speedSelect = null;
-        this.highlightManager = new HighlightManager();
-        this.storageManager = new StorageManager();
-        this.uiManager = new UIManager();
+        this.highlightManager = new ListeningHighlightManager();
+        this.storageManager = new ListeningStorageManager();
+        this.uiManager = new ListeningUIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 300; // Lưu sau 0.3s không thay đổi
         this._isResetting = false;
@@ -648,12 +641,11 @@ class ListeningCore {
         // Setup audio controls
         this.setupAudioControls();
         
+        // Setup UI components
+        this.setupUI();
+        
         // Render questions based on test type
         this.renderQuestions();
-
-        // === QUAN TRỌNG: Khôi phục highlight TRƯỚC khi load answers và attach events ===
-        // Việc này tránh việc innerHTML ghi đè lên các input đã điền đáp án
-        this.loadHighlightDraft();
         
         // Setup event listeners
         this.setupEventListeners();
@@ -669,15 +661,12 @@ class ListeningCore {
             this.loadDraft();
         }
 
-        // === MỚI: Note Manager ===
-        this.noteManager = new PETNoteManager(this);
+        this.loadHighlightDraft();
+        this.noteManager = new PETListeningNoteManager(this);
         this.noteManager.init();
-
-        // === MỚI: Mini Dashboard ===
-        this.miniDashboard = new MiniDashboardManager(this, 'listening');
-        this.miniDashboard.init();
-        
-        this.helpManager = new PETHelpManager(this);
+        this.dashboardManager = new ListeningDashboardManager(this);
+        this.dashboardManager.init();
+        this.helpManager = new PETListeningHelpManager(this);
         this.helpManager.init();
         
         // Update initial state
@@ -713,22 +702,26 @@ class ListeningCore {
         return key;
     }
 
+    /**
+     * Lấy storage key cho highlight
+     */
     getHighlightStorageKey() {
         return this.getStorageKey(false) + '_highlights';
     }
 
+    /**
+     * Lưu trạng thái highlight
+     */
     saveHighlightDraft() {
         const potentialSelectors = [
-            '#readingContent', '#transcriptContent', '#questionsContainer',
-            '.reading-content', '.transcript-content', '.questions-list',
-            '.reading-card', '.single-col', '.split-container'
+            '#transcriptContent', '#questionsContainer', 
+            '.transcript-content', '.split-container'
         ];
         
         let foundData = [];
         potentialSelectors.forEach(selector => {
             const el = document.querySelector(selector);
-            
-            if (el && (el.innerHTML.includes('highlight-yellow') || el.innerHTML.includes('highlight-green') || el.innerHTML.includes('highlight-pink') || el.innerHTML.includes('highlight'))) {
+            if (el && (el.innerHTML.includes('highlight-'))) {
                 foundData.push({
                     selector: selector,
                     html: el.innerHTML
@@ -738,58 +731,35 @@ class ListeningCore {
 
         const key = this.getHighlightStorageKey();
         if (foundData.length > 0) {
-            // ✅ THAY ĐỔI: Lưu mảng nhiều container thay vì chỉ 1 container đầu tiên
             this._safeSetStorage(key, JSON.stringify({ containers: foundData, timestamp: Date.now() }));
-            console.log('[Highlight] Saved', foundData.length, 'containers to', key);
         } else {
             localStorage.removeItem(key);
-            console.log('[Highlight] REMOVED (no highlights found) from key:', key);
         }
     }
 
+    /**
+     * Khôi phục highlight
+     */
     loadHighlightDraft() {
         const key = this.getHighlightStorageKey();
         const savedData = localStorage.getItem(key);
-        
-        if (!savedData) {
-            console.log('[Highlight] No saved data found for key:', key);
-            return;
-        }
-        
+        if (!savedData) return;
+
         try {
             const parsed = JSON.parse(savedData);
-            
-            // Xử lý cả định dạng cũ (1 container) và định dạng mới (nhiều container)
             if (parsed.containers && Array.isArray(parsed.containers)) {
-                console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
                 parsed.containers.forEach(item => {
                     const container = document.querySelector(item.selector);
                     if (container) {
-                        container.innerHTML = item.html;
-                        console.log('[Highlight] Restored container:', item.selector);
+                        // Tránh ghi đè tiêu đề ielts-header nếu selector quá rộng
+                        if (!container.classList.contains('ielts-header')) {
+                            container.innerHTML = item.html;
+                        }
                     }
                 });
-            } else {
-                // Fallback cho định dạng bản nháp cũ
-                const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
-                if (!savedHtml) return;
-                
-                const container = document.getElementById('readingContent') || 
-                                  document.getElementById('transcriptContent') ||
-                                  document.querySelector('.reading-content') ||
-                                  document.querySelector('.transcript-content');
-                if (container) {
-                    container.innerHTML = savedHtml;
-                    console.log('[Highlight] Restored using legacy logic');
-                }
             }
         } catch (e) {
             console.error('[Highlight] Load error:', e);
-            // Fallback cực hạn cho dữ liệu text thô
-            if (typeof savedData === 'string' && savedData.includes('<span')) {
-                const container = document.getElementById('transcriptContent') || document.querySelector('.transcript-content');
-                if (container) container.innerHTML = savedData;
-            }
         }
     }
 
@@ -810,40 +780,7 @@ class ListeningCore {
             part = part || parsed.part;
         }
         
-        // Diagnostic log
-        if (!this._metaLogged) {
-            console.log('[Metadata] Listening:', { book, test, part });
-            this._metaLogged = true;
-        }
-        
         return { book, test, part };
-    }
-
-    cleanup() {
-        // Gỡ bỏ các listener đã gắn trên document
-        if (this._boundChangeHandler) {
-            document.removeEventListener('change', this._boundChangeHandler);
-            this._boundChangeHandler = null;
-        }
-        if (this._boundInputHandler) {
-            document.removeEventListener('input', this._boundInputHandler);
-            this._boundInputHandler = null;
-        }
-
-        // Dừng audio nếu có
-        if (this.audio) {
-            this.audio.pause();
-            this.audio.src = '';
-        }
-
-        // Clear debounce timer
-        if (this.debounceTimer) {
-            clearTimeout(this.debounceTimer);
-            this.debounceTimer = null;
-        }
-
-        // Lưu draft lần cuối (nếu cần)
-        this.saveDraftImmediate();
     }
 
     /**
@@ -856,9 +793,6 @@ class ListeningCore {
         // Listening PET có 4 part
         if (targetPart < 1 || targetPart > 4) return;
         
-        // === THÊM CLEANUP ===
-        this.cleanup();
-
         const targetUrl = `lis-pet${book}-test${test}-part${targetPart}.html`;
         console.log(`[Navigation] Redirecting to: ${targetUrl}`);
         window.location.href = targetUrl;
@@ -874,47 +808,6 @@ class ListeningCore {
             answers[`q${i}`] = this.getUserAnswer(i);
         }
         return answers;
-    }
-
-    /**
-     * Lưu an toàn vào localStorage với xử lý lỗi quota
-     */
-    _safeSetStorage(key, value) {
-        try {
-            localStorage.setItem(key, value);
-        } catch (e) {
-            if (e.name === 'QuotaExceededError' || e.code === 22) {
-                console.warn('[Storage] Quota exceeded, cleaning old drafts...');
-                this._cleanOldDrafts();
-                try {
-                    localStorage.setItem(key, value);
-                } catch (e2) {
-                    console.error('[Storage] Still failed after cleanup:', e2);
-                }
-            } else {
-                console.error('[Storage] Failed to save:', e);
-            }
-        }
-    }
-
-    /**
-     * Xóa các draft cũ hơn 30 ngày hoặc chỉ giữ lại 10 draft gần nhất
-     */
-    _cleanOldDrafts() {
-        const keys = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            // ✅ FIX: Nhận diện cả _draft và _highlights để dọn dẹp khi bộ nhớ đầy
-            if (key && key.startsWith('pet_listening_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
-                keys.push(key);
-            }
-        }
-        if (keys.length > 20) {
-            keys.sort(); // Xóa các key cũ nhất
-            for (let i = 0; i < keys.length - 20; i++) {
-                localStorage.removeItem(keys[i]);
-            }
-        }
     }
 
     /**
@@ -951,7 +844,6 @@ class ListeningCore {
      * Thêm kiểm tra: 1. _isResetting early return 2. Kiểm tra hasAnswers trước khi lưu
      */
     saveDraftImmediate() {
-        // ✅ FIX: Kiểm tra _isResetting TRƯỚC (early return)
         if (this._isResetting) {
             console.log('[Draft] Blocked: currently resetting');
             return;
@@ -968,10 +860,7 @@ class ListeningCore {
             const draft = this.getDraftData();
             
             // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
-            // Nếu tất cả answer đều null/undefined/'' thì không lưu
-            const hasAnswers = Object.values(draft).some(v => {
-                return v !== null && v !== undefined && v !== '';
-            });
+            const hasAnswers = this.draftHasAnswers(draft);
             
             if (!hasAnswers) {
                 console.log('[Draft] No answers to save, skipping immediate save');
@@ -1001,6 +890,39 @@ class ListeningCore {
             console.error('[Draft] Immediate save failed:', e);
         }
     }
+
+    /**
+     * ✅ FIX v2.1: Helper function - check if draft has real answers
+     */
+    draftHasAnswers(draft) {
+        return Object.values(draft).some(v => {
+            return v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object';
+        });
+    }
+
+    /**
+     * Helper - Try to set item in localStorage, handle quota exceeded
+     */
+    _safeSetStorage(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                console.warn('[Storage] Quota exceeded, clearing highlights and trying again...');
+                // Clear old highlight data to free space
+                const highlightsKey = this.getHighlightStorageKey();
+                localStorage.removeItem(highlightsKey);
+                try {
+                    localStorage.setItem(key, value);
+                } catch (retryError) {
+                    console.error('[Storage] Still failed after clearing highlights:', retryError);
+                }
+            } else {
+                console.error('[Storage] Write failed:', e);
+            }
+        }
+    }
+
 
     /**
      * Khôi phục nháp từ localStorage và áp dụng vào giao diện
@@ -1255,8 +1177,9 @@ class ListeningCore {
      * ✅ FIX v2.1: Setup event listeners - kiểm tra _isResetting
      */
     setupEventListeners() {
-        // Tạo bound handler và lưu vào this
-        this._boundChangeHandler = (e) => {
+        // Radio button changes - lưu NGAY, không debounce
+        document.addEventListener('change', (e) => {
+            // ✅ FIX: Kiểm tra _isResetting (thêm log)
             if (this._isResetting) {
                 console.log('[Draft] change event blocked during reset');
                 return;
@@ -1265,11 +1188,11 @@ class ListeningCore {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
             }
-        };
-        // Radio button changes - lưu NGAY, không debounce
-        document.addEventListener('change', this._boundChangeHandler);
+        });
 
-        this._boundInputHandler = (e) => {
+        // Input field changes (for fill-in-blank)
+        document.addEventListener('input', (e) => {
+            // ✅ FIX: Kiểm tra _isResetting (thêm log)
             if (this._isResetting) {
                 console.log('[Draft] input event blocked during reset');
                 return;
@@ -1278,9 +1201,7 @@ class ListeningCore {
                 this.updateAnswerCount();
                 this.saveDraft(); // Debounce: lưu sau 0.3s
             }
-        };
-        // Input field changes (for fill-in-blank)
-        document.addEventListener('input', this._boundInputHandler);
+        });
 
         // Submit button
         document.getElementById('submitBtn')?.addEventListener('click', () => {
@@ -1417,20 +1338,6 @@ class ListeningCore {
             });
         }
         nav.appendChild(nextPartBtn);
-        
-        // Nút Hướng dẫn (?) - Nằm giữa Next Part và Highlight
-        const helpBtn = document.createElement('button');
-        helpBtn.className = 'nav-arrow-btn nav-help-btn';
-        helpBtn.title = 'Hướng dẫn';
-        helpBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        `;
-        helpBtn.style.padding = '8px';
-        helpBtn.style.minWidth = '40px';
-        helpBtn.style.borderRadius = '50%';
-        helpBtn.style.marginLeft = '12px';
-        helpBtn.addEventListener('click', () => this.helpManager.toggle());
-        nav.appendChild(helpBtn);
         
         // Inject highlight toggle into question-nav
         this.injectHighlightToggle();
@@ -1597,10 +1504,6 @@ class ListeningCore {
 
         const total = questionRange.end - questionRange.start + 1;
         
-        // Chỉ cập nhật DOM nếu số lượng thay đổi
-        if (this._lastAnsweredCount === answered) return;
-        this._lastAnsweredCount = answered;
-
         // Update badges
         const answeredBadge = document.getElementById('answeredCount');
         if (answeredBadge) {
@@ -1638,7 +1541,7 @@ class ListeningCore {
         }
 
         if (unanswered.length > 0) {
-            if (!confirm(`Bạn còn ${unanswered.length} câu chưa chọn. Nộp bài?`)) {
+            if (!confirm(`Bạn còn ${unanswered.length} câu chưa chọn/điền. Nộp bài?`)) {
                 return;
             }
         }
@@ -1647,7 +1550,7 @@ class ListeningCore {
     }
 
     /**
-     * Submit the exam
+     * Core submission logic
      */
     submitExam() {
         this.examSubmitted = true;
@@ -1657,10 +1560,6 @@ class ListeningCore {
         document.querySelector('.question-nav')?.classList.remove('collapsed');
         document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
-        // Show transcript
-        this.showTranscript();
-
-        // Mark answers
         this.markAnswers();
 
         // Update UI
@@ -1844,35 +1743,25 @@ class ListeningCore {
 
     /**
      * ✅ FIX v2.1: Reset all answers and state
-     * CHANGES:
-     * 1. Removed function override method - using flag instead
-     * 2. Changed setTimeout delay from 0 to 500ms
-     * 3. Added defensive: removeItem again after delay
-     * 4. All event listeners check _isResetting early return
+     * Standardized with Reading Core logic
      */
     resetAll() {
-        console.log('[resetAll] started');
+        console.log('[Listening resetAll] started');
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
         const completedKey = this.getStorageKey(false);
         const draftKey = this.getStorageKey(true);
 
-        // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
+        // ✅ FIX: Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
-        localStorage.removeItem(this.getHighlightStorageKey()); 
-        console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
+        localStorage.removeItem(this.getHighlightStorageKey());
+        console.log('[Reset] Deleted keys:', completedKey, draftKey);
 
-        // ✅ FIX: Get book/test/part for BroadcastChannel
-        const d = this.currentTestData;
-        let book = d.book, test = d.test, part = d.part;
-        if (!book || !test || !part) {
-            const parsed = this.storageManager.parseTestInfo(d.title);
-            book = book || parsed.book;
-            test = test || parsed.test;
-            part = part || parsed.part;
-        }
+        const meta = this.getTestMeta();
+        const book = meta.book;
+        const test = meta.test;
+        const part = meta.part;
 
         // ✅ FIX: SET FLAG TRƯỚC KHI LÀM ĐIỀU GÌ KHÁC
         this._isResetting = true;
@@ -1910,7 +1799,7 @@ class ListeningCore {
                 const input = document.getElementById(`q${i}`);
                 if (input) {
                     input.classList.remove('correct', 'incorrect');
-                    const wrapper = input.closest('.blank-line');
+                    const wrapper = input.closest('.blank-line') || input.parentNode;
                     if (wrapper) {
                         const badge = wrapper.querySelector('.correct-answer-badge');
                         if (badge) badge.remove();
@@ -1924,7 +1813,7 @@ class ListeningCore {
         const transcriptContent = document.getElementById('transcriptContent');
         if (mainArea && transcriptContent) {
             mainArea.classList.remove('show-transcript');
-            transcriptContent.innerHTML = '';
+            // transcription logic might vary, but clearing is safe
         }
 
         // Hide eye icons
@@ -1952,22 +1841,29 @@ class ListeningCore {
             explanationPanel.classList.remove('show');
         }
 
-        // Gửi BroadcastChannel
+        // Gửi BroadcastChannel update (để Dashboard nhận diện reset)
         try {
-            const channel = new BroadcastChannel('pet_reset_channel');
-            channel.postMessage({ action: 'reset', type: 'listening', book, test, part });
+            const channel = new BroadcastChannel('pet_update_channel');
+            channel.postMessage({
+                action: 'status_updated',
+                type: 'listening',
+                book: book,
+                test: test,
+                part: part,
+                status: 'reset'
+            });
             channel.close();
-        } catch(e) {
+        } catch (e) {
             console.warn('BroadcastChannel error:', e);
         }
 
-        // ✅ FIX: DELAY LÂU HƠN - 500ms thay vì 0ms
+        // ✅ FIX: DELAY 500ms
         setTimeout(() => {
             this._isResetting = false;
-            // ✅ FIX: Xóa lần nữa để chắc chắn (defensive)
+            // Defensive cleanup
             localStorage.removeItem(draftKey);
-            console.log('[Reset] Complete - _isResetting=false, draft key cleaned');
-        }, 500);  // ✅ 500ms để đảm bảo event queue process hết
+            console.log('[Reset] Complete - _isResetting=false');
+        }, 500);
 
         this.updateAnswerCount();
     }
@@ -2057,9 +1953,9 @@ class ListeningCore {
 }
 
 /**
- * Highlight Manager - Handles transcript highlighting
+ * ListeningHighlightManager - Handles transcript highlighting
  */
-class HighlightManager {
+class ListeningHighlightManager {
     constructor() {
         this.selectedRange = null;  // ✅ Lưu range khi contextmenu
         this.setupContextMenu();
@@ -2146,6 +2042,16 @@ class HighlightManager {
         document.querySelectorAll('.keyword-highlight').forEach(el => {
             el.classList.remove('keyword-highlight');
         });
+
+        document.querySelectorAll('[class^="highlight-"]').forEach(el => {
+            const parent = el.parentNode;
+            while (el.firstChild) {
+                parent.insertBefore(el.firstChild, el);
+            }
+            parent.removeChild(el);
+        });
+
+        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 
     /**
@@ -2182,9 +2088,7 @@ class HighlightManager {
         this.hideContextMenu();
         this.selectedRange = null;
 
-        // Gọi lưu draft
-        if (window.readingCore) window.readingCore.saveHighlightDraft();
-        else if (window.listeningCore) window.listeningCore.saveHighlightDraft();
+        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
     
     // 🎯 SIMPLE: 1 text node
@@ -2386,9 +2290,7 @@ class HighlightManager {
         this.hideContextMenu();
         this.selectedRange = null;
 
-        // Gọi lưu draft
-        if (window.readingCore) window.readingCore.saveHighlightDraft();
-        else if (window.listeningCore) window.listeningCore.saveHighlightDraft();
+        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 
     /**
@@ -2403,9 +2305,9 @@ class HighlightManager {
 }
 
 /**
- * Storage Manager - Handles saving results to localStorage
+ * ListeningStorageManager - Handles saving results to localStorage
  */
-class StorageManager {
+class ListeningStorageManager {
     /**
      * Save test results to localStorage
      */
@@ -2490,9 +2392,9 @@ class StorageManager {
 }
 
 /**
- * UI Manager - Handles UI interactions and controls
+ * ListeningUIManager - Handles UI interactions and controls
  */
-class UIManager {
+class ListeningUIManager {
     /**
      * Setup font size controls
      */
@@ -2530,7 +2432,8 @@ class UIManager {
 
         // Update content font sizes
         document.querySelectorAll('.transcript-content, .questions-list').forEach(el => {
-            el.className = `transcript-content font-${size}`;
+            el.classList.remove('font-small', 'font-medium', 'font-large');
+            el.classList.add(`font-${size}`);
             if (el.classList.contains('questions-list')) {
                 el.classList.add('centered');
             }
@@ -2770,143 +2673,35 @@ class UIManager {
     /**
      * Setup auto-collapse for header and footer after 5s of mouse leave
      */
-    setupAutoCollapse(coreInstance) {
-        const header = document.querySelector('.ielts-header');
-        const footer = document.querySelector('.bottom-bar');
-        const questionNav = document.querySelector('.question-nav');
-        
-        if (!header && !footer) return;
-
-        // Add toggle button to header
-        this.addAutoCollapseToggle(header, coreInstance);
-
-        let headerTimer = null;
-        let footerTimer = null;
-        const COLLAPSE_DELAY = 5000; // 5 seconds
-
-        const isAutoCollapseEnabled = () => {
-            return localStorage.getItem('pet-autocollapse-enabled') !== 'false';
-        };
-
-        const collapseHeader = () => {
-            if (coreInstance.examSubmitted) return;
-            if (!isAutoCollapseEnabled()) return;
-            header?.classList.add('collapsed');
-        };
-
-        const expandHeader = () => {
-            header?.classList.remove('collapsed');
-        };
-
-        const collapseFooter = () => {
-            if (coreInstance.examSubmitted) return;
-            if (!isAutoCollapseEnabled()) return;
-            footer?.classList.add('collapsed');
-        };
-
-        const expandFooter = () => {
-            footer?.classList.remove('collapsed');
-        };
-
-        // Header hover handling
-        if (header) {
-            header.addEventListener('mouseenter', () => {
-                clearTimeout(headerTimer);
-                expandHeader();
-            });
-            header.addEventListener('mouseleave', () => {
-                if (isAutoCollapseEnabled()) {
-                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
-                }
-            });
-        }
-
-        // Question nav hover handling - hover to expand header, but don't collapse question nav itself
-        if (questionNav) {
-            questionNav.addEventListener('mouseenter', () => {
-                clearTimeout(headerTimer);
-                expandHeader();
-            });
-            questionNav.addEventListener('mouseleave', () => {
-                if (!header?.matches(':hover') && isAutoCollapseEnabled()) {
-                    headerTimer = setTimeout(collapseHeader, COLLAPSE_DELAY);
-                }
-            });
-        }
-
-        // Footer hover handling
-        if (footer) {
-            footer.addEventListener('mouseenter', () => {
-                clearTimeout(footerTimer);
-                expandFooter();
-            });
-            footer.addEventListener('mouseleave', () => {
-                if (isAutoCollapseEnabled()) {
-                    footerTimer = setTimeout(collapseFooter, COLLAPSE_DELAY);
-                }
-            });
-        }
-
-        // Start collapsed after initial delay only if enabled
-        setTimeout(() => {
-            if (!coreInstance.examSubmitted && isAutoCollapseEnabled()) {
-                collapseHeader();
-                collapseFooter();
-            }
-        }, COLLAPSE_DELAY);
-    }
-
     /**
-     * Add auto-collapse toggle button to header
+     * Setup auto-collapse for header/footer
      */
-    addAutoCollapseToggle(header, coreInstance) {
-        if (!header) return;
+    setupAutoCollapse(core) {
+        let lastScrollY = window.scrollY;
         
-        // Check if toggle already exists
-        if (header.querySelector('.autocollapse-toggle')) return;
-
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'autocollapse-toggle';
-        toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
-        
-        // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
-        const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
-        </svg>`;
-        const iconExpand = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-        </svg>`;
-        
-        const isEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
-        toggleBtn.innerHTML = isEnabled ? iconShrink : iconExpand;
-        toggleBtn.classList.toggle('active', isEnabled);
-
-        toggleBtn.addEventListener('click', () => {
-            const currentlyEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
-            const newEnabled = !currentlyEnabled;
-            localStorage.setItem('pet-autocollapse-enabled', newEnabled.toString());
+        window.addEventListener('scroll', () => {
+            // No auto-collapse if exam submitted or explanation mode
+            if (core.examSubmitted || core.explanationMode) return;
             
-            toggleBtn.classList.toggle('active', newEnabled);
-            toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
+            const currentScrollY = window.scrollY;
+            const header = document.querySelector('.ielts-header');
+            const bottomBar = document.querySelector('.bottom-bar');
+            const nav = document.querySelector('.question-nav');
             
-            if (!newEnabled) {
-                // Expand header and footer when disabled (keep question-nav visible)
+            if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                // Scrolling down - collapse
+                header?.classList.add('collapsed');
+                bottomBar?.classList.add('collapsed');
+                nav?.classList.add('collapsed');
+            } else if (currentScrollY < lastScrollY) {
+                // Scrolling up - expand
                 header?.classList.remove('collapsed');
-                document.querySelector('.bottom-bar')?.classList.remove('collapsed');
+                bottomBar?.classList.remove('collapsed');
+                nav?.classList.remove('collapsed');
             }
-        });
-
-        // Find a good place to insert the button - right after mode toggle (modern/classic)
-        const modeToggle = header.querySelector('#modeToggleContainer');
-        const themeToggle = header.querySelector('.theme-toggle-btn');
-        
-        if (modeToggle) {
-            modeToggle.insertAdjacentElement('afterend', toggleBtn);
-        } else if (themeToggle) {
-            themeToggle.insertAdjacentElement('afterend', toggleBtn);
-        } else {
-            header.appendChild(toggleBtn);
-        }
+            
+            lastScrollY = currentScrollY;
+        }, { passive: true });
     }
 }
 
@@ -2925,3 +2720,9 @@ window.removeHighlight = function() {
 
 // Export for use in HTML files
 window.ListeningCore = ListeningCore;
+window.ListeningHighlightManager = ListeningHighlightManager;
+window.ListeningStorageManager = ListeningStorageManager;
+window.ListeningUIManager = ListeningUIManager;
+window.ListeningDashboardManager = ListeningDashboardManager;
+window.PETListeningNoteManager = PETListeningNoteManager;
+window.PETListeningHelpManager = PETListeningHelpManager;
