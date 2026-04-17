@@ -272,6 +272,9 @@ class ReadingCore {
             this.loadDraft();
         }
         
+        // Khôi phục highlight đã lưu (nếu có)
+        this.loadHighlightDraft();
+        
         // === MỚI: Note Manager ===
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
@@ -311,6 +314,37 @@ class ReadingCore {
         if (isDraft) key += '_draft';
         console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
         return key;
+    }
+
+    getHighlightStorageKey() {
+        return this.getStorageKey(false) + '_highlights';
+    }
+
+    saveHighlightDraft() {
+        const container = document.querySelector('.transcript-content') || 
+                          document.querySelector('.reading-card') ||
+                          document.querySelector('.single-col .reading-card');
+        if (!container) return;
+        
+        const html = container.innerHTML;
+        if (html.includes('highlight-yellow') || html.includes('highlight-green') || html.includes('highlight-pink') || html.includes('highlight')) {
+            this._safeSetStorage(this.getHighlightStorageKey(), html);
+        } else {
+            localStorage.removeItem(this.getHighlightStorageKey());
+        }
+    }
+
+    loadHighlightDraft() {
+        const savedHtml = localStorage.getItem(this.getHighlightStorageKey());
+        if (!savedHtml) return;
+        
+        const container = document.querySelector('.transcript-content') || 
+                          document.querySelector('.reading-card') ||
+                          document.querySelector('.single-col .reading-card');
+        if (container) {
+            container.innerHTML = savedHtml;
+            console.log('[Highlight] Restored from draft');
+        }
     }
 
     /**
@@ -427,15 +461,14 @@ class ReadingCore {
      * Xóa các draft cũ hơn 30 ngày hoặc chỉ giữ lại 10 draft gần nhất
      */
     _cleanOldDrafts() {
-        const prefix = 'pet_reading_draft_';
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith(prefix)) keys.push(key);
+            if (key && (key.startsWith('pet_reading_draft_') || (key.startsWith('pet_reading_book') && key.endsWith('_highlights')))) keys.push(key);
         }
-        if (keys.length > 10) {
+        if (keys.length > 20) {
             keys.sort(); // Xóa các key cũ nhất (theo thứ tự từ điển)
-            for (let i = 0; i < keys.length - 10; i++) {
+            for (let i = 0; i < keys.length - 20; i++) {
                 localStorage.removeItem(keys[i]);
             }
         }
@@ -1874,6 +1907,7 @@ class ReadingCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(this.getHighlightStorageKey());
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel
@@ -2181,6 +2215,10 @@ class ReadingHighlightManager {
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
+
+        // Gọi lưu draft
+        if (window.readingCore) window.readingCore.saveHighlightDraft();
+        else if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
     
     // 🎯 SIMPLE: 1 text node, dùng surroundContents
@@ -2387,6 +2425,10 @@ class ReadingHighlightManager {
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
+
+        // Gọi lưu draft
+        if (window.readingCore) window.readingCore.saveHighlightDraft();
+        else if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 }
 
