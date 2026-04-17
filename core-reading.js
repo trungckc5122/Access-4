@@ -583,39 +583,107 @@ class ReadingCore {
     loadHighlightDraft() {
         const key = this.getHighlightStorageKey();
         const savedData = localStorage.getItem(key);
-        
+
         if (!savedData) {
             console.log('[Highlight] No saved data found for key:', key);
             return;
         }
-        
-        try {
-            // ✅ SỬA ĐỔI: Giải mã JSON
-            const parsed = JSON.parse(savedData);
-            const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
-            
-            if (!savedHtml) return;
 
-            const container = document.getElementById('readingContent') || 
-                              document.getElementById('transcriptContent') ||
-                              document.querySelector('.reading-content') ||
-                              document.querySelector('.transcript-content') || 
-                              document.querySelector('.reading-card') ||
-                              document.querySelector('.single-col .reading-card');
-            
-            if (container) {
-                container.innerHTML = savedHtml;
-                console.log('[Highlight] RESTORED from key:', key);
+        try {
+            const parsed = JSON.parse(savedData);
+
+            // Hàm helper lưu giá trị input trước khi thay đổi DOM
+            const captureInputValues = (container) => {
+                const inputs = container.querySelectorAll('input, select, textarea');
+                const values = [];
+                inputs.forEach((input, index) => {
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        values.push({ index, checked: input.checked, name: input.name, value: input.value });
+                    } else {
+                        values.push({ index, value: input.value, id: input.id });
+                    }
+                });
+                return values;
+            };
+
+            // Hàm helper khôi phục giá trị input sau khi DOM đã thay đổi
+            const restoreInputValues = (container, savedValues) => {
+                const inputs = container.querySelectorAll('input, select, textarea');
+                savedValues.forEach(item => {
+                    const input = inputs[item.index];
+                    if (!input) return;
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        input.checked = item.checked;
+                    } else {
+                        input.value = item.value;
+                    }
+                });
+            };
+
+            // Xử lý nhiều container
+            if (parsed.containers && Array.isArray(parsed.containers)) {
+                console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
+                parsed.containers.forEach(item => {
+                    const container = document.querySelector(item.selector);
+                    if (container) {
+                        // 1. Lưu giá trị input hiện tại
+                        const inputValues = captureInputValues(container);
+
+                        // 2. Ghi đè HTML để khôi phục highlight
+                        container.innerHTML = item.html;
+
+                        // 3. Khôi phục lại giá trị input
+                        restoreInputValues(container, inputValues);
+
+                        console.log('[Highlight] Restored container:', item.selector);
+                    }
+                });
             } else {
-                console.warn('[Highlight] Restore failed: container not found');
+                // Fallback cho định dạng cũ (chỉ 1 container)
+                const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
+                if (!savedHtml) return;
+
+                const container = document.getElementById('readingContent') ||
+                                  document.getElementById('transcriptContent') ||
+                                  document.querySelector('.reading-content') ||
+                                  document.querySelector('.transcript-content') ||
+                                  document.querySelector('.reading-card') ||
+                                  document.querySelector('.single-col .reading-card');
+
+                if (container) {
+                    const inputValues = captureInputValues(container);
+                    container.innerHTML = savedHtml;
+                    restoreInputValues(container, inputValues);
+                    console.log('[Highlight] Restored using legacy logic');
+                }
             }
         } catch (e) {
-            console.error('[Highlight] Load error (invalid JSON?):', e);
-            // Fallback for old raw HTML data
-            const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
-            if (container && savedData.includes('<span')) {
-                container.innerHTML = savedData;
-                console.log('[Highlight] Restored using fallback (legacy data)');
+            console.error('[Highlight] Load error:', e);
+            // Fallback cực hạn cho dữ liệu text thô
+            if (typeof savedData === 'string' && savedData.includes('<span')) {
+                const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
+                if (container) {
+                    const inputs = container.querySelectorAll('input, select, textarea');
+                    const values = [];
+                    inputs.forEach((input, index) => {
+                        if (input.type === 'radio' || input.type === 'checkbox') {
+                            values.push({ index, checked: input.checked });
+                        } else {
+                            values.push({ index, value: input.value });
+                        }
+                    });
+                    container.innerHTML = savedData;
+                    const newInputs = container.querySelectorAll('input, select, textarea');
+                    values.forEach(item => {
+                        const input = newInputs[item.index];
+                        if (!input) return;
+                        if (input.type === 'radio' || input.type === 'checkbox') {
+                            input.checked = item.checked;
+                        } else {
+                            input.value = item.value;
+                        }
+                    });
+                }
             }
         }
     }
@@ -623,6 +691,7 @@ class ReadingCore {
     /**
      * Lấy thông tin metadata của test hiện tại
      */
+// ...
     getTestMeta() {
         const d = this.currentTestData;
         if (!d) return { book: 1, test: 1, part: 1 };

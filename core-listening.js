@@ -624,36 +624,74 @@ class ListeningCore {
     loadHighlightDraft() {
         const key = this.getHighlightStorageKey();
         const savedData = localStorage.getItem(key);
-        
+
         if (!savedData) {
             console.log('[Highlight] No saved data found for key:', key);
             return;
         }
-        
+
         try {
             const parsed = JSON.parse(savedData);
-            
-            // Xử lý cả định dạng cũ (1 container) và định dạng mới (nhiều container)
+
+            // Hàm helper lưu giá trị input trước khi thay đổi DOM
+            const captureInputValues = (container) => {
+                const inputs = container.querySelectorAll('input, select, textarea');
+                const values = [];
+                inputs.forEach((input, index) => {
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        values.push({ index, checked: input.checked, name: input.name, value: input.value });
+                    } else {
+                        values.push({ index, value: input.value, id: input.id });
+                    }
+                });
+                return values;
+            };
+
+            // Hàm helper khôi phục giá trị input sau khi DOM đã thay đổi
+            const restoreInputValues = (container, savedValues) => {
+                const inputs = container.querySelectorAll('input, select, textarea');
+                savedValues.forEach(item => {
+                    const input = inputs[item.index];
+                    if (!input) return;
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        input.checked = item.checked;
+                    } else {
+                        input.value = item.value;
+                    }
+                });
+            };
+
+            // Xử lý nhiều container
             if (parsed.containers && Array.isArray(parsed.containers)) {
                 console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
                 parsed.containers.forEach(item => {
                     const container = document.querySelector(item.selector);
                     if (container) {
+                        // 1. Lưu giá trị input hiện tại
+                        const inputValues = captureInputValues(container);
+
+                        // 2. Ghi đè HTML để khôi phục highlight
                         container.innerHTML = item.html;
+
+                        // 3. Khôi phục lại giá trị input
+                        restoreInputValues(container, inputValues);
+
                         console.log('[Highlight] Restored container:', item.selector);
                     }
                 });
             } else {
-                // Fallback cho định dạng bản nháp cũ
+                // Fallback cho định dạng cũ (chỉ 1 container)
                 const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
                 if (!savedHtml) return;
-                
-                const container = document.getElementById('readingContent') || 
+
+                const container = document.getElementById('readingContent') ||
                                   document.getElementById('transcriptContent') ||
                                   document.querySelector('.reading-content') ||
                                   document.querySelector('.transcript-content');
                 if (container) {
+                    const inputValues = captureInputValues(container);
                     container.innerHTML = savedHtml;
+                    restoreInputValues(container, inputValues);
                     console.log('[Highlight] Restored using legacy logic');
                 }
             }
@@ -662,7 +700,28 @@ class ListeningCore {
             // Fallback cực hạn cho dữ liệu text thô
             if (typeof savedData === 'string' && savedData.includes('<span')) {
                 const container = document.getElementById('transcriptContent') || document.querySelector('.transcript-content');
-                if (container) container.innerHTML = savedData;
+                if (container) {
+                    const inputs = container.querySelectorAll('input, select, textarea');
+                    const values = [];
+                    inputs.forEach((input, index) => {
+                        if (input.type === 'radio' || input.type === 'checkbox') {
+                            values.push({ index, checked: input.checked });
+                        } else {
+                            values.push({ index, value: input.value });
+                        }
+                    });
+                    container.innerHTML = savedData;
+                    const newInputs = container.querySelectorAll('input, select, textarea');
+                    values.forEach(item => {
+                        const input = newInputs[item.index];
+                        if (!input) return;
+                        if (input.type === 'radio' || input.type === 'checkbox') {
+                            input.checked = item.checked;
+                        } else {
+                            input.value = item.value;
+                        }
+                    });
+                }
             }
         }
     }
