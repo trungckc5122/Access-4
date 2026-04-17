@@ -8,6 +8,7 @@
  * - Reset now also clears saved results and draft
  * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
  * - ✅ NEW: Added Floating Sticky Note feature
+ * - ✅ NEW: Reset modal with 3 options (All, Content only, Cancel)
  */
 
 /**
@@ -549,6 +550,9 @@ class ListeningCore {
         // === MỚI: Mini Dashboard ===
         this.miniDashboard = new MiniDashboardManager(this, 'listening');
         this.miniDashboard.init();
+
+        // === MỚI: Reset Modal ===
+        this.createResetModal();
         
         // Update initial state
         this.updateAnswerCount();
@@ -1695,19 +1699,73 @@ class ListeningCore {
      */
     handleReset() {
         console.log('[handleReset] called');
-        this.resetAll();
+        this.showResetModal();
+    }
+
+    /**
+     * Create reset modal with 3 options
+     */
+    createResetModal() {
+        if (document.getElementById('resetModalOverlay')) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'resetModalOverlay';
+        overlay.className = 'reset-modal-overlay';
+        overlay.innerHTML = `
+            <div class="reset-modal">
+                <h3>Xác nhận Reset</h3>
+                <p>Bạn muốn reset những gì?</p>
+                <div class="reset-modal-btns">
+                    <button class="reset-modal-btn all" id="resetAllBtn">
+                        <span>🗑️</span> Xóa hết (đáp án & highlight)
+                    </button>
+                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn">
+                        <span>📝</span> Xóa nội dung (chỉ đáp án)
+                    </button>
+                    <button class="reset-modal-btn cancel" id="cancelResetBtn">
+                        <span>✕</span> Hủy
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('resetAllBtn').addEventListener('click', () => {
+            this.hideResetModal();
+            this.resetAll(true);
+        });
+
+        document.getElementById('resetAnswersOnlyBtn').addEventListener('click', () => {
+            this.hideResetModal();
+            this.resetAll(false);
+        });
+
+        document.getElementById('cancelResetBtn').addEventListener('click', () => {
+            this.hideResetModal();
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.hideResetModal();
+        });
+    }
+
+    showResetModal() {
+        const overlay = document.getElementById('resetModalOverlay');
+        if (overlay) overlay.classList.add('show');
+    }
+
+    hideResetModal() {
+        const overlay = document.getElementById('resetModalOverlay');
+        if (overlay) overlay.classList.remove('show');
     }
 
     /**
      * ✅ FIX v2.1: Reset all answers and state
-     * CHANGES:
-     * 1. Removed function override method - using flag instead
-     * 2. Changed setTimeout delay from 0 to 500ms
-     * 3. Added defensive: removeItem again after delay
-     * 4. All event listeners check _isResetting early return
+     * @param {boolean} clearHighlights - whether to clear highlights as well
      */
-    resetAll() {
-        console.log('[resetAll] started');
+    resetAll(clearHighlights = true) {
+        console.log('[resetAll] started, clearHighlights:', clearHighlights);
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
         const completedKey = this.getStorageKey(false);
@@ -1716,8 +1774,15 @@ class ListeningCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
-        localStorage.removeItem(this.getHighlightStorageKey()); 
+        
+        // Chỉ xóa highlight nếu được yêu cầu
+        if (clearHighlights) {
+            localStorage.removeItem(this.getHighlightStorageKey());
+            console.log('[Reset] Highlights cleared');
+        } else {
+            console.log('[Reset] Keeping highlights');
+        }
+        
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel
@@ -1788,7 +1853,10 @@ class ListeningCore {
             icon.style.display = 'none';
         });
 
-        this.highlightManager.clearAllHighlights();
+        // Chỉ xóa highlight trực quan nếu được yêu cầu
+        if (clearHighlights) {
+            this.highlightManager.clearAllHighlights();
+        }
 
         // Reset buttons
         const submitBtn = document.getElementById('submitBtn');
@@ -1995,6 +2063,7 @@ class HighlightManager {
      * Clear all highlights
      */
     clearAllHighlights() {
+        // Xóa transcript highlights (dùng khi show giải thích)
         document.querySelectorAll('.transcript-highlight').forEach(el => {
             el.classList.remove('transcript-highlight');
         });
@@ -2002,6 +2071,21 @@ class HighlightManager {
         document.querySelectorAll('.keyword-highlight').forEach(el => {
             el.classList.remove('keyword-highlight');
         });
+
+        // Xóa MANUAL highlights (yellow, green, pink) - unwrap để giữ text
+        const manualHighlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+        manualHighlights.forEach(span => {
+            const parent = span.parentNode;
+            if (parent) {
+                // Di chuyển tất cả con của span ra ngoài trước khi xóa span
+                while (span.firstChild) {
+                    parent.insertBefore(span.firstChild, span);
+                }
+                parent.removeChild(span);
+            }
+        });
+        
+        console.log('[Listening] Cleared all highlights (including manual)');
     }
 
     /**

@@ -11,6 +11,7 @@
  * - FIXED: force reflow in mode toggle
  * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
  * - ✅ NEW: Added Floating Sticky Note feature
+ * - ✅ NEW: Reset modal with 3 options (All, Content only, Cancel)
  */
 
 /**
@@ -508,6 +509,9 @@ class ReadingCore {
         // === MỚI: Mini Dashboard ===
         this.miniDashboard = new MiniDashboardManager(this, 'reading');
         this.miniDashboard.init();
+
+        // === MỚI: Reset Modal ===
+        this.createResetModal();
         
         // Update initial state
         this.updateAnswerCount();
@@ -2164,38 +2168,99 @@ class ReadingCore {
      */
     handleReset() {
         console.log('[Reading handleReset] called');
-        this.resetAll();
+        this.showResetModal();
+    }
+
+    /**
+     * Create reset modal with 3 options
+     */
+    createResetModal() {
+        if (document.getElementById('resetModalOverlay')) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'resetModalOverlay';
+        overlay.className = 'reset-modal-overlay';
+        overlay.innerHTML = `
+            <div class="reset-modal">
+                <h3>Xác nhận Reset</h3>
+                <p>Bạn muốn reset những gì?</p>
+                <div class="reset-modal-btns">
+                    <button class="reset-modal-btn all" id="resetAllBtn">
+                        Xóa hết (đáp án & highlight)
+                    </button>
+                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn">
+                        Xóa nội dung (chỉ đáp án)
+                    </button>
+                    <button class="reset-modal-btn cancel" id="cancelResetBtn">
+                        <span>✕</span> Hủy
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('resetAllBtn').addEventListener('click', () => {
+            this.hideResetModal();
+            this.resetAll(true);
+        });
+
+        document.getElementById('resetAnswersOnlyBtn').addEventListener('click', () => {
+            this.hideResetModal();
+            this.resetAll(false);
+        });
+
+        document.getElementById('cancelResetBtn').addEventListener('click', () => {
+            this.hideResetModal();
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.hideResetModal();
+        });
+    }
+
+    showResetModal() {
+        const overlay = document.getElementById('resetModalOverlay');
+        if (overlay) overlay.classList.add('show');
+    }
+
+    hideResetModal() {
+        const overlay = document.getElementById('resetModalOverlay');
+        if (overlay) overlay.classList.remove('show');
     }
 
     /**
      * ✅ FIX v2.1: Reset all answers and state
-     * CHANGES:
-     * 1. Removed function override method - using flag instead
-     * 2. Changed setTimeout delay from 0 to 500ms
-     * 3. Added defensive: removeItem again after delay
-     * 4. All event listeners check _isResetting early return
+     * @param {boolean} clearHighlights - whether to clear highlights as well
      */
-    resetAll() {
-        console.log('[Reading resetAll] started');
+    resetAll(clearHighlights = true) {
+        console.log('[Reading resetAll] started, clearHighlights:', clearHighlights);
         if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
         const completedKey = this.getStorageKey(false);
         const draftKey = this.getStorageKey(true);
 
-        // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
+        // Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
-        localStorage.removeItem(this.getHighlightStorageKey()); 
+        
+        // Chỉ xóa highlight nếu được yêu cầu
+        if (clearHighlights) {
+            localStorage.removeItem(this.getHighlightStorageKey());
+            console.log('[Reset] Highlights cleared');
+        } else {
+            console.log('[Reset] Keeping highlights');
+        }
+        
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
-        // ✅ FIX: Get book/test/part for BroadcastChannel
+        // Get book/test/part for BroadcastChannel
         const testInfo = this.storageManager.parseTestInfo(document.querySelector('.candidate')?.textContent || '');
         const book = this.currentTestData.book || testInfo.book || 1;
         const test = this.currentTestData.test || testInfo.test || 1;
         const part = this.currentTestData.part || testInfo.part || 1;
 
-        // ✅ FIX: SET FLAG TRƯỚC KHI LÀM ĐIỀU GÌ KHÁC
+        // SET FLAG
         this._isResetting = true;
 
         // === Reset UI ===
@@ -2261,7 +2326,10 @@ class ReadingCore {
             icon.style.display = 'none';
         });
 
-        this.highlightManager.clearAllHighlights();
+        // Chỉ xóa highlight trực quan nếu được yêu cầu
+        if (clearHighlights) {
+            this.highlightManager.clearAllHighlights();
+        }
 
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
@@ -2284,20 +2352,19 @@ class ReadingCore {
         window.dispatchEvent(new StorageEvent('storage', { key: completedKey }));
         window.dispatchEvent(new StorageEvent('storage', { key: draftKey }));
 
-        // Gửi broadcast (để index ở bất kỳ tab nào cũng nhận)
+        // Gửi broadcast
         try {
             const channel = new BroadcastChannel('pet_reset_channel');
             channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
         } catch(e) { console.warn('BroadcastChannel error:', e); }
 
-        // ✅ FIX: DELAY LÂU HƠN - 500ms thay vì 0ms
+        // Delay để đảm bảo event queue process hết
         setTimeout(() => {
             this._isResetting = false;
-            // ✅ FIX: Xóa lần nữa để chắc chắn (defensive)
-            localStorage.removeItem(draftKey);
+            localStorage.removeItem(draftKey); // Xóa lần nữa để chắc chắn
             console.log('[Reset] Complete - _isResetting=false, draft key cleaned');
-        }, 500);  // ✅ 500ms để đảm bảo event queue process hết
+        }, 500);
 
         this.updateAnswerCount();
     }
@@ -2447,6 +2514,7 @@ class ReadingHighlightManager {
     }
 
     clearAllHighlights() {
+        // Xóa dynamic highlights (dùng cho giải thích)
         document.querySelectorAll('.dynamic-highlight').forEach(el => {
             const parent = el.parentNode;
             if (parent) {
@@ -2456,9 +2524,25 @@ class ReadingHighlightManager {
                 parent.removeChild(el);
             }
         });
+        
+        // Xóa class highlight-question
         document.querySelectorAll('.question-item.highlight-question').forEach(el => {
             el.classList.remove('highlight-question');
         });
+
+        // Xóa MANUAL highlights (yellow, green, pink) - unwrap để giữ text
+        const manualHighlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+        manualHighlights.forEach(span => {
+            const parent = span.parentNode;
+            if (parent) {
+                while (span.firstChild) {
+                    parent.insertBefore(span.firstChild, span);
+                }
+                parent.removeChild(span);
+            }
+        });
+        
+        console.log('[Reading] Cleared all highlights (including manual)');
     }
 
     /**
