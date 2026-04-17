@@ -195,6 +195,7 @@ class PETNoteManager {
         this.updateBadge();
     }
 
+
     updateBadge() {
         const toggleBtn = document.querySelector('.note-toggle-btn');
         if (!toggleBtn) return;
@@ -387,15 +388,24 @@ class MiniDashboardManager {
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
                 let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
                 
-                const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
+                const isCurrent = Number(meta.part) === Number(d.part) && this.skillType === (isReading ? 'reading' : 'listening');
                 const currentClass = isCurrent ? 'current' : '';
 
-                sectionHtml += `
-                    <a href="${url}" class="part-item ${currentClass}" target="_blank" onclick="return confirm('Mở Part ${d.part} trong tab mới?')">
-                        <span>Part ${d.part}</span>
-                        <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                    </a>
-                `;
+                if (isCurrent) {
+                    sectionHtml += `
+                        <div class="part-item ${currentClass}" title="Bạn đang ở Part này" style="cursor: default;">
+                            <span>Part ${d.part}</span>
+                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                        </div>
+                    `;
+                } else {
+                    sectionHtml += `
+                        <a href="${url}" class="part-item ${currentClass}" target="_blank" onclick="return confirm('Mở Part ${d.part} trong tab mới?')">
+                            <span>Part ${d.part}</span>
+                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                        </a>
+                    `;
+                }
             });
             sectionHtml += '</div></div>';
             return sectionHtml;
@@ -490,6 +500,128 @@ class MiniDashboardManager {
     }
 }
 
+/**
+ * PETHelpManager - Floating guide panel for core interactions
+ */
+class PETHelpManager {
+    constructor(core) {
+        this.core = core;
+        this.panel = null;
+        this.isVisible = false;
+        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
+    }
+
+    init() {
+        if (document.getElementById('pet-help-panel')) return;
+        this.createPanel();
+        console.log('[Help] Initialized');
+    }
+
+    createPanel() {
+        this.panel = document.createElement('div');
+        this.panel.id = 'pet-help-panel';
+        this.panel.className = 'pet-note-panel'; // Reuse sticky note style
+        this.panel.style.display = 'none';
+        this.panel.style.width = '350px';
+        this.panel.style.height = 'auto';
+        this.panel.style.maxHeight = '80vh';
+
+        this.panel.innerHTML = `
+            <div class="pet-note-header help-header" style="cursor: move; background: var(--header-bg) !important;">
+                <div class="pet-note-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Hướng dẫn sử dụng
+                </div>
+                <div class="pet-note-controls">
+                    <button class="pet-note-btn close-btn" onclick="window.readingCore.helpManager.hide()">✕</button>
+                </div>
+            </div>
+            <div class="pet-note-content help-content" style="padding: 15px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+                <div class="help-section" style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🖊️ Làm bài</h4>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Nhấn chọn đáp án trực tiếp.</li>
+                        <li>Gõ câu trả lời vào các ô trống (Part 6).</li>
+                        <li>Kéo thả các lựa chọn vào vị trí trống (Part 4).</li>
+                    </ul>
+                </div>
+                <div class="help-section" style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🖍️ Highlight (Bôi màu)</h4>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Bôi đen văn bản và <b>Chuột phải</b> để chọn màu.</li>
+                        <li>Dùng nút gạt <b>Highlight</b> ở thanh điều hướng để ẩn/hiện đánh dấu.</li>
+                    </ul>
+                </div>
+                <div class="help-section" style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🛠️ Công cụ hỗ trợ</h4>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li><b>Note</b>: Ghi chú nhanh các ý chính cho bài làm.</li>
+                        <li><b>Tiến độ</b>: Xem trạng thái hoàn thành toàn bộ đề thi.</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">✅ Kết quả</h4>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        <li>Nhấn <b>Submit</b> để nộp bài và xem đáp án giải thích.</li>
+                        <li>Nhấn biểu tượng <b>👁️</b> bên cạnh câu hỏi để xem giải thích chi tiết.</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(this.panel);
+        this.setupEvents();
+    }
+
+    setupEvents() {
+        const header = this.panel.querySelector('.pet-note-header');
+        
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const dx = e.clientX - this.dragData.startX;
+            const dy = e.clientY - this.dragData.startY;
+            this.panel.style.left = `${this.dragData.initialX + dx}px`;
+            this.panel.style.top = `${this.dragData.initialY + dy}px`;
+            this.panel.style.right = 'auto';
+            this.panel.style.bottom = 'auto';
+        };
+
+        const stopDrag = () => {
+            this.dragData.isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = this.panel.getBoundingClientRect();
+            this.dragData.initialX = rect.left;
+            this.dragData.initialY = rect.top;
+            this.panel.style.transition = 'none';
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        });
+    }
+
+    toggle() {
+        if (this.isVisible) this.hide();
+        else this.show();
+    }
+
+    show() {
+        if (!this.panel) this.createPanel();
+        this.panel.style.display = 'flex';
+        this.isVisible = true;
+    }
+
+    hide() {
+        if (this.panel) this.panel.style.display = 'none';
+        this.isVisible = false;
+    }
+}
+
 
 class ReadingCore {
     constructor() {
@@ -563,6 +695,9 @@ class ReadingCore {
         // === MỚI: Mini Dashboard ===
         this.miniDashboard = new MiniDashboardManager(this, 'reading');
         this.miniDashboard.init();
+        
+        this.helpManager = new PETHelpManager(this);
+        this.helpManager.init();
         
         // Update initial state
         this.updateAnswerCount();
@@ -1608,6 +1743,20 @@ class ReadingCore {
             });
         }
         nav.appendChild(nextPartBtn);
+        
+        // Nút Hướng dẫn (?) - Nằm giữa Next Part và Highlight
+        const helpBtn = document.createElement('button');
+        helpBtn.className = 'nav-arrow-btn nav-help-btn';
+        helpBtn.title = 'Hướng dẫn';
+        helpBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        `;
+        helpBtn.style.padding = '8px';
+        helpBtn.style.minWidth = '40px';
+        helpBtn.style.borderRadius = '50%';
+        helpBtn.style.marginLeft = '12px';
+        helpBtn.addEventListener('click', () => this.helpManager.toggle());
+        nav.appendChild(helpBtn);
         
         // Inject highlight toggle into question-nav
         this.injectHighlightToggle();
