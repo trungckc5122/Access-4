@@ -1037,7 +1037,10 @@ class ListeningCore {
         this.uiManager.injectHeaderControls(this);
         this.uiManager.injectModeToggle();
         this.injectNoteButton();
-        this.injectHelpButton();
+        
+        // Rename reset button to just "Reset"
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) resetBtn.textContent = 'Reset';
 
         // 2. Setup behaviors
         this.uiManager.setupFontControls();
@@ -1074,32 +1077,7 @@ class ListeningCore {
         }
     }
 
-    /**
-     * Inject Help button into the bottom bar next to Note button
-     */
-    injectHelpButton() {
-        const bottomBar = document.querySelector('.bottom-bar');
-        if (!bottomBar || bottomBar.querySelector('.help-toggle-btn-bottom')) return;
 
-        const helpBtn = document.createElement('button');
-        helpBtn.className = 'btn btn-info help-toggle-btn-bottom';
-        helpBtn.id = 'helpBtnBottom';
-        helpBtn.style.marginLeft = '8px';
-        helpBtn.style.backgroundColor = 'var(--info-color, #17a2b8)';
-        helpBtn.style.color = '#fff';
-        helpBtn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Help
-        `;
-        helpBtn.onclick = () => this.helpManager.toggle();
-
-        const noteBtn = bottomBar.querySelector('.note-toggle-btn');
-        if (noteBtn) {
-            noteBtn.parentNode.insertBefore(helpBtn, noteBtn.nextSibling);
-        } else {
-            bottomBar.appendChild(helpBtn);
-        }
-    }
 
     /**
      * Render questions based on test type
@@ -1778,28 +1756,95 @@ class ListeningCore {
     }
 
     /**
-     * ✅ FIX v2.1: Handle reset button click
+     * ✅ FIX v2.5: Handle reset button click with 3-option modal
      */
     handleReset() {
-        console.log('[handleReset] called');
-        this.resetAll();
+        console.log('[handleReset] triggered');
+        this.showResetChoiceModal();
     }
 
     /**
-     * ✅ FIX v2.1: Reset all answers and state
-     * Standardized with Reading Core logic
+     * Show custom reset choice modal
      */
-    resetAll() {
-        console.log('[Listening resetAll] started');
-        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
+    showResetChoiceModal() {
+        // Remove existing modal if any
+        const existing = document.querySelector('.reset-modal-overlay');
+        if (existing) existing.remove();
 
+        const modalHtml = `
+            <div class="reset-modal-overlay">
+                <div class="reset-modal">
+                    <h3>Lựa chọn Reset</h3>
+                    <p>Bạn muốn thực hiện thao tác xóa nào? Lựa chọn "Chỉ xóa đáp án" sẽ giữ lại các phần highlight cá nhân của bạn.</p>
+                    <div class="reset-modal-btns">
+                        <button class="reset-modal-btn all" id="confirmResetAll">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            Xóa tất cả
+                        </button>
+                        <button class="reset-modal-btn content" id="confirmResetAnswers">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Chỉ xóa đáp án
+                        </button>
+                        <button class="reset-modal-btn cancel" id="cancelReset">Hủy</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const overlay = document.querySelector('.reset-modal-overlay');
+        
+        // Use timeout to trigger animation
+        setTimeout(() => overlay.classList.add('show'), 10);
+
+        document.getElementById('confirmResetAll').onclick = () => {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.remove();
+                this.resetAll(true); // Clear everything
+            }, 300);
+        };
+
+        document.getElementById('confirmResetAnswers').onclick = () => {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.remove();
+                this.resetAll(false); // Only clear answers (keep highlights)
+            }, 300);
+        };
+
+        document.getElementById('cancelReset').onclick = () => {
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        // Close on backdrop click
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.remove(), 300);
+            }
+        };
+    }
+
+    /**
+     * ✅ FIX v2.5: Reset answers and state
+     * @param {boolean} clearHighlights - Whether to also clear personal highlights
+     */
+    resetAll(clearHighlights = true) {
+        console.log(`[Listening resetAll] started (clearHighlights: ${clearHighlights})`);
+        
         const completedKey = this.getStorageKey(false);
         const draftKey = this.getStorageKey(true);
 
         // ✅ FIX: Xóa localStorage ngay
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        localStorage.removeItem(this.getHighlightStorageKey());
+        
+        if (clearHighlights) {
+            localStorage.removeItem(this.getHighlightStorageKey());
+        }
+        
         console.log('[Reset] Deleted keys:', completedKey, draftKey);
 
         const meta = this.getTestMeta();
