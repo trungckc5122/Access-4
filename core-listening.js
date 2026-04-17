@@ -1717,13 +1717,13 @@ class ListeningCore {
                 <p>Bạn muốn reset những gì?</p>
                 <div class="reset-modal-btns">
                     <button class="reset-modal-btn all" id="resetAllBtn">
-                        <span>🗑️</span> Xóa hết (đáp án & highlight)
+                         Xóa hết (đáp án & highlight)
                     </button>
                     <button class="reset-modal-btn content" id="resetAnswersOnlyBtn">
-                        <span>📝</span> Xóa nội dung (chỉ đáp án)
+                         Xóa nội dung (chỉ đáp án)
                     </button>
                     <button class="reset-modal-btn cancel" id="cancelResetBtn">
-                        <span>✕</span> Hủy
+                         Hủy
                     </button>
                 </div>
             </div>

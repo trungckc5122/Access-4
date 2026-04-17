@@ -2192,7 +2192,7 @@ class ReadingCore {
                         Xóa nội dung (chỉ đáp án)
                     </button>
                     <button class="reset-modal-btn cancel" id="cancelResetBtn">
-                        <span>✕</span> Hủy
+                         Hủy
                     </button>
                 </div>
             </div>
