@@ -74,7 +74,7 @@ class PETNoteManager {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(this.panel.style, pos);
-            } catch (e) { }
+            } catch(e) {}
         }
     }
 
@@ -111,7 +111,7 @@ class PETNoteManager {
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mousemove', onResize);
                 document.removeEventListener('mouseup', stopActions);
-
+                
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -195,11 +195,10 @@ class PETNoteManager {
         this.updateBadge();
     }
 
-
     updateBadge() {
         const toggleBtn = document.querySelector('.note-toggle-btn');
         if (!toggleBtn) return;
-
+        
         const hasContent = this.textarea.value.trim().length > 0;
         toggleBtn.classList.toggle('has-content', hasContent);
     }
@@ -223,7 +222,6 @@ class MiniDashboardManager {
         this.skillType = skillType;
         this.panel = null;
         this.isVisible = false;
-        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
     }
 
     init() {
@@ -240,28 +238,19 @@ class MiniDashboardManager {
         this.panel.id = 'mini-dashboard-panel';
 
         this.panel.innerHTML = `
-            <div class="mini-dashboard-header" id="mini-dashboard-header" style="cursor: move; user-select: none;">
-                <h3><span id="mini-dashboard-title">Dashboard</span></h3>
+            <div class="mini-dashboard-header">
+                <h3>📊 <span id="mini-dashboard-title">Dashboard</span></h3>
                 <button class="mini-dashboard-close" onclick="window.miniDashboard.hide()">✕</button>
             </div>
             <div class="mini-dashboard-content" id="mini-dashboard-content"></div>
             <div class="mini-dashboard-footer">
-                <a href="dashboard.html" class="dashboard-link" target="_blank" onclick="return confirm('Mở trang Dashboard tổng trong tab mới?')">Đến Dashboard ➝</a>
+                <a href="dashboard.html" class="dashboard-link">Đến Dashboard ➝</a>
             </div>
         `;
 
         document.body.appendChild(this.panel);
         window.miniDashboard = this;
         this.contentArea = document.getElementById('mini-dashboard-content');
-
-        // Restore position 
-        const posStr = localStorage.getItem('mini-dashboard-pos');
-        if (posStr) {
-            try {
-                const pos = JSON.parse(posStr);
-                Object.assign(this.panel.style, pos);
-            } catch (e) { }
-        }
     }
 
     injectToggleButton() {
@@ -275,10 +264,10 @@ class MiniDashboardManager {
             Tiến độ
         `;
         toggleBtn.onclick = () => this.toggle();
-
+        
         const noteBtn = document.querySelector('.note-toggle-btn');
         const submitBtn = document.getElementById('submitBtn');
-
+        
         if (noteBtn) {
             noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
         } else if (submitBtn) {
@@ -301,7 +290,7 @@ class MiniDashboardManager {
         const meta = this.core.getTestMeta();
         const book = meta.book;
         const test = meta.test;
-
+        
         const titleEl = document.getElementById('mini-dashboard-title');
         if (titleEl) titleEl.textContent = `PET ${book} - Test ${test}`;
 
@@ -312,12 +301,12 @@ class MiniDashboardManager {
     }
 
     fetchSkillData(skill, book, test) {
-        const parts = skill === 'reading' ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4];
-
+        const parts = skill === 'reading' ? [1,2,3,4,5,6] : [1,2,3,4];
+        
         return parts.map(part => {
             let keyCompleted = `pet_${skill}_book${book}_test${test}_part${part}`;
             let keyDraft = keyCompleted + '_draft';
-
+            
             let dataCompleted = localStorage.getItem(keyCompleted);
             let dataDraft = localStorage.getItem(keyDraft);
 
@@ -325,15 +314,15 @@ class MiniDashboardManager {
                 try {
                     const parsed = JSON.parse(dataCompleted);
                     return { part, type: 'completed', value: parsed.correctCount || 0, total: parsed.totalQuestions || 0 };
-                } catch (e) { }
-            }
-
+                } catch(e) {}
+            } 
+            
             if (dataDraft) {
                 try {
                     const parsed = JSON.parse(dataDraft);
                     const answered = Object.values(parsed).filter(v => v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object').length;
                     return { part, type: 'draft', value: answered, total: 0 };
-                } catch (e) { }
+                } catch(e) {}
             }
             return { part, type: 'empty', value: 0, total: 0 };
         });
@@ -344,7 +333,7 @@ class MiniDashboardManager {
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
         const totalAnswered = maxQuestions; // Total questions for this skill
         const hasAnyData = data.some(d => d.type !== 'empty');
-
+        
         return {
             correct: totalCorrect,
             total: totalAnswered,
@@ -355,13 +344,13 @@ class MiniDashboardManager {
 
     renderContent(readingData, listeningData) {
         if (!this.contentArea) return;
-
+        
         const meta = this.core.getTestMeta();
-
+        
         // Calculate stats for each skill
         const readingStats = this.calculateSkillStats(readingData, 35); // Reading: 35 questions total
         const listeningStats = this.calculateSkillStats(listeningData, 25); // Listening: 25 questions total
-
+        
         const renderSection = (title, data, stats, isReading) => {
             // Determine score display
             let scoreHtml;
@@ -372,7 +361,7 @@ class MiniDashboardManager {
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
-
+            
             let sectionHtml = `
                 <div class="skill-section">
                     <div class="skill-header">
@@ -381,31 +370,22 @@ class MiniDashboardManager {
                     </div>
                     <div class="part-list">
             `;
-
+            
             data.forEach(d => {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
                 let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
-
-                const isCurrent = Number(meta.part) === Number(d.part) && this.skillType === (isReading ? 'reading' : 'listening');
+                
+                const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
                 const currentClass = isCurrent ? 'current' : '';
 
-                if (isCurrent) {
-                    sectionHtml += `
-                        <div class="part-item ${currentClass}" title="Bạn đang ở Part này" style="cursor: default;">
-                            <span>Part ${d.part}</span>
-                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                        </div>
-                    `;
-                } else {
-                    sectionHtml += `
-                        <a href="${url}" class="part-item ${currentClass}" target="_blank" onclick="return confirm('Mở Part ${d.part} trong tab mới?')">
-                            <span>Part ${d.part}</span>
-                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                        </a>
-                    `;
-                }
+                sectionHtml += `
+                    <a href="${url}" class="part-item ${currentClass}">
+                        <span>Part ${d.part}</span>
+                        <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                    </a>
+                `;
             });
             sectionHtml += '</div></div>';
             return sectionHtml;
@@ -436,44 +416,6 @@ class MiniDashboardManager {
     }
 
     setupEvents() {
-        const header = document.getElementById('mini-dashboard-header');
-
-        const onDrag = (e) => {
-            if (!this.dragData.isDragging) return;
-            const dx = e.clientX - this.dragData.startX;
-            const dy = e.clientY - this.dragData.startY;
-            this.panel.style.left = `${this.dragData.initialX + dx}px`;
-            this.panel.style.top = `${this.dragData.initialY + dy}px`;
-            this.panel.style.right = 'auto';
-            this.panel.style.bottom = 'auto';
-        };
-
-        const stopDrag = () => {
-            if (this.dragData.isDragging) {
-                this.dragData.isDragging = false;
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('mouseup', stopDrag);
-
-                const rect = this.panel.getBoundingClientRect();
-                localStorage.setItem('mini-dashboard-pos', JSON.stringify({
-                    left: `${rect.left}px`,
-                    top: `${rect.top}px`
-                }));
-            }
-        };
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button')) return;
-            this.dragData.isDragging = true;
-            this.dragData.startX = e.clientX;
-            this.dragData.startY = e.clientY;
-            const rect = this.panel.getBoundingClientRect();
-            this.dragData.initialX = rect.left;
-            this.dragData.initialY = rect.top;
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', stopDrag);
-        });
-
         // Broadcast channel listener
         try {
             this.channel = new BroadcastChannel('pet_update_channel');
@@ -486,139 +428,10 @@ class MiniDashboardManager {
 
         // Window storage event
         window.addEventListener('storage', (e) => {
-            if (e.key && (e.key.startsWith('pet_') || e.key === 'mini-dashboard-pos') && this.isVisible) {
-                if (e.key === 'mini-dashboard-pos') {
-                    try {
-                        const pos = JSON.parse(e.newValue);
-                        Object.assign(this.panel.style, pos);
-                    } catch (err) { }
-                } else {
-                    this.refreshData();
-                }
+            if (e.key && e.key.startsWith('pet_') && this.isVisible) {
+                this.refreshData();
             }
         });
-    }
-}
-
-/**
- * PETHelpManager - Floating guide panel for core interactions
- */
-class PETHelpManager {
-    constructor(core) {
-        this.core = core;
-        this.panel = null;
-        this.isVisible = false;
-        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
-    }
-
-    init() {
-        if (document.getElementById('pet-help-panel')) return;
-        this.createPanel();
-        console.log('[Help] Initialized');
-    }
-
-    createPanel() {
-        this.panel = document.createElement('div');
-        this.panel.id = 'pet-help-panel';
-        this.panel.className = 'pet-note-panel'; // Reuse sticky note style
-        this.panel.style.display = 'none';
-        this.panel.style.width = '350px';
-        this.panel.style.height = 'auto';
-        this.panel.style.maxHeight = '80vh';
-
-        this.panel.innerHTML = `
-            <div class="pet-note-header help-header" style="cursor: move; background: var(--header-bg) !important;">
-                <div class="pet-note-title">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    Hướng dẫn sử dụng
-                </div>
-                <div class="pet-note-controls">
-                    <button class="pet-note-btn close-btn" onclick="window.readingCore.helpManager.hide()">✕</button>
-                </div>
-            </div>
-            <div class="pet-note-content help-content" style="padding: 15px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
-                <div class="help-section" style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🖊️ Làm bài</h4>
-                    <ul style="margin: 0; padding-left: 18px;">
-                        <li>Nhấn chọn đáp án trực tiếp.</li>
-                        <li>Gõ câu trả lời vào các ô trống (Part 6).</li>
-                        <li>Kéo thả các lựa chọn vào vị trí trống (Part 4).</li>
-                    </ul>
-                </div>
-                <div class="help-section" style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🖍️ Highlight (Bôi màu)</h4>
-                    <ul style="margin: 0; padding-left: 18px;">
-                        <li>Bôi đen văn bản và <b>Chuột phải</b> để chọn màu.</li>
-                        <li>Dùng nút gạt <b>Highlight</b> ở thanh điều hướng để ẩn/hiện đánh dấu.</li>
-                    </ul>
-                </div>
-                <div class="help-section" style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">🛠️ Công cụ hỗ trợ</h4>
-                    <ul style="margin: 0; padding-left: 18px;">
-                        <li><b>Note</b>: Ghi chú nhanh các ý chính cho bài làm.</li>
-                        <li><b>Tiến độ</b>: Xem trạng thái hoàn thành toàn bộ đề thi.</li>
-                    </ul>
-                </div>
-                <div class="help-section">
-                    <h4 style="margin: 0 0 8px 0; color: var(--primary); border-bottom: 1px solid var(--border-light); padding-bottom: 4px;">✅ Kết quả</h4>
-                    <ul style="margin: 0; padding-left: 18px;">
-                        <li>Nhấn <b>Submit</b> để nộp bài và xem đáp án giải thích.</li>
-                        <li>Nhấn biểu tượng <b>👁️</b> bên cạnh câu hỏi để xem giải thích chi tiết.</li>
-                    </ul>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(this.panel);
-        this.setupEvents();
-    }
-
-    setupEvents() {
-        const header = this.panel.querySelector('.pet-note-header');
-
-        const onDrag = (e) => {
-            if (!this.dragData.isDragging) return;
-            const dx = e.clientX - this.dragData.startX;
-            const dy = e.clientY - this.dragData.startY;
-            this.panel.style.left = `${this.dragData.initialX + dx}px`;
-            this.panel.style.top = `${this.dragData.initialY + dy}px`;
-            this.panel.style.right = 'auto';
-            this.panel.style.bottom = 'auto';
-        };
-
-        const stopDrag = () => {
-            this.dragData.isDragging = false;
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('mouseup', stopDrag);
-        };
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button')) return;
-            this.dragData.isDragging = true;
-            this.dragData.startX = e.clientX;
-            this.dragData.startY = e.clientY;
-            const rect = this.panel.getBoundingClientRect();
-            this.dragData.initialX = rect.left;
-            this.dragData.initialY = rect.top;
-            this.panel.style.transition = 'none';
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', stopDrag);
-        });
-    }
-
-    toggle() {
-        if (this.isVisible) this.hide();
-        else this.show();
-    }
-
-    show() {
-        if (!this.panel) this.createPanel();
-        this.panel.style.display = 'flex';
-        this.isVisible = true;
-    }
-
-    hide() {
-        if (this.panel) this.panel.style.display = 'none';
-        this.isVisible = false;
     }
 }
 
@@ -630,14 +443,14 @@ class ReadingCore {
         this.currentTestData = null;
         this.currentSplit = false; // Used for Part 6 split layout
         this.slotState = {}; // Used for Part 4 & 5
-
+        
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 500;
         this._isResetting = false;
-
+        
         // State cho toggle highlight cá nhân
         this.personalHighlightsVisible = true;
     }
@@ -651,10 +464,10 @@ class ReadingCore {
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
-
+        
         // Setup UI components
         this.setupUI();
-
+        
         // Render questions based on test type (or setup initial split layout)
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
@@ -673,13 +486,13 @@ class ReadingCore {
         if (this.currentTestData.type === 'split-layout') {
             this.attachInputEvents(); // For inline gaps
         }
-
+        
         // Setup event listeners
         this.setupEventListeners();
-
+        
         // === MỚI: Lưu draft khi rời trang ===
         this.setupBeforeUnload();
-
+        
         // Initialize navigation
         this.createNavigation();
 
@@ -687,26 +500,23 @@ class ReadingCore {
         if (!this.isCompleted()) {
             this.loadDraft();
         }
-
+        
         // === MỚI: Note Manager ===
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
-
+        
         // === MỚI: Mini Dashboard ===
         this.miniDashboard = new MiniDashboardManager(this, 'reading');
         this.miniDashboard.init();
-
-        this.helpManager = new PETHelpManager(this);
-        this.helpManager.init();
-
+        
         // Update initial state
         this.updateAnswerCount();
-
+        
         // Hide eye icons initially
         document.querySelectorAll('.eye-icon').forEach(icon => {
             icon.style.display = 'none';
         });
-
+        
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
 
@@ -729,7 +539,7 @@ class ReadingCore {
      */
     getStorageKey(isDraft = false) {
         const { book, test, part } = this.getTestMeta();
-
+        
         let key = `pet_reading_book${book}_test${test}_part${part}`;
         if (isDraft) key += '_draft';
         console.log('[Reading Draft] Generated key:', key, '(isDraft:', isDraft, ')');
@@ -741,29 +551,25 @@ class ReadingCore {
     }
 
     saveHighlightDraft() {
-        const potentialSelectors = [
-            '#readingContent', '#transcriptContent', '#questionsContainer',
-            '.reading-content', '.transcript-content', '.questions-list',
-            '.reading-card', '.single-col', '.split-container'
-        ];
-
-        let foundData = [];
-        potentialSelectors.forEach(selector => {
-            const el = document.querySelector(selector);
-
-            if (el && (el.innerHTML.includes('highlight-yellow') || el.innerHTML.includes('highlight-green') || el.innerHTML.includes('highlight-pink') || el.innerHTML.includes('highlight'))) {
-                foundData.push({
-                    selector: selector,
-                    html: el.innerHTML
-                });
-            }
-        });
-
+        const container = document.getElementById('readingContent') || 
+                          document.getElementById('transcriptContent') ||
+                          document.querySelector('.reading-content') ||
+                          document.querySelector('.transcript-content') || 
+                          document.querySelector('.reading-card') ||
+                          document.querySelector('.single-col .reading-card');
+        
+        if (!container) {
+            console.warn('[Highlight] Save failed: container not found');
+            return;
+        }
+        
+        const html = container.innerHTML;
         const key = this.getHighlightStorageKey();
-        if (foundData.length > 0) {
-            // ✅ THAY ĐỔI: Lưu mảng nhiều container thay vì chỉ 1 container đầu tiên
-            this._safeSetStorage(key, JSON.stringify({ containers: foundData, timestamp: Date.now() }));
-            console.log('[Highlight] Saved', foundData.length, 'containers to', key);
+        
+        if (html.includes('highlight-yellow') || html.includes('highlight-green') || html.includes('highlight-pink') || html.includes('highlight')) {
+            // ✅ SỬA ĐỔI: Sử dụng JSON.stringify để đảm bảo dữ liệu HTML được lưu trữ an toàn
+            this._safeSetStorage(key, JSON.stringify({ html: html, timestamp: Date.now() }));
+            console.log('[Highlight] SAVED to key:', key, 'Length:', html.length);
         } else {
             localStorage.removeItem(key);
             console.log('[Highlight] REMOVED (no highlights found) from key:', key);
@@ -773,45 +579,39 @@ class ReadingCore {
     loadHighlightDraft() {
         const key = this.getHighlightStorageKey();
         const savedData = localStorage.getItem(key);
-
+        
         if (!savedData) {
             console.log('[Highlight] No saved data found for key:', key);
             return;
         }
-
+        
         try {
+            // ✅ SỬA ĐỔI: Giải mã JSON
             const parsed = JSON.parse(savedData);
+            const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
+            
+            if (!savedHtml) return;
 
-            // Xử lý cả định dạng cũ (1 container) và định dạng mới (nhiều container)
-            if (parsed.containers && Array.isArray(parsed.containers)) {
-                console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
-                parsed.containers.forEach(item => {
-                    const container = document.querySelector(item.selector);
-                    if (container) {
-                        container.innerHTML = item.html;
-                        console.log('[Highlight] Restored container:', item.selector);
-                    }
-                });
+            const container = document.getElementById('readingContent') || 
+                              document.getElementById('transcriptContent') ||
+                              document.querySelector('.reading-content') ||
+                              document.querySelector('.transcript-content') || 
+                              document.querySelector('.reading-card') ||
+                              document.querySelector('.single-col .reading-card');
+            
+            if (container) {
+                container.innerHTML = savedHtml;
+                console.log('[Highlight] RESTORED from key:', key);
             } else {
-                // Fallback cho định dạng bản nháp cũ
-                const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
-                if (!savedHtml) return;
-
-                const container = document.getElementById('readingContent') ||
-                    document.querySelector('.reading-content') ||
-                    document.querySelector('.reading-card') ||
-                    document.querySelector('.single-col');
-                if (container) {
-                    container.innerHTML = savedHtml;
-                    console.log('[Highlight] Restored using legacy logic');
-                }
+                console.warn('[Highlight] Restore failed: container not found');
             }
         } catch (e) {
-            console.error('[Highlight] Load error:', e);
-            // Fallback cực hạn cho dữ liệu text thô
-            if (typeof savedData === 'string' && savedData.includes('<span')) {
-                const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
-                if (container) container.innerHTML = savedData;
+            console.error('[Highlight] Load error (invalid JSON?):', e);
+            // Fallback for old raw HTML data
+            const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
+            if (container && savedData.includes('<span')) {
+                container.innerHTML = savedData;
+                console.log('[Highlight] Restored using fallback (legacy data)');
             }
         }
     }
@@ -822,21 +622,21 @@ class ReadingCore {
     getTestMeta() {
         const d = this.currentTestData;
         if (!d) return { book: 1, test: 1, part: 1 };
-
+        
         const meta = d.metadata || this.storageManager.parseTestInfo(
             document.querySelector('.candidate')?.textContent || document.title || ''
         );
-
+        
         // Diagnostic log
         if (!this._metaLogged) {
             console.log('[Metadata] Parsed:', meta, 'from source:', document.title);
             this._metaLogged = true;
         }
-
+        
         const book = meta.book || 1;
         const test = meta.test || 1;
         const part = d.part || meta.part || 1;
-
+        
         return { book, test, part };
     }
 
@@ -872,10 +672,10 @@ class ReadingCore {
     goToPart(direction) {
         const { book, test, part } = this.getTestMeta();
         const targetPart = part + direction;
-
+        
         // Reading PET có 6 part
         if (targetPart < 1 || targetPart > 6) return;
-
+        
         // === THÊM CLEANUP ===
         this.cleanup();
 
@@ -890,7 +690,7 @@ class ReadingCore {
     getDraftData() {
         const questionRange = this.getQuestionRange();
         const draft = { type: this.currentTestData.type };
-
+        
         if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 draft[`q${i}`] = this.getUserAnswer(i);
@@ -965,10 +765,10 @@ class ReadingCore {
             console.log('[Reading Draft] Skip: no test data');
             return;
         }
-
+        
         clearTimeout(this.debounceTimer);
         console.log('[Reading Draft] Scheduled save in', this.DEBOUNCE_MS, 'ms');
-
+        
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
@@ -991,25 +791,25 @@ class ReadingCore {
             console.log('[Reading Draft] Blocked: currently resetting');
             return;
         }
-
+        
         if (this.examSubmitted || !this.currentTestData) {
             console.log('[Reading Draft] Blocked: exam submitted or no test data');
             return;
         }
-
+        
         clearTimeout(this.debounceTimer);
-
+        
         try {
             const draft = this.getDraftData();
-
+            
             // ✅ FIX: Kiểm tra xem draft có câu trả lời thực không
             const hasAnswers = this.draftHasAnswers(draft);
-
+            
             if (!hasAnswers) {
                 console.log('[Reading Draft] No answers to save, skipping immediate save');
                 return;  // ✅ Không lưu nếu trống!
             }
-
+            
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
             console.log('[Reading Draft] Saved immediately to key:', key);
@@ -1040,17 +840,17 @@ class ReadingCore {
     draftHasAnswers(draft) {
         // Loại bỏ 'type' key, chỉ kiểm tra câu trả lời thực
         const { type, slotState, ...answers } = draft;
-
+        
         // Kiểm tra multiple-choice / inline-radio
         const radioAnswers = Object.entries(answers).some(([key, val]) => {
             return val !== null && val !== undefined && val !== '';
         });
-
+        
         // Kiểm tra drag-drop
         if (slotState && Object.keys(slotState).length > 0) {
             return true;
         }
-
+        
         return radioAnswers;
     }
 
@@ -1097,18 +897,18 @@ class ReadingCore {
     loadDraft() {
         const key = this.getStorageKey(true);
         console.log('[Reading Draft] Attempting to load from key:', key);
-
+        
         const draftJson = localStorage.getItem(key);
         if (!draftJson) {
             console.log('[Reading Draft] No draft found for key:', key);
             return false;
         }
-
+        
         try {
             const draft = JSON.parse(draftJson);
             console.log('[Reading Draft] Loaded data:', draft);
             const questionRange = this.getQuestionRange();
-
+            
             if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
@@ -1145,7 +945,7 @@ class ReadingCore {
                     if (inp) inp.value = ans;
                 }
             }
-
+            
             console.log('[Reading Draft] SUCCESSFULLY loaded for', this.currentTestData?.title || 'reading test');
             this.updateAnswerCount();
             return true;
@@ -1176,13 +976,13 @@ class ReadingCore {
         this.uiManager.setupFontControls();
         this.uiManager.setupThemeToggle();
         this.uiManager.setupModeToggle();
-
+        
         // Only set up standard resizers if not using split-layout dynamic generation
         if (this.currentTestData.type !== 'split-layout') {
             this.uiManager.setupResizer();
             this.uiManager.setupExplanationPanel();
         }
-
+        
         // Setup auto-collapse for header/footer
         this.uiManager.setupAutoCollapse(this);
     }
@@ -1202,7 +1002,7 @@ class ReadingCore {
             Note
         `;
         noteBtn.onclick = () => this.noteManager?.toggle();
-
+        
         // Insert before submit button if possible
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
@@ -1226,27 +1026,27 @@ class ReadingCore {
                 const div = document.createElement('div');
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
-
+                
                 const introHtml = (q.intro || q.text)
                     ? `<div class="question-intro">${q.num}. ${q.intro || q.text}</div>`
                     : `<div class="question-num-only">${q.num}.</div>`;
-
+                    
                 div.innerHTML = `
                     ${introHtml}
                     <div class="options">
                         ${q.options.map((opt, idx) => {
-                    const letter = String.fromCharCode(65 + idx);
-                    return `
+                            const letter = String.fromCharCode(65 + idx);
+                            return `
                                 <div class="option">
                                     <input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}">
                                     <label for="q${q.num}${letter}"><strong>${letter}</strong>. ${opt}</label>
                                 </div>
                             `;
-                }).join('')}
+                        }).join('')}
                     </div>
                     <span class="eye-icon" data-question="${q.num}">👁️</span>
                 `;
-
+                
                 container.appendChild(div);
             });
         } else if (this.currentTestData.type === 'matching') {
@@ -1254,7 +1054,7 @@ class ReadingCore {
                 const div = document.createElement('div');
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
-
+                
                 div.innerHTML = `
                     <div class="question-text">${q.num}. ${q.text}</div>
                     <div class="answer-input-area">
@@ -1264,11 +1064,11 @@ class ReadingCore {
                     </div>
                 `;
                 container.appendChild(div);
-
+                
                 // Add enforcing A-H formatting
                 const input = document.getElementById(`answer-${q.num}`);
                 if (input) {
-                    input.addEventListener('input', function () {
+                    input.addEventListener('input', function() {
                         this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
                         // Force a dispatch to update the answer count via the global listener
                         this.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1366,13 +1166,13 @@ class ReadingCore {
             const contentEl = slot.querySelector('.slot-content');
             const removeEl = slot.querySelector('.remove-chip');
             if (value) {
-                if (contentEl) contentEl.textContent = displayText;
+                if(contentEl) contentEl.textContent = displayText;
                 slot.setAttribute('data-selected', value);
-                if (removeEl) removeEl.style.display = 'inline';
+                if(removeEl) removeEl.style.display = 'inline';
             } else {
-                if (contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
+                if(contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
                 slot.removeAttribute('data-selected');
-                if (removeEl) removeEl.style.display = 'none';
+                if(removeEl) removeEl.style.display = 'none';
             }
         });
 
@@ -1419,7 +1219,7 @@ class ReadingCore {
         const container = document.getElementById('questionsContainer');
         if (!container) return;
         container.innerHTML = '';
-
+        
         const optionsList = this.currentTestData.optionsList;
         const qRange = this.getQuestionRange();
 
@@ -1427,13 +1227,13 @@ class ReadingCore {
             const qDiv = document.createElement('div');
             qDiv.className = 'question-item';
             qDiv.id = `question-${i}`;
-
+            
             const optionsHtml = optionsList[i].map(opt => {
                 const letter = opt.charAt(0);
                 const text = opt.substring(2);
                 return `<label><input type="radio" name="q${i}" value="${letter}"> <strong>${letter}</strong>. ${text}</label>`;
             }).join('');
-
+            
             qDiv.innerHTML = `
                 <div class="question-text">${i}.</div>
                 <div class="answer-input-area">
@@ -1477,7 +1277,7 @@ class ReadingCore {
     renderSingleColumn() {
         const mainArea = document.getElementById('mainArea');
         if (!mainArea || !this.currentTestData.template) return;
-
+        
         mainArea.innerHTML = `
             <div class="single-col">
                 <div class="part-header">
@@ -1495,7 +1295,7 @@ class ReadingCore {
     renderSplitColumn() {
         const mainArea = document.getElementById('mainArea');
         if (!mainArea || !this.currentTestData.template) return;
-
+        
         mainArea.innerHTML = `
             <div class="split-container">
                 <div class="left-col">
@@ -1516,7 +1316,7 @@ class ReadingCore {
                 </div>
             </div>
         `;
-
+        
         document.getElementById('closeRightExplain')?.addEventListener('click', () => {
             const col = document.getElementById('rightCol');
             if (col) col.classList.remove('show');
@@ -1554,14 +1354,14 @@ class ReadingCore {
                 }
             });
         }
-
+        
         document.querySelectorAll('.eye-icon').forEach(icon => {
             if (this.explanationMode || this.examSubmitted) {
                 icon.style.display = 'inline-block';
             } else {
                 icon.style.display = 'none';
             }
-
+            
             icon.addEventListener('click', (e) => {
                 const qNum = parseInt(e.currentTarget.dataset.q || e.currentTarget.dataset.question);
                 this.showExplanation(qNum);
@@ -1594,7 +1394,7 @@ class ReadingCore {
             }
             // Ignore if handled by delegation in attachInputEvents
             if (e.target && e.target.matches('.gap-input')) return;
-
+            
             if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {
                 this.updateAnswerCount();
                 this.saveDraft();
@@ -1602,7 +1402,7 @@ class ReadingCore {
         };
         // Input changes (for matching, split-layout, etc.)
         document.addEventListener('input', this._boundDocInputHandler);
-
+        
         // Eye icon click handler for standard types
         document.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('eye-icon') && !e.target.dataset.q) {
@@ -1685,9 +1485,9 @@ class ReadingCore {
         }
 
         nav.innerHTML = '';
-
+        
         const { part } = this.getTestMeta();
-
+        
         // Nút Part trước
         const prevPartBtn = document.createElement('button');
         prevPartBtn.className = 'nav-arrow-btn nav-prev-part';
@@ -1713,18 +1513,18 @@ class ReadingCore {
             btn.className = 'nav-btn unanswered';
             btn.textContent = i;
             btn.dataset.question = i;
-
+            
             // Allow dataset match to Part 6 structure dataset.q setup
             btn.dataset.q = i;
-
+            
             btn.addEventListener('click', () => {
                 this.scrollToQuestion(i);
                 this.setActiveNavButton(i);
             });
-
+            
             nav.appendChild(btn);
         }
-
+        
         // Nút Part sau
         const nextPartBtn = document.createElement('button');
         nextPartBtn.className = 'nav-arrow-btn nav-next-part';
@@ -1743,21 +1543,7 @@ class ReadingCore {
             });
         }
         nav.appendChild(nextPartBtn);
-
-        // Nút Hướng dẫn (?) - Nằm giữa Next Part và Highlight
-        const helpBtn = document.createElement('button');
-        helpBtn.className = 'nav-arrow-btn nav-help-btn';
-        helpBtn.title = 'Hướng dẫn';
-        helpBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        `;
-        helpBtn.style.padding = '8px';
-        helpBtn.style.minWidth = '40px';
-        helpBtn.style.borderRadius = '50%';
-        helpBtn.style.marginLeft = '12px';
-        helpBtn.addEventListener('click', () => this.helpManager.toggle());
-        nav.appendChild(helpBtn);
-
+        
         // Inject highlight toggle into question-nav
         this.injectHighlightToggle();
     }
@@ -1768,10 +1554,10 @@ class ReadingCore {
     injectHighlightToggle() {
         const questionNav = document.querySelector('.question-nav');
         if (!questionNav) return;
-
+        
         // Check if toggle already exists
         if (questionNav.querySelector('#highlightToggle')) return;
-
+        
         const toggleWrapper = document.createElement('div');
         toggleWrapper.className = 'highlight-toggle-wrapper';
         toggleWrapper.title = 'Ẩn/hiện highlight cá nhân (không ảnh hưởng highlight đáp án)';
@@ -1782,9 +1568,9 @@ class ReadingCore {
             </label>
             <span class="toggle-label">Highlight</span>
         `;
-
+        
         questionNav.appendChild(toggleWrapper);
-
+        
         // Initialize toggle functionality
         this.initHighlightToggle();
     }
@@ -1798,7 +1584,7 @@ class ReadingCore {
 
         // Set initial state
         this.personalHighlightsVisible = toggleCheckbox.checked;
-
+        
         // Áp dụng trạng thái ngay sau khi khởi tạo (ẩn các highlight có sẵn nếu toggle OFF)
         this.togglePersonalHighlights(this.personalHighlightsVisible);
 
@@ -1822,16 +1608,16 @@ class ReadingCore {
             document.querySelector('.left-col'),
             document.querySelector('.single-col')
         ].filter(Boolean); // Lọc bỏ null
-
+        
         const allHighlights = new Set();
-
+        
         containers.forEach(container => {
             const highlights = container.querySelectorAll(
                 '.highlight-yellow, .highlight-green, .highlight-pink'
             );
             highlights.forEach(h => allHighlights.add(h));
         });
-
+        
         allHighlights.forEach(highlight => {
             if (visible) {
                 highlight.classList.remove('highlight-hidden');
@@ -1839,7 +1625,7 @@ class ReadingCore {
                 highlight.classList.add('highlight-hidden');
             }
         });
-
+        
         console.log(`[Reading] ${visible ? 'Hiện' : 'Ẩn'} ${allHighlights.size} highlights`);
     }
 
@@ -1848,7 +1634,7 @@ class ReadingCore {
      */
     getQuestionRange() {
         if (!this.currentTestData) return { start: 1, end: 5 };
-
+        
         if (this.currentTestData.questions) {
             const numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
             return {
@@ -1856,7 +1642,7 @@ class ReadingCore {
                 end: numbers[numbers.length - 1] || 5
             };
         }
-
+        
         if (this.currentTestData.answerKey) {
             const keys = Object.keys(this.currentTestData.answerKey)
                 .map(k => parseInt(k.replace('q', '')))
@@ -1866,7 +1652,7 @@ class ReadingCore {
                 return { start: keys[0], end: keys[keys.length - 1] };
             }
         }
-
+        
         return { start: 1, end: 5 };
     }
 
@@ -1899,9 +1685,9 @@ class ReadingCore {
      */
     isAnswerCorrect(questionNum, userAnswer) {
         if (!userAnswer) return false;
-
+        
         const keyMap = this.currentTestData.answerKey[`q${questionNum}`] || this.currentTestData.answerKey[questionNum];
-
+        
         if (Array.isArray(keyMap)) {
             // Support multiple correct alternatives (e.g. ['every', 'each'])
             return keyMap.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
@@ -1918,9 +1704,9 @@ class ReadingCore {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-
-        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) ||
-            document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
+        
+        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) || 
+                          document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
         }
@@ -1937,7 +1723,7 @@ class ReadingCore {
         // Part 5 (inline-radio): Scroll to inline slot in reading panel
         if (type === 'inline-radio') {
             const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
-                document.querySelector(`[data-q="${questionNum}"]`);
+                              document.querySelector(`[data-q="${questionNum}"]`);
             if (slotElement) {
                 slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -1952,7 +1738,7 @@ class ReadingCore {
         // Part 4 (drag-drop): Scroll to slot in reading panel
         if (type === 'drag-drop') {
             const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
-                document.querySelector(`#passageCard [data-q="${questionNum}"]`);
+                              document.querySelector(`#passageCard [data-q="${questionNum}"]`);
             if (slotElement) {
                 slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -1975,7 +1761,7 @@ class ReadingCore {
             if (!cardId) {
                 cardId = questionNum;
             }
-
+            
             // Scroll reading panel to the card
             const cardElement = document.querySelector(`.reading-card[data-text-id="${cardId}"]`);
             if (cardElement) {
@@ -1988,7 +1774,7 @@ class ReadingCore {
         if (!questionElement && type === 'split-layout') {
             questionElement = document.getElementById(`q${questionNum}`);
         }
-
+        
         if (questionElement) {
             questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             if (type === 'split-layout') {
@@ -2010,11 +1796,11 @@ class ReadingCore {
         }
 
         const total = questionRange.end - questionRange.start + 1;
-
+        
         // Chỉ cập nhật DOM nếu số lượng thay đổi
         if (this._lastAnsweredCount === answered) return;
         this._lastAnsweredCount = answered;
-
+        
         const answeredBadge = document.getElementById('answeredCount');
         if (answeredBadge) {
             answeredBadge.textContent = `${answered}/${total} answered`;
@@ -2027,8 +1813,8 @@ class ReadingCore {
 
         // Apply visual updates to nav numbers
         for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) ||
-                document.querySelector(`.nav-btn[data-q="${i}"]`);
+            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) || 
+                        document.querySelector(`.nav-btn[data-q="${i}"]`);
             if (btn) {
                 const ans = this.getUserAnswer(i);
                 btn.classList.remove('answered', 'unanswered');
@@ -2183,7 +1969,7 @@ class ReadingCore {
             const isCorrect = this.isAnswerCorrect(i, userAnswer);
 
             questionDiv.classList.remove('correct', 'incorrect');
-
+            
             const oldBadge = questionDiv.querySelector('.correct-answer-badge');
             if (oldBadge) oldBadge.remove();
 
@@ -2239,7 +2025,7 @@ class ReadingCore {
         if (!this.examSubmitted) return;
 
         this.explanationMode = true;
-
+        
         document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => {
             el.style.display = 'inline-block';
         });
@@ -2253,19 +2039,19 @@ class ReadingCore {
         if (this.currentTestData.type === 'split-layout') {
             if (!this.currentSplit) {
                 this.currentSplit = true;
-
+                
                 // Keep input values while shifting layout
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents(); // Rebind since DOM replaced
-
+                
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                     this.addBadgeForQuestion(i);
                 }
-
+                
                 document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
             }
         } else {
@@ -2285,25 +2071,25 @@ class ReadingCore {
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents();
-
+                
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                 }
             }
-
+            
             const rightCol = document.getElementById('rightCol');
             if (rightCol) rightCol.classList.add('show');
-
+            
             const explanationDiv = document.getElementById('rightExplanationText');
             if (!explanationDiv) return;
-
+            
             const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
-            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] ||
-                this.currentTestData.detailedExplanations[questionNum] ||
-                `<strong>Đáp án: ${customAnsDisplay}</strong>`;
-
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                       this.currentTestData.detailedExplanations[questionNum] || 
+                       `<strong>Đáp án: ${customAnsDisplay}</strong>`;
+            
             if (this.examSubmitted) {
                 const user = this.getUserAnswer(questionNum) || "(chưa điền)";
                 const correct = this.isAnswerCorrect(questionNum, user);
@@ -2315,7 +2101,7 @@ class ReadingCore {
             }
             explanationDiv.innerHTML = html;
             if (this.examSubmitted) this.addBadgeForQuestion(questionNum);
-
+            
         } else {
             this.highlightManager.highlightAnswerInReading(questionNum, this.currentTestData.highlightMap);
 
@@ -2326,16 +2112,16 @@ class ReadingCore {
             if (explanationPanel && explanationTitle && explanationText) {
                 explanationPanel.classList.add('show');
                 explanationTitle.textContent = `Giải thích câu ${questionNum}`;
-
+                
                 const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
-                let html = this.currentTestData.detailedExplanations[`q${questionNum}`] ||
-                    this.currentTestData.detailedExplanations[questionNum] ||
-                    `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
-
+                let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                           this.currentTestData.detailedExplanations[questionNum] || 
+                           `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
+                
                 if (this.examSubmitted) {
                     const userAnswer = this.getUserAnswer(questionNum) || '(chưa chọn/điền)';
                     const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
-
+                    
                     html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
                     html += `<strong>Câu trả lời của bạn:</strong> ${userAnswer}<br>`;
                     if (!isCorrect) {
@@ -2345,7 +2131,7 @@ class ReadingCore {
                     }
                     html += `</div>`;
                 }
-
+                
                 explanationText.innerHTML = html;
             }
         }
@@ -2357,7 +2143,7 @@ class ReadingCore {
         const wrapper = input.parentNode;
         let existing = wrapper.querySelector('.correct-answer-badge');
         if (existing) existing.remove();
-
+        
         const badge = document.createElement('span');
         badge.className = 'correct-answer-badge';
         badge.textContent = this.currentTestData.displayAnswers[`q${qNum}`] || this.currentTestData.displayAnswers[qNum];
@@ -2374,83 +2160,24 @@ class ReadingCore {
     }
 
     /**
-     * ✅ FIX v2.5: Handle reset button click with 3-option modal
+     * ✅ FIX v2.1: Handle reset button click
      */
     handleReset() {
-        console.log('[Reading handleReset] triggered');
-        this.showResetChoiceModal();
+        console.log('[Reading handleReset] called');
+        this.resetAll();
     }
 
     /**
-     * Show custom reset choice modal (Standardized for all PET Core)
+     * ✅ FIX v2.1: Reset all answers and state
+     * CHANGES:
+     * 1. Removed function override method - using flag instead
+     * 2. Changed setTimeout delay from 0 to 500ms
+     * 3. Added defensive: removeItem again after delay
+     * 4. All event listeners check _isResetting early return
      */
-    showResetChoiceModal() {
-        // Remove existing modal if any
-        const existing = document.querySelector('.reset-modal-overlay');
-        if (existing) existing.remove();
-
-        const modalHtml = `
-            <div class="reset-modal-overlay">
-                <div class="reset-modal">
-                    <h3>Lựa chọn Reset</h3>
-                    <p>Bạn muốn thực hiện thao tác xóa nào? Lựa chọn "Chỉ xóa đáp án" sẽ giữ lại các phần highlight cá nhân của bạn.</p>
-                    <div class="reset-modal-btns">
-                        <button class="reset-modal-btn all" id="confirmResetAll">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            Xóa tất cả
-                        </button>
-                        <button class="reset-modal-btn content" id="confirmResetAnswers">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            Chỉ xóa đáp án
-                        </button>
-                        <button class="reset-modal-btn cancel" id="cancelReset">Hủy</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const overlay = document.querySelector('.reset-modal-overlay');
-        
-        // Use timeout to trigger animation
-        setTimeout(() => overlay.classList.add('show'), 10);
-
-        document.getElementById('confirmResetAll').onclick = () => {
-            overlay.classList.remove('show');
-            setTimeout(() => {
-                overlay.remove();
-                this.resetAll(true); // Clear everything
-            }, 300);
-        };
-
-        document.getElementById('confirmResetAnswers').onclick = () => {
-            overlay.classList.remove('show');
-            setTimeout(() => {
-                overlay.remove();
-                this.resetAll(false); // Only clear answers (keep highlights)
-            }, 300);
-        };
-
-        document.getElementById('cancelReset').onclick = () => {
-            overlay.classList.remove('show');
-            setTimeout(() => overlay.remove(), 300);
-        };
-
-        // Close on backdrop click
-        overlay.onclick = (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('show');
-                setTimeout(() => overlay.remove(), 300);
-            }
-        };
-    }
-
-    /**
-     * ✅ FIX v2.5: Reset answers and state
-     * @param {boolean} clearHighlights - Whether to also clear personal highlights
-     */
-    resetAll(clearHighlights = true) {
-        console.log(`[Reading resetAll] started (clearHighlights: ${clearHighlights})`);
+    resetAll() {
+        console.log('[Reading resetAll] started');
+        if (!confirm('Reset tất cả câu trả lời của part này?')) return;
 
         const completedKey = this.getStorageKey(false);
         const draftKey = this.getStorageKey(true);
@@ -2458,12 +2185,8 @@ class ReadingCore {
         // ✅ FIX: Xóa localStorage ngay (SKIP NOTE)
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        
-        if (clearHighlights) {
-            // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
-            localStorage.removeItem(this.getHighlightStorageKey());
-        }
-        
+        // ✅ KHÔI PHỤC: Xóa highlight khi reset theo yêu cầu người dùng
+        localStorage.removeItem(this.getHighlightStorageKey()); 
         console.log('[Reset] Deleted keys using getStorageKey():', completedKey, draftKey);
 
         // ✅ FIX: Get book/test/part for BroadcastChannel
@@ -2566,7 +2289,7 @@ class ReadingCore {
             const channel = new BroadcastChannel('pet_reset_channel');
             channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
-        } catch (e) { console.warn('BroadcastChannel error:', e); }
+        } catch(e) { console.warn('BroadcastChannel error:', e); }
 
         // ✅ FIX: DELAY LÂU HƠN - 500ms thay vì 0ms
         setTimeout(() => {
@@ -2628,10 +2351,10 @@ class ReadingHighlightManager {
         document.addEventListener('contextmenu', (e) => {
             const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
             if (!highlightArea) return;
-
+            
             const selection = window.getSelection();
             if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
-
+            
             e.preventDefault();
             this.selectedRange = selection.getRangeAt(0);
             this.showContextMenu(e.pageX, e.pageY);
@@ -2679,14 +2402,14 @@ class ReadingHighlightManager {
         if (!referenceMap) return;
         const info = referenceMap[`q${questionNum}`] || referenceMap[questionNum];
         if (!info) return;
-
+        
         let card;
         if (info.cardId) {
             card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
         } else if (info.reviewId) {
             card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
         }
-
+        
         if (!card) return;
 
         const qItem = document.getElementById(`question-${questionNum}`);
@@ -2694,7 +2417,7 @@ class ReadingHighlightManager {
 
         let firstSpan = null;
         const keywords = info.keywords || [];
-
+        
         keywords.forEach(keyword => {
             const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
             let node;
@@ -2709,12 +2432,12 @@ class ReadingHighlightManager {
                     try {
                         range.surroundContents(span);
                         if (!firstSpan) firstSpan = span;
-                    } catch (e) { console.log("Tree span surround failed", e); }
+                    } catch(e) { console.log("Tree span surround failed", e); }
                     break;
                 }
             }
         });
-
+        
         if (firstSpan) {
             firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
@@ -2747,27 +2470,27 @@ class ReadingHighlightManager {
             this.hideContextMenu();
             return;
         }
-
+        
         try {
             const range = this.selectedRange.cloneRange();
-
+            
             // 1️⃣ Xóa highlight cũ trong vùng chọn (để lấy màu mới)
             this.removeExistingHighlightsInRange(range);
-
+            
             // 2️⃣ Chọn strategy dựa trên complexity
             const isSimple = this.isSimpleRange(range);
             console.log('[ReadingHighlight] Using', isSimple ? 'SIMPLE' : 'COMPLEX', 'strategy');
-
+            
             if (isSimple) {
                 this.applyHighlightSimple(range, color);
             } else {
                 this.applyHighlightComplex(range, color);
             }
-
+            
         } catch (e) {
             console.log('[ReadingHighlight] Lỗi apply highlight:', e);
         }
-
+        
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2776,17 +2499,17 @@ class ReadingHighlightManager {
         if (window.readingCore) window.readingCore.saveHighlightDraft();
         else if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
-
+    
     // 🎯 SIMPLE: 1 text node, dùng surroundContents
     applyHighlightSimple(range, color) {
         try {
             const span = document.createElement('span');
             span.className = `highlight-${color}`;
-
+            
             if (window.readingCore && !window.readingCore.personalHighlightsVisible) {
                 span.classList.add('highlight-hidden');
             }
-
+            
             range.surroundContents(span);
             console.log('[ReadingHighlight] Simple highlight applied:', span.textContent.substring(0, 30));
         } catch (e) {
@@ -2802,21 +2525,21 @@ class ReadingHighlightManager {
             range.insertNode(span);
         }
     }
-
+    
     // 🚀 COMPLEX: Nhiều nodes, dùng TreeWalker
     applyHighlightComplex(range, color) {
         const textNodes = this.getTextNodesInRange(range);
-
+        
         textNodes.forEach(textNode => {
             const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
             const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
-
+            
             if (startOffset === endOffset) return;
-
+            
             const subRange = document.createRange();
             subRange.setStart(textNode, startOffset);
             subRange.setEnd(textNode, endOffset);
-
+            
             try {
                 const span = document.createElement('span');
                 span.className = `highlight-${color}`;
@@ -2835,10 +2558,10 @@ class ReadingHighlightManager {
                 subRange.insertNode(span);
             }
         });
-
+        
         console.log('[ReadingHighlight] Complex highlight applied on', textNodes.length, 'nodes');
     }
-
+    
     // Lấy tất cả text nodes trong range
     getTextNodesInRange(range) {
         const textNodes = [];
@@ -2846,7 +2569,7 @@ class ReadingHighlightManager {
             range.commonAncestorContainer,
             NodeFilter.SHOW_TEXT,
             {
-                acceptNode: function (node) {
+                acceptNode: function(node) {
                     if (range.intersectsNode(node)) {
                         return NodeFilter.FILTER_ACCEPT;
                     }
@@ -2854,35 +2577,35 @@ class ReadingHighlightManager {
                 }
             }
         );
-
+        
         let node;
         while (node = walker.nextNode()) {
             textNodes.push(node);
         }
-
+        
         return textNodes;
     }
-
+    
     // Kiểm tra xem range có đơn giản (1 node) hay phức tạp (nhiều nodes)
     isSimpleRange(range) {
         const startContainer = range.startContainer;
         const endContainer = range.endContainer;
-
+        
         // Nếu cùng 1 text node -> đơn giản
         if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) {
             return true;
         }
-
+        
         // Nếu cùng parent và không có element tags ở giữa -> đơn giản
         if (startContainer.parentNode === endContainer.parentNode) {
             // Kiểm tra xem có element node nào giữa start và end không
             const textNodes = this.getTextNodesInRange(range);
             return textNodes.length <= 1;
         }
-
+        
         return false;
     }
-
+    
     // Xóa highlight cũ trong vùng chọn (để thay thế bằng màu mới)
     removeExistingHighlightsInRange(range) {
         try {
@@ -2892,17 +2615,17 @@ class ReadingHighlightManager {
                 NodeFilter.SHOW_ELEMENT,
                 {
                     acceptNode: (node) => {
-                        if (node.classList &&
-                            (node.classList.contains('highlight-yellow') ||
-                                node.classList.contains('highlight-green') ||
-                                node.classList.contains('highlight-pink'))) {
+                        if (node.classList && 
+                            (node.classList.contains('highlight-yellow') || 
+                             node.classList.contains('highlight-green') || 
+                             node.classList.contains('highlight-pink'))) {
                             return NodeFilter.FILTER_ACCEPT;
                         }
                         return NodeFilter.FILTER_SKIP;
                     }
                 }
             );
-
+            
             const toUnwrap = [];
             let node;
             while (node = walker.nextNode()) {
@@ -2910,7 +2633,7 @@ class ReadingHighlightManager {
                     toUnwrap.push(node);
                 }
             }
-
+            
             // Unwrap mà không làm mất text
             toUnwrap.forEach(span => {
                 const parent = span.parentNode;
@@ -2919,7 +2642,7 @@ class ReadingHighlightManager {
                 }
                 parent.removeChild(span);
             });
-
+            
             console.log('[ReadingHighlight] Removed', toUnwrap.length, 'existing highlights');
         } catch (e) {
             console.log('[ReadingHighlight] Lỗi remove existing:', e);
@@ -2935,27 +2658,27 @@ class ReadingHighlightManager {
             this.hideContextMenu();
             return;
         }
-
+        
         try {
             const range = this.selectedRange.cloneRange();
-
+            
             // Tìm tất cả highlight spans trong vùng chọn
             const walker = document.createTreeWalker(
                 range.commonAncestorContainer,
                 NodeFilter.SHOW_ELEMENT,
                 {
                     acceptNode: (node) => {
-                        if (node.classList &&
-                            (node.classList.contains('highlight-yellow') ||
-                                node.classList.contains('highlight-green') ||
-                                node.classList.contains('highlight-pink'))) {
+                        if (node.classList && 
+                            (node.classList.contains('highlight-yellow') || 
+                             node.classList.contains('highlight-green') || 
+                             node.classList.contains('highlight-pink'))) {
                             return NodeFilter.FILTER_ACCEPT;
                         }
                         return NodeFilter.FILTER_SKIP;
                     }
                 }
             );
-
+            
             const toRemove = [];
             let node;
             while (node = walker.nextNode()) {
@@ -2963,7 +2686,7 @@ class ReadingHighlightManager {
                     toRemove.push(node);
                 }
             }
-
+            
             // Xóa từng highlight
             toRemove.forEach(span => {
                 const parent = span.parentNode;
@@ -2972,12 +2695,12 @@ class ReadingHighlightManager {
                 }
                 parent.removeChild(span);
             });
-
+            
             console.log('[ReadingHighlight] Removed', toRemove.length, 'highlights');
         } catch (e) {
             console.log('[ReadingHighlight] Lỗi remove highlight:', e);
         }
-
+        
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2996,16 +2719,16 @@ class ReadingStorageManager {
         const details = [];
         let correctCount = 0;
 
-        const questions = testData.questions ||
-            Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
-
+        const questions = testData.questions || 
+                          Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q','')) })).filter(q => !isNaN(q.num));
+                          
         const questionRangeStart = Math.min(...questions.map(q => q.num));
         const questionRangeEnd = Math.max(...questions.map(q => q.num));
 
         for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
             const userAnswer = userAnswers[i];
             const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
-
+            
             // Revalidate internally
             let isCorrect = false;
             if (userAnswer) {
@@ -3015,7 +2738,7 @@ class ReadingStorageManager {
                     isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
                 }
             }
-
+            
             if (isCorrect) correctCount++;
 
             const correctAnswerString = testData.displayAnswers[`q${i}`] || testData.displayAnswers[i] || answerKeyRaw;
@@ -3039,25 +2762,25 @@ class ReadingStorageManager {
 
         const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
         const resolvedPart = testData.part || part;
-
+        
         const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
-
+        
         localStorage.setItem(key, JSON.stringify(partData));
         console.log(`Results saved with key: ${key}`);
     }
 
     parseTestInfo(title) {
         let book = 1, test = 1, part = 1;
-
+        
         const bookMatch = title.match(/Preliminary\s+(\d+)/i) || title.match(/PET\s*(\d+)/i);
         if (bookMatch) book = parseInt(bookMatch[1]);
-
+        
         const testMatch = title.match(/Test\s+(\d+)/i);
         if (testMatch) test = parseInt(testMatch[1]);
-
+        
         const partMatch = title.match(/Part\s+(\d+)/i);
         if (partMatch) part = parseInt(partMatch[1]);
-
+        
         return { book, test, part };
     }
 }
@@ -3069,7 +2792,7 @@ class ReadingUIManager {
     setupFontControls() {
         const fontButtons = {
             fontSmall: 'small',
-            fontMedium: 'medium',
+            fontMedium: 'medium', 
             fontLarge: 'large'
         };
 
@@ -3085,7 +2808,7 @@ class ReadingUIManager {
         document.querySelectorAll('.font-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-
+        
         const activeBtn = document.getElementById(`font${size.charAt(0).toUpperCase() + size.slice(1)}`);
         if (activeBtn) {
             activeBtn.classList.add('active');
@@ -3175,7 +2898,7 @@ class ReadingUIManager {
             if (testWrapper && testWrapper.classList.contains('classic-mode')) return;
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
+            
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('pet-theme', newTheme);
         });
@@ -3201,7 +2924,7 @@ class ReadingUIManager {
             </label>
             <span class="mode-label">Cổ điển</span>
         `;
-
+        
         // Tìm vị trí chèn: sau font-controls hoặc ở cuối brand
         const fontControls = header.querySelector('.font-controls');
         if (fontControls) {
@@ -3232,7 +2955,7 @@ class ReadingUIManager {
             } else {
                 styleLink.href = 'reading-pet-common.css';
                 testWrapper.classList.remove('classic-mode');
-
+                
                 // Restore dark mode if it was enabled in modern mode
                 const savedTheme = localStorage.getItem('pet-theme');
                 if (savedTheme === 'dark') {
@@ -3262,7 +2985,7 @@ class ReadingUIManager {
         const readingPanel = document.getElementById('readingPanel');
         const questionsPanel = document.getElementById('questionsPanel');
         const resizer = document.getElementById('resizer');
-
+        
         if (!readingPanel || !questionsPanel || !resizer) return;
 
         let isResizing = false;
@@ -3280,10 +3003,10 @@ class ReadingUIManager {
 
             const rect = mainArea.getBoundingClientRect();
             let leftWidth = e.clientX - rect.left - 4;
-
+            
             if (leftWidth < 250) leftWidth = 250;
             if (leftWidth > rect.width - 250) leftWidth = rect.width - 250;
-
+            
             readingPanel.style.width = leftWidth + 'px';
             questionsPanel.style.width = (rect.width - leftWidth - 8) + 'px';
         });
@@ -3297,7 +3020,7 @@ class ReadingUIManager {
     setupExplanationPanel() {
         const explanationPanel = document.getElementById('explanationPanel');
         const explanationResizer = document.getElementById('explanationResizer');
-
+        
         if (!explanationPanel || !explanationResizer) return;
 
         let isResizing = false;
@@ -3316,7 +3039,7 @@ class ReadingUIManager {
 
             const dy = startY - e.clientY;
             const newHeight = startHeight + dy;
-
+            
             if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
                 explanationPanel.style.height = newHeight + 'px';
                 explanationPanel.style.maxHeight = newHeight + 'px';
@@ -3337,7 +3060,7 @@ class ReadingUIManager {
         const header = document.querySelector('.ielts-header');
         const footer = document.querySelector('.bottom-bar');
         const questionNav = document.querySelector('.question-nav');
-
+        
         if (!header && !footer) return;
 
         // Add toggle button to header
@@ -3424,14 +3147,14 @@ class ReadingUIManager {
      */
     addAutoCollapseToggle(header, coreInstance) {
         if (!header) return;
-
+        
         // Check if toggle already exists
         if (header.querySelector('.autocollapse-toggle')) return;
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'autocollapse-toggle';
         toggleBtn.title = 'Bật/Tắt tự động thu gọn header/footer';
-
+        
         // SVG icons: active = auto-collapse (shrink icon), inactive = fixed (fullscreen icon)
         const iconShrink = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 14h6v6M4 10h6V4M14 20v-6h6M14 4v6h6"/>
@@ -3439,7 +3162,7 @@ class ReadingUIManager {
         const iconExpand = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
         </svg>`;
-
+        
         const isEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
         toggleBtn.innerHTML = isEnabled ? iconShrink : iconExpand;
         toggleBtn.classList.toggle('active', isEnabled);
@@ -3448,10 +3171,10 @@ class ReadingUIManager {
             const currentlyEnabled = localStorage.getItem('pet-autocollapse-enabled') !== 'false';
             const newEnabled = !currentlyEnabled;
             localStorage.setItem('pet-autocollapse-enabled', newEnabled.toString());
-
+            
             toggleBtn.classList.toggle('active', newEnabled);
             toggleBtn.innerHTML = newEnabled ? iconShrink : iconExpand;
-
+            
             if (!newEnabled) {
                 // Expand header and footer when disabled (keep question-nav visible)
                 header?.classList.remove('collapsed');
@@ -3462,7 +3185,7 @@ class ReadingUIManager {
         // Find a good place to insert the button - right after mode toggle (modern/classic)
         const modeToggle = header.querySelector('#modeToggleContainer');
         const themeToggle = header.querySelector('.theme-toggle-btn');
-
+        
         if (modeToggle) {
             modeToggle.insertAdjacentElement('afterend', toggleBtn);
         } else if (themeToggle) {
@@ -3474,13 +3197,13 @@ class ReadingUIManager {
 }
 
 // Ensure the context menu functions are mapped globally so the HTML onclick="applyHighlight('yellow')" handlers still fire correctly.
-window.applyHighlight = function (color) {
+window.applyHighlight = function(color) {
     if (window.readingCore && window.readingCore.highlightManager) {
         window.readingCore.highlightManager.applyHighlight(color);
     }
 };
 
-window.removeHighlight = function () {
+window.removeHighlight = function() {
     if (window.readingCore && window.readingCore.highlightManager) {
         window.readingCore.highlightManager.removeHighlight();
     }
