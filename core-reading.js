@@ -1814,9 +1814,9 @@ class ReadingCore {
                 <h3>Xác nhận Reset</h3>
                 <p>Bạn muốn reset những gì?</p>
                 <div class="reset-modal-btns">
-                    <button class="reset-modal-btn all" id="resetAllBtn">🗑️ Xóa hết (đáp án & highlight)</button>
-                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn">📝 Xóa nội dung (chỉ đáp án)</button>
-                    <button class="reset-modal-btn cancel" id="cancelResetBtn">❌ Hủy</button>
+                    <button class="reset-modal-btn all" id="resetAllBtn"> Xóa hết (đáp án & highlight)</button>
+                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn"> Xóa nội dung (chỉ đáp án)</button>
+                    <button class="reset-modal-btn cancel" id="cancelResetBtn"> Hủy</button>
                 </div>
             </div>
         `;
