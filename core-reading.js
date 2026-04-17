@@ -213,6 +213,228 @@ class PETNoteManager {
     }
 }
 
+/**
+ * MiniDashboardManager - Popup showing progress across all parts with PET scores
+ */
+class MiniDashboardManager {
+    constructor(core, skillType) {
+        this.core = core;
+        this.skillType = skillType;
+        this.panel = null;
+        this.isVisible = false;
+    }
+
+    init() {
+        this.createPanel();
+        this.injectToggleButton();
+        this.setupEvents();
+        console.log('[MiniDashboard] Initialized for', this.skillType);
+    }
+
+    createPanel() {
+        if (document.getElementById('mini-dashboard-panel')) return;
+
+        this.panel = document.createElement('div');
+        this.panel.id = 'mini-dashboard-panel';
+
+        this.panel.innerHTML = `
+            <div class="mini-dashboard-header">
+                <h3>📊 <span id="mini-dashboard-title">Dashboard</span></h3>
+                <button class="mini-dashboard-close" onclick="window.miniDashboard.hide()">✕</button>
+            </div>
+            <div class="mini-dashboard-content" id="mini-dashboard-content"></div>
+            <div class="mini-dashboard-footer">
+                <a href="dashboard.html" class="dashboard-link">Đến Dashboard ➝</a>
+            </div>
+        `;
+
+        document.body.appendChild(this.panel);
+        window.miniDashboard = this;
+        this.contentArea = document.getElementById('mini-dashboard-content');
+    }
+
+    injectToggleButton() {
+        const bottomBar = document.querySelector('.bottom-bar') || document.querySelector('.ielts-header');
+        if (!bottomBar || document.getElementById('mini-dashboard-toggle')) return;
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.id = 'mini-dashboard-toggle';
+        toggleBtn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            Tiến độ
+        `;
+        toggleBtn.onclick = () => this.toggle();
+        
+        const noteBtn = document.querySelector('.note-toggle-btn');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (noteBtn) {
+            noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
+        } else if (submitBtn) {
+            submitBtn.parentNode.insertBefore(toggleBtn, submitBtn);
+        } else {
+            bottomBar.appendChild(toggleBtn);
+        }
+    }
+
+    // Tính điểm PET scale (120-170) từ số câu đúng
+    calculatePETScore(correct, maxQuestions) {
+        if (correct === 0) return null;
+        // PET scale approximation: 120 + (correct/max) * 50
+        const percentage = correct / maxQuestions;
+        let score = Math.round(120 + percentage * 50);
+        return Math.min(170, Math.max(120, score));
+    }
+
+    refreshData() {
+        const meta = this.core.getTestMeta();
+        const book = meta.book;
+        const test = meta.test;
+        
+        const titleEl = document.getElementById('mini-dashboard-title');
+        if (titleEl) titleEl.textContent = `PET ${book} - Test ${test}`;
+
+        const readingData = this.fetchSkillData('reading', book, test);
+        const listeningData = this.fetchSkillData('listening', book, test);
+
+        this.renderContent(readingData, listeningData);
+    }
+
+    fetchSkillData(skill, book, test) {
+        const parts = skill === 'reading' ? [1,2,3,4,5,6] : [1,2,3,4];
+        
+        return parts.map(part => {
+            let keyCompleted = `pet_${skill}_book${book}_test${test}_part${part}`;
+            let keyDraft = keyCompleted + '_draft';
+            
+            let dataCompleted = localStorage.getItem(keyCompleted);
+            let dataDraft = localStorage.getItem(keyDraft);
+
+            if (dataCompleted) {
+                try {
+                    const parsed = JSON.parse(dataCompleted);
+                    return { part, type: 'completed', value: parsed.correctCount || 0, total: parsed.totalQuestions || 0 };
+                } catch(e) {}
+            } 
+            
+            if (dataDraft) {
+                try {
+                    const parsed = JSON.parse(dataDraft);
+                    const answered = Object.values(parsed).filter(v => v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object').length;
+                    return { part, type: 'draft', value: answered, total: 0 };
+                } catch(e) {}
+            }
+            return { part, type: 'empty', value: 0, total: 0 };
+        });
+    }
+
+    calculateSkillStats(data, maxQuestions) {
+        const completedParts = data.filter(d => d.type === 'completed');
+        const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
+        const totalAnswered = maxQuestions; // Total questions for this skill
+        const hasAnyData = data.some(d => d.type !== 'empty');
+        
+        return {
+            correct: totalCorrect,
+            total: totalAnswered,
+            hasData: hasAnyData,
+            petScore: this.calculatePETScore(totalCorrect, totalAnswered)
+        };
+    }
+
+    renderContent(readingData, listeningData) {
+        if (!this.contentArea) return;
+        
+        const meta = this.core.getTestMeta();
+        
+        // Calculate stats for each skill
+        const readingStats = this.calculateSkillStats(readingData, 35); // Reading: 35 questions total
+        const listeningStats = this.calculateSkillStats(listeningData, 25); // Listening: 25 questions total
+        
+        const renderSection = (title, data, stats, isReading) => {
+            // Determine score display
+            let scoreHtml;
+            if (!stats.hasData) {
+                scoreHtml = '<span class="not-done">Chưa làm</span>';
+            } else if (stats.petScore) {
+                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.petScore}</strong> điểm`;
+            } else {
+                scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
+            }
+            
+            let sectionHtml = `
+                <div class="skill-section">
+                    <div class="skill-header">
+                        <span class="skill-title">${title}</span>
+                        <span class="skill-score">${scoreHtml}</span>
+                    </div>
+                    <div class="part-list">
+            `;
+            
+            data.forEach(d => {
+                let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
+                let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
+                let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
+                let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
+                
+                const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
+                const currentClass = isCurrent ? 'current' : '';
+
+                sectionHtml += `
+                    <a href="${url}" class="part-item ${currentClass}">
+                        <span>Part ${d.part}</span>
+                        <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                    </a>
+                `;
+            });
+            sectionHtml += '</div></div>';
+            return sectionHtml;
+        }
+
+        let html = renderSection('Reading', readingData, readingStats, true);
+        html += `<div style="height: 1px; background: var(--border, #e2e8f0); margin: 4px 0;"></div>`;
+        html += renderSection('Listening', listeningData, listeningStats, false);
+
+        this.contentArea.innerHTML = html;
+    }
+
+    toggle() {
+        if (this.isVisible) this.hide();
+        else this.show();
+    }
+
+    show() {
+        if (!this.panel) this.createPanel();
+        this.refreshData();
+        this.panel.style.display = 'flex';
+        this.isVisible = true;
+    }
+
+    hide() {
+        if (this.panel) this.panel.style.display = 'none';
+        this.isVisible = false;
+    }
+
+    setupEvents() {
+        // Broadcast channel listener
+        try {
+            this.channel = new BroadcastChannel('pet_update_channel');
+            this.channel.addEventListener('message', () => {
+                if (this.isVisible) this.refreshData();
+            });
+        } catch (e) {
+            console.warn('BroadcastChannel not supported', e);
+        }
+
+        // Window storage event
+        window.addEventListener('storage', (e) => {
+            if (e.key && e.key.startsWith('pet_') && this.isVisible) {
+                this.refreshData();
+            }
+        });
+    }
+}
+
 
 class ReadingCore {
     constructor() {
@@ -279,6 +501,10 @@ class ReadingCore {
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
         
+        // === MỚI: Mini Dashboard ===
+        this.miniDashboard = new MiniDashboardManager(this, 'reading');
+        this.miniDashboard.init();
+        
         // Update initial state
         this.updateAnswerCount();
         
@@ -321,7 +547,10 @@ class ReadingCore {
     }
 
     saveHighlightDraft() {
-        const container = document.querySelector('.transcript-content') || 
+        const container = document.getElementById('readingContent') || 
+                          document.getElementById('transcriptContent') ||
+                          document.querySelector('.reading-content') ||
+                          document.querySelector('.transcript-content') || 
                           document.querySelector('.reading-card') ||
                           document.querySelector('.single-col .reading-card');
         if (!container) return;
@@ -338,7 +567,10 @@ class ReadingCore {
         const savedHtml = localStorage.getItem(this.getHighlightStorageKey());
         if (!savedHtml) return;
         
-        const container = document.querySelector('.transcript-content') || 
+        const container = document.getElementById('readingContent') || 
+                          document.getElementById('transcriptContent') ||
+                          document.querySelector('.reading-content') ||
+                          document.querySelector('.transcript-content') || 
                           document.querySelector('.reading-card') ||
                           document.querySelector('.single-col .reading-card');
         if (container) {
