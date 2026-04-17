@@ -551,25 +551,29 @@ class ReadingCore {
     }
 
     saveHighlightDraft() {
-        const container = document.getElementById('readingContent') || 
-                          document.getElementById('transcriptContent') ||
-                          document.querySelector('.reading-content') ||
-                          document.querySelector('.transcript-content') || 
-                          document.querySelector('.reading-card') ||
-                          document.querySelector('.single-col .reading-card');
+        const potentialSelectors = [
+            '#readingContent', '#transcriptContent', '#questionsContainer',
+            '.reading-content', '.transcript-content', '.questions-list',
+            '.reading-card', '.single-col', '.split-container'
+        ];
         
-        if (!container) {
-            console.warn('[Highlight] Save failed: container not found');
-            return;
-        }
-        
-        const html = container.innerHTML;
+        let foundData = [];
+        potentialSelectors.forEach(selector => {
+            const el = document.querySelector(selector);
+            
+            if (el && (el.innerHTML.includes('highlight-yellow') || el.innerHTML.includes('highlight-green') || el.innerHTML.includes('highlight-pink') || el.innerHTML.includes('highlight'))) {
+                foundData.push({
+                    selector: selector,
+                    html: el.innerHTML
+                });
+            }
+        });
+
         const key = this.getHighlightStorageKey();
-        
-        if (html.includes('highlight-yellow') || html.includes('highlight-green') || html.includes('highlight-pink') || html.includes('highlight')) {
-            // ✅ SỬA ĐỔI: Sử dụng JSON.stringify để đảm bảo dữ liệu HTML được lưu trữ an toàn
-            this._safeSetStorage(key, JSON.stringify({ html: html, timestamp: Date.now() }));
-            console.log('[Highlight] SAVED to key:', key, 'Length:', html.length);
+        if (foundData.length > 0) {
+            // ✅ THAY ĐỔI: Lưu mảng nhiều container thay vì chỉ 1 container đầu tiên
+            this._safeSetStorage(key, JSON.stringify({ containers: foundData, timestamp: Date.now() }));
+            console.log('[Highlight] Saved', foundData.length, 'containers to', key);
         } else {
             localStorage.removeItem(key);
             console.log('[Highlight] REMOVED (no highlights found) from key:', key);
@@ -586,32 +590,38 @@ class ReadingCore {
         }
         
         try {
-            // ✅ SỬA ĐỔI: Giải mã JSON
             const parsed = JSON.parse(savedData);
-            const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
             
-            if (!savedHtml) return;
-
-            const container = document.getElementById('readingContent') || 
-                              document.getElementById('transcriptContent') ||
-                              document.querySelector('.reading-content') ||
-                              document.querySelector('.transcript-content') || 
-                              document.querySelector('.reading-card') ||
-                              document.querySelector('.single-col .reading-card');
-            
-            if (container) {
-                container.innerHTML = savedHtml;
-                console.log('[Highlight] RESTORED from key:', key);
+            // Xử lý cả định dạng cũ (1 container) và định dạng mới (nhiều container)
+            if (parsed.containers && Array.isArray(parsed.containers)) {
+                console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
+                parsed.containers.forEach(item => {
+                    const container = document.querySelector(item.selector);
+                    if (container) {
+                        container.innerHTML = item.html;
+                        console.log('[Highlight] Restored container:', item.selector);
+                    }
+                });
             } else {
-                console.warn('[Highlight] Restore failed: container not found');
+                // Fallback cho định dạng bản nháp cũ
+                const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
+                if (!savedHtml) return;
+                
+                const container = document.getElementById('readingContent') || 
+                                  document.querySelector('.reading-content') ||
+                                  document.querySelector('.reading-card') ||
+                                  document.querySelector('.single-col');
+                if (container) {
+                    container.innerHTML = savedHtml;
+                    console.log('[Highlight] Restored using legacy logic');
+                }
             }
         } catch (e) {
-            console.error('[Highlight] Load error (invalid JSON?):', e);
-            // Fallback for old raw HTML data
-            const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
-            if (container && savedData.includes('<span')) {
-                container.innerHTML = savedData;
-                console.log('[Highlight] Restored using fallback (legacy data)');
+            console.error('[Highlight] Load error:', e);
+            // Fallback cực hạn cho dữ liệu text thô
+            if (typeof savedData === 'string' && savedData.includes('<span')) {
+                const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
+                if (container) container.innerHTML = savedData;
             }
         }
     }
