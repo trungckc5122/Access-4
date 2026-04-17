@@ -375,27 +375,46 @@ class MiniDashboardManager {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
-                let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
-                
                 const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
-                const currentClass = isCurrent ? 'current' : '';
-
-                sectionHtml += `
-                    <a href="${url}" class="part-item ${currentClass}">
-                        <span>Part ${d.part}</span>
-                        <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                    </a>
-                `;
+                const url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
+                
+                if (isCurrent) {
+                    sectionHtml += `
+                        <span class="part-item current disabled" style="opacity: 0.6; cursor: not-allowed; pointer-events: none;">
+                            <span>Part ${d.part}</span>
+                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                        </span>
+                    `;
+                } else {
+                    sectionHtml += `
+                        <span class="part-item" style="cursor: pointer;" data-url="${url}" data-part="${d.part}">
+                            <span>Part ${d.part}</span>
+                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                        </span>
+                    `;
+                }
             });
             sectionHtml += '</div></div>';
             return sectionHtml;
-        }
+        };
 
         let html = renderSection('Reading', readingData, readingStats, true);
         html += `<div style="height: 1px; background: var(--border, #e2e8f0); margin: 4px 0;"></div>`;
         html += renderSection('Listening', listeningData, listeningStats, false);
 
         this.contentArea.innerHTML = html;
+
+        // Gắn sự kiện click cho các Part khác (có data-url)
+        this.contentArea.querySelectorAll('.part-item[data-url]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetUrl = el.dataset.url;
+                const partNum = el.dataset.part;
+                if (confirm(`Bạn có muốn mở Part ${partNum} trong tab mới không?`)) {
+                    window.open(targetUrl, '_blank');
+                }
+            });
+        });
     }
 
     toggle() {
