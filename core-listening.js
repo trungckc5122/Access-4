@@ -219,6 +219,7 @@ class MiniDashboardManager {
         this.skillType = skillType;
         this.panel = null;
         this.isVisible = false;
+        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
     }
 
     init() {
@@ -235,19 +236,28 @@ class MiniDashboardManager {
         this.panel.id = 'mini-dashboard-panel';
 
         this.panel.innerHTML = `
-            <div class="mini-dashboard-header">
-                <h3>📊 <span id="mini-dashboard-title">Dashboard</span></h3>
+            <div class="mini-dashboard-header" id="mini-dashboard-header" style="cursor: move; user-select: none;">
+                <h3><span id="mini-dashboard-title">Dashboard</span></h3>
                 <button class="mini-dashboard-close" onclick="window.miniDashboard.hide()">✕</button>
             </div>
             <div class="mini-dashboard-content" id="mini-dashboard-content"></div>
             <div class="mini-dashboard-footer">
-                <a href="dashboard.html" class="dashboard-link">Đến Dashboard ➝</a>
+                <a href="dashboard.html" class="dashboard-link" target="_blank" onclick="return confirm('Mở trang Dashboard tổng trong tab mới?')">Đến Dashboard ➝</a>
             </div>
         `;
 
         document.body.appendChild(this.panel);
         window.miniDashboard = this;
         this.contentArea = document.getElementById('mini-dashboard-content');
+
+        // Restore position 
+        const posStr = localStorage.getItem('mini-dashboard-pos');
+        if (posStr) {
+            try {
+                const pos = JSON.parse(posStr);
+                Object.assign(this.panel.style, pos);
+            } catch(e) {}
+        }
     }
 
     injectToggleButton() {
@@ -378,7 +388,7 @@ class MiniDashboardManager {
                 const currentClass = isCurrent ? 'current' : '';
 
                 sectionHtml += `
-                    <a href="${url}" class="part-item ${currentClass}">
+                    <a href="${url}" class="part-item ${currentClass}" target="_blank" onclick="return confirm('Mở Part ${d.part} trong tab mới?')">
                         <span>Part ${d.part}</span>
                         <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
                     </a>
@@ -413,6 +423,44 @@ class MiniDashboardManager {
     }
 
     setupEvents() {
+        const header = document.getElementById('mini-dashboard-header');
+        
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const dx = e.clientX - this.dragData.startX;
+            const dy = e.clientY - this.dragData.startY;
+            this.panel.style.left = `${this.dragData.initialX + dx}px`;
+            this.panel.style.top = `${this.dragData.initialY + dy}px`;
+            this.panel.style.right = 'auto';
+            this.panel.style.bottom = 'auto';
+        };
+
+        const stopDrag = () => {
+            if (this.dragData.isDragging) {
+                this.dragData.isDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                
+                const rect = this.panel.getBoundingClientRect();
+                localStorage.setItem('mini-dashboard-pos', JSON.stringify({
+                    left: `${rect.left}px`,
+                    top: `${rect.top}px`
+                }));
+            }
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = this.panel.getBoundingClientRect();
+            this.dragData.initialX = rect.left;
+            this.dragData.initialY = rect.top;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        });
+
         // Broadcast channel listener
         try {
             this.channel = new BroadcastChannel('pet_update_channel');
@@ -425,8 +473,15 @@ class MiniDashboardManager {
 
         // Window storage event
         window.addEventListener('storage', (e) => {
-            if (e.key && e.key.startsWith('pet_') && this.isVisible) {
-                this.refreshData();
+            if (e.key && (e.key.startsWith('pet_') || e.key === 'mini-dashboard-pos') && this.isVisible) {
+                if (e.key === 'mini-dashboard-pos') {
+                    try {
+                        const pos = JSON.parse(e.newValue);
+                        Object.assign(this.panel.style, pos);
+                    } catch(err) {}
+                } else {
+                    this.refreshData();
+                }
             }
         });
     }
