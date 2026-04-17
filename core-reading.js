@@ -557,29 +557,62 @@ class ReadingCore {
                           document.querySelector('.transcript-content') || 
                           document.querySelector('.reading-card') ||
                           document.querySelector('.single-col .reading-card');
-        if (!container) return;
+        
+        if (!container) {
+            console.warn('[Highlight] Save failed: container not found');
+            return;
+        }
         
         const html = container.innerHTML;
+        const key = this.getHighlightStorageKey();
+        
         if (html.includes('highlight-yellow') || html.includes('highlight-green') || html.includes('highlight-pink') || html.includes('highlight')) {
-            this._safeSetStorage(this.getHighlightStorageKey(), html);
+            // ✅ SỬA ĐỔI: Sử dụng JSON.stringify để đảm bảo dữ liệu HTML được lưu trữ an toàn
+            this._safeSetStorage(key, JSON.stringify({ html: html, timestamp: Date.now() }));
+            console.log('[Highlight] SAVED to key:', key, 'Length:', html.length);
         } else {
-            localStorage.removeItem(this.getHighlightStorageKey());
+            localStorage.removeItem(key);
+            console.log('[Highlight] REMOVED (no highlights found) from key:', key);
         }
     }
 
     loadHighlightDraft() {
-        const savedHtml = localStorage.getItem(this.getHighlightStorageKey());
-        if (!savedHtml) return;
+        const key = this.getHighlightStorageKey();
+        const savedData = localStorage.getItem(key);
         
-        const container = document.getElementById('readingContent') || 
-                          document.getElementById('transcriptContent') ||
-                          document.querySelector('.reading-content') ||
-                          document.querySelector('.transcript-content') || 
-                          document.querySelector('.reading-card') ||
-                          document.querySelector('.single-col .reading-card');
-        if (container) {
-            container.innerHTML = savedHtml;
-            console.log('[Highlight] Restored from draft');
+        if (!savedData) {
+            console.log('[Highlight] No saved data found for key:', key);
+            return;
+        }
+        
+        try {
+            // ✅ SỬA ĐỔI: Giải mã JSON
+            const parsed = JSON.parse(savedData);
+            const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
+            
+            if (!savedHtml) return;
+
+            const container = document.getElementById('readingContent') || 
+                              document.getElementById('transcriptContent') ||
+                              document.querySelector('.reading-content') ||
+                              document.querySelector('.transcript-content') || 
+                              document.querySelector('.reading-card') ||
+                              document.querySelector('.single-col .reading-card');
+            
+            if (container) {
+                container.innerHTML = savedHtml;
+                console.log('[Highlight] RESTORED from key:', key);
+            } else {
+                console.warn('[Highlight] Restore failed: container not found');
+            }
+        } catch (e) {
+            console.error('[Highlight] Load error (invalid JSON?):', e);
+            // Fallback for old raw HTML data
+            const container = document.getElementById('readingContent') || document.querySelector('.reading-card');
+            if (container && savedData.includes('<span')) {
+                container.innerHTML = savedData;
+                console.log('[Highlight] Restored using fallback (legacy data)');
+            }
         }
     }
 
@@ -593,6 +626,12 @@ class ReadingCore {
         const meta = d.metadata || this.storageManager.parseTestInfo(
             document.querySelector('.candidate')?.textContent || document.title || ''
         );
+        
+        // Diagnostic log
+        if (!this._metaLogged) {
+            console.log('[Metadata] Parsed:', meta, 'from source:', document.title);
+            this._metaLogged = true;
+        }
         
         const book = meta.book || 1;
         const test = meta.test || 1;
