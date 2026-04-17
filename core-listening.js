@@ -8,6 +8,7 @@
  * - Reset now also clears saved results and draft
  * - ✅ FIX v2.1: Fixed autosave issue when resetting (timeout 0→500, hasAnswers check)
  * - ✅ NEW: Added Floating Sticky Note feature
+ * - ✅ NEW: Integrated Help Manager and repositioned buttons for better layout
  */
 
 /**
@@ -49,7 +50,7 @@ class PETListeningNoteManager {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
                     <button class="pet-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 0 2 2v3"/></svg>
                     </button>
                     <button class="pet-note-btn close-btn" title="Đóng">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -637,6 +638,14 @@ class ListeningCore {
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
+
+        // === MỚI: Khởi tạo managers trước khi dựng UI ===
+        this.noteManager = new PETListeningNoteManager(this);
+        this.noteManager.init();
+        this.dashboardManager = new ListeningDashboardManager(this);
+        this.dashboardManager.init();
+        this.helpManager = new PETListeningHelpManager(this);
+        this.helpManager.init();
         
         // Setup audio controls
         this.setupAudioControls();
@@ -662,12 +671,6 @@ class ListeningCore {
         }
 
         this.loadHighlightDraft();
-        this.noteManager = new PETListeningNoteManager(this);
-        this.noteManager.init();
-        this.dashboardManager = new ListeningDashboardManager(this);
-        this.dashboardManager.init();
-        this.helpManager = new PETListeningHelpManager(this);
-        this.helpManager.init();
         
         // Update initial state
         this.updateAnswerCount();
@@ -1034,6 +1037,7 @@ class ListeningCore {
         this.uiManager.injectHeaderControls(this);
         this.uiManager.injectModeToggle();
         this.injectNoteButton();
+        this.injectHelpButton();
 
         // 2. Setup behaviors
         this.uiManager.setupFontControls();
@@ -1062,12 +1066,38 @@ class ListeningCore {
         `;
         noteBtn.onclick = () => this.noteManager.toggle();
         
-        // Insert before submit button if possible
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.parentNode.insertBefore(noteBtn, resetBtn);
         } else {
             bottomBar.appendChild(noteBtn);
+        }
+    }
+
+    /**
+     * Inject Help button into the bottom bar next to Note button
+     */
+    injectHelpButton() {
+        const bottomBar = document.querySelector('.bottom-bar');
+        if (!bottomBar || bottomBar.querySelector('.help-toggle-btn-bottom')) return;
+
+        const helpBtn = document.createElement('button');
+        helpBtn.className = 'btn btn-info help-toggle-btn-bottom';
+        helpBtn.id = 'helpBtnBottom';
+        helpBtn.style.marginLeft = '8px';
+        helpBtn.style.backgroundColor = 'var(--info-color, #17a2b8)';
+        helpBtn.style.color = '#fff';
+        helpBtn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help
+        `;
+        helpBtn.onclick = () => this.helpManager.toggle();
+
+        const noteBtn = bottomBar.querySelector('.note-toggle-btn');
+        if (noteBtn) {
+            noteBtn.parentNode.insertBefore(helpBtn, noteBtn.nextSibling);
+        } else {
+            bottomBar.appendChild(helpBtn);
         }
     }
 
@@ -1338,6 +1368,20 @@ class ListeningCore {
             });
         }
         nav.appendChild(nextPartBtn);
+
+        // Nút Hướng dẫn (?) - Nằm giữa Next Part và Highlight
+        const helpBtn = document.createElement('button');
+        helpBtn.className = 'nav-arrow-btn nav-help-btn';
+        helpBtn.title = 'Hướng dẫn';
+        helpBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        `;
+        helpBtn.style.padding = '8px';
+        helpBtn.style.minWidth = '40px';
+        helpBtn.style.borderRadius = '50%';
+        helpBtn.style.marginLeft = '12px';
+        helpBtn.addEventListener('click', () => this.helpManager.toggle());
+        nav.appendChild(helpBtn);
         
         // Inject highlight toggle into question-nav
         this.injectHighlightToggle();
@@ -2453,6 +2497,8 @@ class ListeningUIManager {
             candidateEl.textContent = coreInstance.currentTestData.title;
         }
 
+        const innerBrand = header.querySelector('.brand');
+
         // 2. Inject Font Controls if not present
         if (!header.querySelector('.font-controls')) {
             const fontControls = document.createElement('div');
@@ -2462,7 +2508,11 @@ class ListeningUIManager {
                 <button class="font-btn" id="fontMedium">A</button>
                 <button class="font-btn active" id="fontLarge">A+</button>
             `;
-            header.appendChild(fontControls);
+            if (innerBrand) {
+                innerBrand.appendChild(fontControls);
+            } else {
+                header.appendChild(fontControls);
+            }
         }
 
         // 3. Inject Theme Toggle if not present
@@ -2475,7 +2525,11 @@ class ListeningUIManager {
                 <span class="icon-moon">🌙</span>
                 <span class="icon-sun">☀️</span>
             `;
-            header.appendChild(themeBtn);
+            if (innerBrand) {
+                innerBrand.appendChild(themeBtn);
+            } else {
+                header.appendChild(themeBtn);
+            }
         }
 
         // Load saved theme
@@ -2516,6 +2570,7 @@ class ListeningUIManager {
             html.setAttribute('data-theme', 'light');
         }
     }
+
     injectModeToggle() {
         const header = document.querySelector('.ielts-header .brand') || document.querySelector('.ielts-header');
         if (!header) return;
