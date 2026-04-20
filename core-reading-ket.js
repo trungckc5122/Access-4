@@ -3,20 +3,9 @@
  * Contains all functionality for reading tests across all parts and tests
  * Compatible with KET 1 & KET 2, Tests 1-4, Parts 1-5
  * 
- * CHANGELOG (KET adaptation from PET):
- * - Renamed all storage keys from "pet_" to "ket_"
- * - Adjusted maximum parts from 6 to 5
- * - Updated total questions for reading: 30 (6+7+5+6+6)
- * - Modified part navigation limits (1-5)
- * - Updated MiniDashboard part lists
- * - Changed PET score calculation to KET scale (120-150)
- * - ✅ FIXED: multiple-choice Part 1 saving (use answerKey as source)
- * - All other functionalities preserved (highlight, note, dashboard)
+ * FIXED: Part 1 saving issue - use part-based question ranges
  */
 
-/**
- * KETNoteManager - Handles the draggable, resizable sticky notes
- */
 class KETNoteManager {
     constructor(core) {
         this.core = core;
@@ -212,9 +201,6 @@ class KETNoteManager {
     }
 }
 
-/**
- * MiniDashboardManager - Popup showing progress across all parts with KET scores
- */
 class MiniDashboardManager {
     constructor(core, skillType) {
         this.core = core;
@@ -668,27 +654,10 @@ class ReadingCore {
         window.location.href = targetUrl;
     }
 
-    // Helper: get list of question numbers from answerKey (primary) or questions
-    getQuestionNumbers() {
-        let numbers = [];
-        if (this.currentTestData.answerKey) {
-            numbers = Object.keys(this.currentTestData.answerKey)
-                .map(k => parseInt(k.replace('q', '')))
-                .filter(n => !isNaN(n))
-                .sort((a, b) => a - b);
-        } else if (this.currentTestData.questions) {
-            numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
-        } else {
-            const range = this.getQuestionRange();
-            for (let i = range.start; i <= range.end; i++) numbers.push(i);
-        }
-        return numbers;
-    }
-
     getDraftData() {
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
         const draft = { type: this.currentTestData.type, slotState: { ...this.slotState } };
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             draft[`q${i}`] = this.getUserAnswer(i);
         }
         return draft;
@@ -804,10 +773,10 @@ class ReadingCore {
 
         try {
             const draft = JSON.parse(draftJson);
-            const questionNumbers = this.getQuestionNumbers();
+            const questionRange = this.getQuestionRange();
 
             if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
-                for (let i of questionNumbers) {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
                     if (!ans) continue;
                     const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
@@ -817,7 +786,7 @@ class ReadingCore {
                     }
                 }
             } else if (draft.type === 'matching') {
-                for (let i of questionNumbers) {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
                     if (!ans) continue;
                     const input = document.getElementById(`answer-${i}`);
@@ -830,7 +799,7 @@ class ReadingCore {
                     if (value && value.value) this.placeInSlot(qNum, value.value);
                 }
             } else if (draft.type === 'split-layout') {
-                for (let i of questionNumbers) {
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const ans = draft[`q${i}`];
                     if (ans === undefined) continue;
                     const inp = document.getElementById(`q${i}`);
@@ -886,12 +855,6 @@ class ReadingCore {
             submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
         } else {
             bottomBar.appendChild(noteBtn);
-        }
-    }
-
-    setupResetModal() {
-        if (!document.getElementById('resetModalOverlay')) {
-            this.createResetModal();
         }
     }
 
@@ -990,7 +953,6 @@ class ReadingCore {
         }
     }
 
-    // ==================== DRAG & DROP ====================
     setupDragDropEvents() {
         const sentenceEls = document.querySelectorAll('.sentence-item');
         let touchSelected = null;
@@ -1120,16 +1082,15 @@ class ReadingCore {
         this.updateAnswerCount();
     }
 
-    // ==================== INLINE RADIO ====================
     renderInlineRadioQuestions() {
         const container = document.getElementById('questionsContainer');
         if (!container) return;
         container.innerHTML = '';
 
         const optionsList = this.currentTestData.optionsList;
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
 
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             const qDiv = document.createElement('div');
             qDiv.className = 'question-item';
             qDiv.id = `question-${i}`;
@@ -1360,8 +1321,8 @@ class ReadingCore {
         prevPartBtn.onclick = () => this.goToPart(-1);
         nav.appendChild(prevPartBtn);
 
-        const questionNumbers = this.getQuestionNumbers();
-        for (let i of questionNumbers) {
+        const questionRange = this.getQuestionRange();
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             const btn = document.createElement('button');
             const ans = this.getUserAnswer(i);
             btn.className = 'nav-btn unanswered';
@@ -1439,26 +1400,18 @@ class ReadingCore {
         });
     }
 
+    // ==================== FIXED: Part-based question range ====================
     getQuestionRange() {
         if (!this.currentTestData) return { start: 1, end: 5 };
-        if (this.currentTestData.questions && this.currentTestData.questions.length > 0) {
-            const numbers = this.currentTestData.questions.map(q => q.num).filter(n => !isNaN(n)).sort((a, b) => a - b);
-            if (numbers.length > 0) return { start: numbers[0], end: numbers[numbers.length - 1] };
-        }
-        if (this.currentTestData.answerKey) {
-            const keys = Object.keys(this.currentTestData.answerKey)
-                .map(k => parseInt(k.replace('q', '')))
-                .filter(n => !isNaN(n))
-                .sort((a, b) => a - b);
-            if (keys.length > 0) return { start: keys[0], end: keys[keys.length - 1] };
-        }
         const part = this.currentTestData.part || 1;
-        if (part === 1) return { start: 1, end: 6 };
-        if (part === 2) return { start: 7, end: 13 };
-        if (part === 3) return { start: 14, end: 18 };
-        if (part === 4) return { start: 19, end: 24 };
-        if (part === 5) return { start: 25, end: 30 };
-        return { start: 1, end: 5 };
+        switch(part) {
+            case 1: return { start: 1, end: 6 };      // 6 questions
+            case 2: return { start: 7, end: 13 };     // 7 questions
+            case 3: return { start: 14, end: 18 };    // 5 questions
+            case 4: return { start: 19, end: 24 };    // 6 questions
+            case 5: return { start: 25, end: 30 };    // 6 questions
+            default: return { start: 1, end: 5 };
+        }
     }
 
     getUserAnswer(questionNum) {
@@ -1538,13 +1491,13 @@ class ReadingCore {
     }
 
     updateAnswerCount() {
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
         let answered = 0;
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             const ans = this.getUserAnswer(i);
             if (ans !== null && ans !== "") answered++;
         }
-        const total = questionNumbers.length;
+        const total = questionRange.end - questionRange.start + 1;
         if (this._lastAnsweredCount === answered) return;
         this._lastAnsweredCount = answered;
 
@@ -1553,7 +1506,7 @@ class ReadingCore {
         const progressDisplay = document.getElementById('progressDisplay');
         if (progressDisplay) progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
 
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) ||
                 document.querySelector(`.nav-btn[data-q="${i}"]`);
             if (btn) {
@@ -1566,9 +1519,9 @@ class ReadingCore {
 
     handleSubmit() {
         if (this.examSubmitted) return;
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
         const unanswered = [];
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             const ans = this.getUserAnswer(i);
             if (ans === null || ans === "") unanswered.push(i);
         }
@@ -1585,8 +1538,8 @@ class ReadingCore {
         document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
         if (this.currentTestData.type === 'split-layout') {
-            const questionNumbers = this.getQuestionNumbers();
-            for (let i of questionNumbers) {
+            const questionRange = this.getQuestionRange();
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const inp = document.getElementById(`q${i}`);
                 if (inp) {
                     const correct = this.isAnswerCorrect(i, this.getUserAnswer(i));
@@ -1624,8 +1577,8 @@ class ReadingCore {
     }
 
     markAnswers() {
-        const questionNumbers = this.getQuestionNumbers();
-        for (let i of questionNumbers) {
+        const questionRange = this.getQuestionRange();
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             if (this.currentTestData.type === 'drag-drop') {
                 const reading = document.getElementById(`readingSlot${i}`);
                 const panel = document.getElementById(`panelSlot${i}`);
@@ -1685,12 +1638,12 @@ class ReadingCore {
     }
 
     showResults() {
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
         let correctCount = 0;
-        for (let i of questionNumbers) {
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
             if (this.isAnswerCorrect(i, this.getUserAnswer(i))) correctCount++;
         }
-        const total = questionNumbers.length;
+        const total = questionRange.end - questionRange.start + 1;
         if (this.currentTestData.type === 'split-layout') return;
 
         const explanationPanel = document.getElementById('explanationPanel');
@@ -1720,8 +1673,8 @@ class ReadingCore {
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents();
-                const questionNumbers = this.getQuestionNumbers();
-                for (let i of questionNumbers) {
+                const questionRange = this.getQuestionRange();
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                     this.addBadgeForQuestion(i);
@@ -1743,8 +1696,8 @@ class ReadingCore {
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents();
-                const questionNumbers = this.getQuestionNumbers();
-                for (let i of questionNumbers) {
+                const questionRange = this.getQuestionRange();
+                for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                 }
@@ -1905,13 +1858,13 @@ class ReadingCore {
         this.explanationMode = false;
         this.currentSplit = false;
 
-        const questionNumbers = this.getQuestionNumbers();
+        const questionRange = this.getQuestionRange();
 
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
             this.attachInputEvents();
         } else {
-            for (let i of questionNumbers) {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
                 if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
                     const radios = document.getElementsByName(`q${i}`);
                     radios.forEach(radio => { radio.checked = false; radio.disabled = false; });
@@ -1997,15 +1950,12 @@ class ReadingCore {
 
     getUserAnswers() {
         const answers = {};
-        const questionNumbers = this.getQuestionNumbers();
-        for (let i of questionNumbers) answers[i] = this.getUserAnswer(i);
+        const questionRange = this.getQuestionRange();
+        for (let i = questionRange.start; i <= questionRange.end; i++) answers[i] = this.getUserAnswer(i);
         return answers;
     }
 }
 
-/**
- * Highlighting functionalities inside the text content pane
- */
 class ReadingHighlightManager {
     constructor() {
         this.selectedRange = null;
@@ -2230,9 +2180,6 @@ class ReadingHighlightManager {
     }
 }
 
-/**
- * Storage extraction for the KET module architecture
- */
 class ReadingStorageManager {
     saveResults(testData, userAnswers) {
         const details = [];
@@ -2274,9 +2221,6 @@ class ReadingStorageManager {
     }
 }
 
-/**
- * Interactive DOM controls manipulation
- */
 class ReadingUIManager {
     setupFontControls() {
         const fontButtons = { fontSmall: 'small', fontMedium: 'medium', fontLarge: 'large' };
@@ -2508,7 +2452,6 @@ class ReadingUIManager {
     }
 }
 
-// Global functions
 window.applyHighlight = function (color) {
     if (window.readingCore && window.readingCore.highlightManager) {
         window.readingCore.highlightManager.applyHighlight(color);
@@ -2520,7 +2463,6 @@ window.removeHighlight = function () {
     }
 };
 
-// Exports
 window.ReadingCore = ReadingCore;
 window.ReadingHighlightManager = ReadingHighlightManager;
 window.ReadingStorageManager = ReadingStorageManager;
