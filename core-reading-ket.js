@@ -262,11 +262,29 @@ class MiniDashboardManager {
         }
     }
 
-    calculateKETScore(correct, maxQuestions) {
+    // Bảng quy đổi điểm KET Reading (Cambridge English Scale)
+    ketReadingScoreMap() {
+        return {
+            30: 150, 29: 145, 28: 140, 27: 138, 26: 135, 25: 133, 24: 130, 23: 128,
+            22: 125, 21: 123, 20: 120, 19: 117, 18: 114, 17: 111, 16: 109, 15: 106,
+            14: 103, 13: 100, 12: 97, 11: 94, 10: 91, 9: 88, 8: 85, 7: 82,
+            6: 70, 5: 59, 4: 47, 3: 35, 2: 23, 1: 12, 0: 0
+        };
+    }
+
+    // Bảng quy đổi điểm KET Listening (Cambridge English Scale)
+    ketListeningScoreMap() {
+        return {
+            25: 150, 24: 145, 23: 140, 22: 137, 21: 133, 20: 130, 19: 127, 18: 123,
+            17: 120, 16: 117, 15: 113, 14: 110, 13: 107, 12: 103, 11: 100,
+            10: 96, 9: 93, 8: 89, 7: 86, 6: 82, 5: 68, 4: 55, 3: 41, 2: 27, 1: 14, 0: 0
+        };
+    }
+
+    calculateKETScore(correct, isReading) {
         if (correct === 0) return null;
-        const percentage = correct / maxQuestions;
-        let score = Math.round(120 + percentage * 30);
-        return Math.min(150, Math.max(120, score));
+        const map = isReading ? this.ketReadingScoreMap() : this.ketListeningScoreMap();
+        return map[correct] !== undefined ? map[correct] : 0;
     }
 
     refreshData() {
@@ -321,7 +339,7 @@ class MiniDashboardManager {
             correct: totalCorrect,
             total: totalAnswered,
             hasData: hasAnyData,
-            ketScore: this.calculateKETScore(totalCorrect, totalAnswered)
+            ketScore: this.calculateKETScore(totalCorrect, maxQuestions === 30)
         };
     }
 
@@ -1144,8 +1162,8 @@ class ReadingCore {
         mainArea.innerHTML = `
             <div class="single-col">
                 <div class="part-header">
-                    <h3>Câu hỏi ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
-                    <p>Điền đáp án đúng vào mỗi chỗ trống. Chỉ điền một từ cho mỗi chỗ trống.</p>
+                    <h3>Questions ${this.getQuestionRange().start}–${this.getQuestionRange().end}</h3>
+                    <p>For each question, write the correct answer. Write <strong>ONE</strong> word for each gap.</p>
                 </div>
                 ${this.currentTestData.template}
             </div>
@@ -1160,8 +1178,8 @@ class ReadingCore {
             <div class="split-container">
                 <div class="left-col">
                     <div class="part-header">
-                        <h3>Câu hỏi ${this.getQuestionRange().start}-${this.getQuestionRange().end}</h3>
-                        <p>Điền đáp án đúng vào mỗi chỗ trống. Chỉ điền một từ cho mỗi chỗ trống.</p>
+                        <h3>Questions ${this.getQuestionRange().start}–${this.getQuestionRange().end}</h3>
+                        <p>For each question, write the correct answer. Write <strong>ONE</strong> word for each gap.</p>
                     </div>
                     ${this.currentTestData.template}
                 </div>
