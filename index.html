@@ -559,15 +559,18 @@
     .broken-link {
       color: #94a3b8 !important;
       text-decoration: none !important;
-      border-bottom: 1px dashed #cbd5e1;
+      border: none !important;
       opacity: 0.8;
       cursor: not-allowed;
+      pointer-events: none;
     }
 
     .broken-link::after {
-      content: ' (soon)';
+      content: ' (Soon)';
       font-size: 10px;
-      opacity: 0.5;
+      font-style: italic;
+      color: #94a3b8;
+      margin-left: 4px;
     }
 
     .status-badge {
@@ -2817,46 +2820,6 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      initTabs();
-      enableHoverForAllDetails();
-      initTheme();
-      initGlobalStacking();
-      initStatusBadges();
-      initDashboardFilters();
-      initResumeButton();
-      initHeaderAutoHide();
-      initDataReset();
-      initSmartSearch(); // Chạy trước để thiết lập event listener
-      await checkBrokenLinks();
-      // Dispatch event sau khi check lần đầu để initSmartSearch cập nhật
-      window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
-
-      // Khai báo BroadcastChannel trong DOMContentLoaded để ổn định
-
-      try {
-        const resetChannel = new BroadcastChannel('pet_reset_channel');
-        resetChannel.onmessage = (event) => {
-          console.log('[Index] Broadcast received:', event.data);
-          if (event.data.action === 'reset') {
-            // Xóa triệt để các badge hiện tại
-            document.querySelectorAll('.status-badge, .score-badge').forEach(b => b.remove());
-            // Cập nhật lại toàn bộ
-            initStatusBadges();
-          }
-        };
-      } catch (e) {
-        console.warn('BroadcastChannel not supported', e);
-      }
-
-      // Hiệu ứng Fade in cho header khi load
-      const header = document.querySelector('header');
-      header.style.opacity = '0';
-      setTimeout(() => {
-        header.style.transition = 'opacity 0.8s ease';
-        header.style.opacity = '1';
-      }, 100);
-    });
 
     // Tự động cập nhật badge khi quay lại tab hoặc có thay đổi từ tab khác
     window.addEventListener('focus', () => {
@@ -3080,7 +3043,7 @@
 
     // Cập nhật khi có thay đổi localStorage
     window.addEventListener('storage', (e) => {
-      if (e.key && (e.key.includes('pet_reading') || e.key.includes('pet_listening'))) {
+      if (e.key && (e.key.includes('_reading') || e.key.includes('_listening'))) {
         console.log('[Index] Storage change detected for:', e.key);
         initStatusBadges();
       }
@@ -3199,6 +3162,8 @@
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         initStatusBadges();
+        // Cập nhật broken link cho panel hiện tại
+        checkBrokenLinks();
       }
     });
 
@@ -3652,6 +3617,47 @@
       // Lắng nghe sự kiện khi checkBrokenLinks hoàn thành để re-scan
       window.addEventListener('brokenLinksChecked', scanExistingLinks);
     }
+
+    // ========== KHỞI TẠO TẤT CẢ COMPONENT KHI LOAD TRANG ==========
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('[Index] Initializing components...');
+        try {
+            // 1. Theme & Tabs first
+            initTheme();
+            initTabs();
+            
+            // 2. Data & UI Status
+            initStatusBadges();
+            initDashboardFilters();
+            initResumeButton();
+            
+            // 3. Navigation & Utilities
+            initHeaderAutoHide();
+            initDataReset();
+            initSmartSearch();
+            initGlobalStacking();
+            enableHoverForAllDetails();
+
+            // 4. Broken Link Initial Check
+            await checkBrokenLinks();
+            window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
+
+            // 5. Cross-tab Sync
+            try {
+                const resetChannel = new BroadcastChannel('pet_reset_channel');
+                resetChannel.onmessage = (event) => {
+                    if (event.data.action === 'trigger_reset') {
+                        localStorage.clear();
+                        window.location.reload();
+                    }
+                };
+            } catch (e) { console.warn('BroadcastChannel not supported for reset sync', e); }
+
+            console.log('[Index] Components initialized successfully.');
+        } catch (err) {
+            console.error('[Index] Initialization error:', err);
+        }
+    });
 
 
   </script>
