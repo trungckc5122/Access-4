@@ -1500,7 +1500,7 @@ class ReadingCore {
                 .sort((a, b) => a - b);
             if (keys.length > 0) return { start: keys[0], end: keys[keys.length - 1] };
         }
-        return { start: 1, end: 5 };
+        return { start: 1, end: 6 };
     }
 
     getUserAnswer(questionNum) {
