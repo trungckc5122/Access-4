@@ -544,17 +544,17 @@
 <div class="dashboard-container">
     <div class="dashboard-header">
         <div class="header-content">
-            <h1>PET Dashboard</h1>
-            <p>Quản lý kết quả Reading & Listening - Tính điểm Cambridge và CEFR</p>
+            <h1 id="dashboardTitle">PET Dashboard</h1>
+            <p id="dashboardDesc">Quản lý kết quả Reading & Listening - Tính điểm Cambridge và CEFR</p>
         </div>
         <div style="display: flex; gap: 16px; align-items: center;">
             <div class="test-info">
                 <div class="info-card">
-                    <span class="label">Reading (max 32)</span>
+                    <span class="label" id="labelReading">Reading (max 32)</span>
                     <span class="value" id="totalReading">0/0</span>
                 </div>
                 <div class="info-card">
-                    <span class="label">Listening (max 25)</span>
+                    <span class="label" id="labelListening">Listening (max 25)</span>
                     <span class="value" id="totalListening">0/0</span>
                 </div>
             </div>
@@ -567,12 +567,15 @@
 
     <div class="selector-bar">
         <div class="selector-item">
-            <label for="bookSelect">Sách:</label>
-            <select id="bookSelect">
-                <option value="1">PET 1</option>
-                <option value="2">PET 2</option>
-                <option value="3">PET 3</option>
+            <label for="typeSelect">Trình độ:</label>
+            <select id="typeSelect">
+                <option value="pet">Preliminary (PET)</option>
+                <option value="ket">Key (KET)</option>
             </select>
+        </div>
+        <div class="selector-item">
+            <label for="bookSelect">Sách:</label>
+            <select id="bookSelect"></select>
         </div>
         <div class="selector-item">
             <label for="testSelect">Test:</label>
@@ -743,14 +746,47 @@
         0:  { cambridge: 0, cefr: '-' }
     };
 
+    // ==================== BẢNG QUY ĐỔI ĐIỂM KET (A2 KEY) ====================
+    const ketReadingScoreMap = {
+        30: { cambridge: 150, cefr: 'B1' }, 29: { cambridge: 145, cefr: 'B1' }, 28: { cambridge: 140, cefr: 'B1' },
+        27: { cambridge: 138, cefr: 'A2' }, 26: { cambridge: 135, cefr: 'A2' }, 25: { cambridge: 133, cefr: 'A2' },
+        24: { cambridge: 130, cefr: 'A2' }, 23: { cambridge: 128, cefr: 'A2' }, 22: { cambridge: 125, cefr: 'A2' },
+        21: { cambridge: 123, cefr: 'A2' }, 20: { cambridge: 120, cefr: 'A2' }, 19: { cambridge: 117, cefr: 'A1' },
+        18: { cambridge: 114, cefr: 'A1' }, 17: { cambridge: 111, cefr: 'A1' }, 16: { cambridge: 109, cefr: 'A1' },
+        15: { cambridge: 106, cefr: 'A1' }, 14: { cambridge: 103, cefr: 'A1' }, 13: { cambridge: 100, cefr: 'A1' },
+        12: { cambridge: 97, cefr: '-' }, 11: { cambridge: 94, cefr: '-' }, 10: { cambridge: 91, cefr: '-' },
+        9: { cambridge: 88, cefr: '-' }, 8: { cambridge: 85, cefr: '-' }, 7: { cambridge: 82, cefr: '-' },
+        6: { cambridge: 70, cefr: '-' }, 5: { cambridge: 59, cefr: '-' }, 4: { cambridge: 47, cefr: '-' },
+        3: { cambridge: 35, cefr: '-' }, 2: { cambridge: 23, cefr: '-' }, 1: { cambridge: 12, cefr: '-' }, 0: { cambridge: 0, cefr: '-' }
+    };
+
+    const ketListeningScoreMap = {
+        25: { cambridge: 150, cefr: 'B1' }, 24: { cambridge: 145, cefr: 'B1' }, 23: { cambridge: 140, cefr: 'B1' },
+        22: { cambridge: 137, cefr: 'A2' }, 21: { cambridge: 133, cefr: 'A2' }, 20: { cambridge: 130, cefr: 'A2' },
+        19: { cambridge: 127, cefr: 'A2' }, 18: { cambridge: 123, cefr: 'A2' }, 17: { cambridge: 120, cefr: 'A2' },
+        16: { cambridge: 117, cefr: 'A1' }, 15: { cambridge: 113, cefr: 'A1' }, 14: { cambridge: 110, cefr: 'A1' },
+        13: { cambridge: 107, cefr: 'A1' }, 12: { cambridge: 103, cefr: 'A1' }, 11: { cambridge: 100, cefr: 'A1' },
+        10: { cambridge: 96, cefr: '-' }, 9: { cambridge: 93, cefr: '-' }, 8: { cambridge: 89, cefr: '-' },
+        7: { cambridge: 86, cefr: '-' }, 6: { cambridge: 82, cefr: '-' }, 5: { cambridge: 68, cefr: '-' },
+        4: { cambridge: 55, cefr: '-' }, 3: { cambridge: 41, cefr: '-' }, 2: { cambridge: 27, cefr: '-' }, 1: { cambridge: 14, cefr: '-' }, 0: { cambridge: 0, cefr: '-' }
+    };
+
     // ==================== CẤU HÌNH ====================
     let currentBook = 1;
     let currentTest = 1;
+    let testType = 'pet'; // 'pet' or 'ket'
 
-    const readingParts = [1, 2, 3, 4, 5, 6];
-    const readingPartQuestions = { 1:5, 2:5, 3:5, 4:5, 5:6, 6:6 };
-    const listeningParts = [1, 2, 3, 4];
-    const listeningPartQuestions = { 1:7, 2:6, 3:7, 4:5 };
+    // PET config
+    const petReadingParts = [1, 2, 3, 4, 5, 6];
+    const petReadingPartQuestions = { 1:5, 2:5, 3:5, 4:5, 5:6, 6:6 };
+    const petListeningParts = [1, 2, 3, 4];
+    const petListeningPartQuestions = { 1:7, 2:6, 3:7, 4:5 };
+
+    // KET config (Standard A2 Key)
+    const ketReadingParts = [1, 2, 3, 4, 5];
+    const ketReadingPartQuestions = { 1:6, 2:7, 3:5, 4:6, 5:6 };
+    const ketListeningParts = [1, 2, 3, 4, 5];
+    const ketListeningPartQuestions = { 1:5, 2:5, 3:5, 4:5, 5:5 };
 
     // ==================== HÀM MỞ TAB LÀM LẠI BÀI ====================
     function openPracticeTab(skill, part) {
@@ -766,11 +802,8 @@
 
     // ==================== HÀM LẤY DỮ LIỆU ====================
     function getStorageKey(skill, part) {
-        if (skill === 'reading') {
-            return `pet_reading_book${currentBook}_test${currentTest}_part${part}`;
-        } else {
-            return `pet_listening_book${currentBook}_test${currentTest}_part${part}`;
-        }
+        const prefix = testType === 'ket' ? `ket_${skill}` : `pet_${skill}`;
+        return `${prefix}_book${currentBook}_test${currentTest}_part${part}`;
     }
 
     function loadPartData(skill, part) {
@@ -783,10 +816,14 @@
     }
 
     function loadAllData() {
+        const isKet = testType === 'ket';
+        const rParts = isKet ? ketReadingParts : petReadingParts;
+        const lParts = isKet ? ketListeningParts : petListeningParts;
+
         const readingData = {};
         let readingTotalCorrect = 0;
         let readingTotalQuestions = 0;
-        for (let part of readingParts) {
+        for (let part of rParts) {
             const data = loadPartData('reading', part);
             if (data) {
                 readingData[part] = data;
@@ -798,7 +835,7 @@
         const listeningData = {};
         let listeningTotalCorrect = 0;
         let listeningTotalQuestions = 0;
-        for (let part of listeningParts) {
+        for (let part of lParts) {
             const data = loadPartData('listening', part);
             if (data) {
                 listeningData[part] = data;
@@ -817,14 +854,20 @@
     // ==================== TÍNH ĐIỂM ====================
     function getReadingLevel(correct) {
         if (correct < 0) correct = 0;
-        if (correct > 32) correct = 32;
-        return readingScoreMap[correct] || { cambridge: 0, cefr: '-' };
+        const isKet = testType === 'ket';
+        const max = isKet ? 30 : 32;
+        const map = isKet ? ketReadingScoreMap : readingScoreMap;
+        if (correct > max) correct = max;
+        return map[correct] || { cambridge: 0, cefr: '-' };
     }
 
     function getListeningLevel(correct) {
         if (correct < 0) correct = 0;
-        if (correct > 25) correct = 25;
-        return listeningScoreMap[correct] || { cambridge: 0, cefr: '-' };
+        const isKet = testType === 'ket';
+        const max = 25; // Both PET and KET Listening are 25
+        const map = isKet ? ketListeningScoreMap : listeningScoreMap;
+        if (correct > max) correct = max;
+        return map[correct] || { cambridge: 0, cefr: '-' };
     }
 
     // ==================== HIỂN THỊ CHI TIẾT PART ====================
@@ -871,19 +914,28 @@
                     ${tableRows}
                 </tbody>
             </table>
+            <div style="margin-top: 20px; font-size: 0.85em; color: var(--text-muted); line-height: 1.4;">
+                <p>💡 <i>Lưu ý: Bạn phải làm xong toàn bộ các Part của một Test để hệ thống tính điểm tổng và quy đổi trình độ (Cambridge Scale/CEFR).</i></p>
+            </div>
         `;
         document.querySelector('.detail-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // ==================== HIỂN THỊ CARD CÁC PART ====================
     function renderCards(data) {
+        const isKet = testType === 'ket';
+        const rParts = isKet ? ketReadingParts : petReadingParts;
+        const rQuestions = isKet ? ketReadingPartQuestions : petReadingPartQuestions;
+        const lParts = isKet ? ketListeningParts : petListeningParts;
+        const lQuestions = isKet ? ketListeningPartQuestions : petListeningPartQuestions;
+
         // Reading
         const readingGrid = document.getElementById('readingPartsGrid');
         let readingHtml = '';
-        for (let part of readingParts) {
+        for (let part of rParts) {
             const partData = data.readingData[part];
+            const total = rQuestions[part];
             if (partData) {
-                const total = readingPartQuestions[part];
                 const correct = partData.correctCount;
                 const percent = Math.round((correct / total) * 100);
                 readingHtml += `
@@ -909,7 +961,7 @@
                                 <button class="undo-btn" onclick="openPracticeTab('reading', ${part})" title="Làm lại Part này">↩️</button>
                             </div>
                         </div>
-                        <div class="no-data" style="color: var(--text-muted); font-style: italic; font-size: 14px;">Chưa có dữ liệu</div>
+                        <div class="no-data" style="color: var(--text-muted); font-style: italic; font-size: 14px;">Chưa có dữ liệu (Max: ${total})</div>
                         <button class="detail-btn" onclick="showPartDetails('reading', ${part})">Xem chi tiết</button>
                     </div>
                 `;
@@ -920,10 +972,10 @@
         // Listening
         const listeningGrid = document.getElementById('listeningPartsGrid');
         let listeningHtml = '';
-        for (let part of listeningParts) {
+        for (let part of lParts) {
             const partData = data.listeningData[part];
+            const total = lQuestions[part];
             if (partData) {
-                const total = listeningPartQuestions[part];
                 const correct = partData.correctCount;
                 const percent = Math.round((correct / total) * 100);
                 listeningHtml += `
@@ -949,7 +1001,7 @@
                                 <button class="undo-btn" onclick="openPracticeTab('listening', ${part})" title="Làm lại Part này">↩️</button>
                             </div>
                         </div>
-                        <div class="no-data" style="color: var(--text-muted); font-style: italic; font-size: 14px;">Chưa có dữ liệu</div>
+                        <div class="no-data" style="color: var(--text-muted); font-style: italic; font-size: 14px;">Chưa có dữ liệu (Max: ${total})</div>
                         <button class="detail-btn" onclick="showPartDetails('listening', ${part})">Xem chi tiết</button>
                     </div>
                 `;
@@ -959,39 +1011,57 @@
     }
 
     function updateOverall(data) {
+        const isKet = testType === 'ket';
+        const rMax = isKet ? 30 : 32;
+        const lMax = 25; 
+
         const rCorrect = data.readingTotalCorrect;
         const lCorrect = data.listeningTotalCorrect;
         const rLevel = getReadingLevel(rCorrect);
         const lLevel = getListeningLevel(lCorrect);
 
-        document.getElementById('readingScore').textContent = `${rCorrect}/32`;
+        document.getElementById('readingScore').textContent = `${rCorrect}/${rMax}`;
         document.getElementById('readingCefr').textContent = rLevel.cefr !== '-' ? `CEFR: ${rLevel.cefr}` : 'Chưa đủ điểm';
         document.getElementById('readingCambridge').textContent = rLevel.cambridge;
 
-        document.getElementById('listeningScore').textContent = `${lCorrect}/25`;
+        document.getElementById('listeningScore').textContent = `${lCorrect}/${lMax}`;
         document.getElementById('listeningCefr').textContent = lLevel.cefr !== '-' ? `CEFR: ${lLevel.cefr}` : 'Chưa đủ điểm';
         document.getElementById('listeningCambridge').textContent = lLevel.cambridge;
 
-        document.getElementById('totalReading').textContent = `${rCorrect}/32`;
-        document.getElementById('totalListening').textContent = `${lCorrect}/25`;
+        document.getElementById('totalReading').textContent = `${rCorrect}/${rMax}`;
+        document.getElementById('totalListening').textContent = `${lCorrect}/${lMax}`;
+
+        // Header labels update
+        document.getElementById('labelReading').textContent = `Reading (max ${rMax})`;
+        document.getElementById('labelListening').textContent = `Listening (max ${lMax})`;
 
         const avgCambridge = Math.round((rLevel.cambridge + lLevel.cambridge) / 2);
         document.getElementById('overallBadge').innerHTML = `<div style="font-size:12px; opacity:0.8; margin-bottom:2px;">TB</div>${avgCambridge}`;
     }
 
     function refreshData() {
+        const isKet = testType === 'ket';
         const data = loadAllData();
         renderCards(data);
         updateOverall(data);
-        document.getElementById('selectedDisplay').textContent = `PET ${currentBook} - Test ${currentTest}`;
+
+        const examLabel = isKet ? 'KEY (KET)' : 'Preliminary (PET)';
+        document.title = `${examLabel} Dashboard - Results`;
+        document.getElementById('dashboardTitle').textContent = `${examLabel} Dashboard`;
+        document.getElementById('selectedDisplay').textContent = `${isKet ? 'KET' : 'PET'} ${currentBook} - Test ${currentTest}`;
         document.getElementById('detailTitle').innerHTML = 'Chi tiết bài làm';
         document.getElementById('partDetailContent').innerHTML = '<div class="no-data" style="text-align: center; color: var(--text-muted); font-style: italic; padding: 20px;">Nhấn "Xem chi tiết" ở bất kỳ Part nào để hiển thị đáp án chi tiết.</div>';
     }
 
     function clearCurrentTest() {
-        if (confirm(`Bạn có chắc muốn xóa toàn bộ dữ liệu của PET ${currentBook} - Test ${currentTest}?`)) {
-            readingParts.forEach(p => localStorage.removeItem(getStorageKey('reading', p)));
-            listeningParts.forEach(p => localStorage.removeItem(getStorageKey('listening', p)));
+        const isKet = testType === 'ket';
+        const rParts = isKet ? ketReadingParts : petReadingParts;
+        const lParts = isKet ? ketListeningParts : petListeningParts;
+        const label = isKet ? 'KET' : 'PET';
+
+        if (confirm(`Bạn có chắc muốn xóa toàn bộ dữ liệu của ${label} ${currentBook} - Test ${currentTest}?`)) {
+            rParts.forEach(p => localStorage.removeItem(getStorageKey('reading', p)));
+            lParts.forEach(p => localStorage.removeItem(getStorageKey('listening', p)));
             refreshData();
         }
     }
@@ -1003,11 +1073,42 @@
         }
     }
 
+    function updateBookSelect() {
+        const isKet = testType === 'ket';
+        const bookSelect = document.getElementById('bookSelect');
+        const prefix = isKet ? 'Key' : 'Preliminary';
+        
+        bookSelect.innerHTML = `
+            <option value="1">${prefix} 1</option>
+            <option value="2">${prefix} 2</option>
+            <option value="3">${prefix} 3</option>
+        `;
+        bookSelect.value = currentBook;
+    }
+
     function init() {
+        const typeSelect = document.getElementById('typeSelect');
         const bookSelect = document.getElementById('bookSelect');
         const testSelect = document.getElementById('testSelect');
-        bookSelect.addEventListener('change', () => { currentBook = parseInt(bookSelect.value); localStorage.setItem('pet_dashboard_last_book', currentBook); refreshData(); });
-        testSelect.addEventListener('change', () => { currentTest = parseInt(testSelect.value); localStorage.setItem('pet_dashboard_last_test', currentTest); refreshData(); });
+        
+        typeSelect.addEventListener('change', () => {
+            testType = typeSelect.value;
+            localStorage.setItem('dashboard_last_type', testType);
+            updateBookSelect();
+            refreshData();
+        });
+
+        bookSelect.addEventListener('change', () => { 
+            currentBook = parseInt(bookSelect.value); 
+            localStorage.setItem(`${testType}_dashboard_last_book`, currentBook); 
+            refreshData(); 
+        });
+
+        testSelect.addEventListener('change', () => { 
+            currentTest = parseInt(testSelect.value); 
+            localStorage.setItem(`${testType}_dashboard_last_test`, currentTest); 
+            refreshData(); 
+        });
 
         // Đọc query parameters từ URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -1015,7 +1116,15 @@
         const paramTest = urlParams.get('test');
         const paramType = urlParams.get('type');
 
-        // Ưu tiên dùng query params nếu có
+        // Xác định testType ban đầu
+        if (paramType) {
+            testType = paramType.toLowerCase().includes('ket') ? 'ket' : 'pet';
+        } else {
+            testType = localStorage.getItem('dashboard_last_type') || 'pet';
+        }
+        typeSelect.value = testType;
+
+        updateBookSelect();
         if (paramBook && !isNaN(parseInt(paramBook))) {
             currentBook = parseInt(paramBook);
         } else {
