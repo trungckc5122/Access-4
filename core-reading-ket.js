@@ -10,14 +10,7 @@
  * - Modified part navigation limits (1-5)
  * - Updated MiniDashboard part lists
  * - Changed PET score calculation to KET scale (120-150)
- * - ✅ NEW: matching-dropdown type for Reading Part 2
- * - ✅ NEW: inline-radio cloze for Reading Part 4
- * - ✅ NEW: split-layout open gap fill for Reading Part 5
- * - ✅ Updated Vietnamese localization/strings
- * - ✅ NEW: Reset modal with 3 options (All, Content only, Cancel)
- * - ✅ FIXED: clearAllHighlights unwraps manual highlights completely
- * - ✅ FIXED: Save/load highlights for multiple containers
- * - ✅ FIXED: Auto-save highlights on Part navigation (cleanup)
+ * - ✅ FIXED: multiple-choice Part 1 saving (use answerKey as source)
  * - All other functionalities preserved (highlight, note, dashboard)
  */
 
@@ -76,13 +69,12 @@ class KETNoteManager {
         this.panel = panel;
         this.textarea = panel.querySelector('.ket-note-textarea');
 
-        // Restore position
         const posStr = localStorage.getItem(this.getNoteKey() + '_pos');
         if (posStr) {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(this.panel.style, pos);
-            } catch(e) {}
+            } catch (e) { }
         }
     }
 
@@ -119,7 +111,7 @@ class KETNoteManager {
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mousemove', onResize);
                 document.removeEventListener('mouseup', stopActions);
-                
+
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -206,7 +198,6 @@ class KETNoteManager {
     updateBadge() {
         const toggleBtn = document.querySelector('.note-toggle-btn');
         if (!toggleBtn) return;
-        
         const hasContent = this.textarea.value.trim().length > 0;
         toggleBtn.classList.toggle('has-content', hasContent);
     }
@@ -272,10 +263,10 @@ class MiniDashboardManager {
             Tiến độ
         `;
         toggleBtn.onclick = () => this.toggle();
-        
+
         const noteBtn = document.querySelector('.note-toggle-btn');
         const submitBtn = document.getElementById('submitBtn');
-        
+
         if (noteBtn) {
             noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
         } else if (submitBtn) {
@@ -288,7 +279,6 @@ class MiniDashboardManager {
     calculateKETScore(correct, maxQuestions) {
         if (correct === 0) return null;
         const percentage = correct / maxQuestions;
-        // KET scale: roughly 120-150
         let score = Math.round(120 + percentage * 30);
         return Math.min(150, Math.max(120, score));
     }
@@ -297,7 +287,7 @@ class MiniDashboardManager {
         const meta = this.core.getTestMeta();
         const book = meta.book;
         const test = meta.test;
-        
+
         const titleEl = document.getElementById('mini-dashboard-title');
         if (titleEl) titleEl.textContent = `KET ${book} - Test ${test}`;
 
@@ -308,12 +298,12 @@ class MiniDashboardManager {
     }
 
     fetchSkillData(skill, book, test) {
-        const parts = skill === 'reading' ? [1,2,3,4,5] : [1,2,3,4];
-        
+        const parts = skill === 'reading' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4];
+
         return parts.map(part => {
             let keyCompleted = `ket_${skill}_book${book}_test${test}_part${part}`;
             let keyDraft = keyCompleted + '_draft';
-            
+
             let dataCompleted = localStorage.getItem(keyCompleted);
             let dataDraft = localStorage.getItem(keyDraft);
 
@@ -321,15 +311,15 @@ class MiniDashboardManager {
                 try {
                     const parsed = JSON.parse(dataCompleted);
                     return { part, type: 'completed', value: parsed.correctCount || 0, total: parsed.totalQuestions || 0 };
-                } catch(e) {}
-            } 
-            
+                } catch (e) { }
+            }
+
             if (dataDraft) {
                 try {
                     const parsed = JSON.parse(dataDraft);
                     const answered = Object.values(parsed).filter(v => v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object').length;
                     return { part, type: 'draft', value: answered, total: 0 };
-                } catch(e) {}
+                } catch (e) { }
             }
             return { part, type: 'empty', value: 0, total: 0 };
         });
@@ -340,7 +330,7 @@ class MiniDashboardManager {
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
         const totalAnswered = maxQuestions;
         const hasAnyData = data.some(d => d.type !== 'empty');
-        
+
         return {
             correct: totalCorrect,
             total: totalAnswered,
@@ -351,12 +341,12 @@ class MiniDashboardManager {
 
     renderContent(readingData, listeningData) {
         if (!this.contentArea) return;
-        
+
         const meta = this.core.getTestMeta();
-        
+
         const readingStats = this.calculateSkillStats(readingData, 30);
         const listeningStats = this.calculateSkillStats(listeningData, 25);
-        
+
         const renderSection = (title, data, stats, isReading) => {
             let scoreHtml;
             if (!stats.hasData) {
@@ -366,7 +356,7 @@ class MiniDashboardManager {
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
-            
+
             let sectionHtml = `
                 <div class="skill-section">
                     <div class="skill-header">
@@ -375,13 +365,13 @@ class MiniDashboardManager {
                     </div>
                     <div class="part-list">
             `;
-            
+
             data.forEach(d => {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
                 let url = isReading ? `read-ket${meta.book}-test${meta.test}-part${d.part}.html` : `lis-ket${meta.book}-test${meta.test}-part${d.part}.html`;
-                
+
                 const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
                 const currentClass = isCurrent ? 'current' : '';
 
@@ -446,14 +436,14 @@ class ReadingCore {
         this.currentTestData = null;
         this.currentSplit = false;
         this.slotState = {};
-        
+
         this.highlightManager = new ReadingHighlightManager();
         this.storageManager = new ReadingStorageManager();
         this.uiManager = new ReadingUIManager();
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 500;
         this._isResetting = false;
-        
+
         this.personalHighlightsVisible = true;
     }
 
@@ -462,9 +452,9 @@ class ReadingCore {
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
-        
+
         this.setupUI();
-        
+
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
         } else if (this.currentTestData.type === 'drag-drop') {
@@ -480,7 +470,7 @@ class ReadingCore {
         if (this.currentTestData.type === 'split-layout') {
             this.attachInputEvents();
         }
-        
+
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
@@ -488,21 +478,21 @@ class ReadingCore {
         if (!this.isCompleted()) {
             this.loadDraft();
         }
-        
+
         this.noteManager = new KETNoteManager(this);
         this.noteManager.init();
-        
+
         this.miniDashboard = new MiniDashboardManager(this, 'reading');
         this.miniDashboard.init();
 
         this.createResetModal();
-        
+
         this.updateAnswerCount();
-        
+
         document.querySelectorAll('.eye-icon').forEach(icon => {
             icon.style.display = 'none';
         });
-        
+
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
 
@@ -533,13 +523,13 @@ class ReadingCore {
             '.single-col .reading-card',
             '.reading-passage'
         ];
-        
+
         let foundData = [];
         potentialSelectors.forEach(selector => {
             const el = document.querySelector(selector);
-            if (el && (el.innerHTML.includes('highlight-yellow') || 
-                       el.innerHTML.includes('highlight-green') || 
-                       el.innerHTML.includes('highlight-pink'))) {
+            if (el && (el.innerHTML.includes('highlight-yellow') ||
+                el.innerHTML.includes('highlight-green') ||
+                el.innerHTML.includes('highlight-pink'))) {
                 foundData.push({ selector, html: el.innerHTML });
             }
         });
@@ -608,8 +598,8 @@ class ReadingCore {
                 if (!savedHtml) return;
 
                 const container = document.getElementById('readingContent') ||
-                                  document.querySelector('.reading-card') ||
-                                  document.querySelector('.single-col .reading-card');
+                    document.querySelector('.reading-card') ||
+                    document.querySelector('.single-col .reading-card');
                 if (container) {
                     const inputValues = captureInputValues(container);
                     container.innerHTML = savedHtml;
@@ -631,15 +621,15 @@ class ReadingCore {
     getTestMeta() {
         const d = this.currentTestData;
         if (!d) return { book: 1, test: 1, part: 1 };
-        
+
         const meta = d.metadata || this.storageManager.parseTestInfo(
             document.querySelector('.candidate')?.textContent || document.title || ''
         );
-        
+
         const book = meta.book || 1;
         const test = meta.test || 1;
         const part = d.part || meta.part || 1;
-        
+
         return { book, test, part };
     }
 
@@ -671,18 +661,34 @@ class ReadingCore {
         const { book, test, part } = this.getTestMeta();
         const targetPart = part + direction;
         if (targetPart < 1 || targetPart > 5) return;
-        
+
         this.cleanup();
 
         const targetUrl = `read-ket${book}-test${test}-part${targetPart}.html`;
         window.location.href = targetUrl;
     }
 
+    // Helper: get list of question numbers from answerKey (primary) or questions
+    getQuestionNumbers() {
+        let numbers = [];
+        if (this.currentTestData.answerKey) {
+            numbers = Object.keys(this.currentTestData.answerKey)
+                .map(k => parseInt(k.replace('q', '')))
+                .filter(n => !isNaN(n))
+                .sort((a, b) => a - b);
+        } else if (this.currentTestData.questions) {
+            numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
+        } else {
+            const range = this.getQuestionRange();
+            for (let i = range.start; i <= range.end; i++) numbers.push(i);
+        }
+        return numbers;
+    }
+
     getDraftData() {
-        const questionRange = this.getQuestionRange();
+        const questionNumbers = this.getQuestionNumbers();
         const draft = { type: this.currentTestData.type, slotState: { ...this.slotState } };
-        
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        for (let i of questionNumbers) {
             draft[`q${i}`] = this.getUserAnswer(i);
         }
         return draft;
@@ -725,9 +731,9 @@ class ReadingCore {
     saveDraft() {
         if (this.examSubmitted || this._isResetting) return;
         if (!this.currentTestData) return;
-        
+
         clearTimeout(this.debounceTimer);
-        
+
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
@@ -742,14 +748,14 @@ class ReadingCore {
     saveDraftImmediate() {
         if (this._isResetting) return;
         if (this.examSubmitted || !this.currentTestData) return;
-        
+
         clearTimeout(this.debounceTimer);
-        
+
         try {
             const draft = this.getDraftData();
             const hasAnswers = this.draftHasAnswers(draft);
             if (!hasAnswers) return;
-            
+
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
 
@@ -764,7 +770,7 @@ class ReadingCore {
                     status: 'in-progress'
                 });
                 channel.close();
-            } catch (e) {}
+            } catch (e) { }
         } catch (e) {
             console.error('[Reading Draft] Immediate save failed:', e);
         }
@@ -795,13 +801,13 @@ class ReadingCore {
         const key = this.getStorageKey(true);
         const draftJson = localStorage.getItem(key);
         if (!draftJson) return false;
-        
+
         try {
             const draft = JSON.parse(draftJson);
-            const questionRange = this.getQuestionRange();
-            
+            const questionNumbers = this.getQuestionNumbers();
+
             if (draft.type === 'multiple-choice' || draft.type === 'inline-radio') {
-                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                for (let i of questionNumbers) {
                     const ans = draft[`q${i}`];
                     if (!ans) continue;
                     const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
@@ -811,7 +817,7 @@ class ReadingCore {
                     }
                 }
             } else if (draft.type === 'matching') {
-                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                for (let i of questionNumbers) {
                     const ans = draft[`q${i}`];
                     if (!ans) continue;
                     const input = document.getElementById(`answer-${i}`);
@@ -824,17 +830,18 @@ class ReadingCore {
                     if (value && value.value) this.placeInSlot(qNum, value.value);
                 }
             } else if (draft.type === 'split-layout') {
-                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                for (let i of questionNumbers) {
                     const ans = draft[`q${i}`];
                     if (ans === undefined) continue;
                     const inp = document.getElementById(`q${i}`);
                     if (inp) inp.value = ans;
                 }
             }
-            
+
             this.updateAnswerCount();
             return true;
         } catch (e) {
+            console.error('Load draft error:', e);
             return false;
         }
     }
@@ -852,12 +859,12 @@ class ReadingCore {
         this.uiManager.setupFontControls();
         this.uiManager.setupThemeToggle();
         this.uiManager.setupModeToggle();
-        
+
         if (this.currentTestData.type !== 'split-layout') {
             this.uiManager.setupResizer();
             this.uiManager.setupExplanationPanel();
         }
-        
+
         this.uiManager.setupAutoCollapse(this);
     }
 
@@ -873,7 +880,7 @@ class ReadingCore {
             Ghi chú
         `;
         noteBtn.onclick = () => this.noteManager?.toggle();
-        
+
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
@@ -888,59 +895,6 @@ class ReadingCore {
         }
     }
 
-    scrollToQuestion(questionNum) {
-        const type = this.currentTestData.type;
-        
-        if (type === 'inline-radio' || type === 'split-layout') {
-            const slotElement = document.getElementById(`readingSlot${questionNum}`) || 
-                              document.querySelector(`[data-q="${questionNum}"]`);
-            if (slotElement) slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            const questionElement = document.getElementById(`question-${questionNum}`);
-            if (questionElement) {
-                questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                questionElement.classList.add('focused-question');
-                setTimeout(() => questionElement.classList.remove('focused-question'), 2000);
-            }
-            return;
-        }
-
-        const questionElement = document.getElementById(`question-${questionNum}`);
-        if (questionElement) {
-            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            questionElement.classList.add('focused-question');
-            setTimeout(() => questionElement.classList.remove('focused-question'), 2000);
-        }
-    }
-
-    setActiveNavButton(questionNum) {
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) || 
-                          document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
-    }
-
-    injectNoteButton() {
-        const bottomBar = document.querySelector('.bottom-bar');
-        if (!bottomBar || bottomBar.querySelector('.note-toggle-btn')) return;
-
-        const noteBtn = document.createElement('button');
-        noteBtn.className = 'btn btn-primary note-toggle-btn';
-        noteBtn.style.marginLeft = '8px';
-        noteBtn.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
-            Ghi chú
-        `;
-        noteBtn.onclick = () => this.noteManager?.toggle();
-        
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
-        } else {
-            bottomBar.appendChild(noteBtn);
-        }
-    }
-
     renderQuestions() {
         const container = document.getElementById('questionsContainer');
         if (!container) return;
@@ -952,27 +906,27 @@ class ReadingCore {
                 const div = document.createElement('div');
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
-                
+
                 const introHtml = (q.intro || q.text)
                     ? `<div class="question-intro">${q.num}. ${q.intro || q.text}</div>`
                     : `<div class="question-num-only">${q.num}.</div>`;
-                    
+
                 div.innerHTML = `
                     ${introHtml}
                     <div class="options">
                         ${q.options.map((opt, idx) => {
-                            const letter = String.fromCharCode(65 + idx);
-                            return `
+                    const letter = String.fromCharCode(65 + idx);
+                    return `
                                 <div class="option">
                                     <input type="radio" name="q${q.num}" value="${letter}" id="q${q.num}${letter}">
                                     <label for="q${q.num}${letter}"><strong>${letter}</strong>. ${opt}</label>
                                 </div>
                             `;
-                        }).join('')}
+                }).join('')}
                     </div>
                     <span class="eye-icon" data-question="${q.num}">👁️</span>
                 `;
-                
+
                 container.appendChild(div);
             });
         } else if (this.currentTestData.type === 'matching') {
@@ -980,7 +934,7 @@ class ReadingCore {
                 const div = document.createElement('div');
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
-                
+
                 div.innerHTML = `
                     <div class="question-text">${q.num}. ${q.text}</div>
                     <div class="answer-input-area">
@@ -990,10 +944,10 @@ class ReadingCore {
                     </div>
                 `;
                 container.appendChild(div);
-                
+
                 const input = document.getElementById(`answer-${q.num}`);
                 if (input) {
-                    input.addEventListener('input', function() {
+                    input.addEventListener('input', function () {
                         this.value = this.value.toUpperCase().replace(/[^A-H]/g, '');
                         this.dispatchEvent(new Event('change', { bubbles: true }));
                     });
@@ -1005,15 +959,15 @@ class ReadingCore {
                 const div = document.createElement('div');
                 div.className = 'question-item';
                 div.id = `question-${q.num}`;
-                
+
                 const optionsHtml = `
                     <option value="">-- Chọn đáp án --</option>
                     ${options.map(opt => {
-                        const val = opt.charAt(0).toUpperCase();
-                        return `<option value="${val}">${opt}</option>`;
-                    }).join('')}
+                    const val = opt.charAt(0).toUpperCase();
+                    return `<option value="${val}">${opt}</option>`;
+                }).join('')}
                 `;
-                
+
                 div.innerHTML = `
                     <div class="question-text">${q.num}. ${q.text}</div>
                     <div class="answer-input-area">
@@ -1024,7 +978,7 @@ class ReadingCore {
                     </div>
                 `;
                 container.appendChild(div);
-                
+
                 const select = document.getElementById(`answer-${q.num}`);
                 if (select) {
                     select.addEventListener('change', () => {
@@ -1120,13 +1074,13 @@ class ReadingCore {
             const contentEl = slot.querySelector('.slot-content');
             const removeEl = slot.querySelector('.remove-chip');
             if (value) {
-                if(contentEl) contentEl.textContent = displayText;
+                if (contentEl) contentEl.textContent = displayText;
                 slot.setAttribute('data-selected', value);
-                if(removeEl) removeEl.style.display = 'inline';
+                if (removeEl) removeEl.style.display = 'inline';
             } else {
-                if(contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
+                if (contentEl) contentEl.textContent = slot.classList.contains('inline-drop-slot') ? `[ ${qNum} ]` : '';
                 slot.removeAttribute('data-selected');
-                if(removeEl) removeEl.style.display = 'none';
+                if (removeEl) removeEl.style.display = 'none';
             }
         });
 
@@ -1171,21 +1125,21 @@ class ReadingCore {
         const container = document.getElementById('questionsContainer');
         if (!container) return;
         container.innerHTML = '';
-        
-        const optionsList = this.currentTestData.optionsList;
-        const qRange = this.getQuestionRange();
 
-        for (let i = qRange.start; i <= qRange.end; i++) {
+        const optionsList = this.currentTestData.optionsList;
+        const questionNumbers = this.getQuestionNumbers();
+
+        for (let i of questionNumbers) {
             const qDiv = document.createElement('div');
             qDiv.className = 'question-item';
             qDiv.id = `question-${i}`;
-            
+
             const optionsHtml = optionsList[i].map(opt => {
                 const letter = opt.charAt(0);
                 const text = opt.substring(2);
                 return `<label><input type="radio" name="q${i}" value="${letter}"> <strong>${letter}</strong>. ${text}</label>`;
             }).join('');
-            
+
             qDiv.innerHTML = `
                 <div class="question-text">${i}.</div>
                 <div class="answer-input-area">
@@ -1225,7 +1179,7 @@ class ReadingCore {
     renderSingleColumn() {
         const mainArea = document.getElementById('mainArea');
         if (!mainArea || !this.currentTestData.template) return;
-        
+
         mainArea.innerHTML = `
             <div class="single-col">
                 <div class="part-header">
@@ -1240,7 +1194,7 @@ class ReadingCore {
     renderSplitColumn() {
         const mainArea = document.getElementById('mainArea');
         if (!mainArea || !this.currentTestData.template) return;
-        
+
         mainArea.innerHTML = `
             <div class="split-container">
                 <div class="left-col">
@@ -1261,7 +1215,7 @@ class ReadingCore {
                 </div>
             </div>
         `;
-        
+
         document.getElementById('closeRightExplain')?.addEventListener('click', () => {
             const col = document.getElementById('rightCol');
             if (col) col.classList.remove('show');
@@ -1293,14 +1247,14 @@ class ReadingCore {
                 }
             });
         }
-        
+
         document.querySelectorAll('.eye-icon').forEach(icon => {
             if (this.explanationMode || this.examSubmitted) {
                 icon.style.display = 'inline-block';
             } else {
                 icon.style.display = 'none';
             }
-            
+
             icon.addEventListener('click', (e) => {
                 const qNum = parseInt(e.currentTarget.dataset.q || e.currentTarget.dataset.question);
                 this.showExplanation(qNum);
@@ -1321,16 +1275,15 @@ class ReadingCore {
         this._boundDocInputHandler = (e) => {
             if (this._isResetting) return;
             if (e.target && e.target.matches('.gap-input')) return;
-            
+
             if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {
                 this.updateAnswerCount();
                 this.saveDraft();
             }
         };
         document.addEventListener('input', this._boundDocInputHandler);
-        
+
         document.addEventListener('click', (e) => {
-            // Gap click interaction (Part 4/5)
             const slot = e.target.closest('.reading-slot, .gap-input');
             if (slot) {
                 const qNum = parseInt(slot.dataset.q);
@@ -1340,7 +1293,6 @@ class ReadingCore {
                 }
             }
 
-            // Eye icon explanation (Part 5)
             if (e.target && e.target.classList.contains('eye-icon') && !e.target.dataset.q) {
                 const qNum = e.target.dataset.question;
                 if (qNum) this.showExplanation(parseInt(qNum));
@@ -1394,9 +1346,9 @@ class ReadingCore {
         }
 
         nav.innerHTML = '';
-        
+
         const { part } = this.getTestMeta();
-        
+
         const prevPartBtn = document.createElement('button');
         prevPartBtn.className = 'nav-arrow-btn nav-prev-part';
         prevPartBtn.title = 'Part trước';
@@ -1405,11 +1357,11 @@ class ReadingCore {
             <span>Part trước</span>
         `;
         if (part <= 1) prevPartBtn.disabled = true;
-        prevPartBtn.onclick = () => this.changePart(part - 1);
+        prevPartBtn.onclick = () => this.goToPart(-1);
         nav.appendChild(prevPartBtn);
 
-        const questionRange = this.getQuestionRange();
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        const questionNumbers = this.getQuestionNumbers();
+        for (let i of questionNumbers) {
             const btn = document.createElement('button');
             const ans = this.getUserAnswer(i);
             btn.className = 'nav-btn unanswered';
@@ -1420,7 +1372,7 @@ class ReadingCore {
             btn.onclick = () => this.scrollToQuestion(i);
             nav.appendChild(btn);
         }
-        
+
         const nextPartBtn = document.createElement('button');
         nextPartBtn.className = 'nav-arrow-btn nav-next-part';
         nextPartBtn.title = 'Part sau';
@@ -1429,9 +1381,9 @@ class ReadingCore {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         `;
         if (part >= 5) nextPartBtn.disabled = true;
-        nextPartBtn.onclick = () => this.changePart(part + 1);
+        nextPartBtn.onclick = () => this.goToPart(1);
         nav.appendChild(nextPartBtn);
-        
+
         this.injectHighlightToggle();
     }
 
@@ -1439,7 +1391,7 @@ class ReadingCore {
         const questionNav = document.querySelector('.question-nav');
         if (!questionNav) return;
         if (questionNav.querySelector('#highlightToggle')) return;
-        
+
         const toggleWrapper = document.createElement('div');
         toggleWrapper.className = 'highlight-toggle-wrapper';
         toggleWrapper.title = 'Bật/tắt highlight cá nhân';
@@ -1474,13 +1426,13 @@ class ReadingCore {
             document.querySelector('.left-col'),
             document.querySelector('.single-col')
         ].filter(Boolean);
-        
+
         const allHighlights = new Set();
         containers.forEach(container => {
             const highlights = container.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
             highlights.forEach(h => allHighlights.add(h));
         });
-        
+
         allHighlights.forEach(highlight => {
             if (visible) highlight.classList.remove('highlight-hidden');
             else highlight.classList.add('highlight-hidden');
@@ -1489,9 +1441,9 @@ class ReadingCore {
 
     getQuestionRange() {
         if (!this.currentTestData) return { start: 1, end: 5 };
-        if (this.currentTestData.questions) {
-            const numbers = this.currentTestData.questions.map(q => q.num).sort((a, b) => a - b);
-            return { start: numbers[0] || 1, end: numbers[numbers.length - 1] || 5 };
+        if (this.currentTestData.questions && this.currentTestData.questions.length > 0) {
+            const numbers = this.currentTestData.questions.map(q => q.num).filter(n => !isNaN(n)).sort((a, b) => a - b);
+            if (numbers.length > 0) return { start: numbers[0], end: numbers[numbers.length - 1] };
         }
         if (this.currentTestData.answerKey) {
             const keys = Object.keys(this.currentTestData.answerKey)
@@ -1500,7 +1452,13 @@ class ReadingCore {
                 .sort((a, b) => a - b);
             if (keys.length > 0) return { start: keys[0], end: keys[keys.length - 1] };
         }
-        return { start: 1, end: 6 };
+        const part = this.currentTestData.part || 1;
+        if (part === 1) return { start: 1, end: 6 };
+        if (part === 2) return { start: 7, end: 13 };
+        if (part === 3) return { start: 14, end: 18 };
+        if (part === 4) return { start: 19, end: 24 };
+        if (part === 5) return { start: 25, end: 30 };
+        return { start: 1, end: 5 };
     }
 
     getUserAnswer(questionNum) {
@@ -1532,8 +1490,8 @@ class ReadingCore {
 
     setActiveNavButton(questionNum) {
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) || 
-                          document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
+        const activeBtn = document.querySelector(`.nav-btn[data-question="${questionNum}"]`) ||
+            document.querySelector(`.nav-btn[data-q="${questionNum}"]`);
         if (activeBtn) activeBtn.classList.add('active');
     }
 
@@ -1543,7 +1501,7 @@ class ReadingCore {
 
         if (type === 'inline-radio') {
             const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
-                              document.querySelector(`[data-q="${questionNum}"]`);
+                document.querySelector(`[data-q="${questionNum}"]`);
             if (slotElement) slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             let questionElement = document.getElementById(`question-${questionNum}`);
             if (questionElement) questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1552,7 +1510,7 @@ class ReadingCore {
 
         if (type === 'drag-drop') {
             const slotElement = document.getElementById(`readingSlot${questionNum}`) ||
-                              document.querySelector(`#passageCard [data-q="${questionNum}"]`);
+                document.querySelector(`#passageCard [data-q="${questionNum}"]`);
             if (slotElement) slotElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             const sentItem = document.getElementById(`sent-${this.getUserAnswer(questionNum) || ''}`);
             if (sentItem) sentItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1580,24 +1538,24 @@ class ReadingCore {
     }
 
     updateAnswerCount() {
-        const questionRange = this.getQuestionRange();
+        const questionNumbers = this.getQuestionNumbers();
         let answered = 0;
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        for (let i of questionNumbers) {
             const ans = this.getUserAnswer(i);
             if (ans !== null && ans !== "") answered++;
         }
-        const total = questionRange.end - questionRange.start + 1;
+        const total = questionNumbers.length;
         if (this._lastAnsweredCount === answered) return;
         this._lastAnsweredCount = answered;
-        
+
         const answeredBadge = document.getElementById('answeredCount');
         if (answeredBadge) answeredBadge.textContent = `${answered}/${total} answered`;
         const progressDisplay = document.getElementById('progressDisplay');
         if (progressDisplay) progressDisplay.textContent = `Đã làm: ${answered}/${total}`;
 
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) || 
-                        document.querySelector(`.nav-btn[data-q="${i}"]`);
+        for (let i of questionNumbers) {
+            const btn = document.querySelector(`.nav-btn[data-question="${i}"]`) ||
+                document.querySelector(`.nav-btn[data-q="${i}"]`);
             if (btn) {
                 const ans = this.getUserAnswer(i);
                 btn.classList.remove('answered', 'unanswered');
@@ -1608,9 +1566,9 @@ class ReadingCore {
 
     handleSubmit() {
         if (this.examSubmitted) return;
-        const questionRange = this.getQuestionRange();
+        const questionNumbers = this.getQuestionNumbers();
         const unanswered = [];
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        for (let i of questionNumbers) {
             const ans = this.getUserAnswer(i);
             if (ans === null || ans === "") unanswered.push(i);
         }
@@ -1627,8 +1585,8 @@ class ReadingCore {
         document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
         if (this.currentTestData.type === 'split-layout') {
-            const questionRange = this.getQuestionRange();
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const questionNumbers = this.getQuestionNumbers();
+            for (let i of questionNumbers) {
                 const inp = document.getElementById(`q${i}`);
                 if (inp) {
                     const correct = this.isAnswerCorrect(i, this.getUserAnswer(i));
@@ -1659,15 +1617,15 @@ class ReadingCore {
                 status: 'completed'
             });
             channel.close();
-        } catch (e) {}
+        } catch (e) { }
 
         this.clearDraft();
         this.disableInputs();
     }
 
     markAnswers() {
-        const questionRange = this.getQuestionRange();
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        const questionNumbers = this.getQuestionNumbers();
+        for (let i of questionNumbers) {
             if (this.currentTestData.type === 'drag-drop') {
                 const reading = document.getElementById(`readingSlot${i}`);
                 const panel = document.getElementById(`panelSlot${i}`);
@@ -1727,12 +1685,12 @@ class ReadingCore {
     }
 
     showResults() {
-        const questionRange = this.getQuestionRange();
+        const questionNumbers = this.getQuestionNumbers();
         let correctCount = 0;
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
+        for (let i of questionNumbers) {
             if (this.isAnswerCorrect(i, this.getUserAnswer(i))) correctCount++;
         }
-        const total = questionRange.end - questionRange.start + 1;
+        const total = questionNumbers.length;
         if (this.currentTestData.type === 'split-layout') return;
 
         const explanationPanel = document.getElementById('explanationPanel');
@@ -1762,8 +1720,8 @@ class ReadingCore {
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents();
-                const questionRange = this.getQuestionRange();
-                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const questionNumbers = this.getQuestionNumbers();
+                for (let i of questionNumbers) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                     this.addBadgeForQuestion(i);
@@ -1785,8 +1743,8 @@ class ReadingCore {
                 const vals = this.getUserAnswers();
                 this.renderSplitColumn();
                 this.attachInputEvents();
-                const questionRange = this.getQuestionRange();
-                for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const questionNumbers = this.getQuestionNumbers();
+                for (let i of questionNumbers) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
                 }
@@ -1796,9 +1754,9 @@ class ReadingCore {
             const explanationDiv = document.getElementById('rightExplanationText');
             if (!explanationDiv) return;
             const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
-            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
-                       this.currentTestData.detailedExplanations[questionNum] || 
-                       `<strong>Đáp án: ${customAnsDisplay}</strong>`;
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] ||
+                this.currentTestData.detailedExplanations[questionNum] ||
+                `<strong>Đáp án: ${customAnsDisplay}</strong>`;
             if (this.examSubmitted) {
                 const user = this.getUserAnswer(questionNum) || "(trống)";
                 const correct = this.isAnswerCorrect(questionNum, user);
@@ -1819,9 +1777,9 @@ class ReadingCore {
                 explanationPanel.classList.add('show');
                 explanationTitle.textContent = `Giải thích câu ${questionNum}`;
                 const customAnsDisplay = this.currentTestData.displayAnswers[`q${questionNum}`] || this.currentTestData.displayAnswers[questionNum];
-                let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
-                           this.currentTestData.detailedExplanations[questionNum] || 
-                           `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
+                let html = this.currentTestData.detailedExplanations[`q${questionNum}`] ||
+                    this.currentTestData.detailedExplanations[questionNum] ||
+                    `<strong>Đáp án: ${customAnsDisplay}</strong><br>`;
                 if (this.examSubmitted) {
                     const userAnswer = this.getUserAnswer(questionNum) || '(chưa trả lời)';
                     const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
@@ -1881,7 +1839,7 @@ class ReadingCore {
             zIndex: '9999',
             transition: 'opacity 0.2s ease'
         });
-        
+
         overlay.innerHTML = `
             <div class="reset-modal">
                 <h3>Xác nhận Reset</h3>
@@ -1935,7 +1893,7 @@ class ReadingCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
-        
+
         const testInfo = this.storageManager.parseTestInfo(document.querySelector('.candidate')?.textContent || '');
         const book = this.currentTestData.book || testInfo.book || 1;
         const test = this.currentTestData.test || testInfo.test || 1;
@@ -1947,13 +1905,13 @@ class ReadingCore {
         this.explanationMode = false;
         this.currentSplit = false;
 
-        const questionRange = this.getQuestionRange();
+        const questionNumbers = this.getQuestionNumbers();
 
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
             this.attachInputEvents();
         } else {
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
+            for (let i of questionNumbers) {
                 if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
                     const radios = document.getElementsByName(`q${i}`);
                     radios.forEach(radio => { radio.checked = false; radio.disabled = false; });
@@ -2014,15 +1972,14 @@ class ReadingCore {
             const channel = new BroadcastChannel('ket_reset_channel');
             channel.postMessage({ action: 'reset', type: 'reading', book, test, part });
             channel.close();
-        } catch(e) {}
+        } catch (e) { }
 
         setTimeout(() => {
             this._isResetting = false;
-            // Removed redundant localStorage.removeItem(draftKey) which was causing saving issues
         }, 100);
 
         this.updateAnswerCount();
-        this.saveDraftImmediate(); // Persist the empty state
+        this.saveDraftImmediate();
     }
 
     disableInputs() {
@@ -2040,8 +1997,8 @@ class ReadingCore {
 
     getUserAnswers() {
         const answers = {};
-        const questionRange = this.getQuestionRange();
-        for (let i = questionRange.start; i <= questionRange.end; i++) answers[i] = this.getUserAnswer(i);
+        const questionNumbers = this.getQuestionNumbers();
+        for (let i of questionNumbers) answers[i] = this.getUserAnswer(i);
         return answers;
     }
 }
@@ -2120,7 +2077,7 @@ class ReadingHighlightManager {
                     try {
                         range.surroundContents(span);
                         if (!firstSpan) firstSpan = span;
-                    } catch(e) {}
+                    } catch (e) { }
                     break;
                 }
             }
@@ -2157,7 +2114,7 @@ class ReadingHighlightManager {
             const isSimple = this.isSimpleRange(range);
             if (isSimple) this.applyHighlightSimple(range, color);
             else this.applyHighlightComplex(range, color);
-        } catch (e) {}
+        } catch (e) { }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2243,7 +2200,7 @@ class ReadingHighlightManager {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
-        } catch (e) {}
+        } catch (e) { }
     }
 
     removeHighlight() {
@@ -2265,7 +2222,7 @@ class ReadingHighlightManager {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
-        } catch (e) {}
+        } catch (e) { }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2280,7 +2237,7 @@ class ReadingStorageManager {
     saveResults(testData, userAnswers) {
         const details = [];
         let correctCount = 0;
-        const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q','')) })).filter(q => !isNaN(q.num));
+        const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
         const questionRangeStart = Math.min(...questions.map(q => q.num));
         const questionRangeEnd = Math.max(...questions.map(q => q.num));
 
@@ -2552,12 +2509,12 @@ class ReadingUIManager {
 }
 
 // Global functions
-window.applyHighlight = function(color) {
+window.applyHighlight = function (color) {
     if (window.readingCore && window.readingCore.highlightManager) {
         window.readingCore.highlightManager.applyHighlight(color);
     }
 };
-window.removeHighlight = function() {
+window.removeHighlight = function () {
     if (window.readingCore && window.readingCore.highlightManager) {
         window.readingCore.highlightManager.removeHighlight();
     }
