@@ -17,7 +17,317 @@
  * - KET storage key prefix: ket_listening_book*
  * - KET URL pattern: lis-ket{book}-test{test}-part{part}.html
  * - Navigation supports 5 parts (KET has Parts 1-5)
+ * - v2.0: Integrated HighlightManagerV2 for metadata-based highlight storage
  */
+
+/**
+ * HighlightManagerV2 - Metadata-based highlight storage
+ * Optimized: stores positions instead of full innerHTML (~200 bytes vs ~10KB)
+ */
+class HighlightManagerV2 {
+    constructor(core) {
+        this.core = core;
+        this.highlights = [];
+        this.storageKey = '';
+        this.VERSION = 2;
+        
+        this.colorClasses = {
+            yellow: 'highlight-yellow',
+            green: 'highlight-green',
+            pink: 'highlight-pink'
+        };
+        
+        this.containerSelectors = [
+            '#transcriptContent',
+            '#questionsContainer',
+            '.transcript-content',
+            '.questions-list',
+            '.reading-card',
+            '.reading-content'
+        ];
+    }
+
+    init(storageKey) {
+        this.storageKey = storageKey;
+        this.loadHighlights();
+    }
+
+    getNodePath(container, node) {
+        const path = [];
+        let current = node;
+        
+        while (current && current !== container) {
+            const parent = current.parentNode;
+            if (!parent) break;
+            
+            const children = Array.from(parent.childNodes);
+            const index = children.indexOf(current);
+            path.unshift(index);
+            current = parent;
+        }
+        
+        return path;
+    }
+
+    getNodeFromPath(container, path) {
+        let current = container;
+        for (const index of path) {
+            if (!current.childNodes[index]) return null;
+            current = current.childNodes[index];
+        }
+        return current;
+    }
+
+    serializeRange(range, color) {
+        try {
+            let container = null;
+            let node = range.commonAncestorContainer;
+            
+            if (node.nodeType === Node.TEXT_NODE) {
+                node = node.parentElement;
+            }
+            
+            for (const selector of this.containerSelectors) {
+                const el = document.querySelector(selector);
+                if (el && el.contains(node)) {
+                    container = el;
+                    break;
+                }
+            }
+            
+            if (!container) {
+                console.warn('[HighlightV2] No container found');
+                return null;
+            }
+
+            return {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                containerSelector: this.getSelectorForElement(container),
+                startPath: this.getNodePath(container, range.startContainer),
+                startOffset: range.startOffset,
+                endPath: this.getNodePath(container, range.endContainer),
+                endOffset: range.endOffset,
+                color: color,
+                text: range.toString().substring(0, 100),
+                timestamp: Date.now()
+            };
+        } catch (e) {
+            console.error('[HighlightV2] Serialize error:', e);
+            return null;
+        }
+    }
+
+    getSelectorForElement(el) {
+        if (el.id) return `#${el.id}`;
+        if (el.className) return `.${el.className.split(' ')[0]}`;
+        return el.tagName.toLowerCase();
+    }
+
+    applyHighlight(highlightData) {
+        try {
+            const container = document.querySelector(highlightData.containerSelector);
+            if (!container) {
+                console.warn('[HighlightV2] Container not found:', highlightData.containerSelector);
+                return false;
+            }
+
+            const startNode = this.getNodeFromPath(container, highlightData.startPath);
+            const endNode = this.getNodeFromPath(container, highlightData.endPath);
+            
+            if (!startNode || !endNode) {
+                console.warn('[HighlightV2] Node not found for highlight:', highlightData.id);
+                return false;
+            }
+
+            const range = document.createRange();
+            range.setStart(startNode, highlightData.startOffset);
+            range.setEnd(endNode, highlightData.endOffset);
+
+            this.wrapRangeWithHighlight(range, highlightData.color);
+            return true;
+        } catch (e) {
+            console.error('[HighlightV2] Apply error:', e);
+            return false;
+        }
+    }
+
+    wrapRangeWithHighlight(range, color) {
+        const className = this.colorClasses[color] || this.colorClasses.yellow;
+        
+        const span = document.createElement('span');
+        span.className = className;
+        span.setAttribute('data-highlight-id', Date.now().toString(36));
+        
+        try {
+            range.surroundContents(span);
+        } catch (e) {
+            const contents = range.extractContents();
+            span.appendChild(contents);
+            range.insertNode(span);
+        }
+    }
+
+    addHighlight(color = 'yellow') {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) return false;
+
+        const range = selection.getRangeAt(0);
+        const highlightData = this.serializeRange(range, color);
+        
+        if (!highlightData) return false;
+
+        this.wrapRangeWithHighlight(range, color);
+        this.highlights.push(highlightData);
+        this.saveHighlights();
+        selection.removeAllRanges();
+        
+        return true;
+    }
+
+    removeHighlight(id) {
+        const index = this.highlights.findIndex(h => h.id === id);
+        if (index === -1) return false;
+        
+        this.highlights.splice(index, 1);
+        this.saveHighlights();
+        this.clearAllHighlights();
+        this.renderHighlights();
+        
+        return true;
+    }
+
+    clearAllHighlights() {
+        const spans = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+        spans.forEach(span => {
+            const parent = span.parentNode;
+            if (parent) {
+                parent.replaceChild(document.createTextNode(span.textContent), span);
+                parent.normalize();
+            }
+        });
+    }
+
+    renderHighlights() {
+        let successCount = 0;
+        for (const h of this.highlights) {
+            if (this.applyHighlight(h)) {
+                successCount++;
+            }
+        }
+        console.log(`[HighlightV2] Rendered ${successCount}/${this.highlights.length} highlights`);
+    }
+
+    saveHighlights() {
+        try {
+            const data = {
+                version: this.VERSION,
+                highlights: this.highlights,
+                timestamp: Date.now()
+            };
+            
+            const json = JSON.stringify(data);
+            console.log(`[HighlightV2] Saved ${this.highlights.length} highlights (${json.length} bytes)`);
+            
+            this.core._safeSetStorage(this.storageKey, json);
+        } catch (e) {
+            console.error('[HighlightV2] Save error:', e);
+        }
+    }
+
+    loadHighlights() {
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (!saved) return;
+
+            const data = JSON.parse(saved);
+            
+            if (data.version === this.VERSION) {
+                this.highlights = data.highlights || [];
+                console.log('[HighlightV2] Loaded', this.highlights.length, 'highlights (v2)');
+            } else if (data.containers || (!data.version && saved.includes('<span'))) {
+                console.log('[HighlightV2] Detected v1 format, migrating...');
+                const migrated = this.migrateFromV1(data, saved);
+                if (migrated.success) {
+                    this.highlights = migrated.highlights;
+                    this.saveHighlights();
+                    console.log('[HighlightV2] Migration successful');
+                } else {
+                    console.warn('[HighlightV2] Migration failed, using legacy mode');
+                    return;
+                }
+            }
+            
+            setTimeout(() => this.renderHighlights(), 100);
+            
+        } catch (e) {
+            console.error('[HighlightV2] Load error:', e);
+        }
+    }
+
+    migrateFromV1(oldData, rawSaved) {
+        try {
+            const highlights = [];
+            let containers = [];
+            
+            if (oldData.containers && Array.isArray(oldData.containers)) {
+                containers = oldData.containers;
+            } else if (typeof rawSaved === 'string' && rawSaved.includes('<span')) {
+                containers = [{ selector: '#transcriptContent', html: rawSaved }];
+            }
+            
+            for (const container of containers) {
+                const el = document.querySelector(container.selector);
+                if (!el) continue;
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = container.html;
+                
+                const spans = tempDiv.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+                
+                for (const span of spans) {
+                    const color = span.classList.contains('highlight-green') ? 'green' :
+                                  span.classList.contains('highlight-pink') ? 'pink' : 'yellow';
+                    
+                    const text = span.textContent;
+                    if (text && el.textContent.includes(text)) {
+                        highlights.push({
+                            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                            containerSelector: container.selector,
+                            startPath: [0],
+                            startOffset: 0,
+                            endPath: [0],
+                            endOffset: text.length,
+                            color: color,
+                            text: text.substring(0, 100),
+                            timestamp: Date.now(),
+                            migrated: true
+                        });
+                    }
+                }
+            }
+            
+            return { success: highlights.length > 0, highlights };
+            
+        } catch (e) {
+            console.error('[HighlightV2] Migration error:', e);
+            return { success: false, highlights: [] };
+        }
+    }
+
+    hasHighlights() {
+        return this.highlights.length > 0;
+    }
+
+    getHighlights() {
+        return this.highlights;
+    }
+
+    clearAll() {
+        this.highlights = [];
+        localStorage.removeItem(this.storageKey);
+        this.clearAllHighlights();
+    }
+}
 
 /**
  * PETNoteManager - Handles the draggable, resizable sticky notes
@@ -543,6 +853,7 @@ class ListeningCore {
         this.highlightManager = new HighlightManager();
         this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
+        this.highlightV2 = new HighlightManagerV2(this); // V2: metadata-based
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 300;
         this._isResetting = false;
@@ -558,7 +869,7 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
-        this.loadHighlightDraft();
+        this.highlightV2.init(this.getHighlightStorageKey()); // Load V2 highlights
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
@@ -597,38 +908,13 @@ class ListeningCore {
     }
 
     saveHighlightDraft() {
-        const potentialSelectors = [
-            '#transcriptContent',
-            '#questionsContainer',
-            '.transcript-content',
-            '.questions-list',
-            '.reading-card',
-            '.reading-passage',
-            '.single-col',
-            '.split-container'
-        ];
-        
-        let foundData = [];
-        potentialSelectors.forEach(selector => {
-            const el = document.querySelector(selector);
-            if (el && (el.innerHTML.includes('highlight-yellow') || 
-                       el.innerHTML.includes('highlight-green') || 
-                       el.innerHTML.includes('highlight-pink'))) {
-                foundData.push({ selector, html: el.innerHTML });
-            }
-        });
-
-        const key = this.getHighlightStorageKey();
-        if (foundData.length > 0) {
-            this._safeSetStorage(key, JSON.stringify({ containers: foundData, timestamp: Date.now() }));
-            console.log('[Listening Highlight] Saved', foundData.length, 'containers to', key);
-        } else {
-            localStorage.removeItem(key);
-            console.log('[Listening Highlight] No highlights – removed key:', key);
-        }
+        // V2: Metadata-based (handled by HighlightManagerV2.addHighlight)
+        this.highlightV2.saveHighlights();
     }
 
     loadHighlightDraft() {
+        // V2: Metadata-based loading is handled by highlightV2.init()
+        // This method kept for compatibility and legacy fallback
         const key = this.getHighlightStorageKey();
         const savedData = localStorage.getItem(key);
 
@@ -636,7 +922,20 @@ class ListeningCore {
             console.log('[Highlight] No saved data found for key:', key);
             return;
         }
+        
+        // Check if it's legacy format
+        try {
+            const parsed = JSON.parse(savedData);
+            if (!parsed.version && (parsed.containers || savedData.includes('<span'))) {
+                console.log('[Highlight] Legacy format detected, loading via old method');
+                this.loadHighlightDraftLegacy(savedData);
+            }
+        } catch (e) {
+            this.loadHighlightDraftLegacy(savedData);
+        }
+    }
 
+    loadHighlightDraftLegacy(savedData) {
         try {
             const parsed = JSON.parse(savedData);
 
@@ -1747,6 +2046,7 @@ class HighlightManager {
             if (parent) {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
+                parent.normalize();
             }
         });
     }
@@ -1759,11 +2059,15 @@ class HighlightManager {
             const isSimple = this.isSimpleRange(range);
             if (isSimple) this.applyHighlightSimple(range, color);
             else this.applyHighlightComplex(range, color);
-        } catch (e) {}
+            
+            // V2: Save metadata
+            if (window.listeningCore && window.listeningCore.highlightV2) {
+                window.listeningCore.highlightV2.addHighlight(color);
+            }
+        } catch (e) { console.error('Highlight error:', e); }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
-        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 
     applyHighlightSimple(range, color) {
@@ -1867,11 +2171,15 @@ class HighlightManager {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
-        } catch (e) {}
+            
+            // V2: Re-save after removal
+            if (window.listeningCore && window.listeningCore.highlightV2) {
+                window.listeningCore.highlightV2.saveHighlights();
+            }
+        } catch (e) { console.error('Remove highlight error:', e); }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
-        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 
     hideContextMenu() {
