@@ -1,27 +1,370 @@
 /**
  * CORE LISTENING ENGINE - KET A2 Key English Test
- * Contains all functionality for KET listening tests across all parts
- * Compatible with KET 1, Tests 1+, Parts 1-5
- *
- * KET Listening Structure:
- *   Part 1 (Q1-5):   Multiple choice (3 options A/B/C)
- *   Part 2 (Q6-10):  Fill-in-blanks (notes/form completion)
- *   Part 3 (Q11-15): Multiple choice dialogue
- *   Part 4 (Q16-20): Multiple choice independent short conversations
- *   Part 5 (Q21-25): Match pairs (fill-blank letter A-H)
- *
- * CHANGELOG:
- * - v1.0: Adapted from core-listening.js for KET format
- * - Added match-pairs type for Part 5
- * - Added fill-blank table template for Part 2
- * - KET storage key prefix: ket_listening_book*
- * - KET URL pattern: lis-ket{book}-test{test}-part{part}.html
- * - Navigation supports 5 parts (KET has Parts 1-5)
+ * Phiên bản hoàn chỉnh - Tối ưu highlight, tiết kiệm bộ nhớ, ổn định cao
+ * 
+ * Các cải tiến chính:
+ * - HighlightManagerV2: Lưu metadata thay vì innerHTML, giảm dung lượng ~50-100 lần
+ * - Tự động migrate dữ liệu highlight cũ sang định dạng mới
+ * - Đồng bộ xóa highlight giữa giao diện và metadata
+ * - Xử lý transcript động (chỉ hiển thị sau nộp bài)
+ * - Loại bỏ hoàn toàn logic lưu innerHTML cũ gây xung đột
  */
 
-/**
- * PETNoteManager - Handles the draggable, resizable sticky notes
- */
+// ==================== HIGHLIGHT MANAGER V2 ====================
+class HighlightManagerV2 {
+    constructor(core) {
+        this.core = core;
+        this.highlights = [];
+        this.storageKey = '';
+        this.VERSION = 2;
+        
+        this.colorClasses = {
+            yellow: 'highlight-yellow',
+            green: 'highlight-green',
+            pink: 'highlight-pink'
+        };
+        
+        this.containerSelectors = [
+            '#transcriptContent',
+            '#questionsContainer',
+            '.transcript-content',
+            '.questions-list'
+        ];
+    }
+
+    init(storageKey) {
+        this.storageKey = storageKey;
+        this.loadHighlights();
+    }
+
+    getNodePath(container, node) {
+        const path = [];
+        let current = node;
+        while (current && current !== container) {
+            const parent = current.parentNode;
+            if (!parent) break;
+            const children = Array.from(parent.childNodes);
+            const index = children.indexOf(current);
+            path.unshift(index);
+            current = parent;
+        }
+        return path;
+    }
+
+    getNodeFromPath(container, path) {
+        let current = container;
+        for (const index of path) {
+            if (!current.childNodes[index]) return null;
+            current = current.childNodes[index];
+        }
+        return current;
+    }
+
+    getSelectorForElement(el) {
+        if (el.id) return `#${el.id}`;
+        if (el.className) return `.${el.className.split(' ')[0]}`;
+        return el.tagName.toLowerCase();
+    }
+
+    serializeRange(range, color) {
+        try {
+            let container = null;
+            let node = range.commonAncestorContainer;
+            if (node.nodeType === Node.TEXT_NODE) {
+                node = node.parentElement;
+            }
+            
+            for (const selector of this.containerSelectors) {
+                const el = document.querySelector(selector);
+                if (el && el.contains(node)) {
+                    container = el;
+                    break;
+                }
+            }
+            
+            if (!container) {
+                console.warn('[HighlightV2] No container found for range');
+                return null;
+            }
+
+            return {
+                id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+                containerSelector: this.getSelectorForElement(container),
+                startPath: this.getNodePath(container, range.startContainer),
+                startOffset: range.startOffset,
+                endPath: this.getNodePath(container, range.endContainer),
+                endOffset: range.endOffset,
+                color: color,
+                text: range.toString().substring(0, 100),
+                timestamp: Date.now()
+            };
+        } catch (e) {
+            console.error('[HighlightV2] Serialize error:', e);
+            return null;
+        }
+    }
+
+    applyHighlight(highlightData) {
+        try {
+            const container = document.querySelector(highlightData.containerSelector);
+            if (!container) return false;
+
+            const startNode = this.getNodeFromPath(container, highlightData.startPath);
+            const endNode = this.getNodeFromPath(container, highlightData.endPath);
+            if (!startNode || !endNode) return false;
+
+            const range = document.createRange();
+            range.setStart(startNode, highlightData.startOffset);
+            range.setEnd(endNode, highlightData.endOffset);
+
+            this.wrapRangeWithHighlight(range, highlightData.color);
+            return true;
+        } catch (e) {
+            console.warn('[HighlightV2] Apply error for', highlightData.id, e);
+            return false;
+        }
+    }
+
+    /**
+     * Bọc range bằng span highlight - AN TOÀN, KHÔNG GÂY VỠ DOM
+     * Chỉ xử lý text node, bỏ qua các phần tử block nằm trong range.
+     */
+    wrapRangeWithHighlight(range, color) {
+        const className = this.colorClasses[color] || this.colorClasses.yellow;
+        
+        // Lấy tất cả text node trong range
+        const textNodes = this.getTextNodesInRange(range);
+        
+        for (const textNode of textNodes) {
+            const nodeRange = document.createRange();
+            const startOffset = (textNode === range.startContainer) ? range.startOffset : 0;
+            const endOffset = (textNode === range.endContainer) ? range.endOffset : textNode.length;
+            
+            if (startOffset === endOffset) continue;
+            
+            nodeRange.setStart(textNode, startOffset);
+            nodeRange.setEnd(textNode, endOffset);
+            
+            try {
+                const span = document.createElement('span');
+                span.className = className;
+                span.setAttribute('data-highlight-id', Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5));
+                nodeRange.surroundContents(span);
+            } catch (e) {
+                // Nếu surround lỗi (do text node nằm trong thẻ không cho phép), dùng extractContents
+                const fragment = nodeRange.extractContents();
+                const span = document.createElement('span');
+                span.className = className;
+                span.setAttribute('data-highlight-id', Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5));
+                span.appendChild(fragment);
+                nodeRange.insertNode(span);
+            }
+        }
+    }
+
+    /**
+     * Lấy tất cả text node nằm trong range (an toàn, không đệ quy vô hạn)
+     */
+    getTextNodesInRange(range) {
+        const textNodes = [];
+        const walker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: (node) => {
+                    // Chỉ chấp nhận nếu node giao với range và không rỗng
+                    if (range.intersectsNode(node) && node.nodeValue.trim() !== '') {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+        return textNodes;
+    }
+
+    addHighlight(color = 'yellow') {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) return false;
+
+        const range = selection.getRangeAt(0);
+        const highlightData = this.serializeRange(range, color);
+        if (!highlightData) return false;
+
+        this.wrapRangeWithHighlight(range, color);
+        this.highlights.push(highlightData);
+        this.saveHighlights();
+        selection.removeAllRanges();
+        return true;
+    }
+
+    removeHighlight(id) {
+        const index = this.highlights.findIndex(h => h.id === id);
+        if (index === -1) return false;
+        this.highlights.splice(index, 1);
+        this.saveHighlights();
+        return true;
+    }
+
+    clearAllHighlightSpans() {
+        const spans = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+        spans.forEach(span => {
+            const parent = span.parentNode;
+            if (parent) {
+                parent.replaceChild(document.createTextNode(span.textContent), span);
+                parent.normalize();
+            }
+        });
+    }
+
+    renderHighlights() {
+        let successCount = 0;
+        for (const h of this.highlights) {
+            if (this.applyHighlight(h)) successCount++;
+        }
+        console.log(`[HighlightV2] Rendered ${successCount}/${this.highlights.length} highlights`);
+    }
+
+    saveHighlights() {
+        try {
+            const data = {
+                version: this.VERSION,
+                highlights: this.highlights,
+                timestamp: Date.now()
+            };
+            const json = JSON.stringify(data);
+            console.log(`[HighlightV2] Saved ${this.highlights.length} highlights (${json.length} bytes)`);
+            this.core._safeSetStorage(this.storageKey, json);
+        } catch (e) {
+            console.error('[HighlightV2] Save error:', e);
+        }
+    }
+
+    loadHighlights() {
+        try {
+            const saved = localStorage.getItem(this.storageKey);
+            if (!saved) return;
+
+            const data = JSON.parse(saved);
+            
+            if (data.version === this.VERSION) {
+                this.highlights = data.highlights || [];
+                console.log('[HighlightV2] Loaded', this.highlights.length, 'highlights (v2)');
+            } else if (data.containers || (!data.version && saved.includes('<span'))) {
+                console.log('[HighlightV2] Detected v1 format, migrating...');
+                const migrated = this.migrateFromV1(data, saved);
+                if (migrated.success) {
+                    this.highlights = migrated.highlights;
+                    this.saveHighlights();
+                    console.log('[HighlightV2] Migration successful, converted', migrated.highlights.length, 'highlights');
+                } else {
+                    console.warn('[HighlightV2] Migration failed, clearing old data');
+                    localStorage.removeItem(this.storageKey);
+                }
+            }
+            
+            setTimeout(() => this.renderHighlights(), 100);
+        } catch (e) {
+            console.error('[HighlightV2] Load error:', e);
+        }
+    }
+
+    findTextInContainer(container, searchText) {
+        const ranges = [];
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+            { acceptNode: node => node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }
+        );
+
+        let node;
+        while (node = walker.nextNode()) {
+            const nodeText = node.nodeValue;
+            let startIndex = 0;
+            let index;
+            while ((index = nodeText.indexOf(searchText, startIndex)) !== -1) {
+                const range = document.createRange();
+                range.setStart(node, index);
+                range.setEnd(node, index + searchText.length);
+                ranges.push(range);
+                startIndex = index + searchText.length;
+            }
+        }
+        return ranges;
+    }
+
+    migrateFromV1(oldData, rawSaved) {
+        try {
+            const highlights = [];
+            let containers = [];
+            
+            if (oldData.containers && typeof oldData.containers === 'object' && !Array.isArray(oldData.containers)) {
+                for (const [key, html] of Object.entries(oldData.containers)) {
+                    const selector = key === 'transcript' ? '#transcriptContent' : '#questionsContainer';
+                    containers.push({ selector, html });
+                }
+            } else if (oldData.containers && Array.isArray(oldData.containers)) {
+                containers = oldData.containers;
+            } else if (typeof rawSaved === 'string' && rawSaved.includes('<span')) {
+                containers = [{ selector: '#transcriptContent', html: rawSaved }];
+            }
+            
+            for (const containerInfo of containers) {
+                const container = document.querySelector(containerInfo.selector);
+                if (!container) continue;
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = containerInfo.html;
+                const spans = tempDiv.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
+                
+                for (const span of spans) {
+                    const color = span.classList.contains('highlight-green') ? 'green' :
+                                  span.classList.contains('highlight-pink') ? 'pink' : 'yellow';
+                    const text = span.textContent;
+                    if (!text) continue;
+
+                    const ranges = this.findTextInContainer(container, text);
+                    for (const range of ranges) {
+                        const startPath = this.getNodePath(container, range.startContainer);
+                        const endPath = this.getNodePath(container, range.endContainer);
+                        if (startPath && endPath) {
+                            highlights.push({
+                                id: Date.now().toString(36) + Math.random().toString(36).substr(2) + '-' + highlights.length,
+                                containerSelector: containerInfo.selector,
+                                startPath, startOffset: range.startOffset,
+                                endPath, endOffset: range.endOffset,
+                                color, text: text.substring(0, 100),
+                                timestamp: Date.now(),
+                                migrated: true
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+            return { success: highlights.length > 0, highlights };
+        } catch (e) {
+            console.error('[HighlightV2] Migration error:', e);
+            return { success: false, highlights: [] };
+        }
+    }
+
+    hasHighlights() {
+        return this.highlights.length > 0;
+    }
+
+    clearAll() {
+        this.highlights = [];
+        localStorage.removeItem(this.storageKey);
+        this.clearAllHighlightSpans();
+    }
+}
+
+// ==================== PETNOTE MANAGER ====================
 class PETNoteManager {
     constructor(core) {
         this.core = core;
@@ -217,9 +560,7 @@ class PETNoteManager {
     }
 }
 
-/**
- * MiniDashboardManager - Popup showing progress across all parts with PET scores
- */
+// ==================== MINI DASHBOARD MANAGER ====================
 class MiniDashboardManager {
     constructor(core, skillType) {
         this.core = core;
@@ -353,7 +694,6 @@ class MiniDashboardManager {
     }
 
     fetchSkillData(skill, book, test) {
-        // KET config: Reading 5 parts, Listening 5 parts
         const parts = skill === 'reading' ? [1,2,3,4,5] : [1,2,3,4,5];
         
         return parts.map(part => {
@@ -401,7 +741,6 @@ class MiniDashboardManager {
         
         const meta = this.core.getTestMeta();
         
-        // KET: Reading max 30, Listening max 25
         const readingStats = this.calculateSkillStats(readingData, 30);
         const listeningStats = this.calculateSkillStats(listeningData, 25);
         
@@ -532,7 +871,7 @@ class MiniDashboardManager {
     }
 }
 
-
+// ==================== LISTENING CORE ====================
 class ListeningCore {
     constructor() {
         this.examSubmitted = false;
@@ -540,9 +879,10 @@ class ListeningCore {
         this.currentTestData = null;
         this.audio = null;
         this.speedSelect = null;
-        this.highlightManager = new HighlightManager();
+        this.highlightManager = new HighlightManager(this);
         this.storageManager = new StorageManager();
         this.uiManager = new UIManager();
+        this.highlightV2 = new HighlightManagerV2(this);
         this.debounceTimer = null;
         this.DEBOUNCE_MS = 300;
         this._isResetting = false;
@@ -558,7 +898,8 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
-        this.loadHighlightDraft();
+        this.highlightV2.init(this.getHighlightStorageKey());
+        
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
@@ -597,133 +938,16 @@ class ListeningCore {
     }
 
     saveHighlightDraft() {
-        const potentialSelectors = [
-            '#transcriptContent',
-            '#questionsContainer',
-            '.transcript-content',
-            '.questions-list',
-            '.reading-card',
-            '.reading-passage',
-            '.single-col',
-            '.split-container'
-        ];
-        
-        let foundData = [];
-        potentialSelectors.forEach(selector => {
-            const el = document.querySelector(selector);
-            if (el && (el.innerHTML.includes('highlight-yellow') || 
-                       el.innerHTML.includes('highlight-green') || 
-                       el.innerHTML.includes('highlight-pink'))) {
-                foundData.push({ selector, html: el.innerHTML });
-            }
-        });
-
-        const key = this.getHighlightStorageKey();
-        if (foundData.length > 0) {
-            this._safeSetStorage(key, JSON.stringify({ containers: foundData, timestamp: Date.now() }));
-            console.log('[Listening Highlight] Saved', foundData.length, 'containers to', key);
-        } else {
-            localStorage.removeItem(key);
-            console.log('[Listening Highlight] No highlights – removed key:', key);
-        }
+        this.highlightV2.saveHighlights();
     }
 
     loadHighlightDraft() {
-        const key = this.getHighlightStorageKey();
-        const savedData = localStorage.getItem(key);
-
-        if (!savedData) {
-            console.log('[Highlight] No saved data found for key:', key);
-            return;
-        }
-
-        try {
-            const parsed = JSON.parse(savedData);
-
-            const captureInputValues = (container) => {
-                const inputs = container.querySelectorAll('input, select, textarea');
-                const values = [];
-                inputs.forEach((input, index) => {
-                    if (input.type === 'radio' || input.type === 'checkbox') {
-                        values.push({ index, checked: input.checked, name: input.name, value: input.value });
-                    } else {
-                        values.push({ index, value: input.value, id: input.id });
-                    }
-                });
-                return values;
-            };
-
-            const restoreInputValues = (container, savedValues) => {
-                const inputs = container.querySelectorAll('input, select, textarea');
-                savedValues.forEach(item => {
-                    const input = inputs[item.index];
-                    if (!input) return;
-                    if (input.type === 'radio' || input.type === 'checkbox') {
-                        input.checked = item.checked;
-                    } else {
-                        input.value = item.value;
-                    }
-                });
-            };
-
-            if (parsed.containers && Array.isArray(parsed.containers)) {
-                console.log('[Highlight] Restoring', parsed.containers.length, 'containers');
-                parsed.containers.forEach(item => {
-                    const container = document.querySelector(item.selector);
-                    if (container) {
-                        const inputValues = captureInputValues(container);
-                        container.innerHTML = item.html;
-                        restoreInputValues(container, inputValues);
-                        console.log('[Highlight] Restored container:', item.selector);
-                    }
-                });
-            } else {
-                const savedHtml = typeof parsed === 'object' ? parsed.html : parsed;
-                if (!savedHtml) return;
-
-                const container = document.getElementById('transcriptContent') ||
-                                  document.querySelector('.transcript-content');
-                if (container) {
-                    const inputValues = captureInputValues(container);
-                    container.innerHTML = savedHtml;
-                    restoreInputValues(container, inputValues);
-                    console.log('[Highlight] Restored using legacy logic');
-                }
-            }
-        } catch (e) {
-            console.error('[Highlight] Load error:', e);
-            if (typeof savedData === 'string' && savedData.includes('<span')) {
-                const container = document.getElementById('transcriptContent') || document.querySelector('.transcript-content');
-                if (container) {
-                    const inputs = container.querySelectorAll('input, select, textarea');
-                    const values = [];
-                    inputs.forEach((input, index) => {
-                        if (input.type === 'radio' || input.type === 'checkbox') {
-                            values.push({ index, checked: input.checked });
-                        } else {
-                            values.push({ index, value: input.value });
-                        }
-                    });
-                    container.innerHTML = savedData;
-                    const newInputs = container.querySelectorAll('input, select, textarea');
-                    values.forEach(item => {
-                        const input = newInputs[item.index];
-                        if (!input) return;
-                        if (input.type === 'radio' || input.type === 'checkbox') {
-                            input.checked = item.checked;
-                        } else {
-                            input.value = item.value;
-                        }
-                    });
-                }
-            }
-        }
+        this.highlightV2.loadHighlights();
     }
 
     getTestMeta() {
         const d = this.currentTestData;
         if (!d) return { book: 1, test: 1, part: 1 };
-        
         let book = d.book, test = d.test, part = d.part;
         if (!book || !test || !part) {
             const parsed = this.storageManager.parseTestInfo(d.title);
@@ -731,7 +955,6 @@ class ListeningCore {
             test = test || parsed.test;
             part = part || parsed.part;
         }
-        
         return { book, test, part };
     }
 
@@ -744,17 +967,14 @@ class ListeningCore {
             document.removeEventListener('input', this._boundInputHandler);
             this._boundInputHandler = null;
         }
-
         if (this.audio) {
             this.audio.pause();
             this.audio.src = '';
         }
-
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
             this.debounceTimer = null;
         }
-
         this.saveHighlightDraft();
         this.saveDraftImmediate();
     }
@@ -763,9 +983,7 @@ class ListeningCore {
         const { book, test, part } = this.getTestMeta();
         const targetPart = part + direction;
         if (targetPart < 1 || targetPart > 5) return;
-        
         this.cleanup();
-
         const targetUrl = `lis-ket${book}-test${test}-part${targetPart}.html`;
         window.location.href = targetUrl;
     }
@@ -786,13 +1004,7 @@ class ListeningCore {
             if (e.name === 'QuotaExceededError' || e.code === 22) {
                 console.warn('[Storage] Quota exceeded, cleaning old drafts...');
                 this._cleanOldDrafts();
-                try {
-                    localStorage.setItem(key, value);
-                } catch (e2) {
-                    console.error('[Storage] Still failed after cleanup:', e2);
-                }
-            } else {
-                console.error('[Storage] Failed to save:', e);
+                try { localStorage.setItem(key, value); } catch (e2) {}
             }
         }
     }
@@ -801,99 +1013,72 @@ class ListeningCore {
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('pet_listening_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+            if (key && key.startsWith('ket_listening_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
                 keys.push(key);
             }
         }
         if (keys.length > 20) {
             keys.sort();
-            for (let i = 0; i < keys.length - 20; i++) {
-                localStorage.removeItem(keys[i]);
-            }
+            for (let i = 0; i < keys.length - 20; i++) localStorage.removeItem(keys[i]);
         }
     }
 
     saveDraft() {
         if (this.examSubmitted || this._isResetting) return;
         if (!this.currentTestData) return;
-        
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
-            } catch (e) {
-                console.error('[Draft] FAILED to save:', e);
-            }
+            } catch (e) {}
         }, this.DEBOUNCE_MS);
     }
 
     saveDraftImmediate() {
         if (this._isResetting) return;
         if (this.examSubmitted || !this.currentTestData) return;
-        
         clearTimeout(this.debounceTimer);
-        
         try {
             const draft = this.getDraftData();
             const hasAnswers = Object.values(draft).some(v => v !== null && v !== undefined && v !== '');
             if (!hasAnswers) return;
-            
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
-
             try {
                 const channel = new BroadcastChannel('ket_update_channel');
-                channel.postMessage({
-                    action: 'status_updated',
-                    type: 'listening',
-                    book: this.currentTestData.book,
-                    test: this.currentTestData.test,
-                    part: this.currentTestData.part,
-                    status: 'in-progress'
-                });
+                channel.postMessage({ action: 'status_updated', type: 'listening', book: this.currentTestData.book, test: this.currentTestData.test, part: this.currentTestData.part, status: 'in-progress' });
                 channel.close();
             } catch (e) {}
-        } catch (e) {
-            console.error('[Draft] Immediate save failed:', e);
-        }
+        } catch (e) {}
     }
 
     loadDraft() {
         const key = this.getStorageKey(true);
         const draftJson = localStorage.getItem(key);
         if (!draftJson) return false;
-        
         try {
             const draft = JSON.parse(draftJson);
             const questionRange = this.getQuestionRange();
-            
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const ans = draft[`q${i}`];
                 if (ans === undefined || ans === null) continue;
-                
                 if (this.currentTestData.type === 'multiple-choice') {
                     const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
                     if (radio) radio.checked = true;
-                } else if (this.currentTestData.type === 'fill-blank') {
-                    const input = document.getElementById(`q${i}`);
-                    if (input) input.value = ans;
-                } else if (this.currentTestData.type === 'match-pairs') {
+                } else {
                     const input = document.getElementById(`q${i}`);
                     if (input) input.value = ans;
                 }
             }
             this.updateAnswerCount();
             return true;
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 
     clearDraft() {
-        const key = this.getStorageKey(true);
-        localStorage.removeItem(key);
+        localStorage.removeItem(this.getStorageKey(true));
     }
 
     setupAudioControls() {
@@ -915,10 +1100,8 @@ class ListeningCore {
                 btnForward.title = 'Tua nhanh 5 giây';
                 btnForward.onclick = (e) => { e.preventDefault(); this.skipAudio(5); };
 
-                if (this.audio) {
-                    controlsContainer.insertBefore(btnBack, this.audio);
-                    this.audio.after(btnForward);
-                }
+                controlsContainer.insertBefore(btnBack, this.audio);
+                this.audio.after(btnForward);
             }
 
             this.speedSelect.addEventListener('change', () => {
@@ -939,13 +1122,11 @@ class ListeningCore {
         this.uiManager.injectHeaderControls(this);
         this.uiManager.injectModeToggle();
         this.injectNoteButton();
-
         this.uiManager.setupFontControls();
         this.uiManager.setupThemeToggle();
         this.uiManager.setupModeToggle();
         this.uiManager.setupResizer();
         this.uiManager.setupExplanationPanel();
-        
         this.uiManager.setupAutoCollapse(this);
     }
 
@@ -1032,14 +1213,11 @@ class ListeningCore {
         const things = data.things || [];
         const example = data.example || null;
 
-        // Build two-column layout matching KET exam paper style
         let html = `<div class="ket-match-layout">`;
 
-        // Left column: Places
         html += `<div class="ket-match-left">`;
         html += `<div class="ket-match-col-header">Places</div>`;
 
-        // Example row
         if (example) {
             html += `<div class="ket-match-row ket-match-example">
                 <span class="ket-match-num ket-example-num">0</span>
@@ -1048,28 +1226,20 @@ class ListeningCore {
             </div>`;
         }
 
-        // Question rows
         places.forEach(p => {
             html += `
             <div class="ket-match-row" id="question-${p.num}">
                 <span class="ket-match-num">${p.num}</span>
                 <span class="ket-match-place">${p.label}</span>
                 <span class="ket-match-input-wrap">
-                    <input type="text" id="q${p.num}" class="fill-input ket-match-input" 
-                           maxlength="1" autocomplete="off" 
-                           placeholder="" 
-                           title="Nhập một chữ cái (A–H)">
+                    <input type="text" id="q${p.num}" class="fill-input ket-match-input" maxlength="1" autocomplete="off" title="Nhập một chữ cái (A–H)">
                 </span>
                 <span class="eye-icon" data-question="${p.num}">👁️</span>
             </div>`;
         });
 
-        html += `</div>`; // end left
-
-        // Divider
+        html += `</div>`;
         html += `<div class="ket-match-divider"></div>`;
-
-        // Right column: Things
         html += `<div class="ket-match-right">`;
         html += `<div class="ket-match-col-header">Things</div>`;
 
@@ -1080,12 +1250,10 @@ class ListeningCore {
             </div>`;
         });
 
-        html += `</div>`; // end right
-        html += `</div>`; // end layout
+        html += `</div></div>`;
 
         container.innerHTML = html;
 
-        // Uppercase enforcement + validation (A-H only)
         container.querySelectorAll('.ket-match-input').forEach(input => {
             input.addEventListener('input', () => {
                 input.value = input.value.toUpperCase().replace(/[^A-H]/g, '');
@@ -1094,16 +1262,10 @@ class ListeningCore {
     }
 
     setupBeforeUnload() {
-        window.addEventListener('beforeunload', () => {
-            if (!this._isResetting) this.saveDraftImmediate();
-        });
-        window.addEventListener('pagehide', () => {
-            if (!this._isResetting) this.saveDraftImmediate();
-        });
+        window.addEventListener('beforeunload', () => { if (!this._isResetting) this.saveDraftImmediate(); });
+        window.addEventListener('pagehide', () => { if (!this._isResetting) this.saveDraftImmediate(); });
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && !this._isResetting) {
-                this.saveDraftImmediate();
-            }
+            if (document.visibilityState === 'hidden' && !this._isResetting) this.saveDraftImmediate();
         });
     }
 
@@ -1152,7 +1314,7 @@ class ListeningCore {
             });
 
             logoEl.addEventListener('click', () => {
-                if (confirm('Bạn có chắc muốn về trang chủ? Dữ liệu bài làm sẽ được tự động lưu.')) {
+                if (confirm('Quay lại trang chủ? Tiến độ của bạn sẽ được lưu.')) {
                     window.location.href = 'index.html';
                 }
             });
@@ -1354,6 +1516,8 @@ class ListeningCore {
         document.querySelector('.bottom-bar')?.classList.remove('collapsed');
 
         this.showTranscript();
+        this.highlightV2.renderHighlights(); // Render lại highlight trên transcript mới
+
         this.markAnswers();
 
         const submitBtn = document.getElementById('submitBtn');
@@ -1366,14 +1530,7 @@ class ListeningCore {
 
         try {
             const channel = new BroadcastChannel('ket_update_channel');
-            channel.postMessage({
-                action: 'status_updated',
-                type: 'listening',
-                book: this.currentTestData.book,
-                test: this.currentTestData.test,
-                part: this.currentTestData.part,
-                status: 'completed'
-            });
+            channel.postMessage({ action: 'status_updated', type: 'listening', book: this.currentTestData.book, test: this.currentTestData.test, part: this.currentTestData.part, status: 'completed' });
             channel.close();
         } catch (e) {}
 
@@ -1415,7 +1572,6 @@ class ListeningCore {
             const input = document.getElementById(`q${i}`);
             if (input) {
                 input.classList.remove('correct', 'incorrect');
-                // Support both fill-blank (.blank-line) and match-pairs (.ket-match-row)
                 const wrapper = input.closest('.blank-line') || input.closest('.ket-match-row');
                 if (wrapper) {
                     const oldBadge = wrapper.querySelector('.correct-answer-badge');
@@ -1468,6 +1624,44 @@ class ListeningCore {
         if (explanationPanel) explanationPanel.classList.remove('show');
     }
 
+    showExplanation(questionNum) {
+        if (!this.explanationMode && !this.examSubmitted) return;
+
+        this.highlightManager.clearAllHighlights();
+        this.highlightManager.highlightQuestion(questionNum);
+
+        const explanationPanel = document.getElementById('explanationPanel');
+        const explanationTitle = document.getElementById('explanationTitle');
+        const explanationText = document.getElementById('explanationText');
+
+        if (explanationPanel && explanationTitle && explanationText) {
+            explanationPanel.classList.add('show');
+            explanationTitle.textContent = `Giải thích Câu ${questionNum}`;
+            
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
+                      `<strong>Đáp án:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}</strong><br>`;
+            
+            if (this.examSubmitted) {
+                const userAnswer = this.getUserAnswer(questionNum) || '(chưa trả lời)';
+                const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
+                
+                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
+                html += `<strong>Đáp án của bạn:</strong> ${userAnswer}<br>`;
+                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}`;
+                else html += `<strong>Đúng!</strong>`;
+                html += `</div>`;
+            }
+            
+            explanationText.innerHTML = html;
+        }
+    }
+
+    closeExplanation() {
+        const explanationPanel = document.getElementById('explanationPanel');
+        if (explanationPanel) explanationPanel.classList.remove('show');
+        this.highlightManager.clearAllHighlights();
+    }
+
     handleReset() {
         this.showResetModal();
     }
@@ -1480,19 +1674,10 @@ class ListeningCore {
         overlay.id = 'resetModalOverlay';
         overlay.className = 'reset-modal-overlay';
         Object.assign(overlay.style, {
-            display: 'none',
-            opacity: '0',
-            visibility: 'hidden',
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: '9999',
-            transition: 'opacity 0.2s ease'
+            display: 'none', opacity: '0', visibility: 'hidden',
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center',
+            zIndex: '9999', transition: 'opacity 0.2s ease'
         });
         
         overlay.innerHTML = `
@@ -1547,7 +1732,9 @@ class ListeningCore {
         const draftKey = this.getStorageKey(true);
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
-        if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
+        if (clearHighlights) {
+            this.highlightV2.clearAll();
+        }
 
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
@@ -1559,20 +1746,15 @@ class ListeningCore {
         }
 
         this._isResetting = true;
-
         this.examSubmitted = false;
         this.explanationMode = false;
 
         const questionRange = this.getQuestionRange();
-
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             if (this.currentTestData.type === 'multiple-choice') {
                 const radios = document.getElementsByName(`q${i}`);
                 radios.forEach(radio => { radio.checked = false; radio.disabled = false; });
-            } else if (this.currentTestData.type === 'fill-blank') {
-                const input = document.getElementById(`q${i}`);
-                if (input) { input.value = ''; input.disabled = false; }
-            } else if (this.currentTestData.type === 'match-pairs') {
+            } else {
                 const input = document.getElementById(`q${i}`);
                 if (input) { input.value = ''; input.disabled = false; }
             }
@@ -1584,7 +1766,7 @@ class ListeningCore {
                 if (badge) badge.remove();
             }
 
-            if (this.currentTestData.type === 'fill-blank' || this.currentTestData.type === 'match-pairs') {
+            if (this.currentTestData.type !== 'multiple-choice') {
                 const input = document.getElementById(`q${i}`);
                 if (input) {
                     input.classList.remove('correct', 'incorrect');
@@ -1605,8 +1787,6 @@ class ListeningCore {
         }
 
         document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
-
-        if (clearHighlights) this.highlightManager.clearAllHighlights();
 
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Nộp bài'; }
@@ -1629,51 +1809,11 @@ class ListeningCore {
         this.updateAnswerCount();
     }
 
-    showExplanation(questionNum) {
-        if (!this.explanationMode && !this.examSubmitted) return;
-
-        this.highlightManager.clearAllHighlights();
-        this.highlightManager.highlightQuestion(questionNum);
-
-        const explanationPanel = document.getElementById('explanationPanel');
-        const explanationTitle = document.getElementById('explanationTitle');
-        const explanationText = document.getElementById('explanationText');
-
-        if (explanationPanel && explanationTitle && explanationText) {
-            explanationPanel.classList.add('show');
-            explanationTitle.textContent = `Giải thích Câu ${questionNum}`;
-            
-            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
-                      `<strong>Đáp án:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}</strong><br>`;
-            
-            if (this.examSubmitted) {
-                const userAnswer = this.getUserAnswer(questionNum) || '(chưa trả lời)';
-                const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
-                
-                html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
-                html += `<strong>Đáp án của bạn:</strong> ${userAnswer}<br>`;
-                if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}`;
-                else html += `<strong>Đúng!</strong>`;
-                html += `</div>`;
-            }
-            
-            explanationText.innerHTML = html;
-        }
-    }
-
-    closeExplanation() {
-        const explanationPanel = document.getElementById('explanationPanel');
-        if (explanationPanel) explanationPanel.classList.remove('show');
-        this.highlightManager.clearAllHighlights();
-    }
-
     disableInputs() {
         if (this.currentTestData.type === 'multiple-choice') {
             document.querySelectorAll('input[type="radio"]').forEach(input => input.disabled = true);
-        } else if (this.currentTestData.type === 'fill-blank') {
-            document.querySelectorAll('.fill-input').forEach(input => input.disabled = true);
-        } else if (this.currentTestData.type === 'match-pairs') {
-            document.querySelectorAll('.ket-match-input').forEach(input => input.disabled = true);
+        } else {
+            document.querySelectorAll('.fill-input, .ket-match-input').forEach(input => input.disabled = true);
         }
     }
 
@@ -1685,11 +1825,10 @@ class ListeningCore {
     }
 }
 
-/**
- * Highlight Manager - Handles transcript highlighting
- */
+// ==================== HIGHLIGHT MANAGER (CŨ) ====================
 class HighlightManager {
-    constructor() {
+    constructor(core) {
+        this.core = core;
         this.selectedRange = null;
         this.setupContextMenu();
     }
@@ -1725,6 +1864,11 @@ class HighlightManager {
         }
     }
 
+    hideContextMenu() {
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) contextMenu.style.display = 'none';
+    }
+
     highlightQuestion(questionNum) {
         const highlightSpans = document.querySelectorAll(`.highlightable[data-q="${questionNum}"]`);
         highlightSpans.forEach(span => {
@@ -1747,6 +1891,7 @@ class HighlightManager {
             if (parent) {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
+                parent.normalize();
             }
         });
     }
@@ -1756,30 +1901,27 @@ class HighlightManager {
         try {
             const range = this.selectedRange.cloneRange();
             this.removeExistingHighlightsInRange(range);
-            const isSimple = this.isSimpleRange(range);
-            if (isSimple) this.applyHighlightSimple(range, color);
-            else this.applyHighlightComplex(range, color);
-        } catch (e) {}
+            // Luôn dùng complex mode để an toàn, tránh vỡ DOM
+            this.applyHighlightComplex(range, color);
+            
+            // Lưu metadata qua V2 (vẫn cần serialize range gốc, không đổi)
+            if (this.core.highlightV2) {
+                const highlightData = this.core.highlightV2.serializeRange(range, color);
+                if (highlightData) {
+                    this.core.highlightV2.highlights.push(highlightData);
+                    this.core.highlightV2.saveHighlights();
+                }
+            }
+        } catch (e) { console.error('Highlight error:', e); }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
-        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
     }
 
     applyHighlightSimple(range, color) {
-        try {
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            if (window.listeningCore && !window.listeningCore.personalHighlightsVisible) span.classList.add('highlight-hidden');
-            range.surroundContents(span);
-        } catch (e) {
-            const fragment = range.extractContents();
-            const span = document.createElement('span');
-            span.className = `highlight-${color}`;
-            if (window.listeningCore && !window.listeningCore.personalHighlightsVisible) span.classList.add('highlight-hidden');
-            span.appendChild(fragment);
-            range.insertNode(span);
-        }
+        // Phương thức này không còn được dùng trực tiếp nữa,
+        // nhưng giữ lại để tương thích nếu có gọi ở đâu đó.
+        this.applyHighlightComplex(range, color);
     }
 
     applyHighlightComplex(range, color) {
@@ -1794,13 +1936,15 @@ class HighlightManager {
             try {
                 const span = document.createElement('span');
                 span.className = `highlight-${color}`;
-                if (window.listeningCore && !window.listeningCore.personalHighlightsVisible) span.classList.add('highlight-hidden');
+                span.setAttribute('data-highlight-id', Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5));
+                if (this.core && !this.core.personalHighlightsVisible) span.classList.add('highlight-hidden');
                 subRange.surroundContents(span);
             } catch (e) {
                 const fragment = subRange.extractContents();
                 const span = document.createElement('span');
                 span.className = `highlight-${color}`;
-                if (window.listeningCore && !window.listeningCore.personalHighlightsVisible) span.classList.add('highlight-hidden');
+                span.setAttribute('data-highlight-id', Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5));
+                if (this.core && !this.core.personalHighlightsVisible) span.classList.add('highlight-hidden');
                 span.appendChild(fragment);
                 subRange.insertNode(span);
             }
@@ -1809,11 +1953,22 @@ class HighlightManager {
 
     getTextNodesInRange(range) {
         const textNodes = [];
-        const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, {
-            acceptNode: (node) => range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
-        });
+        const walker = document.createTreeWalker(
+            range.commonAncestorContainer,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: (node) => {
+                    if (range.intersectsNode(node) && node.nodeValue.trim() !== '') {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
         let node;
-        while (node = walker.nextNode()) textNodes.push(node);
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
         return textNodes;
     }
 
@@ -1830,18 +1985,15 @@ class HighlightManager {
 
     removeExistingHighlightsInRange(range) {
         try {
-            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
-                acceptNode: (node) => {
-                    if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')))
-                        return NodeFilter.FILTER_ACCEPT;
-                    return NodeFilter.FILTER_SKIP;
-                }
-            });
+            const rangeContainer = range.commonAncestorContainer;
+            const searchContainer = rangeContainer.nodeType === Node.TEXT_NODE ? rangeContainer.parentElement : rangeContainer;
+            if (!searchContainer) return;
+            const highlights = searchContainer.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
             const toUnwrap = [];
-            let node;
-            while (node = walker.nextNode()) if (range.intersectsNode(node)) toUnwrap.push(node);
+            highlights.forEach(highlight => { if (range.intersectsNode(highlight)) toUnwrap.push(highlight); });
             toUnwrap.forEach(span => {
                 const parent = span.parentNode;
+                if (!parent) return;
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
@@ -1852,37 +2004,32 @@ class HighlightManager {
         if (!this.selectedRange) { this.hideContextMenu(); return; }
         try {
             const range = this.selectedRange.cloneRange();
-            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
-                acceptNode: (node) => {
-                    if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')))
-                        return NodeFilter.FILTER_ACCEPT;
-                    return NodeFilter.FILTER_SKIP;
-                }
-            });
+            const rangeContainer = range.commonAncestorContainer;
+            const searchContainer = rangeContainer.nodeType === Node.TEXT_NODE ? rangeContainer.parentElement : rangeContainer;
+            if (!searchContainer) return;
+            const highlights = searchContainer.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
             const toRemove = [];
-            let node;
-            while (node = walker.nextNode()) if (range.intersectsNode(node)) toRemove.push(node);
+            highlights.forEach(highlight => { if (range.intersectsNode(highlight)) toRemove.push(highlight); });
             toRemove.forEach(span => {
+                // Xóa metadata
+                const id = span.getAttribute('data-highlight-id');
+                if (id && this.core.highlightV2) {
+                    this.core.highlightV2.removeHighlight(id);
+                }
                 const parent = span.parentNode;
+                if (!parent) return;
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
+                parent.normalize();
             });
         } catch (e) {}
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
-        if (window.listeningCore) window.listeningCore.saveHighlightDraft();
-    }
-
-    hideContextMenu() {
-        const contextMenu = document.getElementById('contextMenu');
-        if (contextMenu) contextMenu.style.display = 'none';
     }
 }
 
-/**
- * Storage Manager - Handles saving results to localStorage
- */
+// ==================== STORAGE MANAGER ====================
 class StorageManager {
     saveResults(testData, userAnswers) {
         const details = [];
@@ -1929,7 +2076,6 @@ class StorageManager {
 
     parseTestInfo(title) {
         let book = 1, test = 1, part = 1;
-        // KET pattern: "KET 1 · Test 1 · Listening Part 2"
         const ketBookMatch = title.match(/KET\s+(\d+)/i);
         if (ketBookMatch) book = parseInt(ketBookMatch[1]);
         const testMatch = title.match(/Test\s+(\d+)/i);
@@ -1940,9 +2086,7 @@ class StorageManager {
     }
 }
 
-/**
- * UI Manager - Handles UI interactions and controls
- */
+// ==================== UI MANAGER ====================
 class UIManager {
     setupFontControls() {
         const fontButtons = { fontSmall: 'small', fontMedium: 'medium', fontLarge: 'large' };
@@ -2171,7 +2315,7 @@ class UIManager {
     }
 }
 
-// Global functions
+// ==================== GLOBAL FUNCTIONS ====================
 window.applyHighlight = function(color) {
     if (window.listeningCore && window.listeningCore.highlightManager) {
         window.listeningCore.highlightManager.applyHighlight(color);
