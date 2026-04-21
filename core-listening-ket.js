@@ -908,8 +908,47 @@ class ListeningCore {
     }
 
     saveHighlightDraft() {
-        // V2: Metadata-based (handled by HighlightManagerV2.addHighlight)
-        this.highlightV2.saveHighlights();
+        // ✅ FIX: Delay để đảm bảo DOM update xong
+        setTimeout(() => {
+            try {
+                const key = this.getHighlightStorageKey();
+
+                // ✅ FIX: Tìm element chính xác hơn
+                const transcript = document.getElementById('transcriptContent') ||
+                    document.querySelector('.transcript-content');
+                const questions = document.getElementById('questionsContainer') ||
+                    document.querySelector('.questions-list');
+
+                const data = {
+                    timestamp: Date.now(),
+                    containers: {}
+                };
+
+                let hasHighlights = false;
+
+                // Save transcript
+                if (transcript && transcript.innerHTML.includes('highlight-')) {
+                    data.containers.transcript = transcript.innerHTML;
+                    hasHighlights = true;
+                }
+
+                // Save questions
+                if (questions && questions.innerHTML.includes('highlight-')) {
+                    data.containers.questions = questions.innerHTML;
+                    hasHighlights = true;
+                }
+
+                // Store data
+                if (hasHighlights) {
+                    this._safeSetStorage(key, JSON.stringify(data));
+                    console.log('[Highlight] Saved successfully');
+                } else {
+                    localStorage.removeItem(key);
+                }
+            } catch (e) {
+                console.error('[Highlight] Save error:', e);
+            }
+        }, 150); // ✅ KEY: 150ms delay để DOM update xong
     }
 
     loadHighlightDraft() {
@@ -923,11 +962,38 @@ class ListeningCore {
             return;
         }
         
-        // Check if it's legacy format
         try {
             const parsed = JSON.parse(savedData);
+
+            // NEW FORMAT: { timestamp, containers: { transcript, questions } }
+            if (parsed.containers && (parsed.containers.transcript || parsed.containers.questions)) {
+                console.log('[Highlight] Loading new format');
+                const capture = (c) => Array.from(c.querySelectorAll('input, select, textarea')).map((input, i) =>
+                    input.type === 'radio' || input.type === 'checkbox'
+                        ? { i, checked: input.checked, name: input.name, value: input.value }
+                        : { i, value: input.value, id: input.id });
+                const restore = (c, vals) => {
+                    const inputs = c.querySelectorAll('input, select, textarea');
+                    vals.forEach(item => {
+                        const input = inputs[item.i];
+                        if (!input) return;
+                        input.type === 'radio' || input.type === 'checkbox' ? input.checked = item.checked : input.value = item.value;
+                    });
+                };
+                if (parsed.containers.transcript) {
+                    const t = document.getElementById('transcriptContent') || document.querySelector('.transcript-content');
+                    if (t) { const v = capture(t); t.innerHTML = parsed.containers.transcript; restore(t, v); }
+                }
+                if (parsed.containers.questions) {
+                    const q = document.getElementById('questionsContainer') || document.querySelector('.questions-list');
+                    if (q) { const v = capture(q); q.innerHTML = parsed.containers.questions; restore(q, v); }
+                }
+                return;
+            }
+
+            // LEGACY FORMAT
             if (!parsed.version && (parsed.containers || savedData.includes('<span'))) {
-                console.log('[Highlight] Legacy format detected, loading via old method');
+                console.log('[Highlight] Legacy format detected');
                 this.loadHighlightDraftLegacy(savedData);
             }
         } catch (e) {
@@ -2060,9 +2126,9 @@ class HighlightManager {
             if (isSimple) this.applyHighlightSimple(range, color);
             else this.applyHighlightComplex(range, color);
             
-            // V2: Save metadata
-            if (window.listeningCore && window.listeningCore.highlightV2) {
-                window.listeningCore.highlightV2.addHighlight(color);
+            // Save highlight after DOM update
+            if (window.listeningCore) {
+                window.listeningCore.saveHighlightDraft();
             }
         } catch (e) { console.error('Highlight error:', e); }
         window.getSelection().removeAllRanges();
@@ -2172,9 +2238,9 @@ class HighlightManager {
                 parent.removeChild(span);
             });
             
-            // V2: Re-save after removal
-            if (window.listeningCore && window.listeningCore.highlightV2) {
-                window.listeningCore.highlightV2.saveHighlights();
+            // Save after removal
+            if (window.listeningCore) {
+                window.listeningCore.saveHighlightDraft();
             }
         } catch (e) { console.error('Remove highlight error:', e); }
         window.getSelection().removeAllRanges();
