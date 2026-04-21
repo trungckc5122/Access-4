@@ -21,7 +21,7 @@ class KETNoteManager {
     }
 
     init() {
-        if (document.querySelector('.ket-note-panel')) return;
+        if (document.querySelector('.pet-note-panel')) return;
         this.createPanel();
         this.loadNote();
         this.setupEvents();
@@ -30,33 +30,33 @@ class KETNoteManager {
 
     createPanel() {
         const panel = document.createElement('div');
-        panel.className = 'ket-note-panel';
+        panel.className = 'pet-note-panel';
         panel.innerHTML = `
-            <div class="ket-note-header">
-                <div class="ket-note-title">
+            <div class="pet-note-header">
+                <div class="pet-note-title">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
                     Quick Note
                 </div>
-                <div class="ket-note-controls">
-                    <button class="ket-note-btn clear-btn" title="Xóa toàn bộ">
+                <div class="pet-note-controls">
+                    <button class="pet-note-btn clear-btn" title="Xóa toàn bộ">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                     </button>
-                    <button class="ket-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
+                    <button class="pet-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
                     </button>
-                    <button class="ket-note-btn close-btn" title="Đóng">
+                    <button class="pet-note-btn close-btn" title="Đóng">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
             </div>
-            <div class="ket-note-content">
-                <textarea class="ket-note-textarea" placeholder="Ghi chú tại đây..."></textarea>
+            <div class="pet-note-content">
+                <textarea class="pet-note-textarea" placeholder="Ghi chú tại đây..."></textarea>
             </div>
-            <div class="ket-note-resize-handle"></div>
+            <div class="pet-note-resize-handle"></div>
         `;
         document.body.appendChild(panel);
         this.panel = panel;
-        this.textarea = panel.querySelector('.ket-note-textarea');
+        this.textarea = panel.querySelector('.pet-note-textarea');
 
         const posStr = localStorage.getItem(this.getNoteKey() + '_pos');
         if (posStr) {
@@ -68,10 +68,10 @@ class KETNoteManager {
     }
 
     setupEvents() {
-        const header = this.panel.querySelector('.ket-note-header');
+        const header = this.panel.querySelector('.pet-note-header');
         const minBtn = this.panel.querySelector('.minimize-btn');
         const closeBtn = this.panel.querySelector('.close-btn');
-        const handle = this.panel.querySelector('.ket-note-resize-handle');
+        const handle = this.panel.querySelector('.pet-note-resize-handle');
 
         const onDrag = (e) => {
             if (!this.dragData.isDragging) return;
@@ -112,7 +112,7 @@ class KETNoteManager {
         };
 
         header.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.ket-note-btn')) return;
+            if (e.target.closest('.pet-note-btn')) return;
             this.dragData.isDragging = true;
             this.dragData.startX = e.clientX;
             this.dragData.startY = e.clientY;
@@ -2297,7 +2297,7 @@ class ReadingUIManager {
             else header.appendChild(themeBtn);
         }
 
-        const savedTheme = localStorage.getItem('ket-theme') || 'light';
+        const savedTheme = localStorage.getItem('pet-theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
     }
 
@@ -2305,7 +2305,7 @@ class ReadingUIManager {
         const themeToggle = document.getElementById('themeToggle');
         if (!themeToggle) return;
         const testWrapper = document.getElementById('testWrapper');
-        const savedTheme = localStorage.getItem('ket-theme');
+        const savedTheme = localStorage.getItem('pet-theme');
         if (savedTheme === 'dark' && testWrapper && !testWrapper.classList.contains('classic-mode')) {
             document.documentElement.setAttribute('data-theme', 'dark');
         }
@@ -2314,7 +2314,7 @@ class ReadingUIManager {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('ket-theme', newTheme);
+            localStorage.setItem('pet-theme', newTheme);
         });
     }
 
@@ -2343,18 +2343,18 @@ class ReadingUIManager {
         const styleLink = document.getElementById('styleLink');
         const testWrapper = document.getElementById('testWrapper');
         const html = document.documentElement;
-        const storageKey = 'ket-mode';
+        const storageKey = 'pet-mode';
         if (!modeToggle || !styleLink || !testWrapper) return;
 
         const setMode = (isClassic) => {
             if (isClassic) {
-                styleLink.href = 'reading-ket-common1.css';
+                styleLink.href = 'reading-pet-common1.css';
                 testWrapper.classList.add('classic-mode');
                 html.removeAttribute('data-theme');
             } else {
-                styleLink.href = 'reading-ket-common.css';
+                styleLink.href = 'reading-pet-common.css';
                 testWrapper.classList.remove('classic-mode');
-                const savedTheme = localStorage.getItem('ket-theme');
+                const savedTheme = localStorage.getItem('pet-theme');
                 if (savedTheme === 'dark') html.setAttribute('data-theme', 'dark');
             }
             localStorage.setItem(storageKey, isClassic ? 'classic' : 'modern');
