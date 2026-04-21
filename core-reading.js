@@ -276,16 +276,51 @@ class MiniDashboardManager {
             noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
         } else if (submitBtn) {
             submitBtn.parentNode.insertBefore(toggleBtn, submitBtn);
-        } else {
             bottomBar.appendChild(toggleBtn);
         }
     }
 
-    calculatePETScore(correct, maxQuestions) {
-        if (correct === 0) return null;
-        const percentage = correct / maxQuestions;
-        let score = Math.round(120 + percentage * 50);
-        return Math.min(170, Math.max(120, score));
+    // Bảng quy đổi điểm PET Reading chuẩn Cambridge
+    petReadingScoreMap = {
+        32: { cambridge: 170, cefr: 'B2' },
+        31: { cambridge: 168, cefr: 'B2' },
+        30: { cambridge: 164, cefr: 'B2' },
+        29: { cambridge: 160, cefr: 'B1' },
+        28: { cambridge: 156, cefr: 'B1' },
+        27: { cambridge: 152, cefr: 'B1' },
+        26: { cambridge: 150, cefr: 'B1' },
+        25: { cambridge: 147, cefr: 'B1' },
+        24: { cambridge: 144, cefr: 'B1' },
+        23: { cambridge: 141, cefr: 'B1' },
+        22: { cambridge: 138, cefr: 'A2' },
+        21: { cambridge: 136, cefr: 'A2' },
+        20: { cambridge: 134, cefr: 'A2' },
+        19: { cambridge: 132, cefr: 'A2' },
+        18: { cambridge: 130, cefr: 'A2' },
+        17: { cambridge: 126, cefr: 'A2' },
+        16: { cambridge: 124, cefr: 'A2' },
+        15: { cambridge: 122, cefr: 'A2' },
+        14: { cambridge: 120, cefr: 'A2' },
+        13: { cambridge: 118, cefr: '-' },
+        12: { cambridge: 116, cefr: '-' },
+        11: { cambridge: 113, cefr: '-' },
+        10: { cambridge: 111, cefr: '-' },
+        9: { cambridge: 109, cefr: '-' },
+        8: { cambridge: 107, cefr: '-' },
+        7: { cambridge: 104, cefr: '-' },
+        6: { cambridge: 102, cefr: '-' },
+        5: { cambridge: 82, cefr: '-' },
+        4: { cambridge: 61, cefr: '-' },
+        3: { cambridge: 41, cefr: '-' },
+        2: { cambridge: 20, cefr: '-' },
+        1: { cambridge: 10, cefr: '-' },
+        0: { cambridge: 0, cefr: '-' }
+    };
+
+    calculatePETScore(correct) {
+        if (correct < 0) correct = 0;
+        if (correct > 32) correct = 32;
+        return this.petReadingScoreMap[correct] || { cambridge: 0, cefr: '-' };
     }
 
     refreshData() {
@@ -333,14 +368,15 @@ class MiniDashboardManager {
     calculateSkillStats(data, maxQuestions) {
         const completedParts = data.filter(d => d.type === 'completed');
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
-        const totalAnswered = maxQuestions;
         const hasAnyData = data.some(d => d.type !== 'empty');
+        const scoreData = this.calculatePETScore(totalCorrect);
         
         return {
             correct: totalCorrect,
-            total: totalAnswered,
+            total: maxQuestions,
             hasData: hasAnyData,
-            petScore: this.calculatePETScore(totalCorrect, totalAnswered)
+            petScore: scoreData.cambridge,
+            cefr: scoreData.cefr
         };
     }
 
@@ -357,7 +393,8 @@ class MiniDashboardManager {
             if (!stats.hasData) {
                 scoreHtml = '<span class="not-done">Chưa làm</span>';
             } else if (stats.petScore) {
-                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.petScore}</strong> điểm`;
+                const cefrBadge = stats.cefr && stats.cefr !== '-' ? ` <span class="cefr-badge">${stats.cefr}</span>` : '';
+                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.petScore}</strong> điểm${cefrBadge}`;
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
@@ -375,46 +412,27 @@ class MiniDashboardManager {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
-                const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
-                const url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
+                let url = isReading ? `read-pet${meta.book}-test${meta.test}-part${d.part}.html` : `lis-pet${meta.book}-test${meta.test}-part${d.part}.html`;
                 
-                if (isCurrent) {
-                    sectionHtml += `
-                        <span class="part-item current disabled" style="opacity: 0.6; cursor: not-allowed; pointer-events: none;">
-                            <span>Part ${d.part}</span>
-                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                        </span>
-                    `;
-                } else {
-                    sectionHtml += `
-                        <span class="part-item" style="cursor: pointer;" data-url="${url}" data-part="${d.part}">
-                            <span>Part ${d.part}</span>
-                            <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
-                        </span>
-                    `;
-                }
+                const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
+                const currentClass = isCurrent ? 'current' : '';
+
+                sectionHtml += `
+                    <a href="${url}" class="part-item ${currentClass}">
+                        <span>Part ${d.part}</span>
+                        <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
+                    </a>
+                `;
             });
             sectionHtml += '</div></div>';
             return sectionHtml;
-        };
+        }
 
         let html = renderSection('Reading', readingData, readingStats, true);
         html += `<div style="height: 1px; background: var(--border, #e2e8f0); margin: 4px 0;"></div>`;
         html += renderSection('Listening', listeningData, listeningStats, false);
 
         this.contentArea.innerHTML = html;
-
-        // Gắn sự kiện click cho các Part khác (có data-url)
-        this.contentArea.querySelectorAll('.part-item[data-url]').forEach(el => {
-            el.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetUrl = el.dataset.url;
-                const partNum = el.dataset.part;
-                if (confirm(`Bạn có muốn mở Part ${partNum} trong tab mới không?`)) {
-                    window.open(targetUrl, '_blank');
-                }
-            });
-        });
     }
 
     toggle() {
@@ -1814,9 +1832,9 @@ class ReadingCore {
                 <h3>Xác nhận Reset</h3>
                 <p>Bạn muốn reset những gì?</p>
                 <div class="reset-modal-btns">
-                    <button class="reset-modal-btn all" id="resetAllBtn"> Xóa hết (đáp án & highlight)</button>
-                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn"> Xóa nội dung (chỉ đáp án)</button>
-                    <button class="reset-modal-btn cancel" id="cancelResetBtn"> Hủy</button>
+                    <button class="reset-modal-btn all" id="resetAllBtn">🗑️ Xóa hết (đáp án & highlight)</button>
+                    <button class="reset-modal-btn content" id="resetAnswersOnlyBtn">📝 Xóa nội dung (chỉ đáp án)</button>
+                    <button class="reset-modal-btn cancel" id="cancelResetBtn">❌ Hủy</button>
                 </div>
             </div>
         `;

@@ -262,29 +262,81 @@ class MiniDashboardManager {
         }
     }
 
-    // Bảng quy đổi điểm KET Reading (Cambridge English Scale)
+    // Bảng quy đổi điểm KET Reading chuẩn Cambridge (30 câu)
     ketReadingScoreMap() {
         return {
-            30: 150, 29: 145, 28: 140, 27: 138, 26: 135, 25: 133, 24: 130, 23: 128,
-            22: 125, 21: 123, 20: 120, 19: 117, 18: 114, 17: 111, 16: 109, 15: 106,
-            14: 103, 13: 100, 12: 97, 11: 94, 10: 91, 9: 88, 8: 85, 7: 82,
-            6: 70, 5: 59, 4: 47, 3: 35, 2: 23, 1: 12, 0: 0
+            30: { cambridge: 150, cefr: 'B1' },
+            29: { cambridge: 145, cefr: 'B1' },
+            28: { cambridge: 140, cefr: 'B1' },
+            27: { cambridge: 138, cefr: 'A2' },
+            26: { cambridge: 135, cefr: 'A2' },
+            25: { cambridge: 133, cefr: 'A2' },
+            24: { cambridge: 130, cefr: 'A2' },
+            23: { cambridge: 128, cefr: 'A2' },
+            22: { cambridge: 125, cefr: 'A2' },
+            21: { cambridge: 123, cefr: 'A2' },
+            20: { cambridge: 120, cefr: 'A2' },
+            19: { cambridge: 117, cefr: 'A1' },
+            18: { cambridge: 114, cefr: 'A1' },
+            17: { cambridge: 111, cefr: 'A1' },
+            16: { cambridge: 109, cefr: 'A1' },
+            15: { cambridge: 106, cefr: 'A1' },
+            14: { cambridge: 103, cefr: 'A1' },
+            13: { cambridge: 100, cefr: 'A1' },
+            12: { cambridge: 97, cefr: '-' },
+            11: { cambridge: 94, cefr: '-' },
+            10: { cambridge: 91, cefr: '-' },
+            9: { cambridge: 88, cefr: '-' },
+            8: { cambridge: 85, cefr: '-' },
+            7: { cambridge: 82, cefr: '-' },
+            6: { cambridge: 70, cefr: '-' },
+            5: { cambridge: 59, cefr: '-' },
+            4: { cambridge: 47, cefr: '-' },
+            3: { cambridge: 35, cefr: '-' },
+            2: { cambridge: 23, cefr: '-' },
+            1: { cambridge: 12, cefr: '-' },
+            0: { cambridge: 0, cefr: '-' }
         };
     }
 
-    // Bảng quy đổi điểm KET Listening (Cambridge English Scale)
+    // Bảng quy đổi điểm KET Listening chuẩn Cambridge (25 câu)
     ketListeningScoreMap() {
         return {
-            25: 150, 24: 145, 23: 140, 22: 137, 21: 133, 20: 130, 19: 127, 18: 123,
-            17: 120, 16: 117, 15: 113, 14: 110, 13: 107, 12: 103, 11: 100,
-            10: 96, 9: 93, 8: 89, 7: 86, 6: 82, 5: 68, 4: 55, 3: 41, 2: 27, 1: 14, 0: 0
+            25: { cambridge: 150, cefr: 'B1' },
+            24: { cambridge: 145, cefr: 'B1' },
+            23: { cambridge: 140, cefr: 'B1' },
+            22: { cambridge: 137, cefr: 'A2' },
+            21: { cambridge: 133, cefr: 'A2' },
+            20: { cambridge: 130, cefr: 'A2' },
+            19: { cambridge: 127, cefr: 'A2' },
+            18: { cambridge: 123, cefr: 'A2' },
+            17: { cambridge: 120, cefr: 'A2' },
+            16: { cambridge: 117, cefr: 'A1' },
+            15: { cambridge: 113, cefr: 'A1' },
+            14: { cambridge: 110, cefr: 'A1' },
+            13: { cambridge: 107, cefr: 'A1' },
+            12: { cambridge: 103, cefr: 'A1' },
+            11: { cambridge: 100, cefr: 'A1' },
+            10: { cambridge: 96, cefr: '-' },
+            9: { cambridge: 93, cefr: '-' },
+            8: { cambridge: 89, cefr: '-' },
+            7: { cambridge: 86, cefr: '-' },
+            6: { cambridge: 82, cefr: '-' },
+            5: { cambridge: 68, cefr: '-' },
+            4: { cambridge: 55, cefr: '-' },
+            3: { cambridge: 41, cefr: '-' },
+            2: { cambridge: 27, cefr: '-' },
+            1: { cambridge: 14, cefr: '-' },
+            0: { cambridge: 0, cefr: '-' }
         };
     }
 
     calculateKETScore(correct, isReading) {
-        if (correct === 0) return null;
+        if (correct < 0) correct = 0;
+        const max = isReading ? 30 : 25;
+        if (correct > max) correct = max;
         const map = isReading ? this.ketReadingScoreMap() : this.ketListeningScoreMap();
-        return map[correct] !== undefined ? map[correct] : 0;
+        return map[correct] || { cambridge: 0, cefr: '-' };
     }
 
     refreshData() {
@@ -332,14 +384,15 @@ class MiniDashboardManager {
     calculateSkillStats(data, maxQuestions) {
         const completedParts = data.filter(d => d.type === 'completed');
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
-        const totalAnswered = maxQuestions;
         const hasAnyData = data.some(d => d.type !== 'empty');
+        const scoreData = this.calculateKETScore(totalCorrect, maxQuestions === 30);
 
         return {
             correct: totalCorrect,
-            total: totalAnswered,
+            total: maxQuestions,
             hasData: hasAnyData,
-            ketScore: this.calculateKETScore(totalCorrect, maxQuestions === 30)
+            ketScore: scoreData.cambridge,
+            cefr: scoreData.cefr
         };
     }
 
@@ -356,7 +409,8 @@ class MiniDashboardManager {
             if (!stats.hasData) {
                 scoreHtml = '<span class="not-done">Chưa làm</span>';
             } else if (stats.ketScore) {
-                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.ketScore}</strong> điểm`;
+                const cefrBadge = stats.cefr && stats.cefr !== '-' ? ` <span class="cefr-badge">${stats.cefr}</span>` : '';
+                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.ketScore}</strong> điểm${cefrBadge}`;
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }

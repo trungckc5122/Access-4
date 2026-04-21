@@ -301,16 +301,41 @@ class MiniDashboardManager {
 
     ketListeningScoreMap() {
         return {
-            25: 150, 24: 145, 23: 140, 22: 137, 21: 133, 20: 130, 19: 127, 18: 123,
-            17: 120, 16: 117, 15: 113, 14: 110, 13: 107, 12: 103, 11: 100,
-            10: 96, 9: 93, 8: 89, 7: 86, 6: 82, 5: 68, 4: 55, 3: 41, 2: 27, 1: 14, 0: 0
+            25: { cambridge: 150, cefr: 'B1' },
+            24: { cambridge: 145, cefr: 'B1' },
+            23: { cambridge: 140, cefr: 'B1' },
+            22: { cambridge: 137, cefr: 'A2' },
+            21: { cambridge: 133, cefr: 'A2' },
+            20: { cambridge: 130, cefr: 'A2' },
+            19: { cambridge: 127, cefr: 'A2' },
+            18: { cambridge: 123, cefr: 'A2' },
+            17: { cambridge: 120, cefr: 'A2' },
+            16: { cambridge: 117, cefr: 'A1' },
+            15: { cambridge: 113, cefr: 'A1' },
+            14: { cambridge: 110, cefr: 'A1' },
+            13: { cambridge: 107, cefr: 'A1' },
+            12: { cambridge: 103, cefr: 'A1' },
+            11: { cambridge: 100, cefr: 'A1' },
+            10: { cambridge: 96, cefr: '-' },
+            9: { cambridge: 93, cefr: '-' },
+            8: { cambridge: 89, cefr: '-' },
+            7: { cambridge: 86, cefr: '-' },
+            6: { cambridge: 82, cefr: '-' },
+            5: { cambridge: 68, cefr: '-' },
+            4: { cambridge: 55, cefr: '-' },
+            3: { cambridge: 41, cefr: '-' },
+            2: { cambridge: 27, cefr: '-' },
+            1: { cambridge: 14, cefr: '-' },
+            0: { cambridge: 0, cefr: '-' }
         };
     }
 
     calculateKETScore(correct, isReading) {
-        if (correct === 0) return null;
+        if (correct < 0) correct = 0;
+        const max = isReading ? 30 : 25;
+        if (correct > max) correct = max;
         const map = isReading ? this.ketReadingScoreMap() : this.ketListeningScoreMap();
-        return map[correct] !== undefined ? map[correct] : 0;
+        return map[correct] || { cambridge: 0, cefr: '-' };
     }
 
     refreshData() {
@@ -359,14 +384,15 @@ class MiniDashboardManager {
     calculateSkillStats(data, maxQuestions) {
         const completedParts = data.filter(d => d.type === 'completed');
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
-        const totalAnswered = maxQuestions;
         const hasAnyData = data.some(d => d.type !== 'empty');
+        const scoreData = this.calculateKETScore(totalCorrect, maxQuestions === 30);
         
         return {
             correct: totalCorrect,
-            total: totalAnswered,
+            total: maxQuestions,
             hasData: hasAnyData,
-            ketScore: this.calculateKETScore(totalCorrect, maxQuestions === 30)
+            ketScore: scoreData.cambridge,
+            cefr: scoreData.cefr
         };
     }
 
@@ -384,7 +410,8 @@ class MiniDashboardManager {
             if (!stats.hasData) {
                 scoreHtml = '<span class="not-done">Chưa làm</span>';
             } else if (stats.ketScore) {
-                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.ketScore}</strong> điểm`;
+                const cefrBadge = stats.cefr && stats.cefr !== '-' ? ` <span class="cefr-badge">${stats.cefr}</span>` : '';
+                scoreHtml = `${stats.correct}/${stats.total} đúng → <strong>${stats.ketScore}</strong> điểm${cefrBadge}`;
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
