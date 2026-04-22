@@ -755,18 +755,22 @@ class ReadingCore {
     }
 
     _cleanOldDrafts() {
+        const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('pet_reading_book') && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+            if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
                 keys.push(key);
             }
         }
-        if (keys.length > 20) {
+        if (keys.length > 10) {
             keys.sort();
-            for (let i = 0; i < keys.length - 20; i++) {
-                localStorage.removeItem(keys[i]);
-            }
+            const toRemove = keys.slice(0, keys.length - 10);
+            toRemove.forEach(k => {
+                localStorage.removeItem(k);
+                console.log('[Cleanup] Removed old draft/highlight:', k);
+            });
+            console.log(`[Cleanup] Freed ${toRemove.length} old item(s), kept ${Math.min(keys.length, 10)} recent.`);
         }
     }
 
@@ -2507,6 +2511,27 @@ class ReadingUIManager {
 
         resetBtn.parentNode.insertBefore(indicator, resetBtn.nextSibling);
 
+        // Đăng ký hàm dọn dẹp toàn cục (cross-module: pet & ket, reading & listening)
+        window.__petKetCleanStorage = () => {
+            const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+                    keys.push(key);
+                }
+            }
+            keys.sort();
+            // Giữ lại 10 mục mới nhất, xóa phần còn lại
+            const toRemove = keys.length > 10 ? keys.slice(0, keys.length - 10) : [];
+            toRemove.forEach(k => {
+                localStorage.removeItem(k);
+                console.log('[Auto-Clean] Removed:', k);
+            });
+            console.log(`[Auto-Clean] Cleaned ${toRemove.length} item(s). Kept ${Math.min(keys.length, 10)} recent draft(s).`);
+            return toRemove.length;
+        };
+
         this.updateStorageIndicator();
         setInterval(() => this.updateStorageIndicator(), 5000);
         window.addEventListener('storage', () => this.updateStorageIndicator());
@@ -2549,17 +2574,38 @@ class ReadingUIManager {
             if (!warningEl) {
                 warningEl = document.createElement('div');
                 warningEl.id = 'storageWarningMsg';
-                warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #c00; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff4d4d; animation: storageSlideUp 0.4s ease;';
+                warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: white; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff5252; animation: storageSlideUp 0.4s ease; min-width: 340px;';
                 warningEl.innerHTML = `
-                    <div style="margin-bottom: 10px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy! Vui lòng dọn dẹp bằng cách Reset → Xóa hết bài cũ.</div>
-                    <button onclick="this.parentElement.remove()" style="background: white; border: none; color: #c00; padding: 6px 16px; cursor: pointer; border-radius: 4px; font-weight: bold;">Đã hiểu</button>
+                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Draft và highlight cũ sẽ bị mất nếu không dọn dẹp.</span></div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="storageAutoCleanBtn" style="background: #fff176; border: none; color: #5d4037; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">🧹 Tự dọn dẹp</button>
+                        <button onclick="document.getElementById('storageWarningMsg')?.remove()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-size: 13px;">Đã hiểu</button>
+                    </div>
                 `;
                 document.body.appendChild(warningEl);
+
+                // Gắn sự kiện nút Tự dọn dẹp
+                const cleanBtn = document.getElementById('storageAutoCleanBtn');
+                if (cleanBtn) {
+                    cleanBtn.addEventListener('click', () => {
+                        const removed = window.__petKetCleanStorage?.() ?? 0;
+                        document.getElementById('storageWarningMsg')?.remove();
+                        this.updateStorageIndicator();
+                        // Toast xác nhận
+                        const toast = document.createElement('div');
+                        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1b5e20; color: white; padding: 10px 22px; border-radius: 8px; z-index: 10000; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 12px rgba(0,0,0,0.3); animation: storageSlideUp 0.4s ease;';
+                        toast.textContent = removed > 0
+                            ? `✅ Đã dọn ${removed} file cũ. Bộ nhớ được giải phóng!`
+                            : `ℹ️ Không có file cũ nào cần dọn.`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3500);
+                    });
+                }
 
                 if (!document.getElementById('storageWarningStyles')) {
                     const style = document.createElement('style');
                     style.id = 'storageWarningStyles';
-                    style.innerHTML = `@keyframes storageSlideUp { from { bottom: 50px; opacity: 0; } to { bottom: 80px; opacity: 1; } } #storageWarningMsg button:hover { background: #ffebee !important; }`;
+                    style.innerHTML = `@keyframes storageSlideUp { from { bottom: 50px; opacity: 0; } to { bottom: 80px; opacity: 1; } } #storageWarningMsg button:hover { opacity: 0.85; }`;
                     document.head.appendChild(style);
                 }
             }
