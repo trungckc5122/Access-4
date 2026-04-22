@@ -784,17 +784,53 @@ class ListeningCore {
             localStorage.setItem(key, value);
         } catch (e) {
             if (e.name === 'QuotaExceededError' || e.code === 22) {
-                console.warn('[Storage] Quota exceeded, cleaning old drafts...');
-                this._cleanOldDrafts();
+                console.warn('[Storage] Quota exceeded! Running emergency cleanup...');
+
+                // Dọn dẹp khẩn cấp – ưu tiên hàm toàn cục nếu có
+                const removed = window.__petKetCleanStorage?.() ?? 0;
+                if (removed === 0) this._cleanOldDrafts();
+
+                // Hiện toast cảnh báo cho học sinh
+                this._showEmergencyToast(removed);
+
+                // Thử lưu lại lần 2
                 try {
                     localStorage.setItem(key, value);
+                    console.log('[Storage] Saved successfully after emergency cleanup.');
                 } catch (e2) {
                     console.error('[Storage] Still failed after cleanup:', e2);
+                    this._showCriticalStorageError();
                 }
             } else {
                 console.error('[Storage] Failed to save:', e);
             }
         }
+    }
+
+    _showEmergencyToast(removedCount) {
+        if (document.getElementById('storageEmergencyToast')) return;
+        const toast = document.createElement('div');
+        toast.id = 'storageEmergencyToast';
+        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #e65100; color: white; padding: 12px 22px; border-radius: 8px; z-index: 10001; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 14px rgba(0,0,0,0.35); text-align: center; min-width: 300px; animation: storageSlideUp 0.4s ease;';
+        toast.innerHTML = removedCount > 0
+            ? `⚠️ Bộ nhớ đầy! Đã tự dọn <strong>${removedCount}</strong> file cũ để tiếp tục lưu.`
+            : `⚠️ Bộ nhớ đầy! Đang cố gắng giải phóng dung lượng...`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+    }
+
+    _showCriticalStorageError() {
+        if (document.getElementById('storageCriticalMsg')) return;
+        const el = document.createElement('div');
+        el.id = 'storageCriticalMsg';
+        el.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #b71c1c; color: white; padding: 20px 30px; border-radius: 12px; z-index: 10002; font-family: sans-serif; font-size: 15px; box-shadow: 0 6px 24px rgba(0,0,0,0.5); text-align: center; max-width: 420px; border: 2px solid #ff5252;';
+        el.innerHTML = `
+            <div style="font-size: 28px; margin-bottom: 10px;">🚨</div>
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px;">Không thể lưu dữ liệu!</div>
+            <div style="font-size: 13px; margin-bottom: 14px;">Bộ nhớ trình duyệt đã <strong>hoàn toàn đầy</strong>. Câu trả lời hiện tại có thể không được lưu.<br><br>Vui lòng vào một bài đã làm → nhấn <strong>Reset → Xóa hết</strong> để giải phóng bộ nhớ.</div>
+            <button onclick="document.getElementById('storageCriticalMsg')?.remove()" style="background: white; color: #b71c1c; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Đã hiểu</button>
+        `;
+        document.body.appendChild(el);
     }
 
     _cleanOldDrafts() {
