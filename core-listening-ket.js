@@ -1502,7 +1502,9 @@ class ListeningCore {
     handleExplain() {
         if (!this.examSubmitted) return;
         this.explanationMode = true;
-        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
+        // Chỉ hiện eye-icon, ẩn tất cả badge đáp án
+        document.querySelectorAll('.eye-icon').forEach(el => el.style.display = 'inline-block');
+        document.querySelectorAll('.correct-answer-badge').forEach(el => el.style.display = 'none');
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Đang xem giải thích'; }
         const explanationPanel = document.getElementById('explanationPanel');
@@ -1675,6 +1677,21 @@ class ListeningCore {
 
         this.highlightManager.clearAllHighlights();
         this.highlightManager.highlightQuestion(questionNum);
+
+        // Hiện badge đáp án cho câu hỏi được click
+        const questionDiv = document.getElementById(`question-${questionNum}`);
+        if (questionDiv) {
+            const badge = questionDiv.querySelector('.correct-answer-badge');
+            if (badge) badge.style.display = 'inline-block';
+        }
+        // Cho fill-blank và match-pairs
+        document.querySelectorAll('.blank-line, .ket-match-row').forEach(wrapper => {
+            const input = wrapper.querySelector('input');
+            if (input && input.id === `q${questionNum}`) {
+                const badge = wrapper.querySelector('.correct-answer-badge');
+                if (badge) badge.style.display = 'inline-block';
+            }
+        });
 
         const explanationPanel = document.getElementById('explanationPanel');
         const explanationTitle = document.getElementById('explanationTitle');

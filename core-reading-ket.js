@@ -1776,7 +1776,9 @@ class ReadingCore {
     handleExplain() {
         if (!this.examSubmitted) return;
         this.explanationMode = true;
-        document.querySelectorAll('.eye-icon, .correct-answer-badge').forEach(el => el.style.display = 'inline-block');
+        // Chỉ hiện eye-icon, ẩn tất cả badge đáp án
+        document.querySelectorAll('.eye-icon').forEach(el => el.style.display = 'inline-block');
+        document.querySelectorAll('.correct-answer-badge').forEach(el => el.style.display = 'none');
         const explainBtn = document.getElementById('explainBtn');
         if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Đang xem giải thích'; }
 
@@ -1790,9 +1792,11 @@ class ReadingCore {
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
                     if (el) el.value = vals[i] || "";
+                    // Không hiện badge ngay, chỉ tạo nhưng ẩn
                     this.addBadgeForQuestion(i);
                 }
-                document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'inline-block');
+                // Ẩn tất cả badge, chỉ hiện eye-icon
+                document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'none');
             }
         } else {
             const explanationPanel = document.getElementById('explanationPanel');
