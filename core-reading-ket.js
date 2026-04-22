@@ -907,6 +907,7 @@ class ReadingCore {
         }
 
         this.uiManager.setupAutoCollapse(this);
+        this.uiManager.injectStorageIndicator();
     }
 
     injectNoteButton() {
@@ -2521,6 +2522,79 @@ class ReadingUIManager {
         if (modeToggle) modeToggle.insertAdjacentElement('afterend', toggleBtn);
         else if (themeToggle) themeToggle.insertAdjacentElement('afterend', toggleBtn);
         else header.appendChild(toggleBtn);
+    }
+
+    injectStorageIndicator() {
+        const bottomBar = document.querySelector('.bottom-bar');
+        const resetBtn = document.getElementById('resetBtn');
+        if (!bottomBar || !resetBtn || document.getElementById('storageIndicator')) return;
+
+        const indicator = document.createElement('div');
+        indicator.id = 'storageIndicator';
+        indicator.className = 'storage-indicator';
+        indicator.style.cssText = 'display: inline-flex; align-items: center; margin-left: 10px; font-size: 13px; font-weight: 600; border-radius: 6px; padding: 5px 10px; cursor: help; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);';
+
+        resetBtn.parentNode.insertBefore(indicator, resetBtn.nextSibling);
+
+        this.updateStorageIndicator();
+        setInterval(() => this.updateStorageIndicator(), 5000);
+        window.addEventListener('storage', () => this.updateStorageIndicator());
+    }
+
+    updateStorageIndicator() {
+        const indicator = document.getElementById('storageIndicator');
+        if (!indicator) return;
+
+        let total = 0;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                total += (localStorage.getItem(key).length + key.length) * 2;
+            }
+        } catch(e) {}
+
+        const limit = 5 * 1024 * 1024;
+        const usedPercentage = (total / limit) * 100;
+        const remainingMB = Math.max(0, (limit - total) / (1024 * 1024)).toFixed(2);
+
+        let color = '#2e8b57';
+        let bgColor = '#e8f5e8';
+
+        if (usedPercentage > 90) {
+            color = '#c00';
+            bgColor = '#ffebee';
+        } else if (usedPercentage > 70) {
+            color = '#b08d00';
+            bgColor = '#fff3a1';
+        }
+
+        indicator.style.color = color;
+        indicator.style.backgroundColor = bgColor;
+        indicator.title = `Đã dùng: ${usedPercentage.toFixed(1)}%`;
+        indicator.innerHTML = `💾 Trống: ${remainingMB}MB`;
+
+        let warningEl = document.getElementById('storageWarningMsg');
+        if (usedPercentage > 90) {
+            if (!warningEl) {
+                warningEl = document.createElement('div');
+                warningEl.id = 'storageWarningMsg';
+                warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #c00; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff4d4d; animation: storageSlideUp 0.4s ease;';
+                warningEl.innerHTML = `
+                    <div style="margin-bottom: 10px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy! Vui lòng dọn dẹp bằng cách Reset → Xóa hết bài cũ.</div>
+                    <button onclick="this.parentElement.remove()" style="background: white; border: none; color: #c00; padding: 6px 16px; cursor: pointer; border-radius: 4px; font-weight: bold;">Đã hiểu</button>
+                `;
+                document.body.appendChild(warningEl);
+
+                if (!document.getElementById('storageWarningStyles')) {
+                    const style = document.createElement('style');
+                    style.id = 'storageWarningStyles';
+                    style.innerHTML = `@keyframes storageSlideUp { from { bottom: 50px; opacity: 0; } to { bottom: 80px; opacity: 1; } } #storageWarningMsg button:hover { background: #ffebee !important; }`;
+                    document.head.appendChild(style);
+                }
+            }
+        } else {
+            if (warningEl) warningEl.remove();
+        }
     }
 }
 
