@@ -1466,11 +1466,12 @@ class ListeningCore {
                 if (isCorrect) input.classList.add('correct');
                 else {
                     input.classList.add('incorrect');
-                    if (wrapper) {
+                    const inputWrapper = input.parentElement;
+                    if (inputWrapper) {
                         const badge = document.createElement('span');
                         badge.className = 'correct-answer-badge';
                         badge.textContent = this.currentTestData.displayAnswers[`q${i}`];
-                        wrapper.appendChild(badge);
+                        inputWrapper.insertBefore(badge, input);
                     }
                 }
             }
