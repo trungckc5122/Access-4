@@ -1677,8 +1677,9 @@ class ReadingCore {
         this.showResults();
         const userAnswers = this.getUserAnswers();
         this.storageManager.saveResults(this.currentTestData, userAnswers);
-        // LƯU TRẠNG THÁI SUBMITTED
-        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers);
+        // LƯU TRẠNG THÁI SUBMITTED - dùng getDraftData() để có slotState đầy đủ
+        const draftData = this.getDraftData();
+        this.storageManager.saveSubmittedState(this.currentTestData, draftData);
 
         try {
             const channel = new BroadcastChannel('ket_update_channel');
@@ -2087,17 +2088,18 @@ class ReadingCore {
 
         // Khôi phục câu trả lời
         const questionRange = this.getQuestionRange();
+        const answers = submittedState.answers;
 
         if (this.currentTestData.type === 'split-layout') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const inp = document.getElementById(`q${i}`);
-                if (inp && submittedState.answers[i]) {
-                    inp.value = submittedState.answers[i];
+                if (inp && answers[`q${i}`] !== undefined) {
+                    inp.value = answers[`q${i}`];
                 }
             }
         } else if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const answer = submittedState.answers[i];
+                const answer = answers[`q${i}`];
                 if (answer) {
                     const radios = document.getElementsByName(`q${i}`);
                     radios.forEach(radio => {
@@ -2110,33 +2112,26 @@ class ReadingCore {
                     }
                 }
             }
-        } else if (this.currentTestData.type === 'matching') {
+        } else if (this.currentTestData.type === 'matching' || this.currentTestData.type === 'matching-dropdown') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const input = document.getElementById(`answer-${i}`);
-                if (input && submittedState.answers[i]) {
-                    input.value = submittedState.answers[i];
+                if (input && answers[`q${i}`]) {
+                    input.value = answers[`q${i}`];
                 }
             }
         } else if (this.currentTestData.type === 'drag-drop') {
-            if (submittedState.answers.slotState) {
-                this.slotState = { ...submittedState.answers.slotState };
-                Object.keys(this.slotState).forEach(slotNum => {
-                    const sentence = this.slotState[slotNum];
-                    if (sentence) {
-                        const readingSlot = document.getElementById(`readingSlot${slotNum}`);
-                        const panelSlot = document.getElementById(`panelSlot${slotNum}`);
-                        if (readingSlot) readingSlot.textContent = sentence;
-                        if (panelSlot) panelSlot.textContent = sentence;
+            // Khôi phục slotState từ draft data - giờ đã có đầy đủ từ getDraftData()
+            const slotState = answers.slotState || {};
+            this.slotState = { ...slotState };
 
-                        // Ẩn câu đã dùng
-                        document.querySelectorAll('.sentence-item').forEach(item => {
-                            if (item.textContent.trim() === sentence.trim()) {
-                                item.classList.add('hidden');
-                            }
-                        });
-                    }
-                });
-            }
+            // Đặt lại nội dung cho từng slot và ẩn câu đã dùng
+            Object.entries(this.slotState).forEach(([qNumStr, data]) => {
+                const qNum = parseInt(qNumStr);
+                if (data && data.value) {
+                    // Gọi hàm có sẵn để set nội dung slot và ẩn câu đã dùng
+                    this.placeInSlot(qNum, data.value);
+                }
+            });
         }
 
         // Gọi submitExam để hiển thị trạng thái đã nộp
@@ -2729,7 +2724,7 @@ class ReadingUIManager {
             }
         } catch(e) {}
 
-        const limit = 5 * 1024 * 1024;
+        const limit = 7 * 1024 * 1024;
         const usedPercentage = (total / limit) * 100;
         const remainingMB = Math.max(0, (limit - total) / (1024 * 1024)).toFixed(2);
 

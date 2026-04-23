@@ -2695,7 +2695,7 @@ class ReadingUIManager {
             }
         } catch(e) {}
 
-        const limit = 5 * 1024 * 1024;
+        const limit = 7 * 1024 * 1024;
         const usedPercentage = (total / limit) * 100;
         const remainingMB = Math.max(0, (limit - total) / (1024 * 1024)).toFixed(2);
 
