@@ -543,7 +543,12 @@ class ListeningCore {
         this.setupBeforeUnload();
         this.createNavigation();
 
-        if (!this.isCompleted()) {
+        // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
+        const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+        if (submittedState && submittedState.submitted) {
+            console.log('[Init] Restoring submitted state...');
+            this.restoreSubmittedState(submittedState);
+        } else if (!this.isCompleted()) {
             this.loadDraft();
         }
 
@@ -1308,7 +1313,10 @@ class ListeningCore {
         if (explainBtn) explainBtn.disabled = false;
 
         this.showResults();
-        this.storageManager.saveResults(this.currentTestData, this.getUserAnswers());
+        const userAnswers = this.getUserAnswers();
+        this.storageManager.saveResults(this.currentTestData, userAnswers);
+        // LƯU TRẠNG THÁI SUBMITTED
+        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers);
 
         try {
             const channel = new BroadcastChannel('pet_update_channel');
@@ -1495,6 +1503,8 @@ class ListeningCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
+        // XÓA TRẠNG THÁI SUBMITTED
+        this.storageManager.clearSubmittedState(this.currentTestData);
 
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
@@ -1639,6 +1649,39 @@ class ListeningCore {
         const questionRange = this.getQuestionRange();
         for (let i = questionRange.start; i <= questionRange.end; i++) answers[i] = this.getUserAnswer(i);
         return answers;
+    }
+
+    restoreSubmittedState(submittedState) {
+        console.log('[Restore] Restoring submitted state with answers:', submittedState.answers);
+        
+        // Khôi phục câu trả lời
+        const questionRange = this.getQuestionRange();
+        
+        if (this.currentTestData.type === 'multiple-choice') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const answer = submittedState.answers[i];
+                if (answer) {
+                    const radios = document.getElementsByName(`q${i}`);
+                    radios.forEach(radio => {
+                        if (radio.value === answer) {
+                            radio.checked = true;
+                        }
+                    });
+                }
+            }
+        } else if (this.currentTestData.type === 'fill-in' || this.currentTestData.type === 'matching') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const input = document.getElementById(`q${i}`);
+                if (input && submittedState.answers[i]) {
+                    input.value = submittedState.answers[i];
+                }
+            }
+        }
+        
+        // Gọi submitExam để hiển thị trạng thái đã nộp
+        this.submitExam();
+        
+        console.log('[Restore] Submitted state restored successfully');
     }
 }
 
@@ -1870,6 +1913,41 @@ class StorageManager {
         const { book, test, part } = this.parseTestInfo(testData.title);
         const key = `pet_listening_book${book}_test${test}_part${part}`;
         localStorage.setItem(key, JSON.stringify(partData));
+    }
+
+    saveSubmittedState(testData, userAnswers) {
+        const { book, test, part } = this.parseTestInfo(testData.title);
+        const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        const submittedData = {
+            timestamp: Date.now(),
+            answers: userAnswers,
+            submitted: true
+        };
+        localStorage.setItem(key, JSON.stringify(submittedData));
+        console.log('[Storage] Saved submitted state:', key);
+    }
+
+    loadSubmittedState(testData) {
+        const { book, test, part } = this.parseTestInfo(testData.title);
+        const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                console.log('[Storage] Loaded submitted state:', key);
+                return data;
+            } catch (e) {
+                console.error('[Storage] Error parsing submitted state:', e);
+            }
+        }
+        return null;
+    }
+
+    clearSubmittedState(testData) {
+        const { book, test, part } = this.parseTestInfo(testData.title);
+        const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        localStorage.removeItem(key);
+        console.log('[Storage] Cleared submitted state:', key);
     }
 
     getQuestionRange(testData) {
