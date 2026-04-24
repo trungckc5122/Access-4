@@ -1391,10 +1391,15 @@ class ReadingCore {
         const isFlagged = this.flaggedQuestions.has(qNum);
         const shouldShowFlag = (this.flagsVisible !== false) || this.examSubmitted || this.explanationMode;
 
-        if (isFlagged && shouldShowFlag) {
-            questionDiv?.classList.add('flagged');
+        if (isFlagged) {
             navBtn?.classList.add('flagged');
-            flagIcon?.classList.add('active');
+            if (shouldShowFlag) {
+                questionDiv?.classList.add('flagged');
+                flagIcon?.classList.add('active');
+            } else {
+                questionDiv?.classList.remove('flagged');
+                flagIcon?.classList.remove('active');
+            }
         } else {
             questionDiv?.classList.remove('flagged');
             navBtn?.classList.remove('flagged');
