@@ -492,9 +492,9 @@ class ReadingCore {
 
     initializeTest(testData) {
         this.currentTestData = testData;
-        this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
+        this.flagsVisible = true;
         
         this.setupUI();
         
@@ -966,7 +966,7 @@ class ReadingCore {
             .question-item.flagged { border-left: 5px solid #f59e0b !important; background-color: #fffbeb !important; }
             .nav-btn.flagged { border: 2px solid #f59e0b !important; color: #d97706 !important; font-weight: bold !important; position: relative; }
             .nav-btn.flagged::after { content: '🚩'; position: absolute; top: -10px; right: -8px; font-size: 12px; }
-            .eye-icon.is-flag { display: inline-flex !important; align-items: center; justify-content: center; width: 28px; height: 28px; color: #d97706; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
+            .eye-icon.is-flag { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #d97706; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
             .eye-icon.is-flag.active { background-color: #fef3c7; border-color: #f59e0b; border-radius: 50%; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3); transform: scale(1.1); }
             .eye-icon.is-flag:hover { transform: scale(1.15); border-color: #f59e0b; border-radius: 50%; }
         `;
@@ -1315,13 +1315,15 @@ class ReadingCore {
         
         document.querySelectorAll('.eye-icon').forEach(icon => {
             const qNum = parseInt(icon.dataset.q || icon.dataset.question);
+            const shouldShowFlag = (this.flagsVisible !== false) || this.explanationMode || this.examSubmitted;
+            
             if (this.explanationMode || this.examSubmitted) {
                 icon.style.display = 'inline-block';
                 icon.textContent = '👁️';
                 icon.title = 'Xem giải thích';
                 icon.classList.remove('is-flag');
             } else {
-                icon.style.display = 'inline-block';
+                icon.style.display = shouldShowFlag ? 'inline-block' : 'none';
                 icon.textContent = '🚩';
                 icon.title = 'Đánh dấu xem lại';
                 icon.classList.add('is-flag');
@@ -1353,7 +1355,10 @@ class ReadingCore {
         const navBtn = document.querySelector(`.nav-btn[data-question="${qNum}"]`) || document.querySelector(`.nav-btn[data-q="${qNum}"]`);
         const flagIcon = document.querySelector(`.eye-icon[data-question="${qNum}"], .eye-icon[data-q="${qNum}"]`);
         
-        if (this.flaggedQuestions.has(qNum)) {
+        const isFlagged = this.flaggedQuestions.has(qNum);
+        const shouldShowFlag = (this.flagsVisible !== false) || this.examSubmitted || this.explanationMode;
+
+        if (isFlagged && shouldShowFlag) {
             questionDiv?.classList.add('flagged');
             navBtn?.classList.add('flagged');
             flagIcon?.classList.add('active');
@@ -1361,6 +1366,18 @@ class ReadingCore {
             questionDiv?.classList.remove('flagged');
             navBtn?.classList.remove('flagged');
             flagIcon?.classList.remove('active');
+        }
+
+        if (flagIcon) {
+            if (this.examSubmitted || this.explanationMode) {
+                flagIcon.style.display = 'inline-flex';
+                flagIcon.classList.remove('is-flag');
+                flagIcon.textContent = '👁️';
+            } else {
+                flagIcon.classList.add('is-flag');
+                flagIcon.textContent = '🚩';
+                flagIcon.style.display = shouldShowFlag ? 'inline-flex' : 'none';
+            }
         }
     }
 
@@ -1484,7 +1501,47 @@ class ReadingCore {
         else nextPartBtn.addEventListener('click', () => { if (confirm('Chuyển sang Part tiếp theo?')) this.goToPart(1); });
         nav.appendChild(nextPartBtn);
         
+        this.injectFlagToggle();
         this.injectHighlightToggle();
+    }
+
+    injectFlagToggle() {
+        const navContainer = document.getElementById('questionNav')?.parentElement;
+        if (!navContainer) return;
+        
+        const oldToggle = navContainer.querySelector('.flag-toggle-wrapper');
+        if (oldToggle) oldToggle.remove();
+
+        const toggleWrapper = document.createElement('div');
+        toggleWrapper.className = 'flag-toggle-wrapper';
+        toggleWrapper.style.marginLeft = '16px';
+        toggleWrapper.style.display = 'flex';
+        toggleWrapper.style.alignItems = 'center';
+        toggleWrapper.style.gap = '8px';
+        toggleWrapper.innerHTML = `
+            <label class="toggle-switch">
+                <input type="checkbox" id="flagToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">Hiện Cờ</span>
+        `;
+        
+        const highlightToggle = navContainer.querySelector('.highlight-toggle-wrapper');
+        if (highlightToggle) {
+            navContainer.insertBefore(toggleWrapper, highlightToggle);
+        } else {
+            navContainer.appendChild(toggleWrapper);
+        }
+
+        const checkbox = toggleWrapper.querySelector('#flagToggle');
+        this.flagsVisible = checkbox.checked;
+        checkbox.addEventListener('change', (e) => {
+            this.flagsVisible = e.target.checked;
+            const questionRange = this.getQuestionRange();
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                this.updateFlagUI(i);
+            }
+        });
     }
 
     injectHighlightToggle() {
@@ -1511,6 +1568,11 @@ class ReadingCore {
         if (!toggleCheckbox) return;
         this.personalHighlightsVisible = toggleCheckbox.checked;
         this.togglePersonalHighlights(this.personalHighlightsVisible);
+        
+        // Ensure initial flag state is synced if needed
+        const flagCheckbox = document.getElementById('flagToggle');
+        if (flagCheckbox) this.flagsVisible = flagCheckbox.checked;
+
         toggleCheckbox.addEventListener('change', (e) => {
             this.personalHighlightsVisible = e.target.checked;
             this.togglePersonalHighlights(this.personalHighlightsVisible);
@@ -2019,6 +2081,7 @@ class ReadingCore {
         this.examSubmitted = false;
         this.explanationMode = false;
         this.currentSplit = false;
+        this.flaggedQuestions.clear();
 
         const questionRange = this.getQuestionRange();
 
@@ -2142,9 +2205,10 @@ class ReadingCore {
                         }
                     });
                     if (this.currentTestData.type === 'inline-radio') {
-                        this.updateInlineSlotFromRadio(i);
+                        this.updateMatchingInputFromDraft(i);
                     }
                 }
+                this.updateFlagUI(i);
             }
         } else if (this.currentTestData.type === 'matching') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
