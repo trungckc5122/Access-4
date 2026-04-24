@@ -1910,13 +1910,17 @@ class StorageManager {
             details
         };
 
-        const { book, test, part } = this.parseTestInfo(testData.title);
+        const book = testData.book || this.parseTestInfo(testData.title).book;
+        const test = testData.test || this.parseTestInfo(testData.title).test;
+        const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}`;
         localStorage.setItem(key, JSON.stringify(partData));
     }
 
     saveSubmittedState(testData, userAnswers) {
-        const { book, test, part } = this.parseTestInfo(testData.title);
+        const book = testData.book || this.parseTestInfo(testData.title).book;
+        const test = testData.test || this.parseTestInfo(testData.title).test;
+        const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
         const submittedData = {
             timestamp: Date.now(),
@@ -1928,7 +1932,9 @@ class StorageManager {
     }
 
     loadSubmittedState(testData) {
-        const { book, test, part } = this.parseTestInfo(testData.title);
+        const book = testData.book || this.parseTestInfo(testData.title).book;
+        const test = testData.test || this.parseTestInfo(testData.title).test;
+        const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
         const stored = localStorage.getItem(key);
         if (stored) {
@@ -1944,7 +1950,9 @@ class StorageManager {
     }
 
     clearSubmittedState(testData) {
-        const { book, test, part } = this.parseTestInfo(testData.title);
+        const book = testData.book || this.parseTestInfo(testData.title).book;
+        const test = testData.test || this.parseTestInfo(testData.title).test;
+        const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
         localStorage.removeItem(key);
         console.log('[Storage] Cleared submitted state:', key);

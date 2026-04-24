@@ -503,6 +503,7 @@ class ReadingCore {
         this._isResetting = false;
 
         this.personalHighlightsVisible = true;
+        this.flaggedQuestions = new Set();
     }
 
     initializeTest(testData) {
@@ -525,9 +526,6 @@ class ReadingCore {
 
         this.loadHighlightDraft();
 
-        if (this.currentTestData.type === 'split-layout') {
-            this.attachInputEvents();
-        }
 
         this.setupEventListeners();
         this.setupBeforeUnload();
@@ -538,9 +536,11 @@ class ReadingCore {
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
-        } else if (!this.isCompleted()) {
+        } else {
             this.loadDraft();
         }
+
+        this.attachInputEvents();
 
         this.noteManager = new KETNoteManager(this);
         this.noteManager.init();
@@ -551,10 +551,6 @@ class ReadingCore {
         this.createResetModal();
 
         this.updateAnswerCount();
-
-        document.querySelectorAll('.eye-icon').forEach(icon => {
-            icon.style.display = 'none';
-        });
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
@@ -689,8 +685,8 @@ class ReadingCore {
             document.querySelector('.candidate')?.textContent || document.title || ''
         );
 
-        const book = meta.book || 1;
-        const test = meta.test || 1;
+        const book = d.book || meta.book || 1;
+        const test = d.test || meta.test || 1;
         const part = d.part || meta.part || 1;
 
         return { book, test, part };
@@ -737,6 +733,7 @@ class ReadingCore {
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             draft[`q${i}`] = this.getUserAnswer(i);
         }
+        draft.flaggedQuestions = Array.from(this.flaggedQuestions);
         return draft;
     }
 
@@ -925,6 +922,11 @@ class ReadingCore {
             }
 
             this.updateAnswerCount();
+            
+            if (draft.flaggedQuestions) {
+                this.flaggedQuestions = new Set(draft.flaggedQuestions);
+                this.flaggedQuestions.forEach(qNum => this.updateFlagUI(qNum));
+            }
             return true;
         } catch (e) {
             console.error('Load draft error:', e);
@@ -953,6 +955,22 @@ class ReadingCore {
 
         this.uiManager.setupAutoCollapse(this);
         this.uiManager.injectStorageIndicator();
+        this.injectFlagStyles();
+    }
+
+    injectFlagStyles() {
+        if (document.getElementById('flag-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'flag-styles';
+        style.textContent = `
+            .question-item.flagged { border-left: 5px solid #f59e0b !important; background-color: #fffbeb !important; }
+            .nav-btn.flagged { border: 2px solid #f59e0b !important; color: #d97706 !important; font-weight: bold !important; position: relative; }
+            .nav-btn.flagged::after { content: '🚩'; position: absolute; top: -10px; right: -8px; font-size: 12px; }
+            .eye-icon.is-flag { display: inline-flex !important; align-items: center; justify-content: center; width: 28px; height: 28px; color: #d97706; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
+            .eye-icon.is-flag.active { background-color: #fef3c7; border-color: #f59e0b; border-radius: 50%; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.3); transform: scale(1.1); }
+            .eye-icon.is-flag:hover { transform: scale(1.15); border-color: #f59e0b; border-radius: 50%; }
+        `;
+        document.head.appendChild(style);
     }
 
     injectNoteButton() {
@@ -1328,17 +1346,54 @@ class ReadingCore {
         }
 
         document.querySelectorAll('.eye-icon').forEach(icon => {
+            const qNum = parseInt(icon.dataset.q || icon.dataset.question);
             if (this.explanationMode || this.examSubmitted) {
                 icon.style.display = 'inline-block';
+                icon.textContent = '👁️';
+                icon.title = 'Xem giải thích';
+                icon.classList.remove('is-flag');
             } else {
-                icon.style.display = 'none';
+                icon.style.display = 'inline-block';
+                icon.textContent = '🚩';
+                icon.title = 'Đánh dấu xem lại';
+                icon.classList.add('is-flag');
             }
 
-            icon.addEventListener('click', (e) => {
-                const qNum = parseInt(e.currentTarget.dataset.q || e.currentTarget.dataset.question);
-                this.showExplanation(qNum);
-            });
+            icon.onclick = (e) => {
+                e.stopPropagation();
+                if (this.explanationMode || this.examSubmitted) {
+                    this.showExplanation(qNum);
+                } else {
+                    this.toggleFlag(qNum);
+                }
+            };
         });
+    }
+
+    toggleFlag(qNum) {
+        if (this.flaggedQuestions.has(qNum)) {
+            this.flaggedQuestions.delete(qNum);
+        } else {
+            this.flaggedQuestions.add(qNum);
+        }
+        this.updateFlagUI(qNum);
+        this.saveDraft();
+    }
+
+    updateFlagUI(qNum) {
+        const questionDiv = document.getElementById(`question-${qNum}`) || document.getElementById(`q${qNum}`)?.closest('.question-item');
+        const navBtn = document.querySelector(`.nav-btn[data-question="${qNum}"]`) || document.querySelector(`.nav-btn[data-q="${qNum}"]`);
+        const flagIcon = document.querySelector(`.eye-icon[data-question="${qNum}"], .eye-icon[data-q="${qNum}"]`);
+        
+        if (this.flaggedQuestions.has(qNum)) {
+            questionDiv?.classList.add('flagged');
+            navBtn?.classList.add('flagged');
+            flagIcon?.classList.add('active');
+        } else {
+            questionDiv?.classList.remove('flagged');
+            navBtn?.classList.remove('flagged');
+            flagIcon?.classList.remove('active');
+        }
     }
 
     setupEventListeners() {
@@ -1372,9 +1427,15 @@ class ReadingCore {
                 }
             }
 
-            if (e.target && e.target.classList.contains('eye-icon') && !e.target.dataset.q) {
-                const qNum = e.target.dataset.question;
-                if (qNum) this.showExplanation(parseInt(qNum));
+            if (e.target && e.target.classList.contains('eye-icon')) {
+                const qNum = parseInt(e.target.dataset.question || e.target.dataset.q);
+                if (qNum) {
+                    if (this.explanationMode || this.examSubmitted) {
+                        this.showExplanation(qNum);
+                    } else {
+                        this.toggleFlag(qNum);
+                    }
+                }
             }
         });
 
@@ -1646,6 +1707,16 @@ class ReadingCore {
         if (unanswered.length > 0) {
             if (!confirm(`Bạn còn ${unanswered.length} câu chưa trả lời. Bạn có chắc muốn nộp bài?`)) return;
         }
+
+        const flaggedUnanswered = Array.from(this.flaggedQuestions).filter(qNum => {
+            const ans = this.getUserAnswer(qNum);
+            return ans === null || ans === "";
+        });
+
+        if (flaggedUnanswered.length > 0) {
+            if (!confirm(`Bạn có ${flaggedUnanswered.length} câu đã gắn cờ (🚩) nhưng chưa trả lời. Vẫn nộp bài?`)) return;
+        }
+
         this.submitExam();
     }
 
@@ -1696,6 +1767,7 @@ class ReadingCore {
 
         this.clearDraft();
         this.disableInputs();
+        this.attachInputEvents();
     }
 
     markAnswers() {
@@ -2388,7 +2460,9 @@ class ReadingStorageManager {
 
         const partId = testData.part || this.parseTestInfo(document.title).part;
         const partData = { partId, name: `Part ${partId}`, totalQuestions: details.length, correctCount, details };
-        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
+        const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
+        const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
         const resolvedPart = testData.part || part;
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}`;
         localStorage.setItem(key, JSON.stringify(partData));
@@ -2406,7 +2480,9 @@ class ReadingStorageManager {
     }
 
     saveSubmittedState(testData, userAnswers) {
-        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
+        const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
+        const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
         const resolvedPart = testData.part || part;
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         const submittedData = {
@@ -2419,7 +2495,9 @@ class ReadingStorageManager {
     }
 
     loadSubmittedState(testData) {
-        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
+        const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
+        const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
         const resolvedPart = testData.part || part;
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         const stored = localStorage.getItem(key);
@@ -2436,7 +2514,9 @@ class ReadingStorageManager {
     }
 
     clearSubmittedState(testData) {
-        const { book, test, part } = testData.metadata || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title);
+        const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
+        const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
+        const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
         const resolvedPart = testData.part || part;
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         localStorage.removeItem(key);
