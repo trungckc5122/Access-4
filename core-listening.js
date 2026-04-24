@@ -415,7 +415,7 @@ class MiniDashboardManager {
                 const currentClass = isCurrent ? 'current' : '';
 
                 sectionHtml += `
-                    <a href="${url}" class="part-item ${currentClass}" target="_blank" onclick="return confirm('Mở Part ${d.part} trong tab mới?')">
+                    <a href="#" class="part-item ${currentClass}" data-url="${url}">
                         <span>Part ${d.part}</span>
                         <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
                     </a>
@@ -430,6 +430,17 @@ class MiniDashboardManager {
         html += renderSection('Listening', listeningData, listeningStats, false);
 
         this.contentArea.innerHTML = html;
+
+        // Gắn sự kiện xác nhận chuyển Part
+        this.contentArea.querySelectorAll('.part-item[data-url]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetUrl = link.getAttribute('data-url');
+                if (confirm('Mở Part mới trong tab mới? Dữ liệu hiện tại sẽ được lưu.')) {
+                    window.open(targetUrl, '_blank');
+                }
+            });
+        });
     }
 
     toggle() {

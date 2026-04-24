@@ -434,7 +434,7 @@ class MiniDashboardManager {
                 const currentClass = isCurrent ? 'current' : '';
 
                 sectionHtml += `
-                    <a href="${url}" class="part-item ${currentClass}">
+                    <a href="#" class="part-item ${currentClass}" data-url="${url}">
                         <span>Part ${d.part}</span>
                         <span class="part-status ${statusClass}">${displayVal} ${statusIcon}</span>
                     </a>
@@ -449,6 +449,17 @@ class MiniDashboardManager {
         html += renderSection('Listening', listeningData, listeningStats, false);
 
         this.contentArea.innerHTML = html;
+
+        // Gắn sự kiện xác nhận chuyển Part
+        this.contentArea.querySelectorAll('.part-item[data-url]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetUrl = link.getAttribute('data-url');
+                if (confirm('Mở Part mới trong tab mới? Dữ liệu hiện tại sẽ được lưu.')) {
+                    window.open(targetUrl, '_blank');
+                }
+            });
+        });
     }
 
     toggle() {
@@ -1514,7 +1525,11 @@ class ReadingCore {
             <span>Part trước</span>
         `;
         if (part <= 1) prevPartBtn.disabled = true;
-        prevPartBtn.onclick = () => this.goToPart(-1);
+        else prevPartBtn.addEventListener('click', () => {
+            if (confirm('Chuyển sang Part trước? Dữ liệu hiện tại sẽ được lưu.')) {
+                this.goToPart(-1);
+            }
+        });
         nav.appendChild(prevPartBtn);
 
         const questionRange = this.getQuestionRange();
@@ -1538,7 +1553,11 @@ class ReadingCore {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         `;
         if (part >= 5) nextPartBtn.disabled = true;
-        nextPartBtn.onclick = () => this.goToPart(1);
+        else nextPartBtn.addEventListener('click', () => {
+            if (confirm('Chuyển sang Part tiếp theo? Dữ liệu hiện tại sẽ được lưu.')) {
+                this.goToPart(1);
+            }
+        });
         nav.appendChild(nextPartBtn);
         this.injectFlagToggle();
         this.injectHighlightToggle();
