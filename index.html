@@ -897,14 +897,85 @@
             input.value = nextVal;
             updateSuggestions(false);
             input.focus();
-            suggestionsBox.style.display = 'block';
-            suggestionsBox.scrollTop = 0;
+            
+            // Nếu đã là Part cụ thể thì ẩn gợi ý
+            if (info2.part || (info2.course && info2.variant)) {
+              suggestionsBox.style.display = 'none';
+            } else {
+              suggestionsBox.style.display = 'block';
+              suggestionsBox.scrollTop = 0;
+            }
           };
           suggestionsBox.appendChild(item);
         });
         suggestionsBox.style.display = 'block';
       } else suggestionsBox.style.display = 'none';
       checkFinalUrl();
+      filterDashboard();
+    }
+
+    function filterDashboard() {
+      const val = input.value.trim().toLowerCase();
+      const info = parseInput(val);
+      
+      // Reset all if empty
+      if (!val) {
+        document.querySelectorAll('main .section, main details, main .review-button, main .test-button, main .unit-card').forEach(el => el.style.display = '');
+        return;
+      }
+
+      // Chuyển tab nếu khớp Course/Exam
+      let tabId = '';
+      if (info.course === 'Access 4') tabId = 'access';
+      else if (info.exam === 'Ket') tabId = 'ket';
+      else if (info.exam === 'Pet') tabId = 'pet';
+      
+      if (tabId) {
+        const currentActive = document.querySelector('.tab-btn.active')?.dataset.tab;
+        if (currentActive !== tabId) {
+          const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+          if (btn) btn.click();
+        }
+      }
+
+      document.querySelectorAll('main .content-panel').forEach(panel => {
+        // PET/KET Panels
+        if (panel.id === 'pet-panel' || panel.id === 'ket-panel') {
+          const type = panel.id === 'pet-panel' ? 'pet' : 'ket';
+          panel.querySelectorAll('details').forEach(test => {
+            const summary = test.querySelector('summary').textContent.toLowerCase();
+            const skillMatch = !info.skill || summary.includes(info.skill.toLowerCase());
+            const bookMatch = !info.book || summary.includes(`book ${info.book}`) || summary.includes(`${type.toUpperCase()} ${info.book}`);
+            const testMatch = !info.test || summary.includes(`test ${info.test}`);
+            
+            if (skillMatch && bookMatch && testMatch) {
+              test.style.display = 'block';
+              test.querySelectorAll('a').forEach(link => {
+                const linkText = link.textContent.toLowerCase();
+                const partMatch = !info.part || linkText.includes(`part ${info.part}`);
+                link.style.display = partMatch ? '' : 'none';
+              });
+            } else test.style.display = 'none';
+          });
+        }
+        
+        // Access 4 Panel
+        if (panel.id === 'access-panel') {
+          panel.querySelectorAll('.section').forEach(section => {
+            const title = section.querySelector('.section-title').textContent.toLowerCase();
+            const catMatch = !info.category || title.includes(info.category.toLowerCase());
+            if (catMatch) {
+              section.style.display = 'block';
+              section.querySelectorAll('.unit-card, .review-button, .test-button').forEach(card => {
+                 const cardText = card.textContent.toLowerCase();
+                 const typeMatch = !info.type || cardText.includes(info.type.toLowerCase()) || cardText.includes(`module ${info.type}`);
+                 const variantMatch = !info.variant || cardText.includes(info.variant.toLowerCase());
+                 card.style.display = (typeMatch && variantMatch) ? '' : 'none';
+              });
+            } else section.style.display = 'none';
+          });
+        }
+      });
     }
     function checkFinalUrl() {
       const val = input.value.trim().toUpperCase();
