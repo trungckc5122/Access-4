@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tổng hợp Ghi chú - PET & KET</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        :root {
+            --primary: #0d9488;
+            --primary-rgb: 13, 148, 136;
+            --text: #0f172a;
+            --text-muted: #475569;
+            --bg-gradient: radial-gradient(circle at top left, #f0fdfa, #f8fafc, #eff6ff);
+            --card-bg: #ffffff;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --header-bg: linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #0d9488 100%);
+            --text-on-primary: #ffffff;
+            --card-shadow: 0 4px 20px -5px rgba(0,0,0,0.08);
+            --radius-md: 12px;
+            --radius-full: 9999px;
+            --success: #16a34a;
+            --error: #dc2626;
+            --warning: #f59e0b;
+        }
+        [data-theme="dark"] {
+            --primary: #2dd4bf;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --bg-gradient: radial-gradient(circle at top right, #0f172a, #1e293b, #0f172a);
+            --card-bg: #1e293b;
+            --border-light: #334155;
+            --border-medium: #475569;
+            --header-bg: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #5eead4 100%);
+            --text-on-primary: #0f172a;
+            --card-shadow: 0 4px 20px -5px rgba(0,0,0,0.4);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+        header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: sticky;
+            top:0;
+            z-index: 100;
+        }
+        header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+        .theme-toggle-btn {
+            width: 36px; height: 36px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1); color: var(--text-on-primary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .back-link { color: var(--text-on-primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin: 24px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            box-shadow: var(--card-shadow);
+        }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-group label { font-weight: 600; font-size: 14px; color: var(--text-muted); }
+        select, input[type="text"] {
+            padding: 8px 14px; border: 1px solid var(--border-medium); border-radius: 10px;
+            background: var(--card-bg); color: var(--text); font-family: inherit; font-size: 14px;
+            transition: border 0.2s;
+        }
+        select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(var(--primary-rgb),0.1); }
+        .btn {
+            padding: 8px 16px; border: none; border-radius: var(--radius-full); font-weight: 700;
+            cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #0f766e; transform: translateY(-1px); }
+        .btn-outline { background: transparent; border: 1px solid var(--border-medium); color: var(--text); }
+        .btn-outline:hover { background: var(--border-light); }
+        .btn-danger { background: var(--error); color: white; }
+        .table-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            box-shadow: var(--card-shadow);
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th {
+            background: var(--border-light);
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td { padding: 14px 16px; border-bottom: 1px solid var(--border-light); font-size: 14px; vertical-align: top; }
+        tr:hover { background: rgba(var(--primary-rgb),0.03); }
+        .note-cell { max-width: 400px; word-break: break-word; white-space: pre-wrap; cursor: pointer; }
+        .note-cell.editing { padding: 0; }
+        .note-cell textarea {
+            width: 100%; min-height: 80px; padding: 12px; border: 2px solid var(--primary);
+            border-radius: 8px; background: var(--card-bg); color: var(--text); font-family: inherit;
+            font-size: 14px; resize: vertical; outline: none;
+        }
+        .actions { display: flex; gap: 8px; }
+        .actions button { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; transition: 0.2s; }
+        .actions button:hover { opacity: 1; transform: scale(1.1); }
+        .delete-btn:hover { color: var(--error); }
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: var(--text-muted);
+            font-size: 16px; font-weight: 500;
+        }
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; background: var(--primary); color: white;
+            padding: 12px 24px; border-radius: var(--radius-full); font-weight: 600; font-size: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2); z-index: 9999; animation: slideUp 0.3s ease;
+            display: none;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+        @media (max-width:768px) {
+            .filter-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div style="display: flex; align-items: center; gap: 24px;">
+        <a href="index.html" class="back-link">← Quay lại</a>
+        <h1>📝 Tổng hợp Ghi chú</h1>
+    </div>
+    <button id="theme-toggle" class="theme-toggle-btn" title="Đổi chế độ sáng/tối">
+        <span class="icon-moon">🌙</span><span class="icon-sun" style="display:none;">☀️</span>
+    </button>
+</header>
+
+<div class="container">
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label>Trình độ:</label>
+            <select id="examFilter">
+                <option value="all">Tất cả</option>
+                <option value="pet">PET</option>
+                <option value="ket">KET</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Kỹ năng:</label>
+            <select id="skillFilter">
+                <option value="all">Tất cả</option>
+                <option value="reading">Reading</option>
+                <option value="listening">Listening</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sách:</label>
+            <select id="bookFilter">
+                <option value="all">Tất cả</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Test:</label>
+            <select id="testFilter">
+                <option value="all">Tất cả</option>
+            </select>
+        </div>
+        <div style="flex:1;"></div>
+        <button class="btn btn-outline" onclick="refreshTable()">⟳ Làm mới</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="notesTable">
+            <thead>
+                <tr>
+                    <th>Trình độ</th>
+                    <th>Kỹ năng</th>
+                    <th>Sách</th>
+                    <th>Test</th>
+                    <th>Part</th>
+                    <th>Nội dung ghi chú</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState" style="display:none;">
+            Chưa có ghi chú nào. Hãy thêm ghi chú khi làm bài Reading hoặc Listening.
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+    const STORAGE_PATTERN = /^(pet|ket)_(reading|listening)_book(\d+)_test(\d+)_part(\d+)_note$/;
+    let allNotes = [];
+
+    function parseNoteKey(key) {
+        const match = key.match(STORAGE_PATTERN);
+        if (!match) return null;
+        return {
+            exam: match[1],
+            skill: match[2],
+            book: parseInt(match[3]),
+            test: parseInt(match[4]),
+            part: parseInt(match[5]),
+            key: key
+        };
+    }
+
+    function loadAllNotes() {
+        allNotes = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const parsed = parseNoteKey(key);
+            if (parsed) {
+                const content = localStorage.getItem(key);
+                if (content && content.trim().length > 0) {
+                    allNotes.push({ ...parsed, content });
+                }
+            }
+        }
+        // Sắp xếp mặc định: exam, book, test, part
+        allNotes.sort((a,b) => {
+            if (a.exam !== b.exam) return a.exam.localeCompare(b.exam);
+            if (a.book !== b.book) return a.book - b.book;
+            if (a.test !== b.test) return a.test - b.test;
+            return a.part - b.part;
+        });
+    }
+
+    function getExamLabel(exam) { return exam === 'pet' ? 'PET' : 'KET'; }
+    function getSkillLabel(skill) { return skill === 'reading' ? 'Reading' : 'Listening'; }
+
+    function renderTable(notes) {
+        const tbody = document.getElementById('tableBody');
+        const emptyState = document.getElementById('emptyState');
+        tbody.innerHTML = '';
+        if (notes.length === 0) {
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+        notes.forEach(note => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${getExamLabel(note.exam)}</td>
+                <td>${getSkillLabel(note.skill)}</td>
+                <td>${note.exam.toUpperCase()} ${note.book}</td>
+                <td>Test ${note.test}</td>
+                <td>Part ${note.part}</td>
+                <td class="note-cell" data-key="${note.key}">${escapeHtml(note.content)}</td>
+                <td class="actions">
+                    <button class="edit-btn" title="Sửa" onclick="startEdit(this, '${note.key}')">✏️</button>
+                    <button class="delete-btn" title="Xóa" onclick="deleteNote('${note.key}')">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        attachEditListeners();
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function attachEditListeners() {
+        document.querySelectorAll('.note-cell').forEach(cell => {
+            cell.addEventListener('dblclick', function(e) {
+                if (cell.classList.contains('editing')) return;
+                startEdit(cell, cell.dataset.key);
+            });
+        });
+    }
+
+    window.startEdit = function(element, key) {
+        let cell;
+        if (typeof element === 'string') {
+            cell = document.querySelector(`td[data-key="${key}"]`);
+        } else if (element.classList.contains('note-cell')) {
+            cell = element;
+        } else {
+            cell = element.closest('tr').querySelector('.note-cell');
+        }
+        
+        if (!cell) return;
+        // Nếu đã ở chế độ sửa thì không làm gì
+        if (cell.classList.contains('editing')) return;
+        
+        const original = localStorage.getItem(key) || '';
+        cell.classList.add('editing');
+        cell.innerHTML = `<textarea>${escapeHtml(original)}</textarea>`;
+        const textarea = cell.querySelector('textarea');
+        
+        // Focus và chọn toàn bộ văn bản để dễ sửa
+        textarea.focus();
+        textarea.select();
+        
+        const save = () => {
+            const newContent = textarea.value.trim();
+            if (newContent === '') {
+                if (confirm('Xóa ghi chú trống?')) {
+                    localStorage.removeItem(key);
+                    cell.innerHTML = '';
+                    refreshTable();
+                } else {
+                    cell.innerHTML = escapeHtml(original);
+                }
+            } else {
+                localStorage.setItem(key, newContent);
+                cell.innerHTML = escapeHtml(newContent);
+                showToast('Đã lưu ghi chú');
+            }
+            cell.classList.remove('editing');
+            attachEditListeners2(cell);
+        };
+        
+        // Lưu khi textarea mất focus
+        textarea.addEventListener('blur', save);
+        // Nhấn Escape để hủy thay đổi
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                textarea.value = original;
+                textarea.blur();
+            }
+        });
+    };
+
+    function attachEditListeners2(cell) {
+        cell.addEventListener('dblclick', function() {
+            startEdit(cell, cell.dataset.key);
+        });
+    }
+
+    window.deleteNote = function(key) {
+        if (confirm('Xóa ghi chú này?')) {
+            localStorage.removeItem(key);
+            refreshTable();
+            showToast('Đã xóa ghi chú');
+        }
+    };
+
+    function applyFilters() {
+        const exam = document.getElementById('examFilter').value;
+        const skill = document.getElementById('skillFilter').value;
+        const book = document.getElementById('bookFilter').value;
+        const test = document.getElementById('testFilter').value;
+
+        let filtered = allNotes;
+        if (exam !== 'all') filtered = filtered.filter(n => n.exam === exam);
+        if (skill !== 'all') filtered = filtered.filter(n => n.skill === skill);
+        if (book !== 'all') filtered = filtered.filter(n => n.book === parseInt(book));
+        if (test !== 'all') filtered = filtered.filter(n => n.test === parseInt(test));
+        renderTable(filtered);
+    }
+
+    window.refreshTable = function() {
+        loadAllNotes();
+        populateBookTestFilters();
+        applyFilters();
+    };
+
+    function populateBookTestFilters() {
+        const books = [...new Set(allNotes.map(n => n.book))].sort((a,b)=>a-b);
+        const tests = [...new Set(allNotes.map(n => n.test))].sort((a,b)=>a-b);
+        const bookSelect = document.getElementById('bookFilter');
+        const testSelect = document.getElementById('testFilter');
+        const currentBook = bookSelect.value;
+        bookSelect.innerHTML = '<option value="all">Tất cả</option>';
+        books.forEach(b => { const opt = document.createElement('option'); opt.value = b; opt.textContent = `Book ${b}`; bookSelect.appendChild(opt); });
+        bookSelect.value = currentBook;
+        testSelect.innerHTML = '<option value="all">Tất cả</option>';
+        tests.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.textContent = `Test ${t}`; testSelect.appendChild(opt); });
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2000);
+    }
+
+
+    function getFilteredNotes() {
+        const exam = document.getElementById('examFilter').value;
+        const skill = document.getElementById('skillFilter').value;
+        const book = document.getElementById('bookFilter').value;
+        const test = document.getElementById('testFilter').value;
+        let filtered = allNotes;
+        if (exam !== 'all') filtered = filtered.filter(n => n.exam === exam);
+        if (skill !== 'all') filtered = filtered.filter(n => n.skill === skill);
+        if (book !== 'all') filtered = filtered.filter(n => n.book === parseInt(book));
+        if (test !== 'all') filtered = filtered.filter(n => n.test === parseInt(test));
+        return filtered;
+    }
+
+    function initTheme() {
+        const toggle = document.getElementById('theme-toggle');
+        const saved = localStorage.getItem('pet-theme');
+        if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        else document.documentElement.setAttribute('data-theme', 'light');
+        updateIcons(document.documentElement.getAttribute('data-theme'));
+        toggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('pet-theme', next);
+            updateIcons(next);
+        });
+    }
+    function updateIcons(theme) {
+        const moon = document.querySelector('.icon-moon');
+        const sun = document.querySelector('.icon-sun');
+        if (theme === 'dark') { moon.style.display = 'none'; sun.style.display = 'block'; }
+        else { moon.style.display = 'block'; sun.style.display = 'none'; }
+    }
+
+    document.getElementById('examFilter').addEventListener('change', applyFilters);
+    document.getElementById('skillFilter').addEventListener('change', applyFilters);
+    document.getElementById('bookFilter').addEventListener('change', applyFilters);
+    document.getElementById('testFilter').addEventListener('change', applyFilters);
+
+    // Khởi động
+    initTheme();
+    refreshTable();
+})();
+</script>
+</body>
+</html>
