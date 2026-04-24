@@ -1315,15 +1315,14 @@ class ReadingCore {
         
         document.querySelectorAll('.eye-icon').forEach(icon => {
             const qNum = parseInt(icon.dataset.q || icon.dataset.question);
-            const shouldShowFlag = (this.flagsVisible !== false) || this.explanationMode || this.examSubmitted;
             
             if (this.explanationMode || this.examSubmitted) {
-                icon.style.display = 'inline-block';
+                icon.style.display = 'inline-flex';
                 icon.textContent = '👁️';
                 icon.title = 'Xem giải thích';
                 icon.classList.remove('is-flag');
             } else {
-                icon.style.display = shouldShowFlag ? 'inline-block' : 'none';
+                icon.style.display = '';
                 icon.textContent = '🚩';
                 icon.title = 'Đánh dấu xem lại';
                 icon.classList.add('is-flag');
@@ -1356,16 +1355,12 @@ class ReadingCore {
         const flagIcon = document.querySelector(`.eye-icon[data-question="${qNum}"], .eye-icon[data-q="${qNum}"]`);
         
         const isFlagged = this.flaggedQuestions.has(qNum);
-        const shouldShowFlag = (this.flagsVisible !== false) || this.examSubmitted || this.explanationMode;
 
         if (isFlagged) {
             navBtn?.classList.add('flagged');
-            if (shouldShowFlag) {
+            if (this.flagsVisible) {
                 questionDiv?.classList.add('flagged');
                 flagIcon?.classList.add('active');
-            } else {
-                questionDiv?.classList.remove('flagged');
-                flagIcon?.classList.remove('active');
             }
         } else {
             questionDiv?.classList.remove('flagged');
@@ -1381,7 +1376,6 @@ class ReadingCore {
             } else {
                 flagIcon.classList.add('is-flag');
                 flagIcon.textContent = '🚩';
-                flagIcon.style.display = shouldShowFlag ? 'inline-flex' : 'none';
             }
         }
     }
@@ -1540,12 +1534,11 @@ class ReadingCore {
 
         const checkbox = toggleWrapper.querySelector('#flagToggle');
         this.flagsVisible = checkbox.checked;
+        document.body.classList.toggle('hide-flags', !this.flagsVisible);
+
         checkbox.addEventListener('change', (e) => {
             this.flagsVisible = e.target.checked;
-            const questionRange = this.getQuestionRange();
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
-                this.updateFlagUI(i);
-            }
+            document.body.classList.toggle('hide-flags', !this.flagsVisible);
         });
     }
 
@@ -2126,6 +2119,7 @@ class ReadingCore {
                     const badge = questionDiv.querySelector('.correct-answer-badge');
                     if (badge) badge.remove();
                 }
+                this.updateFlagUI(i);
             }
         }
 
@@ -2137,7 +2131,10 @@ class ReadingCore {
             });
         }
 
-        document.querySelectorAll('.eye-icon').forEach(icon => icon.style.display = 'none');
+        document.querySelectorAll('.eye-icon').forEach(icon => {
+            if (this.flagsVisible) icon.style.display = '';
+            else icon.style.display = 'none';
+        });
 
         if (clearHighlights) this.highlightManager.clearAllHighlights();
 
