@@ -369,6 +369,7 @@
       <div><h3 style="color:var(--primary);">Key 2</h3><div class="test-grid-4"><details><summary>Test 1</summary><ul><li><a href="read-ket2-test1-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket2-test1-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket2-test1-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket2-test1-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket2-test1-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 2</summary><ul><li><a href="read-ket2-test2-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket2-test2-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket2-test2-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket2-test2-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket2-test2-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 3</summary><ul><li><a href="read-ket2-test3-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket2-test3-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket2-test3-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket2-test3-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket2-test3-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 4</summary><ul><li><a href="read-ket2-test4-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket2-test4-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket2-test4-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket2-test4-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket2-test4-part5.html" target="_blank">Part 5</a></li></ul></details></div></div>
       <div><h3 style="color:var(--primary);">Key 3</h3><div class="test-grid-4"><details><summary>Test 1</summary><ul><li><a href="read-ket3-test1-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket3-test1-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket3-test1-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket3-test1-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket3-test1-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 2</summary><ul><li><a href="read-ket3-test2-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket3-test2-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket3-test2-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket3-test2-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket3-test2-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 3</summary><ul><li><a href="read-ket3-test3-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket3-test3-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket3-test3-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket3-test3-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket3-test3-part5.html" target="_blank">Part 5</a></li></ul></details><details><summary>Test 4</summary><ul><li><a href="read-ket3-test4-part1.html" target="_blank">Part 1</a></li><li><a href="read-ket3-test4-part2.html" target="_blank">Part 2</a></li><li><a href="read-ket3-test4-part3.html" target="_blank">Part 3</a></li><li><a href="read-ket3-test4-part4.html" target="_blank">Part 4</a></li><li><a href="read-ket3-test4-part5.html" target="_blank">Part 5</a></li></ul></details></div></div>
     </div></section>
+    <section class="section"><h2 class="section-title">Xem điểm KET</h2><div style="display: flex; justify-content: center;"><a href="dashboard.html" target="_blank" class="test-button" style="min-width: 200px;">Xem điểm KET</a></div></section>
   </div>
 
   <!-- ==================== PET PANEL ==================== -->
@@ -494,6 +495,10 @@
       processBatch();
     }
     processBatch();
+    // Thông báo cho smart search biết broken links đã được cập nhật
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
+    }, 500);
   }
 
   window.forceBrokenLinksRecheck = function() {
@@ -874,13 +879,19 @@
           else { const variants = access4Variants[info.type] || []; suggestions = variants.sort().map(v => `Access 4 Module ${info.type} ${v}`); }
         }
       }
+      // Kiểm tra URL có broken không (qua sessionStorage cache từ checkBrokenLinks)
+      function isLinkBroken(url) {
+        const cacheKey = `broken_link_${url}`;
+        return sessionStorage.getItem(cacheKey) === 'broken';
+      }
+
       const filtered = suggestions.filter(s => {
         let match = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
         if (match) {
           let prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
           let exam = match[2].toLowerCase();
           let url = `${prefix}-${exam}${match[3]}-test${match[4]}-part${match[5]}.html`;
-          return existingLinks.has(url);
+          return existingLinks.has(url) && !isLinkBroken(url);
         }
         let accessMatch = s.match(/ACCESS\s*4\s+(REVIEW|MODULE)\s+(MIDTERM|FINAL|\d+)\s+([ABC])/i);
         if (accessMatch) {
@@ -888,10 +899,14 @@
           let typeOrNum = accessMatch[2].toLowerCase();
           let variant = accessMatch[3].toLowerCase();
           let url = category === 'review' ? `${typeOrNum}4${variant}.html` : `${typeOrNum}${variant}.html`;
-          return existingLinks.has(url);
+          return existingLinks.has(url) && !isLinkBroken(url);
         }
         return true;
       });
+
+      // Kiểm tra xem tất cả suggestions có phải broken không
+      const allBroken = suggestions.length > 0 && filtered.length === 0;
+
       if (filtered.length > 0) {
         filtered.forEach(s => {
           const item = document.createElement('div');
@@ -907,11 +922,11 @@
             else if (info2.course && info2.category === 'Module' && !info2.type) nextVal += ' ';
             else if (info2.course && info2.category === 'Review' && !info2.type) nextVal += ' ';
             else nextVal += ' ';
-            
+
             input.value = nextVal;
             updateSuggestions(false);
             input.focus();
-            
+
             // Hiện lại box gợi ý với dữ liệu mới
             suggestionsBox.style.display = 'block';
             suggestionsBox.scrollTop = 0;
@@ -919,7 +934,17 @@
           suggestionsBox.appendChild(item);
         });
         suggestionsBox.style.display = 'block';
-      } else suggestionsBox.style.display = 'none';
+      } else if (allBroken) {
+        // Hiển thị thông báo khi tất cả link đều broken
+        const msgItem = document.createElement('div');
+        msgItem.className = 'suggestion-item';
+        msgItem.style.cssText = 'color: var(--text-muted); font-style: italic; cursor: default; pointer-events: none;';
+        msgItem.innerHTML = `<span>Bài tập chưa có sẵn, sẽ được cập nhật sớm</span>`;
+        suggestionsBox.appendChild(msgItem);
+        suggestionsBox.style.display = 'block';
+      } else {
+        suggestionsBox.style.display = 'none';
+      }
       checkFinalUrl();
     }
 
@@ -939,7 +964,9 @@
           if (moduleMatch) selectedUrl = `${moduleMatch[1]}${moduleMatch[2].toLowerCase()}.html`;
         }
       }
-      if (selectedUrl && existingLinks.has(selectedUrl)) goBtn.classList.add('active');
+      // Kiểm tra link tồn tại và không bị broken
+      const isBroken = selectedUrl && sessionStorage.getItem(`broken_link_${selectedUrl}`) === 'broken';
+      if (selectedUrl && existingLinks.has(selectedUrl) && !isBroken) goBtn.classList.add('active');
       else { selectedUrl = ''; goBtn.classList.remove('active'); }
     }
     input.addEventListener('input', (e) => updateSuggestions(e.inputType?.includes('delete')));
