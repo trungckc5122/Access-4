@@ -1158,7 +1158,7 @@
 
 <!-- Smart Onboarding Widget -->
 <div class="onboarding-widget" id="onboardingWidget">
-  <div class="onboarding-header" onclick="toggleOnboarding()">
+  <div class="onboarding-header">
     <div class="onboarding-icon">🎯</div>
     <div class="onboarding-info">
       <span class="onboarding-title">Hướng dẫn</span>
@@ -1166,10 +1166,10 @@
         <div class="progress-bar">
           <div class="progress-fill" id="onboardingProgress"></div>
         </div>
-        <span class="progress-text" id="onboardingText">0/5</span>
+        <span class="progress-text" id="onboardingText">0/7</span>
       </div>
     </div>
-    <button class="onboarding-toggle" id="onboardingToggle">▼</button>
+    <button class="onboarding-toggle" id="onboardingToggle" onclick="toggleOnboarding(); event.stopPropagation();" title="Thu nhỏ thành dấu ?">✕</button>
   </div>
   <div class="onboarding-body" id="onboardingBody">
     <div class="onboarding-steps" id="onboardingSteps">
@@ -1298,12 +1298,17 @@
   height: 28px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
-  transition: transform 0.2s;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.onboarding-toggle.rotated {
-  transform: rotate(180deg);
+.onboarding-toggle:hover {
+  background: rgba(255,255,255,0.3);
+  transform: scale(1.1);
 }
 
 .onboarding-body {
@@ -1582,11 +1587,15 @@
     { id: 'open_test', label: 'Mở một bài tập', desc: 'Click vào link bất kỳ để làm bài', completed: false },
     { id: 'use_search', label: 'Dùng tìm kiếm', desc: 'Thử tìm "Reading PET 1 Test 1"', completed: false },
     { id: 'check_notes', label: 'Xem ghi chú', desc: 'Truy cập tab Quản lý ghi chú', completed: false },
-    { id: 'dark_mode', label: 'Đổi giao diện', desc: 'Thử chế độ sáng/tối', completed: false }
+    { id: 'dark_mode', label: 'Đổi giao diện', desc: 'Thử chế độ sáng/tối', completed: false },
+    { id: 'mock_test', label: 'Thử Mock Test', desc: 'Tạo đề thi ngẫu nhiên để luyện tập', completed: false },
+    { id: 'view_scores', label: 'Tra cứu điểm', desc: 'Xem tiến độ và điểm số các bài đã làm', completed: false }
   ];
   
   let currentStepIndex = 0;
   let isMinimized = false;
+  let isCollapsedToIcon = false;
+  let widgetPosition = { x: 0, y: 0 };
   
   class SmartOnboarding {
     constructor() {
@@ -1613,16 +1622,86 @@
     }
     
     initUI() {
-      // Check if welcome should show
+      // Check if first time
       const welcomeShown = localStorage.getItem(WELCOME_SHOWN_KEY);
+      
       if (!welcomeShown) {
+        // First time: show welcome modal
         document.getElementById('welcomeOverlay').classList.add('show');
+        // Hide both widget and icon initially
+        document.getElementById('onboardingWidget').classList.remove('show');
+        document.getElementById('helpButton').classList.add('hidden');
       } else {
-        this.showWidget();
+        // Already seen welcome: show icon (?) by default, allow toggle
+        isCollapsedToIcon = true;
+        document.getElementById('helpButton').classList.remove('hidden');
+        document.getElementById('onboardingWidget').classList.remove('show');
       }
       
       this.renderSteps();
       this.updateProgress();
+      this.initDraggable();
+    }
+    
+    initDraggable() {
+      const widget = document.getElementById('onboardingWidget');
+      const header = widget.querySelector('.onboarding-header');
+      let isDragging = false;
+      let startX, startY, initialLeft, initialTop;
+      
+      // Load saved position
+      const savedPos = localStorage.getItem('onboardingPosition');
+      if (savedPos) {
+        try {
+          const pos = JSON.parse(savedPos);
+          Object.assign(widget.style, pos);
+        } catch(e) {}
+      }
+      
+      header.addEventListener('mousedown', dragStart);
+      header.addEventListener('touchstart', dragStart, { passive: false });
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('touchmove', onDrag, { passive: false });
+      document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchend', stopDrag);
+      
+      function dragStart(e) {
+        if (e.target.closest('.onboarding-toggle')) return; // Don't drag when clicking toggle
+        isDragging = true;
+        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        startX = clientX;
+        startY = clientY;
+        const rect = widget.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        widget.style.transition = 'none';
+        widget.style.right = 'auto';
+        widget.style.bottom = 'auto';
+      }
+      
+      function onDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        widget.style.left = `${initialLeft + dx}px`;
+        widget.style.top = `${initialTop + dy}px`;
+      }
+      
+      function stopDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        widget.style.transition = '';
+        // Save position
+        const rect = widget.getBoundingClientRect();
+        localStorage.setItem('onboardingPosition', JSON.stringify({
+          left: `${rect.left}px`,
+          top: `${rect.top}px`
+        }));
+      }
     }
     
     showWidget() {
@@ -1666,7 +1745,9 @@
         open_test: 'Tìm một bài test và click để mở trong tab mới',
         use_search: 'Gõ "Reading PET" hoặc "Module 1a" trong ô tìm kiếm',
         check_notes: 'Chuyển sang tab "Quản lý ghi chú" để xem tất cả notes',
-        dark_mode: 'Click icon 🌙/☀️ ở góc để đổi theme'
+        dark_mode: 'Click icon 🌙/☀️ ở góc để đổi theme',
+        mock_test: 'Tìm và thử tính năng Mock Test để luyện ngẫu nhiên',
+        view_scores: 'Xem các badge trạng thái (completed/in-progress) trên bài tập'
       };
       return tips[stepId] || 'Hoàn thành bước tiếp theo!';
     }
@@ -1683,6 +1764,26 @@
         
         // Show contextual feedback
         this.showTooltip(`${step.label} ✓ Hoàn thành!`);
+        
+        // Note: No longer auto-collapse when completed, user controls via toggle
+      }
+    }
+    
+    toggleIconWidget() {
+      // Toggle between help button (?) and widget
+      const widget = document.getElementById('onboardingWidget');
+      const helpButton = document.getElementById('helpButton');
+      
+      if (isCollapsedToIcon) {
+        // Expand: show widget, hide icon
+        isCollapsedToIcon = false;
+        helpButton.classList.add('hidden');
+        widget.classList.add('show');
+      } else {
+        // Collapse: show icon, hide widget
+        isCollapsedToIcon = true;
+        widget.classList.remove('show');
+        helpButton.classList.remove('hidden');
       }
     }
     
@@ -1753,6 +1854,22 @@
           this.completeStep('dark_mode');
         });
       }
+      
+      // Track Mock Test (check if user visits mock test page or any random test)
+      document.querySelectorAll('a[href*="mock"], a[href*="random"]').forEach(link => {
+        link.addEventListener('click', () => {
+          this.completeStep('mock_test');
+        });
+      });
+      
+      // Track score viewing - completed when user sees status badges
+      setTimeout(() => {
+        const hasBadges = document.querySelectorAll('.status-badge').length > 0;
+        if (hasBadges) {
+          // User has interacted enough to see badges
+          this.completeStep('view_scores');
+        }
+      }, 10000); // After 10 seconds on page
     }
     
     highlightElement(el, message) {
@@ -1766,28 +1883,31 @@
     }
     
     toggle() {
-      const widget = document.getElementById('onboardingWidget');
-      const toggle = document.getElementById('onboardingToggle');
-      isMinimized = !isMinimized;
-      widget.classList.toggle('minimized', isMinimized);
-      toggle.classList.toggle('rotated', isMinimized);
+      // Toggle between icon and widget
+      this.toggleIconWidget();
     }
   }
   
   // Global functions
   window.onboarding = null;
   window.toggleOnboarding = function() {
-    if (window.onboarding) window.onboarding.toggle();
+    if (window.onboarding) window.onboarding.toggleIconWidget();
   };
   window.startOnboarding = function() {
     localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
     document.getElementById('welcomeOverlay').classList.remove('show');
-    window.onboarding.showWidget();
+    // Show widget, hide icon
+    isCollapsedToIcon = false;
+    document.getElementById('helpButton').classList.add('hidden');
+    document.getElementById('onboardingWidget').classList.add('show');
   };
   window.skipWelcome = function() {
     localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
     document.getElementById('welcomeOverlay').classList.remove('show');
-    window.onboarding.showWidget();
+    // Show icon (?), hide widget (user can toggle later)
+    isCollapsedToIcon = true;
+    document.getElementById('helpButton').classList.remove('hidden');
+    document.getElementById('onboardingWidget').classList.remove('show');
   };
   window.goToOnboardingStep = function(index) {
     if (window.onboarding) window.onboarding.goToStep(index);
@@ -1796,9 +1916,145 @@
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
     window.onboarding = new SmartOnboarding();
+    
+    // Help button draggable (same logic as PETNoteManager)
+    const helpBtn = document.getElementById('helpButton');
+    if (helpBtn) {
+      let isDragging = false;
+      let hasMoved = false;
+      let startX, startY, initialLeft, initialTop;
+      
+      // Load saved position
+      const savedPos = localStorage.getItem('helpButtonPosition');
+      if (savedPos) {
+        try {
+          const pos = JSON.parse(savedPos);
+          Object.assign(helpBtn.style, pos);
+        } catch(e) {}
+      }
+      
+      helpBtn.addEventListener('mousedown', dragStart);
+      helpBtn.addEventListener('touchstart', dragStart, { passive: false });
+      
+      function dragStart(e) {
+        hasMoved = false;
+        const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        startX = clientX;
+        startY = clientY;
+        const rect = helpBtn.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        
+        helpBtn.style.transition = 'none';
+        helpBtn.style.right = 'auto';
+        helpBtn.style.bottom = 'auto';
+        
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchend', onEnd);
+      }
+      
+      function onMove(e) {
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          isDragging = true;
+          hasMoved = true;
+          e.preventDefault();
+          helpBtn.style.left = `${initialLeft + dx}px`;
+          helpBtn.style.top = `${initialTop + dy}px`;
+        }
+      }
+      
+      function onEnd() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchend', onEnd);
+        
+        helpBtn.style.transition = '';
+        
+        if (!hasMoved) {
+          // Was a click, toggle between icon and widget
+          toggleOnboarding();
+        } else {
+          // Was a drag, save position
+          const rect = helpBtn.getBoundingClientRect();
+          localStorage.setItem('helpButtonPosition', JSON.stringify({
+            left: `${rect.left}px`,
+            top: `${rect.top}px`
+          }));
+        }
+        
+        isDragging = false;
+        hasMoved = false;
+      }
+    }
   });
 })();
 </script>
+
+<!-- Help Button - Toggle to show/hide widget -->
+<div class="help-button" id="helpButton" title="Nhấn để mở hướng dẫn (kéo thả để di chuyển)">
+  <span>?</span>
+</div>
+
+<style>
+/* Help Button Styles */
+.help-button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  cursor: grab;
+  box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.4);
+  z-index: 9999;
+  transition: all 0.3s;
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.help-button.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0);
+}
+
+.help-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(var(--primary-rgb), 0.5);
+}
+
+.help-button:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .help-button {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+    bottom: 16px;
+    right: 16px;
+  }
+}
+</style>
 
 </body>
 </html>
