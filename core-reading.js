@@ -1358,6 +1358,8 @@ class ReadingCore {
         }
         this.updateFlagUI(qNum);
         this.saveDraft();
+
+        localStorage.setItem('onboarding_flag_question_completed', 'true');
     }
 
     updateFlagUI(qNum) {
