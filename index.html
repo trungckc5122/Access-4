@@ -888,7 +888,27 @@
         return sessionStorage.getItem(cacheKey) === 'broken';
       }
 
+      // Kiểm tra broken link cho các cấp độ: đầy đủ (Part), Test (chưa có Part), Book (chưa có Test)
+      function hasAnyValidPart(suggestion, maxParts) {
+        // suggestion dạng "Reading Pet 3 Test 2" - cần kiểm tra tất cả Part
+        let match = suggestion.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)/i);
+        if (!match) return true; // Không phải dạng PET/KET, giữ lại
+        let prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
+        let exam = match[2].toLowerCase();
+        let book = match[3];
+        let test = match[4];
+        // Kiểm tra có ít nhất 1 Part không broken
+        for (let p = 1; p <= maxParts; p++) {
+          let url = `${prefix}-${exam}${book}-test${test}-part${p}.html`;
+          if (existingLinks.has(url) && !isLinkBroken(url)) {
+            return true;
+          }
+        }
+        return false; // Tất cả Part đều broken
+      }
+
       const filtered = suggestions.filter(s => {
+        // Kiểm tra đầy đủ: "Reading Pet 3 Test 2 Part 1"
         let match = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
         if (match) {
           let prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
@@ -896,6 +916,27 @@
           let url = `${prefix}-${exam}${match[3]}-test${match[4]}-part${match[5]}.html`;
           return existingLinks.has(url) && !isLinkBroken(url);
         }
+        // Kiểm tra cấp Test: "Reading Pet 3 Test 2" - có ít nhất 1 Part hợp lệ?
+        let testMatch = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)$/i);
+        if (testMatch) {
+          let maxParts = testMatch[2] === 'Pet' ? (testMatch[1].toLowerCase().startsWith('r') ? 6 : 4) : 5;
+          return hasAnyValidPart(s, maxParts);
+        }
+        // Kiểm tra cấp Book: "Reading Pet 3" - có ít nhất 1 Test có Part hợp lệ?
+        let bookMatch = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)$/i);
+        if (bookMatch) {
+          let exam = bookMatch[2];
+          let maxParts = exam === 'Pet' ? (bookMatch[1].toLowerCase().startsWith('r') ? 6 : 4) : 5;
+          // Kiểm tra 4 Test
+          for (let t = 1; t <= 4; t++) {
+            let testSuggestion = `${s} Test ${t}`;
+            if (hasAnyValidPart(testSuggestion, maxParts)) {
+              return true;
+            }
+          }
+          return false; // Cả 4 Test đều broken
+        }
+        // Access 4
         let accessMatch = s.match(/ACCESS\s*4\s+(REVIEW|MODULE)\s+(MIDTERM|FINAL|\d+)\s+([ABC])/i);
         if (accessMatch) {
           let category = accessMatch[1].toLowerCase();
