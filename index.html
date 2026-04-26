@@ -1166,7 +1166,7 @@
         <div class="progress-bar">
           <div class="progress-fill" id="onboardingProgress"></div>
         </div>
-        <span class="progress-text" id="onboardingText">0/7</span>
+        <span class="progress-text" id="onboardingText">0/11</span>
       </div>
     </div>
     <button class="onboarding-toggle" id="onboardingToggle" onclick="toggleOnboarding(); event.stopPropagation();" title="Thu nhỏ thành dấu ?">✕</button>
@@ -1589,7 +1589,11 @@
     { id: 'check_notes', label: 'Xem ghi chú', desc: 'Truy cập tab Quản lý ghi chú', completed: false },
     { id: 'dark_mode', label: 'Đổi giao diện', desc: 'Thử chế độ sáng/tối', completed: false },
     { id: 'mock_test', label: 'Thử Mock Test', desc: 'Tạo đề thi ngẫu nhiên để luyện tập', completed: false },
-    { id: 'view_scores', label: 'Tra cứu điểm', desc: 'Xem tiến độ và điểm số các bài đã làm', completed: false }
+    { id: 'view_scores', label: 'Tra cứu điểm', desc: 'Xem tiến độ và điểm số các bài đã làm', completed: false },
+    { id: 'add_note', label: 'Thêm ghi chú', desc: 'Ghi chú ở 1 Part bất kỳ trong bài tập', completed: false },
+    { id: 'highlight_text', label: 'Highlight văn bản', desc: 'Highlight 1 đoạn văn bản bất kỳ', completed: false },
+    { id: 'flag_question', label: 'Gắn cờ câu hỏi', desc: 'Gắn cờ 1 câu hỏi bất kỳ để đánh dấu', completed: false },
+    { id: 'save_draft', label: 'Lưu nháp', desc: 'Thoát ra giữa chừng để lưu nháp bài làm', completed: false }
   ];
   
   let currentStepIndex = 0;
@@ -1747,7 +1751,11 @@
         check_notes: 'Chuyển sang tab "Quản lý ghi chú" để xem tất cả notes',
         dark_mode: 'Click icon 🌙/☀️ ở góc để đổi theme',
         mock_test: 'Tìm và thử tính năng Mock Test để luyện ngẫu nhiên',
-        view_scores: 'Xem các badge trạng thái (completed/in-progress) trên bài tập'
+        view_scores: 'Xem các badge trạng thái (completed/in-progress) trên bài tập',
+        add_note: 'Mở một bài tập và thêm ghi chú với biểu tượng 📝',
+        highlight_text: 'Bôi đen đoạn văn trong bài đọc và chọn màu highlight',
+        flag_question: 'Click icon 🚩 ở câu hỏi để đánh dấu cần xem lại',
+        save_draft: 'Làm bài giữa chừng, thoát ra - hệ thống tự lưu nháp!'
       };
       return tips[stepId] || 'Hoàn thành bước tiếp theo!';
     }
@@ -1870,6 +1878,54 @@
           this.completeStep('view_scores');
         }
       }, 10000); // After 10 seconds on page
+      
+      // Track new steps by checking localStorage periodically
+      this.trackAdvancedFeatures();
+    }
+    
+    trackAdvancedFeatures() {
+      // Check localStorage for advanced features every 3 seconds
+      const checkInterval = setInterval(() => {
+        // Check for notes (pet_notes, ket_notes, etc.)
+        const hasNotes = this.checkLocalStorageKeys(/notes/);
+        if (hasNotes) this.completeStep('add_note');
+        
+        // Check for highlights (highlight_data, highlights, etc.)
+        const hasHighlights = this.checkLocalStorageKeys(/highlight/);
+        if (hasHighlights) this.completeStep('highlight_text');
+        
+        // Check for flagged questions (flagged, flagged_questions, etc.)
+        const hasFlags = this.checkLocalStorageKeys(/flag/);
+        if (hasFlags) this.completeStep('flag_question');
+        
+        // Check for drafts (draft, auto_save, saved_progress, etc.)
+        const hasDrafts = this.checkLocalStorageKeys(/draft|auto_save|saved|progress/);
+        if (hasDrafts) this.completeStep('save_draft');
+        
+        // Clear interval if all completed
+        const allNewCompleted = steps.filter(s => 
+          ['add_note', 'highlight_text', 'flag_question', 'save_draft'].includes(s.id)
+        ).every(s => s.completed);
+        
+        if (allNewCompleted) {
+          clearInterval(checkInterval);
+        }
+      }, 3000);
+    }
+    
+    checkLocalStorageKeys(pattern) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (pattern.test(key)) {
+            const value = localStorage.getItem(key);
+            if (value && value !== '{}' && value !== '[]' && value !== '') {
+              return true;
+            }
+          }
+        }
+      } catch (e) {}
+      return false;
     }
     
     highlightElement(el, message) {
