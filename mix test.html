@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trộn Part Ngẫu Nhiên - PET & KET</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        :root {
+            --primary: #0d9488;
+            --primary-rgb: 13,148,136;
+            --text: #0f172a;
+            --text-muted: #475569;
+            --bg-gradient: radial-gradient(circle at top left, #f0fdfa, #f8fafc, #eff6ff);
+            --card-bg: #ffffff;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --header-bg: linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #0d9488 100%);
+            --text-on-primary: #ffffff;
+            --card-shadow: 0 4px 20px -5px rgba(0,0,0,0.08);
+            --radius-md: 12px;
+            --radius-full: 9999px;
+            --success: #16a34a;
+            --error: #dc2626;
+            --warning: #f59e0b;
+        }
+        [data-theme="dark"] {
+            --primary: #2dd4bf;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --bg-gradient: radial-gradient(circle at top right, #0f172a, #1e293b, #0f172a);
+            --card-bg: #1e293b;
+            --border-light: #334155;
+            --border-medium: #475569;
+            --header-bg: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #5eead4 100%);
+            --text-on-primary: #0f172a;
+            --card-shadow: 0 4px 20px -5px rgba(0,0,0,0.4);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+        header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: sticky; top:0; z-index: 100;
+        }
+        header h1 { font-size: 24px; font-weight: 800; }
+        .back-link { color: var(--text-on-primary); text-decoration: none; font-weight: 600; }
+        .config-panel {
+            background: var(--card-bg); border: 1px solid var(--border-light);
+            border-radius: var(--radius-md); padding: 24px; margin: 24px 0;
+            box-shadow: var(--card-shadow);
+        }
+        .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-weight: 600; font-size: 14px; color: var(--text-muted); }
+        select, input {
+            padding: 10px 16px; border: 1px solid var(--border-medium); border-radius: 10px;
+            background: var(--card-bg); color: var(--text); font-family: inherit; font-size: 14px;
+        }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: var(--radius-full); font-weight: 700;
+            cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #0f766e; transform: translateY(-1px); }
+        .btn-warning { background: var(--warning); color: white; }
+        .timer-section {
+            background: #fef3c7; border: 2px solid var(--warning); border-radius: var(--radius-md);
+            padding: 16px; text-align: center; font-weight: 800; font-size: 20px;
+            color: var(--warning); margin: 20px 0; display: none;
+        }
+        .timer-section.urgent { background: #fee2e2; border-color: var(--error); color: var(--error); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:0.7;} }
+        .parts-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+            gap: 16px; margin: 20px 0;
+        }
+        .part-card {
+            background: var(--card-bg); border: 2px solid var(--border-light);
+            border-radius: var(--radius-md); padding: 20px; text-align: center;
+            transition: 0.3s;
+        }
+        .part-card.completed { border-color: var(--success); background: #dcfce7; }
+        .part-card h3 { font-size: 18px; margin-bottom: 12px; }
+        .result-panel {
+            background: var(--card-bg); border: 1px solid var(--border-light);
+            border-radius: var(--radius-md); padding: 24px; margin: 20px 0;
+            box-shadow: var(--card-shadow); display: none;
+        }
+        .result-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .result-table th, .result-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
+        .overall-score { font-size: 28px; font-weight: 800; color: var(--primary); text-align: center; }
+    </style>
+</head>
+<body>
+<header>
+    <a href="index.html" class="back-link">← Quay lại</a>
+    <h1>🎲 Trộn Part Ngẫu Nhiên</h1>
+</header>
+
+<div class="container">
+    <!-- Cấu hình -->
+    <div class="config-panel" id="configPanel">
+        <div class="row">
+            <div class="form-group">
+                <label>Trình độ</label>
+                <select id="examSelect">
+                    <option value="pet">PET</option>
+                    <option value="ket">KET</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Kỹ năng</label>
+                <select id="skillSelect">
+                    <option value="reading">Reading</option>
+                    <option value="listening">Listening</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Số Part muốn làm</label>
+                <select id="numParts"></select>
+            </div>
+            <div class="form-group">
+                <label>⏱️ Thời gian làm bài</label>
+                <span id="timeInfo" style="font-weight:800; color:var(--primary);">--</span>
+            </div>
+            <button class="btn btn-primary" id="generateBtn">🎲 Tạo bài ngẫu nhiên</button>
+        </div>
+    </div>
+
+    <!-- Đồng hồ -->
+    <div class="timer-section" id="timerSection">
+        ⏳ Thời gian còn lại: <span id="timerDisplay">00:00</span>
+    </div>
+
+    <!-- Danh sách Part -->
+    <div class="parts-grid" id="partsGrid"></div>
+
+    <!-- Nộp bài -->
+    <div style="text-align:center; margin:20px 0; display:none;" id="submitDiv">
+        <button class="btn btn-warning" id="submitBtn">📝 Nộp bài & Xem kết quả</button>
+    </div>
+
+    <!-- Kết quả -->
+    <div class="result-panel" id="resultPanel">
+        <h2 style="text-align:center;">📊 Kết quả bài trộn</h2>
+        <div class="overall-score" id="overallScore"></div>
+        <table class="result-table" id="resultTable">
+            <thead><tr><th>Part</th><th>Thông tin gốc</th><th>Đúng</th><th>Tổng</th><th>Tỉ lệ</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <div style="text-align:center;"><button class="btn btn-primary" onclick="location.reload()">🔄 Tạo bài mới</button></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Cấu hình Part cho từng kỹ năng/trình độ
+    const CONFIG = {
+        pet: {
+            reading: { parts: [1,2,3,4,5,6], totalTime: 60, books: [1,2,3], tests: [1,2,3,4] },
+            listening: { parts: [1,2,3,4], totalTime: 38, books: [1,2,3], tests: [1,2,3,4] }
+        },
+        ket: {
+            reading: { parts: [1,2,3,4,5], totalTime: 40, books: [1,2,3], tests: [1,2,3,4] },
+            listening: { parts: [1,2,3,4,5], totalTime: 38, books: [1,2,3], tests: [1,2,3,4] }
+        }
+    };
+
+    let selectedParts = [];
+    let timerInterval = null;
+    let deadline = null;
+
+    // Cập nhật dropdown số Part
+    function updateNumPartOptions() {
+        const exam = document.getElementById('examSelect').value;
+        const skill = document.getElementById('skillSelect').value;
+        const maxParts = CONFIG[exam][skill].parts.length;
+        const select = document.getElementById('numParts');
+        select.innerHTML = '';
+        for (let i = 1; i <= maxParts; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = i + (i === maxParts ? ' (full test)' : '');
+            if (i === maxParts) opt.selected = true;
+            select.appendChild(opt);
+        }
+        updateTimeInfo();
+    }
+
+    // Cập nhật hiển thị thời gian
+    function updateTimeInfo() {
+        const exam = document.getElementById('examSelect').value;
+        const skill = document.getElementById('skillSelect').value;
+        const totalTime = CONFIG[exam][skill].totalTime;
+        document.getElementById('timeInfo').textContent = totalTime + ' phút';
+    }
+
+    // Tạo URL cho Part
+    function buildPartUrl(exam, skill, book, test, part) {
+        const pfx = skill === 'reading' ? 'read' : 'lis';
+        return `${pfx}-${exam}${book}-test${test}-part${part}.html`;
+    }
+
+    // Lấy storage key
+    function getStorageKey(exam, skill, book, test, part) {
+        return `${exam}_${skill}_book${book}_test${test}_part${part}`;
+    }
+
+    // **Hàm chính: tạo Part ngẫu nhiên theo đúng vị trí**
+    function generateRandomParts() {
+        const exam = document.getElementById('examSelect').value;
+        const skill = document.getElementById('skillSelect').value;
+        const num = parseInt(document.getElementById('numParts').value);
+        const cfg = CONFIG[exam][skill];
+
+        // Gom các Part theo từng vị trí (Part 1, Part 2, ...)
+        const partsByPosition = {};
+        cfg.parts.forEach(p => { partsByPosition[p] = []; });
+
+        cfg.books.forEach(book => {
+            cfg.tests.forEach(test => {
+                cfg.parts.forEach(part => {
+                    const key = getStorageKey(exam, skill, book, test, part);
+                    // Chỉ thêm Part nếu file tồn tại (dựa trên localStorage hoặc ta chấp nhận tất cả)
+                    partsByPosition[part].push({ exam, skill, book, test, part, key });
+                });
+            });
+        });
+
+        // Xáo trộn mỗi nhóm Part theo vị trí
+        Object.keys(partsByPosition).forEach(pos => {
+            partsByPosition[pos] = partsByPosition[pos].sort(() => Math.random() - 0.5);
+        });
+
+        // Chọn ngẫu nhiên num Part, mỗi Part từ danh sách của vị trí đó
+        selectedParts = [];
+        const usedKeys = new Set();
+
+        for (let i = 0; i < num; i++) {
+            const targetPosition = cfg.parts[i]; // Part 1, Part 2, ...
+            const pool = partsByPosition[targetPosition];
+            if (!pool || pool.length === 0) continue;
+
+            // Lấy Part chưa được chọn
+            const available = pool.filter(p => !usedKeys.has(p.key));
+            if (available.length === 0) continue;
+
+            const chosen = available[0];
+            usedKeys.add(chosen.key);
+            selectedParts.push({ ...chosen, order: i + 1 });
+        }
+
+        // Nếu không đủ số Part, thông báo
+        if (selectedParts.length < num) {
+            alert('Không đủ Part để tạo bài ngẫu nhiên. Vui lòng giảm số lượng.');
+            return;
+        }
+
+        renderParts();
+        startTest();
+    }
+
+    // Hiển thị danh sách Part
+    function renderParts() {
+        const grid = document.getElementById('partsGrid');
+        grid.innerHTML = '';
+        selectedParts.forEach((p, idx) => {
+            const card = document.createElement('div');
+            card.className = 'part-card';
+            const key = getStorageKey(p.exam, p.skill, p.book, p.test, p.part);
+            const stored = localStorage.getItem(key);
+            const completed = stored !== null;
+            if (completed) card.classList.add('completed');
+            card.innerHTML = `
+                <h3>Vị trí ${idx + 1}</h3>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
+                    (Gốc: ${p.exam.toUpperCase()} ${p.book} Test ${p.test} Part ${p.part})
+                </div>
+                <a href="${buildPartUrl(p.exam, p.skill, p.book, p.test, p.part)}" target="_blank" class="btn btn-primary">📝 Vào làm</a>
+                <div style="margin-top:8px;">${completed ? '✅ Đã làm' : '⏳ Chưa làm'}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // Bắt đầu bài test
+    function startTest() {
+        const exam = document.getElementById('examSelect').value;
+        const skill = document.getElementById('skillSelect').value;
+        const totalTime = CONFIG[exam][skill].totalTime;
+        deadline = Date.now() + totalTime * 60 * 1000;
+
+        document.getElementById('timerSection').style.display = 'block';
+        document.getElementById('submitDiv').style.display = 'block';
+        document.getElementById('configPanel').style.display = 'none';
+        document.getElementById('resultPanel').style.display = 'none';
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(tick, 1000);
+        tick();
+    }
+
+    // Đồng hồ
+    function tick() {
+        const now = Date.now();
+        const remaining = Math.max(0, deadline - now);
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('timerDisplay').textContent =
+            `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        const timerEl = document.getElementById('timerSection');
+        if (remaining < 300000) timerEl.classList.add('urgent');
+        else timerEl.classList.remove('urgent');
+
+        if (remaining <= 0) {
+            clearInterval(timerInterval);
+            finishTest();
+        }
+    }
+
+    // Kết thúc bài test
+    function finishTest() {
+        clearInterval(timerInterval);
+        document.getElementById('timerSection').style.display = 'none';
+        document.getElementById('submitDiv').style.display = 'none';
+        showResults();
+    }
+
+    // Hiển thị kết quả
+    function showResults() {
+        const resultPanel = document.getElementById('resultPanel');
+        const tbody = document.getElementById('resultTable').querySelector('tbody');
+        tbody.innerHTML = '';
+        let totalCorrect = 0, totalQ = 0;
+
+        selectedParts.forEach((p, idx) => {
+            const key = getStorageKey(p.exam, p.skill, p.book, p.test, p.part);
+            const data = JSON.parse(localStorage.getItem(key) || 'null');
+            const correct = data ? data.correctCount : 0;
+
+            // Xác định tổng số câu hỏi cho Part này
+            let total;
+            if (p.skill === 'reading') {
+                total = p.exam === 'pet'
+                    ? { 1:5, 2:5, 3:5, 4:5, 5:6, 6:6 }[p.part]
+                    : { 1:6, 2:7, 3:5, 4:6, 5:6 }[p.part];
+            } else {
+                total = p.exam === 'pet'
+                    ? { 1:7, 2:6, 3:7, 4:5 }[p.part]
+                    : { 1:5, 2:5, 3:5, 4:5, 5:5 }[p.part];
+            }
+
+            totalCorrect += correct;
+            totalQ += total;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>Vị trí ${idx + 1}</td>
+                <td>${p.exam.toUpperCase()} ${p.book} Test ${p.test} Part ${p.part}</td>
+                <td>${data ? correct : 0}</td>
+                <td>${total}</td>
+                <td>${data ? Math.round(correct / total * 100) : 0}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('overallScore').innerHTML =
+            `Tổng: ${totalCorrect}/${totalQ} câu đúng`;
+        resultPanel.style.display = 'block';
+    }
+
+    // Event listeners
+    document.getElementById('examSelect').addEventListener('change', updateNumPartOptions);
+    document.getElementById('skillSelect').addEventListener('change', updateNumPartOptions);
+    document.getElementById('generateBtn').addEventListener('click', generateRandomParts);
+    document.getElementById('submitBtn').addEventListener('click', finishTest);
+
+    // Khởi tạo
+    updateNumPartOptions();
+})();
+</script>
+</body>
+</html>
