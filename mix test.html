@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trộn Part Ngẫu Nhiên - PET & KET</title>
+    <title>Mock Test - PET & KET</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         :root {
@@ -105,12 +105,25 @@
         .result-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
         .result-table th, .result-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
         .overall-score { font-size: 28px; font-weight: 800; color: var(--primary); text-align: center; }
+        .info-banner {
+            background: linear-gradient(135deg, var(--primary) 0%, #0f766e 100%);
+            color: white; padding: 16px 24px; border-radius: var(--radius-md);
+            margin: 20px 0; text-align: center; font-weight: 700; font-size: 18px;
+            box-shadow: var(--card-shadow); display: none;
+        }
+        .info-banner .exam-name { font-size: 24px; font-weight: 800; text-transform: uppercase; }
+        .info-banner .skill-name { font-size: 16px; opacity: 0.9; margin-top: 4px; }
+        .question-count { 
+            background: rgba(var(--primary-rgb), 0.1); color: var(--primary);
+            padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
+            display: inline-block; margin-top: 8px;
+        }
     </style>
 </head>
 <body>
 <header>
     <a href="index.html" class="back-link">← Quay lại</a>
-    <h1>🎲 Trộn Part Ngẫu Nhiên</h1>
+    <h1>Mock Test</h1>
 </header>
 
 <div class="container">
@@ -143,6 +156,12 @@
         </div>
     </div>
 
+    <!-- Thông tin bài thi -->
+    <div class="info-banner" id="infoBanner">
+        <div class="exam-name" id="examName">KET</div>
+        <div class="skill-name" id="skillName">Listening</div>
+    </div>
+
     <!-- Đồng hồ -->
     <div class="timer-section" id="timerSection">
         ⏳ Thời gian còn lại: <span id="timerDisplay">00:00</span>
@@ -171,6 +190,12 @@
 <script>
 (function() {
     // Cấu hình Part cho từng kỹ năng/trình độ
+    // Số câu hỏi cho mỗi Part
+    const QUESTION_COUNTS = {
+        pet: { reading: {1:5, 2:5, 3:5, 4:5, 5:6, 6:6}, listening: {1:7, 2:6, 3:7, 4:5} },
+        ket: { reading: {1:6, 2:7, 3:5, 4:6, 5:6}, listening: {1:5, 2:5, 3:5, 4:5, 5:5} }
+    };
+
     const CONFIG = {
         pet: {
             reading: { parts: [1,2,3,4,5,6], totalTime: 60, books: [1,2,3], tests: [1,2,3,4] },
@@ -276,6 +301,11 @@
         startTest();
     }
 
+    // Lấy số câu của một Part
+    function getQuestionCount(exam, skill, partNum) {
+        return QUESTION_COUNTS[exam]?.[skill]?.[partNum] || 0;
+    }
+
     // Hiển thị danh sách Part
     function renderParts() {
         const grid = document.getElementById('partsGrid');
@@ -287,11 +317,13 @@
             const stored = localStorage.getItem(key);
             const completed = stored !== null;
             if (completed) card.classList.add('completed');
+            const qCount = getQuestionCount(p.exam, p.skill, p.part);
             card.innerHTML = `
                 <h3>Vị trí ${idx + 1}</h3>
                 <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">
                     (Gốc: ${p.exam.toUpperCase()} ${p.book} Test ${p.test} Part ${p.part})
                 </div>
+                <span class="question-count">${qCount} câu</span>
                 <a href="${buildPartUrl(p.exam, p.skill, p.book, p.test, p.part)}" target="_blank" class="btn btn-primary">📝 Vào làm</a>
                 <div style="margin-top:8px;">${completed ? '✅ Đã làm' : '⏳ Chưa làm'}</div>
             `;
@@ -310,6 +342,13 @@
         document.getElementById('submitDiv').style.display = 'block';
         document.getElementById('configPanel').style.display = 'none';
         document.getElementById('resultPanel').style.display = 'none';
+
+        // Hiển thị thông tin bài thi
+        const examText = exam === 'ket' ? 'KET (A2 Key)' : 'PET (B1 Preliminary)';
+        const skillText = skill === 'reading' ? 'Reading - Đọc hiểu' : 'Listening - Nghe';
+        document.getElementById('examName').textContent = examText;
+        document.getElementById('skillName').textContent = skillText;
+        document.getElementById('infoBanner').style.display = 'block';
 
         clearInterval(timerInterval);
         timerInterval = setInterval(tick, 1000);
@@ -335,11 +374,34 @@
         }
     }
 
+    // Xác nhận nộp bài
+    function confirmSubmit() {
+        const remaining = Math.max(0, deadline - Date.now());
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        
+        if (remaining > 0) {
+            const timeStr = mins > 0 ? `${mins} phút ${secs} giây` : `${secs} giây`;
+            const message = `⚠️ Bạn còn ${timeStr} thời gian làm bài.\n\nBạn có chắc chắn muốn nộp bài ngay bây giờ không?\n\nNhấn OK để nộp bài hoặc Cancel để tiếp tục làm.`;
+            if (!confirm(message)) {
+                return; // Người dùng hủy, tiếp tục làm bài
+            }
+        } else {
+            // Hết giờ, không cần xác nhận
+            if (!confirm('⏰ Hết thời gian làm bài!\n\nBạn có muốn nộp bài và xem kết quả không?')) {
+                return;
+            }
+        }
+        
+        finishTest();
+    }
+
     // Kết thúc bài test
     function finishTest() {
         clearInterval(timerInterval);
         document.getElementById('timerSection').style.display = 'none';
         document.getElementById('submitDiv').style.display = 'none';
+        document.getElementById('infoBanner').style.display = 'none';
         showResults();
     }
 
@@ -389,7 +451,7 @@
     document.getElementById('examSelect').addEventListener('change', updateNumPartOptions);
     document.getElementById('skillSelect').addEventListener('change', updateNumPartOptions);
     document.getElementById('generateBtn').addEventListener('click', generateRandomParts);
-    document.getElementById('submitBtn').addEventListener('click', finishTest);
+    document.getElementById('submitBtn').addEventListener('click', confirmSubmit);
 
     // Khởi tạo
     updateNumPartOptions();
