@@ -951,11 +951,48 @@
       // Kiểm tra xem tất cả suggestions có phải broken không
       const allBroken = suggestions.length > 0 && filtered.length === 0;
 
+      // Helper: kiểm tra trạng thái bài tập từ suggestion
+      function getSuggestionStatus(s) {
+        // Chỉ kiểm tra cho PET/KET đầy đủ
+        let match = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
+        if (!match) return null;
+        let prefix = match[1].toLowerCase().startsWith('r') ? 'pet_reading' : 'pet_listening';
+        if (match[2].toLowerCase() === 'ket') {
+          prefix = match[1].toLowerCase().startsWith('r') ? 'ket_reading' : 'ket_listening';
+        }
+        let exam = match[2].toLowerCase();
+        let book = match[3];
+        let test = match[4];
+        let part = match[5];
+        let completedKey = `${prefix}_book${book}_test${test}_part${part}`;
+        let draftKey = `${completedKey}_draft`;
+        // Kiểm tra có dữ liệu hoàn thành
+        if (localStorage.getItem(completedKey)) {
+          return { type: 'completed', text: '✓ Đã xong' };
+        }
+        // Kiểm tra có draft đang làm
+        let draft = localStorage.getItem(draftKey);
+        if (draft && draft !== '{}' && draft !== 'null') {
+          try {
+            let data = JSON.parse(draft);
+            let hasAnswer = Object.keys(data).some(k => {
+              let v = data[k];
+              return v !== null && v !== undefined && (typeof v === 'number' || (typeof v === 'string' && v.trim() !== ''));
+            });
+            if (hasAnswer) return { type: 'in-progress', text: '⏳ Đang làm' };
+          } catch(e) {}
+        }
+        return null;
+      }
+
       if (filtered.length > 0) {
         filtered.forEach(s => {
           const item = document.createElement('div');
           item.className = 'suggestion-item';
-          item.innerHTML = `<span>${s}</span><span class="type-badge">${s.split(' ')[0]}</span>`;
+          // Lấy badge trạng thái nếu có
+          const status = getSuggestionStatus(s);
+          const statusBadge = status ? `<span class="status-badge ${status.type === 'completed' ? 'completed' : 'in-progress'}" style="margin-left: 8px; font-size: 10px; padding: 2px 6px;">${status.text}</span>` : '';
+          item.innerHTML = `<span>${s}${statusBadge}</span><span class="type-badge">${s.split(' ')[0]}</span>`;
           item.onclick = (e) => {
             e.stopPropagation(); // Ngăn sự kiện click lan ra ngoài gây ẩn box
             let nextVal = s;
@@ -973,7 +1010,7 @@
               if (selectedUrl) {
                 window.open(selectedUrl, '_blank');
                 suggestionsBox.style.display = 'none';
-                input.value = '';
+                // Giữ lại input.value để người dùng còn thông tin tìm kiếm
                 selectedUrl = '';
                 goBtn.classList.remove('active');
                 return;
