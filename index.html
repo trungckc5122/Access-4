@@ -800,25 +800,9 @@
       if (val.includes('READING')) skill = 'Reading';
       else if (val.includes('LISTENING')) skill = 'Listening';
 
-      // Tìm test (phải có từ khóa TEST hoặc T)
+      const book = parts.find(p => p === '1' || p === '2' || p === '3') || '';
       const testMatch = val.match(/TEST\s+(\d)/i) || val.match(/T\s+(\d)/i);
-      let test = testMatch ? testMatch[1] : '';
-
-      // Tìm book (số 1-3 đầu tiên sau PET/KET, nhưng trước từ TEST)
-      let book = '';
-      const examIndex = parts.findIndex(p => p.includes('PET') || p.includes('KET'));
-      if (examIndex >= 0) {
-        // Nếu có TEST, lấy số trước TEST
-        if (test) {
-          const testIndex = parts.findIndex(p => p.includes('TEST') || p.includes('T'));
-          const beforeTest = parts.slice(examIndex + 1, testIndex > examIndex ? testIndex : undefined);
-          book = beforeTest.find(p => ['1','2','3'].includes(p)) || '';
-        } else {
-          // Không có TEST, lấy số đầu tiên sau PET/KET làm book
-          const afterExam = parts.slice(examIndex + 1);
-          book = afterExam.find(p => ['1','2','3'].includes(p)) || '';
-        }
-      }
+      const test = testMatch ? testMatch[1] : (parts.find(p => ['1','2','3','4'].includes(p) && p !== book) || '');
 
       const partMatch = val.match(/PART\s+(\d)/i) || val.match(/P\s+(\d)/i);
       const part = partMatch ? partMatch[1] : '';
@@ -883,19 +867,10 @@
         const exam = info.exam || 'Pet';
         let maxParts = exam === 'Pet' ? (type === 'reading' ? 6 : 4) : 5;
 
-        if (!info.book) {
-          // Chỉ có skill và exam → suggest các Book (1, 2, 3)
-          suggestions = [1,2,3].map(b => `${info.skill} ${exam} ${b}`);
-        } else if (!info.test) {
-          // Có book nhưng chưa có test → suggest các Test (1, 2, 3, 4)
-          suggestions = [1,2,3,4].map(t => `${info.skill} ${exam} ${info.book} Test ${t}`);
-        } else if (!info.part) {
-          // Có book và test, chưa có part → suggest các Part
-          for(let p=1; p<=maxParts; p++) suggestions.push(`${info.skill} ${exam} ${info.book} Test ${info.test} Part ${p}`);
-        } else {
-          // Đầy đủ thông tin
-          suggestions = [`${info.skill} ${exam} ${info.book} Test ${info.test} Part ${info.part}`];
-        }
+        if (!info.book) suggestions = [1,2,3].map(b => `${info.skill} ${exam} ${b}`);
+        else if (!info.test) suggestions = [1,2,3,4].map(t => `${info.skill} ${exam} ${info.book} Test ${t}`);
+        else if (!info.part) for(let p=1; p<=maxParts; p++) suggestions.push(`${info.skill} ${exam} ${info.book} Test ${info.test || '1'} Part ${p}`);
+        else suggestions = [`${info.skill} ${exam} ${info.book} Test ${info.test || '1'} Part ${info.part}`];
       }
       if (info.course) {
         if (!info.category) { if (access4Reviews.size) suggestions.push('Access 4 Review'); if (access4Modules.size) suggestions.push('Access 4 Module'); }
