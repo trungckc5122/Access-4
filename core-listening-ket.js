@@ -79,7 +79,7 @@ class PETNoteManager {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(this.panel.style, pos);
-            } catch(e) {}
+            } catch (e) { }
         }
     }
 
@@ -116,7 +116,7 @@ class PETNoteManager {
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mousemove', onResize);
                 document.removeEventListener('mouseup', stopActions);
-                
+
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -262,7 +262,7 @@ class MiniDashboardManager {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(this.panel.style, pos);
-            } catch(e) {}
+            } catch (e) { }
         }
     }
 
@@ -277,10 +277,10 @@ class MiniDashboardManager {
             Tiến độ
         `;
         toggleBtn.onclick = () => this.toggle();
-        
+
         const noteBtn = document.querySelector('.note-toggle-btn');
         const submitBtn = document.getElementById('submitBtn');
-        
+
         if (noteBtn) {
             noteBtn.parentNode.insertBefore(toggleBtn, noteBtn);
         } else if (submitBtn) {
@@ -342,7 +342,7 @@ class MiniDashboardManager {
         const meta = this.core.getTestMeta();
         const book = meta.book;
         const test = meta.test;
-        
+
         const titleEl = document.getElementById('mini-dashboard-title');
         if (titleEl) titleEl.textContent = `KET ${book} - Test ${test}`;
 
@@ -354,12 +354,12 @@ class MiniDashboardManager {
 
     fetchSkillData(skill, book, test) {
         // KET config: Reading 5 parts, Listening 5 parts
-        const parts = skill === 'reading' ? [1,2,3,4,5] : [1,2,3,4,5];
-        
+        const parts = skill === 'reading' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5];
+
         return parts.map(part => {
             let keyCompleted = `ket_${skill}_book${book}_test${test}_part${part}`;
             let keyDraft = keyCompleted + '_draft';
-            
+
             let dataCompleted = localStorage.getItem(keyCompleted);
             let dataDraft = localStorage.getItem(keyDraft);
 
@@ -367,15 +367,15 @@ class MiniDashboardManager {
                 try {
                     const parsed = JSON.parse(dataCompleted);
                     return { part, type: 'completed', value: parsed.correctCount || 0, total: parsed.totalQuestions || 0 };
-                } catch(e) {}
-            } 
-            
+                } catch (e) { }
+            }
+
             if (dataDraft) {
                 try {
                     const parsed = JSON.parse(dataDraft);
                     const answered = Object.values(parsed).filter(v => v !== null && v !== undefined && String(v).trim() !== '' && typeof v !== 'object').length;
                     return { part, type: 'draft', value: answered, total: 0 };
-                } catch(e) {}
+                } catch (e) { }
             }
             return { part, type: 'empty', value: 0, total: 0 };
         });
@@ -386,7 +386,7 @@ class MiniDashboardManager {
         const totalCorrect = completedParts.reduce((sum, d) => sum + d.value, 0);
         const hasAnyData = data.some(d => d.type !== 'empty');
         const scoreData = this.calculateKETScore(totalCorrect, maxQuestions === 30);
-        
+
         return {
             correct: totalCorrect,
             total: maxQuestions,
@@ -398,13 +398,13 @@ class MiniDashboardManager {
 
     renderContent(readingData, listeningData) {
         if (!this.contentArea) return;
-        
+
         const meta = this.core.getTestMeta();
-        
+
         // KET: Reading max 30, Listening max 25
         const readingStats = this.calculateSkillStats(readingData, 30);
         const listeningStats = this.calculateSkillStats(listeningData, 25);
-        
+
         const renderSection = (title, data, stats, isReading) => {
             let scoreHtml;
             if (!stats.hasData) {
@@ -415,7 +415,7 @@ class MiniDashboardManager {
             } else {
                 scoreHtml = '<span class="not-done">Chưa hoàn thành</span>';
             }
-            
+
             let sectionHtml = `
                 <div class="skill-section">
                     <div class="skill-header">
@@ -424,13 +424,13 @@ class MiniDashboardManager {
                     </div>
                     <div class="part-list">
             `;
-            
+
             data.forEach(d => {
                 let statusClass = d.type === 'completed' ? 'status-completed' : d.type === 'draft' && d.value > 0 ? 'status-draft' : 'status-empty';
                 let statusIcon = d.type === 'completed' ? '✓' : d.type === 'draft' && d.value > 0 ? '⏳' : '○';
                 let displayVal = d.type === 'completed' ? `${d.value}/${d.total}` : (d.type === 'draft' ? `${d.value} câu` : `--`);
                 let url = isReading ? `read-ket${meta.book}-test${meta.test}-part${d.part}.html` : `lis-ket${meta.book}-test${meta.test}-part${d.part}.html`;
-                
+
                 const isCurrent = meta.part === d.part && this.skillType === (isReading ? 'reading' : 'listening');
                 const currentClass = isCurrent ? 'current' : '';
 
@@ -482,7 +482,7 @@ class MiniDashboardManager {
 
     setupEvents() {
         const header = document.getElementById('mini-dashboard-header');
-        
+
         const onDrag = (e) => {
             if (!this.dragData.isDragging) return;
             const dx = e.clientX - this.dragData.startX;
@@ -498,7 +498,7 @@ class MiniDashboardManager {
                 this.dragData.isDragging = false;
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mouseup', stopDrag);
-                
+
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem('mini-dashboard-pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -534,7 +534,7 @@ class MiniDashboardManager {
                     try {
                         const pos = JSON.parse(e.newValue);
                         Object.assign(this.panel.style, pos);
-                    } catch(err) {}
+                    } catch (err) { }
                 } else {
                     this.refreshData();
                 }
@@ -551,109 +551,109 @@ class TestTourManager {
 
     init() {
         if (document.getElementById('test-tour-btn')) return;
-        
+
         const btn = document.createElement('div');
         btn.id = 'test-tour-btn';
         btn.className = 'help-button test-tour-btn';
         btn.innerHTML = '<span>?</span>';
         btn.title = 'Xem hướng dẫn làm bài (Kéo thả để di chuyển)';
         btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:1000000 !important;transition:all 0.3s;user-select:none;visibility:visible !important;';
-        
+
         const posStr = localStorage.getItem('test-tour-btn-pos');
         if (posStr) {
             try {
                 const pos = JSON.parse(posStr);
                 Object.assign(btn.style, pos);
-            } catch(e) {}
+            } catch (e) { }
         }
-        
-                // --- Drag logic (Note-like algorithm) ---
-                const onDrag = (e) => {
-                    if (!this.dragData.isDragging) return;
-                    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-                    const dx = clientX - this.dragData.startX;
-                    const dy = clientY - this.dragData.startY;
-                    btn.style.left = `${this.dragData.initialLeft + dx}px`;
-                    btn.style.top = `${this.dragData.initialTop + dy}px`;
-                    btn.style.right = 'auto';
-                    btn.style.bottom = 'auto';
-                };
 
-                const stopDrag = () => {
-                    if (this.dragData.isDragging) {
-                        this.dragData.isDragging = false;
-                        document.removeEventListener('mousemove', onDrag);
-                        document.removeEventListener('touchmove', onDrag);
-                        document.removeEventListener('mouseup', stopDrag);
-                        document.removeEventListener('touchend', stopDrag);
-                        
-                        btn.style.transition = 'all 0.3s';
-                        btn.style.cursor = 'grab';
+        // --- Drag logic (Note-like algorithm) ---
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            const dx = clientX - this.dragData.startX;
+            const dy = clientY - this.dragData.startY;
+            btn.style.left = `${this.dragData.initialLeft + dx}px`;
+            btn.style.top = `${this.dragData.initialTop + dy}px`;
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+        };
 
-                        if (!this.dragData.hasMoved) {
-                            this.startTour();
-                        } else {
-                            const rect = btn.getBoundingClientRect();
-                            localStorage.setItem('test-tour-btn-pos', JSON.stringify({
-                                left: `${rect.left}px`,
-                                top: `${rect.top}px`,
-                                right: 'auto',
-                                bottom: 'auto'
-                            }));
-                        }
-                    }
-                };
+        const stopDrag = () => {
+            if (this.dragData.isDragging) {
+                this.dragData.isDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('touchmove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchend', stopDrag);
 
-                btn.addEventListener('mousedown', (e) => {
-                    this.dragData.hasMoved = false;
-                    this.dragData.isDragging = true;
-                    this.dragData.startX = e.clientX;
-                    this.dragData.startY = e.clientY;
+                btn.style.transition = 'all 0.3s';
+                btn.style.cursor = 'grab';
+
+                if (!this.dragData.hasMoved) {
+                    this.startTour();
+                } else {
                     const rect = btn.getBoundingClientRect();
-                    this.dragData.initialLeft = rect.left;
-                    this.dragData.initialTop = rect.top;
+                    localStorage.setItem('test-tour-btn-pos', JSON.stringify({
+                        left: `${rect.left}px`,
+                        top: `${rect.top}px`,
+                        right: 'auto',
+                        bottom: 'auto'
+                    }));
+                }
+            }
+        };
 
-                    btn.style.transition = 'none';
-                    btn.style.cursor = 'grabbing';
-                    
-                    document.addEventListener('mousemove', onDrag);
-                    document.addEventListener('mouseup', stopDrag);
+        btn.addEventListener('mousedown', (e) => {
+            this.dragData.hasMoved = false;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = btn.getBoundingClientRect();
+            this.dragData.initialLeft = rect.left;
+            this.dragData.initialTop = rect.top;
 
-                    // Click vs Drag detection
-                    const checkMove = (me) => {
-                        if (Math.abs(me.clientX - this.dragData.startX) > 3 || Math.abs(me.clientY - this.dragData.startY) > 3) {
-                            this.dragData.hasMoved = true;
-                            document.removeEventListener('mousemove', checkMove);
-                        }
-                    };
-                    document.addEventListener('mousemove', checkMove);
-                });
+            btn.style.transition = 'none';
+            btn.style.cursor = 'grabbing';
 
-                btn.addEventListener('touchstart', (e) => {
-                    this.dragData.hasMoved = false;
-                    this.dragData.isDragging = true;
-                    this.dragData.startX = e.touches[0].clientX;
-                    this.dragData.startY = e.touches[0].clientY;
-                    const rect = btn.getBoundingClientRect();
-                    this.dragData.initialLeft = rect.left;
-                    this.dragData.initialTop = rect.top;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
 
-                    btn.style.transition = 'none';
-                    btn.style.cursor = 'grabbing';
-                    
-                    document.addEventListener('touchmove', onDrag, { passive: false });
-                    document.addEventListener('touchend', stopDrag);
+            // Click vs Drag detection
+            const checkMove = (me) => {
+                if (Math.abs(me.clientX - this.dragData.startX) > 3 || Math.abs(me.clientY - this.dragData.startY) > 3) {
+                    this.dragData.hasMoved = true;
+                    document.removeEventListener('mousemove', checkMove);
+                }
+            };
+            document.addEventListener('mousemove', checkMove);
+        });
 
-                    const checkMove = (me) => {
-                        if (Math.abs(me.touches[0].clientX - this.dragData.startX) > 3 || Math.abs(me.touches[0].clientY - this.dragData.startY) > 3) {
-                            this.dragData.hasMoved = true;
-                            document.removeEventListener('touchmove', checkMove);
-                        }
-                    };
-                    document.addEventListener('touchmove', checkMove);
-                }, { passive: false });
-        
+        btn.addEventListener('touchstart', (e) => {
+            this.dragData.hasMoved = false;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.touches[0].clientX;
+            this.dragData.startY = e.touches[0].clientY;
+            const rect = btn.getBoundingClientRect();
+            this.dragData.initialLeft = rect.left;
+            this.dragData.initialTop = rect.top;
+
+            btn.style.transition = 'none';
+            btn.style.cursor = 'grabbing';
+
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', stopDrag);
+
+            const checkMove = (me) => {
+                if (Math.abs(me.touches[0].clientX - this.dragData.startX) > 3 || Math.abs(me.touches[0].clientY - this.dragData.startY) > 3) {
+                    this.dragData.hasMoved = true;
+                    document.removeEventListener('touchmove', checkMove);
+                }
+            };
+            document.addEventListener('touchmove', checkMove);
+        }, { passive: false });
+
         document.body.appendChild(btn);
 
         if (!document.getElementById('introjs-styles')) {
@@ -697,16 +697,6 @@ class TestTourManager {
                 }
                 .introjs-fixParent { z-index: 1000001 !important; }
                 .introjs-showElement { z-index: 1000002 !important; position: relative !important; }
-
-                /* Hide help button when both bars are collapsed */
-                body:has(.ielts-header.collapsed):has(.bottom-bar.collapsed) #test-tour-btn {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                    transform: scale(0.8) !important;
-                }
-                #test-tour-btn {
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                }
             `;
             document.head.appendChild(customStyle);
         }
@@ -734,7 +724,7 @@ class TestTourManager {
             const dashboardBtn = document.getElementById('mini-dashboard-toggle');
             const noteBtn = document.querySelector('.note-toggle-btn');
             const timer = document.getElementById('timerDisplay') || document.querySelector('.timer');
-            
+
             const themeToggle = document.querySelector('.theme-toggle-btn');
             const collapseToggle = document.querySelector('.autocollapse-toggle');
             const fontControls = document.querySelector('.font-controls');
@@ -745,26 +735,26 @@ class TestTourManager {
             const storageIndicator = document.getElementById('storageIndicator');
 
             const steps = [];
-            
+
             if (header) steps.push({ element: header, title: 'ℹ️ Thông tin bài thi', intro: 'Khu vực hiển thị tiêu đề bài thi và các thông tin cơ bản.' });
             if (timer) steps.push({ element: timer, title: '⏱️ Đồng hồ đếm ngược', intro: 'Theo dõi thời gian làm bài còn lại.' });
-            
+
             if (themeToggle) steps.push({ element: themeToggle, title: '🌓 Giao diện', intro: 'Bật/tắt chế độ sáng tối để bảo vệ mắt.' });
             if (collapseToggle) steps.push({ element: collapseToggle, title: '↕️ Ẩn/hiện Header', intro: 'Tự động ẩn thanh tiêu đề khi cuộn trang để mở rộng không gian làm bài.' });
             if (fontControls) steps.push({ element: fontControls, title: '🔠 Cỡ chữ', intro: 'Thay đổi kích thước chữ cho phù hợp.' });
             if (audioControls) steps.push({ element: audioControls, title: '🔊 Điều khiển Audio', intro: 'Phát, tạm dừng và điều chỉnh tốc độ, âm lượng bài nghe.' });
-            
+
             if (leftCol) steps.push({ element: leftCol, title: '📖 Nội dung bài', intro: 'Nội dung bài đọc/nghe nằm ở đây. Bạn có thể bôi đen văn bản để highlight.' });
             if (highlightToggle) steps.push({ element: highlightToggle, title: '🖍️ Bật/tắt Highlight', intro: 'Ẩn hoặc hiện các phần văn bản mà bạn đã tự highlight.' });
-            
+
             if (rightCol) steps.push({ element: rightCol, title: '📝 Danh sách câu hỏi', intro: 'Trả lời các câu hỏi tại khu vực này. Trạng thái sẽ được lưu tự động.' });
             if (noteBtn) steps.push({ element: noteBtn, title: '🗒️ Ghi chú nhanh', intro: 'Mở popup ghi chú để nháp thông tin trong lúc làm bài.' });
             if (dashboardBtn) steps.push({ element: dashboardBtn, title: '📊 Tiến độ bài thi', intro: 'Mở bảng theo dõi số lượng câu đã làm ở các Part khác.' });
             if (storageIndicator) steps.push({ element: storageIndicator, title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ khả dụng còn lại của trình duyệt.' });
-            
+
             if (prevPartBtn) steps.push({ element: prevPartBtn, title: '⬅️ Part trước', intro: 'Chuyển về Part trước đó.' });
             if (nextPartBtn) steps.push({ element: nextPartBtn, title: '➡️ Part tiếp theo', intro: 'Chuyển sang Part tiếp theo.' });
-            
+
             if (submitBtn) steps.push({ element: submitBtn, title: '✅ Nộp bài', intro: 'Khi hoàn thành, nhấn Nộp bài để xem điểm số và giải thích chi tiết.' });
 
             if (steps.length === 0) return;
@@ -780,8 +770,8 @@ class TestTourManager {
                 scrollToElement: true,
                 scrollPadding: 100
             });
-            
-            tour.onbeforechange(function(targetElement) {
+
+            tour.onbeforechange(function (targetElement) {
                 if (targetElement) {
                     targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
@@ -789,8 +779,8 @@ class TestTourManager {
 
             const helpBtn = document.getElementById('test-tour-btn');
             if (helpBtn) helpBtn.style.display = 'none';
-            tour.onexit(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
-            tour.oncomplete(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
+            tour.onexit(() => { if (helpBtn) helpBtn.style.display = 'flex'; });
+            tour.oncomplete(() => { if (helpBtn) helpBtn.style.display = 'flex'; });
 
             tour.start();
         });
@@ -817,7 +807,7 @@ class ListeningCore {
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
-        
+
         this.setupAudioControls();
         this.setupUI();
         this.renderQuestions();
@@ -843,7 +833,7 @@ class ListeningCore {
         this.miniDashboard.init();
 
         this.createResetModal();
-        
+
         this.updateAnswerCount();
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
         console.log('Listening test initialized:', testData.title);
@@ -877,13 +867,13 @@ class ListeningCore {
             '.single-col',
             '.split-container'
         ];
-        
+
         let foundData = [];
         potentialSelectors.forEach(selector => {
             const el = document.querySelector(selector);
-            if (el && (el.innerHTML.includes('highlight-yellow') || 
-                       el.innerHTML.includes('highlight-green') || 
-                       el.innerHTML.includes('highlight-pink'))) {
+            if (el && (el.innerHTML.includes('highlight-yellow') ||
+                el.innerHTML.includes('highlight-green') ||
+                el.innerHTML.includes('highlight-pink'))) {
                 foundData.push({ selector, html: el.innerHTML });
             }
         });
@@ -952,7 +942,7 @@ class ListeningCore {
                 if (!savedHtml) return;
 
                 const container = document.getElementById('transcriptContent') ||
-                                  document.querySelector('.transcript-content');
+                    document.querySelector('.transcript-content');
                 if (container) {
                     const inputValues = captureInputValues(container);
                     container.innerHTML = savedHtml;
@@ -993,7 +983,7 @@ class ListeningCore {
     getTestMeta() {
         const d = this.currentTestData;
         if (!d) return { book: 1, test: 1, part: 1 };
-        
+
         let book = d.book, test = d.test, part = d.part;
         if (!book || !test || !part) {
             const parsed = this.storageManager.parseTestInfo(d.title);
@@ -1001,7 +991,7 @@ class ListeningCore {
             test = test || parsed.test;
             part = part || parsed.part;
         }
-        
+
         return { book, test, part };
     }
 
@@ -1033,7 +1023,7 @@ class ListeningCore {
         const { book, test, part } = this.getTestMeta();
         const targetPart = part + direction;
         if (targetPart < 1 || targetPart > 5) return;
-        
+
         this.cleanup();
 
         const targetUrl = `lis-ket${book}-test${test}-part${targetPart}.html`;
@@ -1126,7 +1116,7 @@ class ListeningCore {
     saveDraft() {
         if (this.examSubmitted || this._isResetting) return;
         if (!this.currentTestData) return;
-        
+
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => {
             try {
@@ -1142,14 +1132,14 @@ class ListeningCore {
     saveDraftImmediate() {
         if (this._isResetting) return;
         if (this.examSubmitted || !this.currentTestData) return;
-        
+
         clearTimeout(this.debounceTimer);
-        
+
         try {
             const draft = this.getDraftData();
             const hasAnswers = Object.values(draft).some(v => v !== null && v !== undefined && v !== '');
             if (!hasAnswers) return;
-            
+
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
 
@@ -1164,7 +1154,7 @@ class ListeningCore {
                     status: 'in-progress'
                 });
                 channel.close();
-            } catch (e) {}
+            } catch (e) { }
         } catch (e) {
             console.error('[Draft] Immediate save failed:', e);
         }
@@ -1174,15 +1164,15 @@ class ListeningCore {
         const key = this.getStorageKey(true);
         const draftJson = localStorage.getItem(key);
         if (!draftJson) return false;
-        
+
         try {
             const draft = JSON.parse(draftJson);
             const questionRange = this.getQuestionRange();
-            
+
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const ans = draft[`q${i}`];
                 if (ans === undefined || ans === null) continue;
-                
+
                 if (this.currentTestData.type === 'multiple-choice') {
                     const radio = document.querySelector(`input[name="q${i}"][value="${ans}"]`);
                     if (radio) radio.checked = true;
@@ -1209,7 +1199,7 @@ class ListeningCore {
     setupAudioControls() {
         this.audio = document.getElementById('listeningAudio');
         this.speedSelect = document.getElementById('speedSelect');
-        
+
         if (this.audio && this.speedSelect) {
             const controlsContainer = this.audio.parentElement;
             if (controlsContainer && !controlsContainer.querySelector('.skip-btn')) {
@@ -1272,7 +1262,7 @@ class ListeningCore {
             Note
         `;
         noteBtn.onclick = () => this.noteManager.toggle();
-        
+
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
             submitBtn.parentNode.insertBefore(noteBtn, submitBtn);
@@ -1301,7 +1291,7 @@ class ListeningCore {
             const div = document.createElement('div');
             div.className = 'question-item';
             div.id = `question-${q.num}`;
-            
+
             div.innerHTML = `
                 <div class="question-text">${q.num}. ${q.text}</div>
                 <div class="options">
@@ -1314,7 +1304,7 @@ class ListeningCore {
                 </div>
                 <span class="eye-icon" data-question="${q.num}">👁️</span>
             `;
-            
+
             container.appendChild(div);
         });
     }
@@ -1491,9 +1481,9 @@ class ListeningCore {
         }
 
         nav.innerHTML = '';
-        
+
         const { part } = this.getTestMeta();
-        
+
         const prevPartBtn = document.createElement('button');
         prevPartBtn.className = 'nav-arrow-btn nav-prev-part';
         prevPartBtn.title = 'Part trước';
@@ -1521,7 +1511,7 @@ class ListeningCore {
             });
             nav.appendChild(btn);
         }
-        
+
         const nextPartBtn = document.createElement('button');
         nextPartBtn.className = 'nav-arrow-btn nav-next-part';
         nextPartBtn.title = 'Part tiếp theo';
@@ -1536,7 +1526,7 @@ class ListeningCore {
             }
         });
         nav.appendChild(nextPartBtn);
-        
+
         this.injectHighlightToggle();
     }
 
@@ -1544,7 +1534,7 @@ class ListeningCore {
         const questionNav = document.querySelector('.question-nav');
         if (!questionNav) return;
         if (questionNav.querySelector('#highlightToggle')) return;
-        
+
         const toggleWrapper = document.createElement('div');
         toggleWrapper.className = 'highlight-toggle-wrapper';
         toggleWrapper.title = 'Ẩn/hiện highlight cá nhân (không ảnh hưởng highlight đáp án)';
@@ -1577,13 +1567,13 @@ class ListeningCore {
             document.querySelector('.questions-panel'),
             document.querySelector('.reading-content')
         ].filter(Boolean);
-        
+
         const allHighlights = new Set();
         containers.forEach(container => {
             const highlights = container.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
             highlights.forEach(h => allHighlights.add(h));
         });
-        
+
         allHighlights.forEach(highlight => {
             if (visible) highlight.classList.remove('highlight-hidden');
             else highlight.classList.add('highlight-hidden');
@@ -1697,7 +1687,7 @@ class ListeningCore {
                 status: 'completed'
             });
             channel.close();
-        } catch (e) {}
+        } catch (e) { }
 
         this.clearDraft();
         this.disableInputs();
@@ -1819,7 +1809,7 @@ class ListeningCore {
             zIndex: '9999',
             transition: 'opacity 0.2s ease'
         });
-        
+
         overlay.innerHTML = `
             <div class="reset-modal">
                 <h3>Xác nhận Reset</h3>
@@ -1946,7 +1936,7 @@ class ListeningCore {
             const channel = new BroadcastChannel('ket_reset_channel');
             channel.postMessage({ action: 'reset', type: 'listening', book, test, part });
             channel.close();
-        } catch(e) {}
+        } catch (e) { }
 
         setTimeout(() => {
             this._isResetting = false;
@@ -1984,21 +1974,21 @@ class ListeningCore {
         if (explanationPanel && explanationTitle && explanationText) {
             explanationPanel.classList.add('show');
             explanationTitle.textContent = `Giải thích Câu ${questionNum}`;
-            
-            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] || 
-                      `<strong>Đáp án:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}</strong><br>`;
-            
+
+            let html = this.currentTestData.detailedExplanations[`q${questionNum}`] ||
+                `<strong>Đáp án:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}</strong><br>`;
+
             if (this.examSubmitted) {
                 const userAnswer = this.getUserAnswer(questionNum) || '(chưa trả lời)';
                 const isCorrect = this.isAnswerCorrect(questionNum, userAnswer);
-                
+
                 html += `<div style="margin-top:10px;padding:10px; background:${isCorrect ? '#e8f5e8' : '#ffebee'}; border-radius:5px;">`;
                 html += `<strong>Đáp án của bạn:</strong> ${userAnswer}<br>`;
                 if (!isCorrect) html += `<strong>Đáp án đúng:</strong> ${this.currentTestData.displayAnswers[`q${questionNum}`]}`;
                 else html += `<strong>Đúng!</strong>`;
                 html += `</div>`;
             }
-            
+
             explanationText.innerHTML = html;
         }
     }
@@ -2134,7 +2124,7 @@ class HighlightManager {
             const isSimple = this.isSimpleRange(range);
             if (isSimple) this.applyHighlightSimple(range, color);
             else this.applyHighlightComplex(range, color);
-        } catch (e) {}
+        } catch (e) { }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2220,7 +2210,7 @@ class HighlightManager {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
-        } catch (e) {}
+        } catch (e) { }
     }
 
     removeHighlight() {
@@ -2242,7 +2232,7 @@ class HighlightManager {
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
                 parent.removeChild(span);
             });
-        } catch (e) {}
+        } catch (e) { }
         window.getSelection().removeAllRanges();
         this.hideContextMenu();
         this.selectedRange = null;
@@ -2636,7 +2626,7 @@ class UIManager {
                 const key = localStorage.key(i);
                 total += (localStorage.getItem(key).length + key.length) * 2;
             }
-        } catch(e) {}
+        } catch (e) { }
 
         const limit = 7 * 1024 * 1024;
         const usedPercentage = (total / limit) * 100;
@@ -2705,12 +2695,12 @@ class UIManager {
 }
 
 // Global functions
-window.applyHighlight = function(color) {
+window.applyHighlight = function (color) {
     if (window.listeningCore && window.listeningCore.highlightManager) {
         window.listeningCore.highlightManager.applyHighlight(color);
     }
 };
-window.removeHighlight = function() {
+window.removeHighlight = function () {
     if (window.listeningCore && window.listeningCore.highlightManager) {
         window.listeningCore.highlightManager.removeHighlight();
     }

@@ -651,16 +651,6 @@ class TestTourManager {
                 }
                 .introjs-fixParent { z-index: 1000001 !important; }
                 .introjs-showElement { z-index: 1000002 !important; position: relative !important; }
-
-                /* Hide help button when both bars are collapsed */
-                body:has(.ielts-header.collapsed):has(.bottom-bar.collapsed) #test-tour-btn {
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                    transform: scale(0.8) !important;
-                }
-                #test-tour-btn {
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                }
             `;
             document.head.appendChild(customStyle);
         }
