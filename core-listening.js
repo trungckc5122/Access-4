@@ -3,128 +3,110 @@
  * Contains all functionality for listening tests across all parts and tests
  * Compatible with PET 1 & PET 2, Tests 1-4, Parts 1-4
  */
-        class TestTourManager {
-            constructor() {
-                this.tourLoaded = false;
-                this.dragData = { startX: 0, startY: 0, initialLeft: 0, initialTop: 0, hasMoved: false };
+class TestTourManager {
+    constructor() {
+        this.tourLoaded = false;
+        this.dragData = { startX: 0, startY: 0, initialLeft: 0, initialTop: 0, hasMoved: false };
+    }
+
+    init() {
+        if (document.getElementById('test-tour-btn')) return;
+
+        const btn = document.createElement('div');
+        btn.id = 'test-tour-btn';
+        btn.className = 'help-button test-tour-btn';
+        btn.innerHTML = '<span>?</span>';
+        btn.title = 'Xem hướng dẫn làm bài (Kéo thả để di chuyển)';
+        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:1000000 !important;transition:all 0.3s;user-select:none;visibility:visible !important;';
+
+        const posStr = localStorage.getItem('test-tour-btn-pos');
+        if (posStr) {
+            try {
+                const pos = JSON.parse(posStr);
+                Object.assign(btn.style, pos);
+            } catch (e) { }
+        }
+
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            // Movement detection for click vs drag
+            if (!this.dragData.hasMoved) {
+                if (Math.abs(clientX - this.dragData.startX) > 4 || Math.abs(clientY - this.dragData.startY) > 4) {
+                    this.dragData.hasMoved = true;
+                    btn.style.setProperty('transition', 'none', 'important');
+                    btn.style.cursor = 'grabbing';
+                }
             }
 
-            init() {
-                if (document.getElementById('test-tour-btn')) return;
+            if (this.dragData.hasMoved) {
+                btn.style.left = `${clientX - this.dragData.offsetX}px`;
+                btn.style.top = `${clientY - this.dragData.offsetY}px`;
+            }
+        };
 
-                const btn = document.createElement('div');
-                btn.id = 'test-tour-btn';
-                btn.className = 'help-button test-tour-btn';
-                btn.innerHTML = '<span>?</span>';
-                btn.title = 'Xem hướng dẫn làm bài';
-                btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:50px;height:50px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:1000000 !important;transition:background 0.2s, box-shadow 0.2s, transform 0.2s; user-select:none;visibility:visible !important;';
+        const stopDrag = () => {
+            if (this.dragData.isDragging) {
+                this.dragData.isDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('touchmove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchend', stopDrag);
+                
+                btn.style.setProperty('transition', 'all 0.3s', 'important');
+                btn.style.cursor = 'grab';
 
-                const posStr = localStorage.getItem('test-tour-btn-pos');
-                if (posStr) {
-                    try {
-                        const pos = JSON.parse(posStr);
-                        Object.assign(btn.style, pos);
-                    } catch (e) { }
+                if (!this.dragData.hasMoved) {
+                    this.startTour();
+                } else {
+                    const rect = btn.getBoundingClientRect();
+                    localStorage.setItem('test-tour-btn-pos', JSON.stringify({
+                        left: `${rect.left}px`,
+                        top: `${rect.top}px`,
+                        right: 'auto',
+                        bottom: 'auto'
+                    }));
                 }
+            }
+        };
 
-                // --- Drag logic (Note-like algorithm) ---
-                const onDrag = (e) => {
-                    if (!this.dragData.isDragging) return;
-                    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-                    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-                    const dx = clientX - this.dragData.startX;
-                    const dy = clientY - this.dragData.startY;
-                    btn.style.left = `${this.dragData.initialLeft + dx}px`;
-                    btn.style.top = `${this.dragData.initialTop + dy}px`;
-                    btn.style.right = 'auto';
-                    btn.style.bottom = 'auto';
-                };
+        const startDrag = (e) => {
+            this.dragData.isDragging = true;
+            this.dragData.hasMoved = false;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            this.dragData.startX = clientX;
+            this.dragData.startY = clientY;
+            
+            const rect = btn.getBoundingClientRect();
+            this.dragData.offsetX = clientX - rect.left;
+            this.dragData.offsetY = clientY - rect.top;
 
-                const stopDrag = () => {
-                    if (this.dragData.isDragging) {
-                        this.dragData.isDragging = false;
-                        document.removeEventListener('mousemove', onDrag);
-                        document.removeEventListener('touchmove', onDrag);
-                        document.removeEventListener('mouseup', stopDrag);
-                        document.removeEventListener('touchend', stopDrag);
-                        
-                        btn.style.transition = 'all 0.3s';
-                        btn.style.cursor = 'grab';
+            if (e.type === 'mousedown') {
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', stopDrag);
+            } else {
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('touchend', stopDrag);
+            }
+        };
 
-                        if (!this.dragData.hasMoved) {
-                            this.startTour();
-                        } else {
-                            const rect = btn.getBoundingClientRect();
-                            localStorage.setItem('test-tour-btn-pos', JSON.stringify({
-                                left: `${rect.left}px`,
-                                top: `${rect.top}px`,
-                                right: 'auto',
-                                bottom: 'auto'
-                            }));
-                        }
-                    }
-                };
+        btn.addEventListener('mousedown', startDrag);
+        btn.addEventListener('touchstart', startDrag, { passive: false });
 
-                btn.addEventListener('mousedown', (e) => {
-                    this.dragData.hasMoved = false;
-                    this.dragData.isDragging = true;
-                    this.dragData.startX = e.clientX;
-                    this.dragData.startY = e.clientY;
-                    const rect = btn.getBoundingClientRect();
-                    this.dragData.initialLeft = rect.left;
-                    this.dragData.initialTop = rect.top;
+        document.body.appendChild(btn);
 
-                    btn.style.transition = 'none';
-                    btn.style.cursor = 'grabbing';
-                    
-                    document.addEventListener('mousemove', onDrag);
-                    document.addEventListener('mouseup', stopDrag);
+        if (!document.getElementById('introjs-styles')) {
+            const link = document.createElement('link');
+            link.id = 'introjs-styles';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css';
+            document.head.appendChild(link);
 
-                    // Click vs Drag detection
-                    const checkMove = (me) => {
-                        if (Math.abs(me.clientX - this.dragData.startX) > 3 || Math.abs(me.clientY - this.dragData.startY) > 3) {
-                            this.dragData.hasMoved = true;
-                            document.removeEventListener('mousemove', checkMove);
-                        }
-                    };
-                    document.addEventListener('mousemove', checkMove);
-                });
-
-                btn.addEventListener('touchstart', (e) => {
-                    this.dragData.hasMoved = false;
-                    this.dragData.isDragging = true;
-                    this.dragData.startX = e.touches[0].clientX;
-                    this.dragData.startY = e.touches[0].clientY;
-                    const rect = btn.getBoundingClientRect();
-                    this.dragData.initialLeft = rect.left;
-                    this.dragData.initialTop = rect.top;
-
-                    btn.style.transition = 'none';
-                    btn.style.cursor = 'grabbing';
-                    
-                    document.addEventListener('touchmove', onDrag, { passive: false });
-                    document.addEventListener('touchend', stopDrag);
-
-                    const checkMove = (me) => {
-                        if (Math.abs(me.touches[0].clientX - this.dragData.startX) > 3 || Math.abs(me.touches[0].clientY - this.dragData.startY) > 3) {
-                            this.dragData.hasMoved = true;
-                            document.removeEventListener('touchmove', checkMove);
-                        }
-                    };
-                    document.addEventListener('touchmove', checkMove);
-                }, { passive: false });
-
-                document.body.appendChild(btn);
-
-                if (!document.getElementById('introjs-styles')) {
-                    const link = document.createElement('link');
-                    link.id = 'introjs-styles';
-                    link.rel = 'stylesheet';
-                    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css';
-                    document.head.appendChild(link);
-
-                    const customStyle = document.createElement('style');
-                    customStyle.innerHTML = `
+            const customStyle = document.createElement('style');
+            customStyle.innerHTML = `
                 .introjs-tooltip { border-radius: 12px !important; font-family: inherit !important; color: #333 !important; background-color: #fff !important; }
                 .introjs-tooltip * { color: #333 !important; }
                 .introjs-button { border-radius: 8px !important; font-weight: 600 !important; color: #333 !important; text-shadow: none !important; }
@@ -159,24 +141,24 @@
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 }
             `;
-                    document.head.appendChild(customStyle);
-                }
-            }
+            document.head.appendChild(customStyle);
+        }
+    }
 
-            loadIntroJs(callback) {
-                if (typeof introJs !== 'undefined') {
-                    callback();
-                    return;
-                }
-                if (this.tourLoaded) return;
-                this.tourLoaded = true;
+    loadIntroJs(callback) {
+        if (typeof introJs !== 'undefined') {
+            callback();
+            return;
+        }
+        if (this.tourLoaded) return;
+        this.tourLoaded = true;
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js';
         script.onload = callback;
         document.body.appendChild(script);
     }
 
-            startTour() {
+    startTour() {
         this.loadIntroJs(() => {
             const steps = [];
             const selectors = [
@@ -223,7 +205,7 @@
             tour.start();
         });
     }
-        }
+}
 
 
 /**
