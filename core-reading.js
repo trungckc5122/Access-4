@@ -495,7 +495,7 @@ class TestTourManager {
         btn.className = 'help-button test-tour-btn';
         btn.innerHTML = '<span>?</span>';
         btn.title = 'Xem hướng dẫn làm bài';
-        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:50px;height:50px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:9999;transition:background 0.2s, box-shadow 0.2s, transform 0.2s; user-select:none;';
+        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:50px;height:50px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:1000000 !important;transition:background 0.2s, box-shadow 0.2s, transform 0.2s; user-select:none;visibility:visible !important;';
         
         const posStr = localStorage.getItem('test-tour-btn-pos');
         if (posStr) {
@@ -588,7 +588,42 @@ class TestTourManager {
                 .introjs-nextbutton { background: var(--primary, #0d9488) !important; color: white !important; }
                 .introjs-skipbutton { color: #666 !important; position: absolute !important; right: 8px !important; top: 8px !important; width: 30px !important; height: 30px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 20px !important; padding: 0 !important; text-decoration: none !important; line-height: 1 !important; z-index: 10 !important; background: transparent !important; }
                 .introjs-skipbutton:hover { color: #000 !important; }
-                body:has(.introjs-overlay) .bottom-bar, body:has(.introjs-tooltip) .bottom-bar, body:has(.introjs-overlay) .ielts-header, body:has(.introjs-tooltip) .ielts-header, .introjs-showElement { transform: translateY(0) !important; opacity: 1 !important; visibility: visible !important; margin-top: 0 !important; }
+                body.introjs-showElement .ielts-header, body:has(.introjs-overlay) .ielts-header { 
+                    transform: translateY(0) !important; 
+                    opacity: 1 !important; 
+                    visibility: visible !important; 
+                    top: 0 !important; 
+                    display: flex !important; 
+                }
+                body.introjs-showElement .bottom-bar, body:has(.introjs-overlay) .bottom-bar { 
+                    transform: translateY(0) !important; 
+                    opacity: 1 !important; 
+                    visibility: visible !important; 
+                    bottom: 0 !important; 
+                    display: flex !important; 
+                }
+                body.introjs-showElement .question-nav, 
+                body:has(.introjs-overlay) .question-nav,
+                .question-nav.collapsed { 
+                    transform: none !important; 
+                    opacity: 1 !important; 
+                    visibility: visible !important; 
+                    display: flex !important;
+                    height: auto !important;
+                    margin: 0 !important;
+                }
+                .introjs-fixParent { z-index: 1000001 !important; }
+                .introjs-showElement { z-index: 1000002 !important; position: relative !important; }
+
+                /* Hide help button when both bars are collapsed */
+                body:has(.ielts-header.collapsed):has(.bottom-bar.collapsed) #test-tour-btn {
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                    transform: scale(0.8) !important;
+                }
+                #test-tour-btn {
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                }
             `;
             document.head.appendChild(customStyle);
         }
