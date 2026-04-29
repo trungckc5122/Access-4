@@ -481,6 +481,203 @@ class MiniDashboardManager {
     }
 }
 
+class TestTourManager {
+    constructor() {
+        this.tourLoaded = false;
+        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0, moved: false };
+    }
+
+    init() {
+        if (document.getElementById('test-tour-btn')) return;
+        
+        const btn = document.createElement('div');
+        btn.id = 'test-tour-btn';
+        btn.className = 'help-button test-tour-btn';
+        btn.innerHTML = '<span>?</span>';
+        btn.title = 'Xem hướng dẫn làm bài';
+        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:50px;height:50px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:9999;transition:background 0.2s, box-shadow 0.2s, transform 0.2s; user-select:none;';
+        
+        const posStr = localStorage.getItem('test-tour-btn-pos');
+        if (posStr) {
+            try {
+                const pos = JSON.parse(posStr);
+                Object.assign(btn.style, pos);
+            } catch(e) {}
+        }
+        
+        btn.onmouseover = () => { if(!this.dragData.isDragging) { btn.style.transform = 'scale(1.1)'; btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)'; } };
+        btn.onmouseout = () => { if(!this.dragData.isDragging) { btn.style.transform = 'scale(1)'; btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)'; } };
+        
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const dx = e.clientX - this.dragData.startX;
+            const dy = e.clientY - this.dragData.startY;
+            btn.style.left = `${this.dragData.initialX + dx}px`;
+            btn.style.top = `${this.dragData.initialY + dy}px`;
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+            btn.style.transform = 'scale(1.1)'; 
+        };
+
+        const stopDrag = () => {
+            if (this.dragData.isDragging) {
+                this.dragData.isDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                btn.style.transition = 'background 0.2s, box-shadow 0.2s, transform 0.2s';
+                btn.style.transform = 'scale(1)';
+                
+                const rect = btn.getBoundingClientRect();
+                localStorage.setItem('test-tour-btn-pos', JSON.stringify({
+                    left: `${rect.left}px`,
+                    top: `${rect.top}px`,
+                    right: 'auto',
+                    bottom: 'auto'
+                }));
+            }
+        };
+
+        btn.addEventListener('mousedown', (e) => {
+            this.dragData.isDragging = false;
+            this.dragData.moved = false;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = btn.getBoundingClientRect();
+            this.dragData.initialX = rect.left;
+            this.dragData.initialY = rect.top;
+            
+            const onFirstMove = (moveEvent) => {
+                const moveX = Math.abs(moveEvent.clientX - this.dragData.startX);
+                const moveY = Math.abs(moveEvent.clientY - this.dragData.startY);
+                if (moveX > 3 || moveY > 3) {
+                    this.dragData.isDragging = true;
+                    this.dragData.moved = true;
+                    btn.style.transition = 'none';
+                    document.removeEventListener('mousemove', onFirstMove);
+                    document.addEventListener('mousemove', onDrag);
+                }
+            };
+            
+            document.addEventListener('mousemove', onFirstMove);
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', onFirstMove);
+                stopDrag();
+            }, {once: true});
+        });
+
+        btn.onclick = (e) => {
+            if (!this.dragData.moved) {
+                this.startTour();
+            }
+        };
+        
+        document.body.appendChild(btn);
+
+        if (!document.getElementById('introjs-styles')) {
+            const link = document.createElement('link');
+            link.id = 'introjs-styles';
+            link.rel = 'stylesheet';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css';
+            document.head.appendChild(link);
+
+            const customStyle = document.createElement('style');
+            customStyle.innerHTML = `
+                .introjs-tooltip { border-radius: 12px !important; font-family: inherit !important; color: #333 !important; background-color: #fff !important; }
+                .introjs-tooltip * { color: #333 !important; }
+                .introjs-button { border-radius: 8px !important; font-weight: 600 !important; color: #333 !important; text-shadow: none !important; }
+                .introjs-nextbutton { background: var(--primary, #0d9488) !important; color: white !important; }
+                .introjs-skipbutton { color: #666 !important; position: absolute !important; right: 8px !important; top: 8px !important; width: 30px !important; height: 30px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 20px !important; padding: 0 !important; text-decoration: none !important; line-height: 1 !important; z-index: 10 !important; background: transparent !important; }
+                .introjs-skipbutton:hover { color: #000 !important; }
+                body:has(.introjs-overlay) .bottom-bar, body:has(.introjs-tooltip) .bottom-bar, body:has(.introjs-overlay) .ielts-header, body:has(.introjs-tooltip) .ielts-header, .introjs-showElement { transform: translateY(0) !important; opacity: 1 !important; visibility: visible !important; margin-top: 0 !important; }
+            `;
+            document.head.appendChild(customStyle);
+        }
+    }
+
+    loadIntroJs(callback) {
+        if (typeof introJs !== 'undefined') {
+            callback();
+            return;
+        }
+        if (this.tourLoaded) return;
+        this.tourLoaded = true;
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js';
+        script.onload = callback;
+        document.body.appendChild(script);
+    }
+
+    startTour() {
+        this.loadIntroJs(() => {
+            const header = document.querySelector('.ielts-header') || document.querySelector('header');
+            const leftCol = document.querySelector('.left-col') || document.querySelector('.reading-card') || document.querySelector('.audio-section') || document.querySelector('.transcript-panel');
+            const rightCol = document.querySelector('.right-col') || document.querySelector('.questions-list') || document.querySelector('.questions-container') || document.querySelector('.questions-panel');
+            const submitBtn = document.getElementById('submitBtn');
+            const dashboardBtn = document.getElementById('mini-dashboard-toggle');
+            const noteBtn = document.querySelector('.note-toggle-btn');
+            const timer = document.getElementById('timerDisplay') || document.querySelector('.timer');
+            
+            const themeToggle = document.querySelector('.theme-toggle-btn');
+            const collapseToggle = document.querySelector('.autocollapse-toggle');
+            const fontControls = document.querySelector('.font-controls');
+            const audioControls = document.querySelector('.audio-controls');
+            const highlightToggle = document.querySelector('.highlight-toggle-wrapper');
+            const prevPartBtn = document.querySelector('.nav-prev-part');
+            const nextPartBtn = document.querySelector('.nav-next-part');
+            const storageIndicator = document.getElementById('storageIndicator');
+
+            const steps = [];
+            
+            if (header) steps.push({ element: header, title: 'ℹ️ Thông tin bài thi', intro: 'Khu vực hiển thị tiêu đề bài thi và các thông tin cơ bản.' });
+            if (timer) steps.push({ element: timer, title: '⏱️ Đồng hồ đếm ngược', intro: 'Theo dõi thời gian làm bài còn lại.' });
+            
+            if (themeToggle) steps.push({ element: themeToggle, title: '🌓 Giao diện', intro: 'Bật/tắt chế độ sáng tối để bảo vệ mắt.' });
+            if (collapseToggle) steps.push({ element: collapseToggle, title: '↕️ Ẩn/hiện Header', intro: 'Tự động ẩn thanh tiêu đề khi cuộn trang để mở rộng không gian làm bài.' });
+            if (fontControls) steps.push({ element: fontControls, title: '🔠 Cỡ chữ', intro: 'Thay đổi kích thước chữ cho phù hợp.' });
+            if (audioControls) steps.push({ element: audioControls, title: '🔊 Điều khiển Audio', intro: 'Phát, tạm dừng và điều chỉnh tốc độ, âm lượng bài nghe.' });
+            
+            if (leftCol) steps.push({ element: leftCol, title: '📖 Nội dung bài', intro: 'Nội dung bài đọc/nghe nằm ở đây. Bạn có thể bôi đen văn bản để highlight.' });
+            if (highlightToggle) steps.push({ element: highlightToggle, title: '🖍️ Bật/tắt Highlight', intro: 'Ẩn hoặc hiện các phần văn bản mà bạn đã tự highlight.' });
+            
+            if (rightCol) steps.push({ element: rightCol, title: '📝 Danh sách câu hỏi', intro: 'Trả lời các câu hỏi tại khu vực này. Trạng thái sẽ được lưu tự động.' });
+            if (noteBtn) steps.push({ element: noteBtn, title: '🗒️ Ghi chú nhanh', intro: 'Mở popup ghi chú để nháp thông tin trong lúc làm bài.' });
+            if (dashboardBtn) steps.push({ element: dashboardBtn, title: '📊 Tiến độ bài thi', intro: 'Mở bảng theo dõi số lượng câu đã làm ở các Part khác.' });
+            if (storageIndicator) steps.push({ element: storageIndicator, title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ khả dụng còn lại của trình duyệt.' });
+            
+            if (prevPartBtn) steps.push({ element: prevPartBtn, title: '⬅️ Part trước', intro: 'Chuyển về Part trước đó.' });
+            if (nextPartBtn) steps.push({ element: nextPartBtn, title: '➡️ Part tiếp theo', intro: 'Chuyển sang Part tiếp theo.' });
+            
+            if (submitBtn) steps.push({ element: submitBtn, title: '✅ Nộp bài', intro: 'Khi hoàn thành, nhấn Nộp bài để xem điểm số và giải thích chi tiết.' });
+
+            if (steps.length === 0) return;
+
+            const tour = introJs().setOptions({
+                steps: steps,
+                nextLabel: 'Tiếp →',
+                prevLabel: '← Quay lại',
+                skipLabel: '×',
+                doneLabel: 'Hoàn tất',
+                showProgress: true,
+                showBullets: false,
+                scrollToElement: true,
+                scrollPadding: 100
+            });
+            
+            tour.onbeforechange(function(targetElement) {
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+
+            const helpBtn = document.getElementById('test-tour-btn');
+            if (helpBtn) helpBtn.style.display = 'none';
+            tour.onexit(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
+            tour.oncomplete(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
+
+            tour.start();
+        });
+    }
+}
 
 class ReadingCore {
     constructor() {
@@ -547,6 +744,8 @@ class ReadingCore {
         
         this.updateAnswerCount();
         
+        if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
+
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
     }
 
