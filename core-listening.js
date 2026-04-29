@@ -6,97 +6,25 @@
 class TestTourManager {
     constructor() {
         this.tourLoaded = false;
-        this.dragData = { startX: 0, startY: 0, initialLeft: 0, initialTop: 0, hasMoved: false };
     }
 
     init() {
         if (document.getElementById('test-tour-btn')) return;
 
+        const footer = document.querySelector('.bottom-bar');
+        if (!footer) return;
+
         const btn = document.createElement('div');
         btn.id = 'test-tour-btn';
         btn.className = 'help-button test-tour-btn';
         btn.innerHTML = '<span>?</span>';
-        btn.title = 'Xem hướng dẫn làm bài (Kéo thả để di chuyển)';
-        btn.style.cssText = 'position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:28px;font-weight:800;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:1000000 !important;transition:all 0.3s;user-select:none;visibility:visible !important;';
+        btn.title = 'Xem hướng dẫn làm bài';
+        btn.style.cssText = 'width:28px;height:28px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);margin-right:12px;user-select:none;flex-shrink:0;';
 
-        const posStr = localStorage.getItem('test-tour-btn-pos');
-        if (posStr) {
-            try {
-                const pos = JSON.parse(posStr);
-                Object.assign(btn.style, pos);
-            } catch (e) { }
-        }
-
-        const onDrag = (e) => {
-            if (!this.dragData.isDragging) return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            // Movement detection for click vs drag
-            if (!this.dragData.hasMoved) {
-                if (Math.abs(clientX - this.dragData.startX) > 4 || Math.abs(clientY - this.dragData.startY) > 4) {
-                    this.dragData.hasMoved = true;
-                    btn.style.setProperty('transition', 'none', 'important');
-                    btn.style.cursor = 'grabbing';
-                }
-            }
-
-            if (this.dragData.hasMoved) {
-                btn.style.left = `${clientX - this.dragData.offsetX}px`;
-                btn.style.top = `${clientY - this.dragData.offsetY}px`;
-            }
-        };
-
-        const stopDrag = () => {
-            if (this.dragData.isDragging) {
-                this.dragData.isDragging = false;
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('touchmove', onDrag);
-                document.removeEventListener('mouseup', stopDrag);
-                document.removeEventListener('touchend', stopDrag);
-                
-                btn.style.setProperty('transition', 'all 0.3s', 'important');
-                btn.style.cursor = 'grab';
-
-                if (!this.dragData.hasMoved) {
-                    this.startTour();
-                } else {
-                    const rect = btn.getBoundingClientRect();
-                    localStorage.setItem('test-tour-btn-pos', JSON.stringify({
-                        left: `${rect.left}px`,
-                        top: `${rect.top}px`,
-                        right: 'auto',
-                        bottom: 'auto'
-                    }));
-                }
-            }
-        };
-
-        const startDrag = (e) => {
-            this.dragData.isDragging = true;
-            this.dragData.hasMoved = false;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            this.dragData.startX = clientX;
-            this.dragData.startY = clientY;
-            
-            const rect = btn.getBoundingClientRect();
-            this.dragData.offsetX = clientX - rect.left;
-            this.dragData.offsetY = clientY - rect.top;
-
-            if (e.type === 'mousedown') {
-                document.addEventListener('mousemove', onDrag);
-                document.addEventListener('mouseup', stopDrag);
-            } else {
-                document.addEventListener('touchmove', onDrag, { passive: false });
-                document.addEventListener('touchend', stopDrag);
-            }
-        };
-
-        btn.addEventListener('mousedown', startDrag);
-        btn.addEventListener('touchstart', startDrag, { passive: false });
-
-        document.body.appendChild(btn);
+        btn.addEventListener('click', () => this.startTour());
+        
+        // Prepend to footer so it's on the left
+        footer.insertBefore(btn, footer.firstChild);
 
         if (!document.getElementById('introjs-styles')) {
             const link = document.createElement('link');
