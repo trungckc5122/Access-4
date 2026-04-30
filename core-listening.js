@@ -1,5 +1,27 @@
 /**
  * CORE LISTENING ENGINE - PET B1 PRELIMINARY
+ * Premium 'Tr' Favicon System
+ */
+(function() {
+    const faviconUri = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOSIgZmlsbD0iIzBkOTQ4OCIvPjxwYXRoIGQ9Ik02IDEwaDEydjNoLTQuNXYxMWgtM3YtMTFINnYtM3ptMTQgNnY4aC0zdi01YzAtMS41IDEtMi41IDIuNS0yLjVoMi41djNoLTJ6IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iMjYiIGN5PSI2IiByPSIzIiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+";
+    const inject = () => {
+        if (!document.querySelector('link[rel*="icon"]')) {
+            const link = document.createElement('link');
+            link.rel = 'icon'; link.type = 'image/svg+xml'; link.href = faviconUri;
+            document.head.appendChild(link);
+        }
+        if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+            const link = document.createElement('link');
+            link.rel = 'apple-touch-icon'; link.href = faviconUri;
+            document.head.appendChild(link);
+        }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+    else inject();
+})();
+
+/**
+ * CORE LISTENING ENGINE - PET B1 PRELIMINARY
  * Contains all functionality for listening tests across all parts and tests
  * Compatible with PET 1 & PET 2, Tests 1-4, Parts 1-4
  */
@@ -22,7 +44,7 @@ class TestTourManager {
         btn.style.cssText = 'width:28px;height:28px;background:var(--primary,#0d9488);color:#fff;border-radius:50%;display:flex !important;align-items:center;justify-content:center;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);margin-right:12px;user-select:none;flex-shrink:0;';
 
         btn.addEventListener('click', () => this.startTour());
-        
+
         // Prepend to footer so it's on the left
         footer.insertBefore(btn, footer.firstChild);
 

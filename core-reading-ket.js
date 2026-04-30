@@ -1,5 +1,27 @@
 /**
  * CORE READING ENGINE - KET A2 KEY
+ * Premium 'Tr' Favicon System
+ */
+(function() {
+    const faviconUri = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOSIgZmlsbD0iIzBkOTQ4OCIvPjxwYXRoIGQ9Ik02IDEwaDEydjNoLTQuNXYxMWgtM3YtMTFINnYtM3ptMTQgNnY4aC0zdi01YzAtMS41IDEtMi41IDIuNS0yLjVoMi41djNoLTJ6IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iMjYiIGN5PSI2IiByPSIzIiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+";
+    const inject = () => {
+        if (!document.querySelector('link[rel*="icon"]')) {
+            const link = document.createElement('link');
+            link.rel = 'icon'; link.type = 'image/svg+xml'; link.href = faviconUri;
+            document.head.appendChild(link);
+        }
+        if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+            const link = document.createElement('link');
+            link.rel = 'apple-touch-icon'; link.href = faviconUri;
+            document.head.appendChild(link);
+        }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
+    else inject();
+})();
+
+/**
+ * CORE READING ENGINE - KET A2 KEY
  * Contains all functionality for reading tests across all parts and tests
  * Compatible with KET 1 & KET 2, Tests 1-4, Parts 1-5
  * 
@@ -584,7 +606,7 @@ class TestTourManager {
             const dashboardBtn = document.getElementById('mini-dashboard-toggle');
             const noteBtn = document.querySelector('.note-toggle-btn');
             const timer = document.getElementById('timerDisplay') || document.querySelector('.timer');
-            
+
             const themeToggle = document.querySelector('.theme-toggle-btn');
             const collapseToggle = document.querySelector('.autocollapse-toggle');
             const fontControls = document.querySelector('.font-controls');
@@ -595,26 +617,26 @@ class TestTourManager {
             const storageIndicator = document.getElementById('storageIndicator');
 
             const steps = [];
-            
+
             if (header) steps.push({ element: header, title: 'ℹ️ Thông tin bài thi', intro: 'Khu vực hiển thị tiêu đề bài thi và các thông tin cơ bản.' });
             if (timer) steps.push({ element: timer, title: '⏱️ Đồng hồ đếm ngược', intro: 'Theo dõi thời gian làm bài còn lại.' });
-            
+
             if (themeToggle) steps.push({ element: themeToggle, title: '🌓 Giao diện', intro: 'Bật/tắt chế độ sáng tối để bảo vệ mắt.' });
             if (collapseToggle) steps.push({ element: collapseToggle, title: '↕️ Ẩn/hiện Header', intro: 'Tự động ẩn thanh tiêu đề khi cuộn trang để mở rộng không gian làm bài.' });
             if (fontControls) steps.push({ element: fontControls, title: '🔠 Cỡ chữ', intro: 'Thay đổi kích thước chữ cho phù hợp.' });
             if (audioControls) steps.push({ element: audioControls, title: '🔊 Điều khiển Audio', intro: 'Phát, tạm dừng và điều chỉnh tốc độ, âm lượng bài nghe.' });
-            
+
             if (leftCol) steps.push({ element: leftCol, title: '📖 Nội dung bài', intro: 'Nội dung bài đọc/nghe nằm ở đây. Bạn có thể bôi đen văn bản để highlight.' });
             if (highlightToggle) steps.push({ element: highlightToggle, title: '🖍️ Bật/tắt Highlight', intro: 'Ẩn hoặc hiện các phần văn bản mà bạn đã tự highlight.' });
-            
+
             if (rightCol) steps.push({ element: rightCol, title: '📝 Danh sách câu hỏi', intro: 'Trả lời các câu hỏi tại khu vực này. Trạng thái sẽ được lưu tự động.' });
             if (noteBtn) steps.push({ element: noteBtn, title: '🗒️ Ghi chú nhanh', intro: 'Mở popup ghi chú để nháp thông tin trong lúc làm bài.' });
             if (dashboardBtn) steps.push({ element: dashboardBtn, title: '📊 Tiến độ bài thi', intro: 'Mở bảng theo dõi số lượng câu đã làm ở các Part khác.' });
             if (storageIndicator) steps.push({ element: storageIndicator, title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ khả dụng còn lại của trình duyệt.' });
-            
+
             if (prevPartBtn) steps.push({ element: prevPartBtn, title: '⬅️ Part trước', intro: 'Chuyển về Part trước đó.' });
             if (nextPartBtn) steps.push({ element: nextPartBtn, title: '➡️ Part tiếp theo', intro: 'Chuyển sang Part tiếp theo.' });
-            
+
             if (submitBtn) steps.push({ element: submitBtn, title: '✅ Nộp bài', intro: 'Khi hoàn thành, nhấn Nộp bài để xem điểm số và giải thích chi tiết.' });
 
             if (steps.length === 0) return;
@@ -630,8 +652,8 @@ class TestTourManager {
                 scrollToElement: true,
                 scrollPadding: 100
             });
-            
-            tour.onbeforechange(function(targetElement) {
+
+            tour.onbeforechange(function (targetElement) {
                 if (targetElement) {
                     targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
@@ -639,8 +661,8 @@ class TestTourManager {
 
             const helpBtn = document.getElementById('test-tour-btn');
             if (helpBtn) helpBtn.style.display = 'none';
-            tour.onexit(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
-            tour.oncomplete(() => { if(helpBtn) helpBtn.style.display = 'flex'; });
+            tour.onexit(() => { if (helpBtn) helpBtn.style.display = 'flex'; });
+            tour.oncomplete(() => { if (helpBtn) helpBtn.style.display = 'flex'; });
 
             tour.start();
         });
@@ -1085,7 +1107,7 @@ class ReadingCore {
             }
 
             this.updateAnswerCount();
-            
+
             if (draft.flaggedQuestions) {
                 this.flaggedQuestions = new Set(draft.flaggedQuestions);
                 this.flaggedQuestions.forEach(qNum => this.updateFlagUI(qNum));
@@ -1551,7 +1573,7 @@ class ReadingCore {
         const questionDiv = document.getElementById(`question-${qNum}`) || document.getElementById(`q${qNum}`)?.closest('.question-item');
         const navBtn = document.querySelector(`.nav-btn[data-question="${qNum}"]`) || document.querySelector(`.nav-btn[data-q="${qNum}"]`);
         const flagIcon = document.querySelector(`.eye-icon[data-question="${qNum}"], .eye-icon[data-q="${qNum}"]`);
-        
+
         const isFlagged = this.flaggedQuestions.has(qNum);
 
         if (isFlagged) {
@@ -1720,7 +1742,7 @@ class ReadingCore {
     injectFlagToggle() {
         const navContainer = document.querySelector('.question-nav');
         if (!navContainer) return;
-        
+
         const oldToggle = navContainer.querySelector('.flag-toggle-wrapper');
         if (oldToggle) oldToggle.remove();
 
@@ -1737,7 +1759,7 @@ class ReadingCore {
             </label>
             <span class="toggle-label">Hiện Cờ</span>
         `;
-        
+
         const highlightToggle = navContainer.querySelector('.highlight-toggle-wrapper');
         if (highlightToggle) {
             navContainer.insertBefore(toggleWrapper, highlightToggle);
@@ -1758,7 +1780,7 @@ class ReadingCore {
     injectHighlightToggle() {
         const questionNav = document.querySelector('.question-nav');
         if (!questionNav) return;
-        
+
         const oldToggle = questionNav.querySelector('.highlight-toggle-wrapper');
         if (oldToggle) oldToggle.remove();
 
@@ -1818,7 +1840,7 @@ class ReadingCore {
     getQuestionRange() {
         if (!this.currentTestData) return { start: 1, end: 5 };
         const part = this.currentTestData.part || 1;
-        switch(part) {
+        switch (part) {
             case 1: return { start: 1, end: 6 };      // 6 questions
             case 2: return { start: 7, end: 13 };     // 7 questions
             case 3: return { start: 14, end: 18 };    // 5 questions
@@ -3043,7 +3065,7 @@ class ReadingUIManager {
                 const key = localStorage.key(i);
                 total += (localStorage.getItem(key).length + key.length) * 2;
             }
-        } catch(e) {}
+        } catch (e) { }
 
         const limit = 7 * 1024 * 1024;
         const usedPercentage = (total / limit) * 100;
