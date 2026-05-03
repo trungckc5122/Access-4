@@ -158,6 +158,9 @@ export class AuthUI {
   }
 
   async signOut() {
+    // 0. Cập nhật giao diện ngay lập tức để người dùng thấy sự thay đổi
+    this.onSignedOut();
+
     try {
       // 1. Gọi lệnh signOut của Supabase với phạm vi toàn cục
       await supabase.auth.signOut({ scope: 'global' });
@@ -177,10 +180,8 @@ export class AuthUI {
     // 4. Xóa sạch Hash trên URL
     window.history.replaceState("", document.title, window.location.pathname);
     
-    // 5. Đợi một chút để Supabase dọn dẹp xong rồi mới reload
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    // 5. Reload lại trang để đảm bảo sạch sẽ hoàn toàn
+    window.location.reload();
   }
 
   onSignedIn(user) {
@@ -204,10 +205,17 @@ export class AuthUI {
   }
 
   onSignedOut() {
-    const txt = document.getElementById('auth-btn-text');
-    if (txt) txt.textContent = '🔑 Đăng nhập';
     const btn = document.getElementById('auth-btn');
-    if (btn) btn.onclick = () => this.showModal();
+    if (btn) {
+      // Làm mới nút để dọn sạch mọi listener cũ (như cái confirm đăng xuất)
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      const txt = newBtn.querySelector('#auth-btn-text');
+      if (txt) txt.textContent = '🔑 Đăng nhập';
+      
+      newBtn.addEventListener('click', () => this.showModal());
+    }
   }
 
   showModal() {
