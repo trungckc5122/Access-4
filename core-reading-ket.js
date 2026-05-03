@@ -759,7 +759,7 @@ class ReadingCore {
             
             window.CloudStorage = CloudStorage;
             this._authUI = new AuthUI();
-            await this._authUI.init();
+            await this._authUI.init({ injectButton: false });
 
             if (await CloudStorage.shouldMigrate()) {
                 CloudStorage.migrateLocalStorageToCloud();
