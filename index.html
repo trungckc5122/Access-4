@@ -4444,27 +4444,29 @@
 
     // ── Đồng bộ & Migrate ──
     supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
+      console.log('[Cloud] Auth Event:', event);
+      
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        const user = session?.user || await getCurrentUser();
+        if (!user) return;
+
         // 1. Luôn ưu tiên sync từ Cloud về Local trước
         const syncedCount = await CloudStorage.syncCloudToLocal();
         if (syncedCount > 0) {
-          if (typeof initStatusBadges === 'function') initStatusBadges();
+          showCloudToast(`☁️ Đã tải ${syncedCount} bài từ đám mây!`);
+          if (typeof window.initStatusBadges === 'function') {
+            window.initStatusBadges();
+          }
         }
 
-        // 2. Nếu có dữ liệu local chưa có trên cloud thì migrate
+        // 2. Nếu có dữ liệu local chưa có trên cloud (migrate lần đầu)
         if (await CloudStorage.shouldMigrate()) {
           const count = await CloudStorage.migrateLocalStorageToCloud();
-          if (count > 0) showCloudToast(`☁️ Đã đồng bộ ${count} bài lên cloud!`);
-          if (typeof initStatusBadges === 'function') initStatusBadges();
+          if (count > 0) showCloudToast(`☁️ Đã đồng bộ thêm ${count} bài lên đám mây!`);
+          if (typeof window.initStatusBadges === 'function') {
+            window.initStatusBadges();
+          }
         }
-      }
-    });
-
-    // Sync ngay lập tức nếu đã có session từ trước
-    getCurrentUser().then(async user => {
-      if (user) {
-        const count = await CloudStorage.syncCloudToLocal();
-        if (count > 0 && typeof initStatusBadges === 'function') initStatusBadges();
       }
     });
 
