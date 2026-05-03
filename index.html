@@ -4442,13 +4442,29 @@
     const authUI = new AuthUI();
     authUI.init();
 
-    // ── Migrate localStorage → cloud lần đầu sau khi đăng nhập ──
+    // ── Đồng bộ & Migrate ──
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
+        // 1. Luôn ưu tiên sync từ Cloud về Local trước
+        const syncedCount = await CloudStorage.syncCloudToLocal();
+        if (syncedCount > 0) {
+          if (typeof initStatusBadges === 'function') initStatusBadges();
+        }
+
+        // 2. Nếu có dữ liệu local chưa có trên cloud thì migrate
         if (await CloudStorage.shouldMigrate()) {
           const count = await CloudStorage.migrateLocalStorageToCloud();
           if (count > 0) showCloudToast(`☁️ Đã đồng bộ ${count} bài lên cloud!`);
+          if (typeof initStatusBadges === 'function') initStatusBadges();
         }
+      }
+    });
+
+    // Sync ngay lập tức nếu đã có session từ trước
+    getCurrentUser().then(async user => {
+      if (user) {
+        const count = await CloudStorage.syncCloudToLocal();
+        if (count > 0 && typeof initStatusBadges === 'function') initStatusBadges();
       }
     });
 
