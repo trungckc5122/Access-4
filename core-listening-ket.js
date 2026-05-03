@@ -810,8 +810,8 @@ class ListeningCore {
                 const wasCompleted = this.isCompleted();
                 await CloudStorage.syncCloudToLocal();
                 const nowCompleted = this.isCompleted();
-                if (wasCompleted && !nowCompleted) {
-                    console.log('[Cloud] Data removed from cloud, reloading...');
+                if (wasCompleted !== nowCompleted) {
+                    console.log(`[Cloud] Data status changed (${wasCompleted} -> ${nowCompleted}), reloading...`);
                     location.reload();
                 }
             });
