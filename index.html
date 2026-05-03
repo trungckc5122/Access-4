@@ -3016,14 +3016,43 @@
         showBtn.addEventListener('click', show);
         closeBtns.forEach(btn => btn.addEventListener('click', hide));
         modal.addEventListener('click', (e) => { if (e.target === modal) hide(); });
-        confirmBtn.addEventListener('click', () => {
-          const tab = localStorage.getItem('activeTab');
+        confirmBtn.addEventListener('click', async () => {
+          // Backup UI preferences
+          const tab   = localStorage.getItem('activeTab');
           const theme = localStorage.getItem('pet-theme');
+
+          // Xóa toàn bộ dữ liệu bài làm trên Supabase (nếu đã đăng nhập)
+          if (window.CloudStorage && window._supabase) {
+            try {
+              const { data: { user } } = await window._supabase.auth.getUser();
+              if (user) {
+                // Lấy tất cả key bài làm từ localStorage trước khi xóa
+                const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+                const examKeys = Object.keys(localStorage).filter(k =>
+                  examPrefixes.some(p => k.startsWith(p))
+                );
+                // Xóa từng key trên Supabase (remove() tự parse và xóa đúng row/field)
+                for (const key of examKeys) {
+                  await window.CloudStorage.remove(key).catch(() => {});
+                }
+                console.log('[Reset] Deleted', examKeys.length, 'items from Supabase');
+              }
+            } catch (e) {
+              console.error('[Reset] Cloud delete failed:', e);
+            }
+          }
+
+          // Xóa localStorage
           localStorage.clear();
-          if (tab) localStorage.setItem('activeTab', tab);
+          if (tab)   localStorage.setItem('activeTab', tab);
           if (theme) localStorage.setItem('pet-theme', theme);
           Object.keys(sessionStorage).forEach(k => { if (k.startsWith('broken_link_')) sessionStorage.removeItem(k); });
-          location.reload();
+
+          // Cập nhật badge và tiến độ ngay, không cần reload
+          if (typeof window.initStatusBadges === 'function') {
+            window.initStatusBadges();
+          }
+          hide();
         });
       }
 
@@ -4441,6 +4470,10 @@
       titleWrapper.appendChild(cloudBar);
 
     }
+
+    // ── Expose CloudStorage & supabase to window for non-module scripts ──
+    window.CloudStorage = CloudStorage;
+    window._supabase = supabase;
 
     // ── Khởi tạo Auth UI ──
     const authUI = new AuthUI();
