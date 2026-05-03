@@ -154,23 +154,25 @@ export class AuthUI {
 
   async signOut() {
     await supabase.auth.signOut();
+    // Xóa các tham số hash/query trên URL (như access_token) do Supabase trả về sau khi login OAuth
+    // để tránh việc trang reload lại và tự động đăng nhập tiếp bằng token cũ.
+    window.location.href = window.location.pathname;
   }
 
   onSignedIn(user) {
     const btn = document.getElementById('auth-btn');
     const txt = document.getElementById('auth-btn-text');
     if (txt) {
-      const name = user.user_metadata?.full_name || user.email.split('@')[0];
-      txt.textContent = name;
+      txt.innerHTML = '✅ Đã đăng nhập';
     }
     if (btn) btn.onclick = () => {
-      if (confirm('Đăng xuất?')) this.signOut();
+      if (confirm('Đăng xuất khỏi hệ thống?')) this.signOut();
     };
   }
 
   onSignedOut() {
     const txt = document.getElementById('auth-btn-text');
-    if (txt) txt.textContent = 'Đăng nhập';
+    if (txt) txt.textContent = '🔑 Đăng nhập';
     const btn = document.getElementById('auth-btn');
     if (btn) btn.onclick = () => this.showModal();
   }
