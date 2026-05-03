@@ -8,9 +8,9 @@ const SUPABASE_ANON = 'sb_publishable_YiqKXa_aHECEv_HiDm_puw_Iz3vqmJx';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    persistSession: true,        // tự lưu session vào localStorage
+    persistSession: true,         // BẬT lại ghi nhớ phiên đăng nhập
     autoRefreshToken: true,
-    detectSessionInUrl: true     // xử lý OAuth callback tự động
+    detectSessionInUrl: true
   }
 });
 
