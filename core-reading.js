@@ -2306,10 +2306,13 @@ class ReadingCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
-        // Cloud sync
-        if (this._cloudStorage) {
-            this._cloudStorage.remove(draftKey).catch(() => {});
-            this._cloudStorage.remove(completedKey).catch(() => {});
+        // 2. Xóa Supabase (Sử dụng window.CloudStorage thay vì this._cloudStorage)
+        if (window.CloudStorage) {
+            window.CloudStorage.remove(draftKey).catch(() => { });
+            window.CloudStorage.remove(completedKey).catch(() => { });
+            if (clearHighlights) {
+                window.CloudStorage.remove(this.getHighlightStorageKey()).catch(() => { });
+            }
         }
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);

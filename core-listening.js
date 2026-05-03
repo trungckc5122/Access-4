@@ -2205,7 +2205,7 @@ class StorageManager {
         localStorage.removeItem(key);
 
         if (window.CloudStorage) {
-            window.CloudStorage.remove(key);
+            window.CloudStorage.remove(key).catch(() => { });
         }
         console.log('[Storage] Cleared submitted state:', key);
     }

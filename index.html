@@ -2458,7 +2458,11 @@
               if (resultData) {
                 try {
                   const parsed = JSON.parse(resultData);
-                  if (parsed.correctCount !== undefined && parsed.totalQuestions !== undefined) {
+                  if (
+                    parsed.correctCount !== undefined && parsed.correctCount !== null &&
+                    parsed.totalQuestions !== undefined && parsed.totalQuestions !== null &&
+                    parsed.totalQuestions > 0
+                  ) {
                     const score = Math.round((parsed.correctCount / parsed.totalQuestions) * 100);
                     const scoreBadge = document.createElement('span');
                     let scoreClass = 'low';
@@ -4447,6 +4451,18 @@
       console.log('[Cloud] Auth Event:', event);
       
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        // Nếu người dùng đã chủ động đăng xuất → bỏ qua INITIAL_SESSION tự động
+        if (event === 'INITIAL_SESSION' && localStorage.getItem('_user_signed_out') === '1') {
+          console.log('[Auth] User previously signed out, ignoring INITIAL_SESSION.');
+          await supabase.auth.signOut({ scope: 'local' });
+          return;
+        }
+        
+        // Nếu người dùng chủ động đăng nhập → xóa flag đăng xuất
+        if (event === 'SIGNED_IN') {
+          localStorage.removeItem('_user_signed_out');
+        }
+
         const user = session?.user || await getCurrentUser();
         if (!user) return;
 
