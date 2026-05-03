@@ -166,17 +166,19 @@ export class AuthUI {
       }
     });
 
-    // Xóa các tham số hash/query trên URL (như access_token)
-    window.location.href = window.location.pathname;
+    // Xóa các tham số hash/query trên URL (như access_token) mà không kích hoạt load lại ngay lập tức
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Bắt buộc tải lại trang để làm sạch hoàn toàn trạng thái
+    window.location.reload();
   }
 
   onSignedIn(user) {
     const btn = document.getElementById('auth-btn');
     const txt = document.getElementById('auth-btn-text');
     if (txt) {
-      // Hiển thị lại tên người dùng như cũ thay vì dấu tick
-      const name = user.user_metadata?.full_name || user.email.split('@')[0];
-      txt.textContent = name;
+      // Hiển thị trực tiếp email của người dùng
+      txt.textContent = user.email;
     }
     if (btn) btn.onclick = () => {
       if (confirm('Đăng xuất khỏi hệ thống?')) this.signOut();
