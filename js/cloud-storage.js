@@ -117,27 +117,37 @@ export class CloudStorage {
     const params = parseStorageKey(localStorageKey);
     if (!params) return;
 
-    // Reset field tương ứng thay vì xóa cả row
     const isHighlight = localStorageKey.endsWith('_highlights');
     const isNote      = localStorageKey.endsWith('_note');
+    const isSubmitted = localStorageKey.endsWith('_submitted');
+    const isDraft     = localStorageKey.endsWith('_draft');
 
-    if (isHighlight) {
-      await supabase.from('progress')
-        .update({ highlights: null })
-        .eq('user_id', user.id)
-        .eq('exam', params.exam).eq('skill', params.skill)
-        .eq('book', params.book).eq('test', params.test).eq('part', params.part);
-    } else if (isNote) {
-      await supabase.from('progress')
-        .update({ note: null })
-        .eq('user_id', user.id)
-        .match(params);
-    } else {
-      // Xóa hẳn row
-      await supabase.from('progress')
-        .delete()
-        .eq('user_id', user.id)
-        .match({ ...params });
+    try {
+      if (isHighlight) {
+        await supabase.from('progress')
+          .update({ highlights: null })
+          .eq('user_id', user.id)
+          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+      } else if (isNote) {
+        await supabase.from('progress')
+          .update({ note: null })
+          .eq('user_id', user.id)
+          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+      } else if (isDraft) {
+        await supabase.from('progress')
+          .update({ answers: null, status: null })
+          .eq('user_id', user.id)
+          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+      } else {
+        // completed hoặc _submitted → xóa hẳn row hoặc reset status/answers/score
+        await supabase.from('progress')
+          .delete()
+          .eq('user_id', user.id)
+          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+      }
+      console.log('[CloudStorage] Removed from cloud:', localStorageKey);
+    } catch (e) {
+      console.error('[CloudStorage] Remove failed:', e);
     }
   }
 
@@ -216,21 +226,27 @@ export class CloudStorage {
         // 1. Sync Completed Result
         if (row.status === 'completed') {
           const completedData = {
-            correctCount: row.score,
-            totalQuestions: row.total,
+            correctCount: row.score ?? 0,         // Fallback null to 0
+            totalQuestions: row.total ?? 0,       // Fallback null to 0
             answers: row.answers,
             submitted: true,
             synced: true
           };
+
+          // Flag để badge biết có điểm thật (tránh hiện 0/0 khi thực tế là null)
+          if (row.score !== null && row.score !== undefined) {
+            completedData._hasScore = true;
+          }
           
           // Ghi vào CẢ HAI key để tương thích cả trang chủ và trang bài thi
           localStorage.setItem(baseKey, JSON.stringify(completedData));
           localStorage.setItem(baseKey + '_submitted', JSON.stringify({
             answers: row.answers,
             submitted: true,
-            correctCount: row.score,
-            totalQuestions: row.total,
-            timestamp: new Date(row.submitted_at || row.updated_at).getTime()
+            correctCount: row.score ?? 0,
+            totalQuestions: row.total ?? 0,
+            timestamp: new Date(row.submitted_at || row.updated_at).getTime(),
+            _hasScore: completedData._hasScore
           }));
           synced++;
         }

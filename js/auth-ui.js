@@ -14,24 +14,30 @@ export class AuthUI {
     }
 
     // Lắng nghe thay đổi auth state
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[AuthUI] Event:', event);
+
       if (event === 'SIGNED_IN') {
-        // NGAY LẬP TỨC xóa hash trên URL sau khi đăng nhập thành công
-        // Điều này rất quan trọng với Google Login để tránh lặp lại đăng nhập khi F5
-        if (window.location.hash) {
-          window.history.replaceState("", document.title, window.location.pathname);
-        }
         this.onSignedIn(session.user);
         this.hideModal();
       }
+      
+      // Nếu người dùng đã chủ động đăng xuất → bỏ qua session tự động khôi phục
+      if (event === 'INITIAL_SESSION' && localStorage.getItem('_user_signed_out') === '1') {
+        console.log('[AuthUI] Ignoring INITIAL_SESSION due to manual sign-out.');
+        await supabase.auth.signOut({ scope: 'local' });
+        return;
+      }
+
       if (event === 'SIGNED_OUT') {
         this.onSignedOut();
       }
     });
 
-    // Check session hiện tại
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) this.onSignedIn(user);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user && localStorage.getItem('_user_signed_out') !== '1') {
+      this.onSignedIn(session.user);
+    }
   }
 
   injectAuthButton() {
@@ -152,17 +158,16 @@ export class AuthUI {
   }
 
   async signOut() {
-    // Hiển thị thông báo để chắc chắn code mới đang chạy
-    alert("Đang tiến hành đăng xuất và xóa sạch session...");
+    if (!confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')) return;
 
     try {
-      // 1. Gọi lệnh signOut của Supabase
+      // 1. Gọi lệnh signOut của Supabase (global để xóa hết session server)
       await supabase.auth.signOut({ scope: 'global' });
-    } catch(e) {
+    } catch (e) {
       console.error("SignOut error:", e);
     }
-    
-    // 2. Sao lưu dữ liệu bài làm (tiến độ, ghi chú, highlights, v.v.)
+
+    // 2. Sao lưu dữ liệu bài làm (KHÔNG backup key của supabase/auth)
     const backup = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -171,11 +176,11 @@ export class AuthUI {
       }
     }
 
-    // 3. Xóa sạch LocalStorage & SessionStorage
+    // 3. Xóa sạch localStorage & sessionStorage
     localStorage.clear();
     sessionStorage.clear();
-    
-    // 4. Xóa sạch Cookie để diệt tận gốc session ngầm
+
+    // 4. Xóa Cookie (cho an toàn)
     const cookies = document.cookie.split(";");
     for (let i = 0; i < cookies.length; i++) {
       const cookie = cookies[i];
@@ -185,7 +190,7 @@ export class AuthUI {
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
     }
 
-    // 5. Xóa sạch IndexedDB (Supabase đôi khi lưu session ở đây)
+    // 5. Xóa IndexedDB (nơi Supabase lưu persist session)
     if (window.indexedDB && window.indexedDB.databases) {
       try {
         const dbs = await window.indexedDB.databases();
@@ -194,17 +199,18 @@ export class AuthUI {
             window.indexedDB.deleteDatabase(db.name);
           }
         });
-      } catch (e) {
-        console.error("IndexedDB clear error:", e);
-      }
+      } catch (e) {}
     }
 
-    // 6. Khôi phục lại dữ liệu bài làm từ bản sao lưu
+    // 6. Khôi phục lại dữ liệu bài làm
     Object.entries(backup).forEach(([k, v]) => {
       localStorage.setItem(k, v);
     });
     
-    // 7. PHÁ CACHE: Điều hướng về trang sạch kèm mã thời gian để ép trình duyệt tải mới
+    // 7. ĐÁNH DẤU "đã đăng xuất" để chặn auto-login khi F5
+    localStorage.setItem('_user_signed_out', '1');
+
+    // 8. PHÁ CACHE: Điều hướng về trang sạch
     const cleanURL = window.location.origin + window.location.pathname + "?t=" + Date.now();
     window.location.replace(cleanURL);
   }
