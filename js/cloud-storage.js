@@ -21,6 +21,7 @@ export class CloudStorage {
     const isDraft     = localStorageKey.endsWith('_draft');
     const isHighlight = localStorageKey.endsWith('_highlights');
     const isNote      = localStorageKey.endsWith('_note');
+    const isSubmitted = localStorageKey.endsWith('_submitted');
 
     const upsertData = {
       user_id: user.id,
@@ -31,8 +32,15 @@ export class CloudStorage {
     if (isDraft)          upsertData.answers = data;
     else if (isHighlight) upsertData.highlights = data;
     else if (isNote)      upsertData.note = typeof data === 'string' ? data : JSON.stringify(data);
+    else if (isSubmitted) {
+      upsertData.status       = 'completed';
+      upsertData.answers      = data.answers || data;
+      upsertData.score        = data.correctCount;   // Mapping correctCount from _submitted data
+      upsertData.total        = data.totalQuestions; // Mapping totalQuestions from _submitted data
+      upsertData.submitted_at = new Date().toISOString();
+    }
     else {
-      // completed result: { answers, score, total }
+      // completed result cũ hoặc result từ dashboard
       upsertData.status       = 'completed';
       upsertData.answers      = data.answers || data;
       upsertData.score        = data.score;
@@ -212,9 +220,18 @@ export class CloudStorage {
             totalQuestions: row.total,
             answers: row.answers,
             submitted: true,
-            synced: true // Flag để biết đây là data từ cloud
+            synced: true
           };
+          
+          // Ghi vào CẢ HAI key để tương thích cả trang chủ và trang bài thi
           localStorage.setItem(baseKey, JSON.stringify(completedData));
+          localStorage.setItem(baseKey + '_submitted', JSON.stringify({
+            answers: row.answers,
+            submitted: true,
+            correctCount: row.score,
+            totalQuestions: row.total,
+            timestamp: new Date(row.submitted_at || row.updated_at).getTime()
+          }));
           synced++;
         }
 

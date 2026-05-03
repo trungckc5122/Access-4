@@ -23,7 +23,11 @@ export async function getCurrentUser() {
 // Helper: convert localStorage key cũ → object params
 // 'pet_reading_book1_test1_part1' → { exam:'pet', skill:'reading', book:1, test:1, part:1 }
 export function parseStorageKey(key) {
-  const clean = key.replace('_draft', '').replace('_highlights', '').replace('_note', '');
+  const clean = key
+    .replace('_submitted', '')
+    .replace('_draft', '')
+    .replace('_highlights', '')
+    .replace('_note', '');
   const match = clean.match(/^(pet|ket)_(reading|listening)_book(\d+)_test(\d+)_part(\d+)$/);
   if (!match) return null;
   return {
