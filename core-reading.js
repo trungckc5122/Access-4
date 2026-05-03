@@ -759,6 +759,21 @@ class ReadingCore {
             }
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
+
+            // ── Parity Check on Focus ──
+            // Nếu user quay lại tab này, kiểm tra xem bài này có bị xóa ở máy khác không
+            window.addEventListener('focus', async () => {
+                if (this._isResetting || !this.cloudSupportInitialized) return;
+                const wasCompleted = this.isCompleted();
+                await CloudStorage.syncCloudToLocal();
+                const nowCompleted = this.isCompleted();
+                
+                // Nếu trạng thái thay đổi (đã bị xóa trên cloud), reload để cập nhật UI
+                if (wasCompleted && !nowCompleted) {
+                    console.log('[Cloud] Data removed from cloud, reloading...');
+                    location.reload();
+                }
+            });
         } catch (e) {
             console.warn('[Cloud] Failed to init cloud support:', e);
         }

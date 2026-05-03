@@ -2425,6 +2425,8 @@
 
       // --- 3. Status badges & progress (cho cả PET và KET) ---
       window.initStatusBadges = function initStatusBadges() {
+        const badges = document.querySelectorAll('.status-badge, .score-badge');
+        badges.forEach(b => b.remove());
         const panels = ['pet', 'ket'];
         panels.forEach(type => {
           const panel = document.getElementById(`${type}-panel`);
@@ -2440,7 +2442,6 @@
             const draftKey = getStorageKeyForTest(testInfo, true);
             const hasCompleted = localStorage.getItem(completedKey) !== null;
             const hasDraft = hasValidDraftData(draftKey);
-            link.querySelectorAll('.status-badge, .score-badge').forEach(b => b.remove());
             const noteKey = completedKey + '_note';
             const hasNote = localStorage.getItem(noteKey) && localStorage.getItem(noteKey).trim().length > 0;
             if (hasNote) {
@@ -3054,12 +3055,16 @@
             }
 
             // 2. Xóa localStorage (loại trừ các key hệ thống/config quan trọng)
-            // Thay vì localStorage.clear(), ta xóa các key liên quan đến bài làm
             const keys = Object.keys(localStorage);
-            const preservedKeys = ['pet-theme', 'activeTab', '_user_signed_out', 'welcome_shown_v1', 'smart_onboarding_v1', 'onboardingPosition', 'helpButtonPosition'];
+            const preservedPatterns = [
+              'pet-theme', 'activeTab', '_user_signed_out', 
+              'welcome_shown', 'smart_onboarding', 'onboarding', 'helpButton',
+              '_cloud_migrated_' // QUAN TRỌNG: Giữ lại để không bị migrate ngược dữ liệu rỗng
+            ];
             
             keys.forEach(key => {
-              if (!preservedKeys.includes(key)) {
+              const isPreserved = preservedPatterns.some(p => key.includes(p));
+              if (!isPreserved) {
                 localStorage.removeItem(key);
               }
             });
@@ -3079,10 +3084,10 @@
               window.initResumeButtons();
             }
 
-            // Notify other tabs
+            // Notify other tabs to reload/reset state
             try {
               const channel = new BroadcastChannel('pet_reset_channel');
-              channel.postMessage({ action: 'reset' });
+              channel.postMessage({ action: 'reset_full' });
             } catch (e) {}
 
             hide();
@@ -3135,11 +3140,22 @@
         initReset();
         initSmartSearch();
         checkBrokenLinks();
-        window.addEventListener('focus', () => { initStatusBadges(); initResumeButtons(); });
+        window.addEventListener('focus', async () => { 
+          if (window.CloudStorage) await window.CloudStorage.syncCloudToLocal();
+          initStatusBadges(); 
+          initResumeButtons(); 
+        });
         window.addEventListener('storage', () => { initStatusBadges(); initResumeButtons(); });
         try {
           const channel = new BroadcastChannel('pet_reset_channel');
-          channel.onmessage = (e) => { if (e.data.action === 'reset') initStatusBadges(); };
+          channel.onmessage = (e) => { 
+            if (e.data.action === 'reset' || e.data.action === 'reset_full') {
+              // Nếu đang ở trang chủ thì cập nhật badge
+              initStatusBadges(); 
+              initResumeButtons();
+              // Nếu là reset_full và đang ở trang bài tập thì nên reload (nhưng đây là index nên chỉ cần init)
+            }
+          };
         } catch (e) { }
       });
     })();

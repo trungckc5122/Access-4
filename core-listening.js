@@ -756,6 +756,18 @@ class ListeningCore {
             }
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
+
+            // ── Parity Check on Focus ──
+            window.addEventListener('focus', async () => {
+                if (this._isResetting || !this.cloudSupportInitialized) return;
+                const wasCompleted = this.isCompleted();
+                await CloudStorage.syncCloudToLocal();
+                const nowCompleted = this.isCompleted();
+                if (wasCompleted && !nowCompleted) {
+                    console.log('[Cloud] Data removed from cloud, reloading...');
+                    location.reload();
+                }
+            });
         } catch (e) {
             console.warn('[Cloud] Failed to init:', e);
         }
