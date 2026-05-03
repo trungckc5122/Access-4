@@ -14,6 +14,11 @@ export class AuthUI {
     // Lắng nghe thay đổi auth state
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
+        // NGAY LẬP TỨC xóa hash trên URL sau khi đăng nhập thành công (đặc biệt là sau OAuth)
+        // Điều này ngăn chặn việc F5 trang web tự động đăng nhập lại bằng token cũ trên URL.
+        if (window.location.hash.includes('access_token=')) {
+          window.history.replaceState("", document.title, window.location.pathname + window.location.search);
+        }
         this.onSignedIn(session.user);
         this.hideModal();
       }
