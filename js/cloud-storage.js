@@ -220,6 +220,33 @@ export class CloudStorage {
         return 0;
       }
 
+      // 1. Xóa các key local KHÔNG có trên cloud (Parity Check)
+      // Lấy danh sách tất cả các key hiện tại trên cloud để so sánh
+      const cloudKeys = new Set();
+      if (data) {
+        data.forEach(row => {
+          const exam = row.exam || 'pet';
+          const prefix = `${exam}_${row.skill}`;
+          const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+          cloudKeys.add(baseKey);
+          cloudKeys.add(baseKey + '_submitted');
+          cloudKeys.add(baseKey + '_draft');
+          cloudKeys.add(baseKey + '_highlights');
+          cloudKeys.add(baseKey + '_note');
+        });
+      }
+
+      // Chỉ thực hiện xóa nếu user đã được đánh dấu là đã migrate
+      if (localStorage.getItem('_cloud_migrated_' + user.id)) {
+        const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+        Object.keys(localStorage).forEach(localKey => {
+          if (examPrefixes.some(p => localKey.startsWith(p)) && !cloudKeys.has(localKey)) {
+            localStorage.removeItem(localKey);
+            console.log('[CloudStorage] Parity: Removed local key missing from cloud:', localKey);
+          }
+        });
+      }
+
       if (!data || data.length === 0) {
         console.log('[CloudStorage] No data found on cloud for this user.');
         return 0;
