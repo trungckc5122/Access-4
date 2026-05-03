@@ -80,25 +80,8 @@ export class AuthUI {
           Lưu tiến trình học lên cloud, xem lại mọi lúc mọi nơi.
         </p>
 
-        <!-- Google OAuth -->
-        <button id="auth-google-btn" style="
-          width:100%; padding:12px; border-radius:12px;
-          border:1.5px solid #e2e8f0; background:#fff;
-          display:flex; align-items:center; justify-content:center; gap:10px;
-          font-size:14px; font-weight:600; cursor:pointer; margin-bottom:12px;
-          color:#0f172a;
-        ">
-          <svg width="18" height="18" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-          </svg>
-          Đăng nhập với Google
-        </button>
-
         <!-- Email/Password -->
-        <div style="border-top:1px solid #e2e8f0;padding-top:16px;margin-top:4px;">
+        <div style="padding-top:4px;">
           <input id="auth-email" type="email" placeholder="Email"
             style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
             font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none;">
@@ -128,18 +111,27 @@ export class AuthUI {
     this.modal = modal;
 
     // Bind events
-    modal.querySelector('#auth-google-btn').onclick  = () => this.signInWithGoogle();
+    const emailInput = modal.querySelector('#auth-email');
+    const passInput  = modal.querySelector('#auth-password');
+
+    emailInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        passInput.focus();
+      }
+    };
+
+    passInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.signInWithEmail();
+      }
+    };
+
     modal.querySelector('#auth-login-btn').onclick   = () => this.signInWithEmail();
     modal.querySelector('#auth-register-btn').onclick= () => this.signUpWithEmail();
     modal.querySelector('#auth-close-btn').onclick   = () => this.hideModal();
     modal.onclick = (e) => { if (e.target === modal) this.hideModal(); };
-  }
-
-  async signInWithGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.href }
-    });
   }
 
   async signInWithEmail() {
@@ -169,7 +161,6 @@ export class AuthUI {
     }
     
     // 2. Sao lưu dữ liệu bài làm (tiến độ, ghi chú, highlights, v.v.)
-    // Chúng ta chỉ giữ lại những gì KHÔNG liên quan đến Supabase auth
     const backup = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -178,20 +169,27 @@ export class AuthUI {
       }
     }
 
-    // 3. Xóa sạch LocalStorage để đảm bảo session bị loại bỏ hoàn toàn
+    // 3. Xóa sạch LocalStorage & SessionStorage
     localStorage.clear();
+    sessionStorage.clear();
     
-    // 4. Khôi phục lại dữ liệu bài làm từ bản sao lưu
+    // 4. Xóa sạch Cookie để diệt tận gốc session ngầm
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+    }
+
+    // 5. Khôi phục lại dữ liệu bài làm từ bản sao lưu
     Object.entries(backup).forEach(([k, v]) => {
       localStorage.setItem(k, v);
     });
     
-    // 5. Dọn sạch SessionStorage
-    sessionStorage.clear();
-
-    // 6. Xóa sạch Hash trên URL và reload lại trang
-    window.history.replaceState("", document.title, window.location.pathname);
-    window.location.reload();
+    // 6. Điều hướng về trang sạch hoàn toàn (loại bỏ mọi hash/token)
+    window.location.replace(window.location.origin + window.location.pathname);
   }
 
   onSignedIn(user) {
