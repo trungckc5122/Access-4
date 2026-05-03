@@ -2378,21 +2378,43 @@
       }
 
       // --- 2. Check broken links (batch + cache) ---
-      async function checkBrokenLinks() {
-        const activePanel = document.querySelector('.active-panel');
-        if (!activePanel) return;
-        const allLinks = Array.from(activePanel.querySelectorAll('a')).filter(link => {
+      // --- 2. Check broken links (Optimized with Priority) ---
+      function getActivePanelId() {
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (!activeTab) return 'access';
+        const tabId = activeTab.dataset.tab;
+        switch (tabId) {
+          case 'pet': return 'pet';
+          case 'ket': return 'ket';
+          case 'access': return 'access';
+          case 'pre-sol': return 'pre-sol';
+          case 'sol': return 'sol';
+          default: return 'access';
+        }
+      }
+
+      function classifyLinksByPriority(allLinks, activePanelId) {
+        const highPriority = [];
+        const lowPriority = [];
+        allLinks.forEach(link => {
           const href = link.getAttribute('href');
-          if (link.classList.contains('broken-link') || link.dataset.checked === 'true') return false;
-          return href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:');
+          if (!href) { lowPriority.push(link); return; }
+          let belongsToActive = false;
+          if (activePanelId === 'pet' && (href.includes('read-pet') || href.includes('lis-pet'))) belongsToActive = true;
+          if (activePanelId === 'ket' && (href.includes('read-ket') || href.includes('lis-ket'))) belongsToActive = true;
+          if (activePanelId === 'access' && (href.match(/^\d+[abc]\.html$/) || href.match(/^Review\d+\.html$/) || href.match(/^(midterm|final)4[ab]\.html$/))) belongsToActive = true;
+          if ((activePanelId === 'pre-sol' && href.includes('presol-')) || (activePanelId === 'sol' && href.includes('sol-') && !href.includes('presol-'))) belongsToActive = true;
+          if (belongsToActive) highPriority.push(link);
+          else lowPriority.push(link);
         });
-        if (allLinks.length === 0) return;
-        allLinks.forEach(link => link.dataset.checked = 'true');
-        const queue = [...allLinks];
-        const BATCH_SIZE = 5;
-        async function processBatch() {
+        return { highPriority, lowPriority };
+      }
+
+      async function processBatchWithPriority(links, priority, batchSize) {
+        const queue = [...links];
+        async function processNextBatch() {
           if (queue.length === 0) return;
-          const batch = queue.splice(0, BATCH_SIZE);
+          const batch = queue.splice(0, batchSize);
           await Promise.all(batch.map(async (link) => {
             const cacheKey = `broken_link_${link.href}`;
             const cached = sessionStorage.getItem(cacheKey);
@@ -2404,13 +2426,36 @@
               else sessionStorage.setItem(cacheKey, 'ok');
             } catch { link.classList.add('broken-link'); sessionStorage.setItem(cacheKey, 'broken'); }
           }));
-          processBatch();
+          await processNextBatch();
         }
-        processBatch();
-        // Thông báo cho smart search biết broken links đã được cập nhật
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('brokenLinksChecked'));
-        }, 500);
+        await processNextBatch();
+        console.log(`[BrokenLinks] ${priority} priority scan completed`);
+      }
+
+      async function checkBrokenLinks() {
+        const activePanel = document.querySelector('.active-panel');
+        if (!activePanel) return;
+        const activePanelId = getActivePanelId();
+        const allLinks = Array.from(document.querySelectorAll('main a')).filter(link => {
+          const href = link.getAttribute('href');
+          if (link.classList.contains('broken-link') || link.dataset.checked === 'true') return false;
+          return href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:');
+        });
+        if (allLinks.length === 0) return;
+        const { highPriority, lowPriority } = classifyLinksByPriority(allLinks, activePanelId);
+        allLinks.forEach(link => link.dataset.checked = 'true');
+        
+        // Quét nhóm ưu tiên cao trước
+        await processBatchWithPriority(highPriority, 'high', 8);
+        window.dispatchEvent(new CustomEvent('brokenLinksChecked', { detail: { priority: 'high', panel: activePanelId } }));
+        
+        // Quét nhóm ưu tiên thấp sau
+        if (lowPriority.length > 0) {
+          setTimeout(async () => {
+            await processBatchWithPriority(lowPriority, 'low', 3);
+            window.dispatchEvent(new CustomEvent('brokenLinksChecked', { detail: { priority: 'low', panel: activePanelId } }));
+          }, 500);
+        }
       }
 
       window.forceBrokenLinksRecheck = function () {
@@ -2644,7 +2689,15 @@
           const ketFilters = document.getElementById('header-ket-filters');
           if (petFilters) petFilters.style.display = tabId === 'pet' ? 'flex' : 'none';
           if (ketFilters) ketFilters.style.display = tabId === 'ket' ? 'flex' : 'none';
-          setTimeout(() => { checkBrokenLinks(); initStatusBadges(); }, 100);
+          
+          setTimeout(() => { 
+            // Xóa cache checked để quét lại với ưu tiên mới
+            document.querySelectorAll('a[data-checked="true"]').forEach(link => {
+              link.removeAttribute('data-checked');
+            });
+            checkBrokenLinks(); 
+            initStatusBadges(); 
+          }, 100);
         }
         tabs.forEach(btn => btn.addEventListener('click', () => activate(btn.dataset.tab)));
         const saved = localStorage.getItem('activeTab') || 'access';
@@ -2997,8 +3050,18 @@
         document.addEventListener('click', (e) => { if (!e.target.closest('.search-container')) suggestionsBox.style.display = 'none'; });
         window.scanExistingLinks();
         window.addEventListener('focus', window.scanExistingLinks);
-        window.addEventListener('brokenLinksChecked', () => {
-          window.scanExistingLinks();
+        window.addEventListener('brokenLinksChecked', (e) => {
+          if (e.detail?.priority === 'high') {
+            // Chỉ cập nhật status badges sau khi link ưu tiên đã check
+            if (typeof window.initStatusBadges === 'function') {
+              initStatusBadges();
+            }
+          }
+          
+          if (typeof window.scanExistingLinks === 'function') {
+            window.scanExistingLinks();
+          }
+
           // Refresh suggestions nếu search box đang active
           if (document.activeElement === input && suggestionsBox.style.display === 'block') {
             updateSuggestions(false);
