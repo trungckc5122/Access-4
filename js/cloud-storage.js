@@ -35,16 +35,16 @@ export class CloudStorage {
     else if (isSubmitted) {
       upsertData.status       = 'completed';
       upsertData.answers      = data.answers || data;
-      upsertData.score        = data.correctCount;   // Mapping correctCount from _submitted data
-      upsertData.total        = data.totalQuestions; // Mapping totalQuestions from _submitted data
+      upsertData.score        = data.score  ?? data.correctCount  ?? null;
+      upsertData.total        = data.total  ?? data.totalQuestions ?? null;
       upsertData.submitted_at = new Date().toISOString();
     }
     else {
       // completed result cũ hoặc result từ dashboard
       upsertData.status       = 'completed';
       upsertData.answers      = data.answers || data;
-      upsertData.score        = data.score;
-      upsertData.total        = data.total;
+      upsertData.score        = data.score  ?? data.correctCount;
+      upsertData.total        = data.total  ?? data.totalQuestions;
       upsertData.submitted_at = new Date().toISOString();
     }
 
@@ -87,10 +87,12 @@ export class CloudStorage {
           if (isHighlight)      return data.highlights;
           if (isNote)           return data.note;
           return {
-            answers: data.answers,
-            score:   data.score,
-            total:   data.total,
-            status:  data.status
+            answers:        data.answers,
+            score:          data.score,
+            total:          data.total,
+            correctCount:   data.score,
+            totalQuestions: data.total,
+            status:         data.status
           };
         }
       }
@@ -119,31 +121,37 @@ export class CloudStorage {
 
     const isHighlight = localStorageKey.endsWith('_highlights');
     const isNote      = localStorageKey.endsWith('_note');
-    const isSubmitted = localStorageKey.endsWith('_submitted');
     const isDraft     = localStorageKey.endsWith('_draft');
+
+    const matchClause = {
+      user_id: user.id,
+      exam:    params.exam,
+      skill:   params.skill,
+      book:    params.book,
+      test:    params.test,
+      part:    params.part
+    };
 
     try {
       if (isHighlight) {
         await supabase.from('progress')
           .update({ highlights: null })
-          .eq('user_id', user.id)
-          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+          .match(matchClause);
       } else if (isNote) {
         await supabase.from('progress')
           .update({ note: null })
-          .eq('user_id', user.id)
-          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+          .match(matchClause);
       } else if (isDraft) {
+        // Chỉ xóa phần draft, giữ lại row nếu đã completed
         await supabase.from('progress')
-          .update({ answers: null, status: null })
-          .eq('user_id', user.id)
-          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+          .update({ answers: null })
+          .eq('status', 'draft')
+          .match(matchClause);
       } else {
-        // completed hoặc _submitted → xóa hẳn row hoặc reset status/answers/score
+        // completed key (no suffix) hoặc _submitted → xóa hẳn row
         await supabase.from('progress')
           .delete()
-          .eq('user_id', user.id)
-          .match({ exam: params.exam, skill: params.skill, book: params.book, test: params.test, part: params.part });
+          .match(matchClause);
       }
       console.log('[CloudStorage] Removed from cloud:', localStorageKey);
     } catch (e) {
