@@ -3011,48 +3011,93 @@
         const showBtn = document.getElementById('show-reset-modal');
         const confirmBtn = document.getElementById('confirm-reset-btn');
         const closeBtns = [document.getElementById('close-modal-x'), document.getElementById('close-modal-btn')];
+        const originalConfirmText = confirmBtn.innerHTML;
+
         function hide() { modal.style.opacity = '0'; setTimeout(() => modal.style.display = 'none', 300); }
         function show() { modal.style.display = 'flex'; modal.style.opacity = '1'; }
+        
         showBtn.addEventListener('click', show);
         closeBtns.forEach(btn => btn.addEventListener('click', hide));
         modal.addEventListener('click', (e) => { if (e.target === modal) hide(); });
+
         confirmBtn.addEventListener('click', async () => {
-          // Backup UI preferences
-          const tab   = localStorage.getItem('activeTab');
-          const theme = localStorage.getItem('pet-theme');
+          // Provide immediate feedback
+          confirmBtn.disabled = true;
+          confirmBtn.innerHTML = '<span class="loading-spinner"></span> Đang xóa...';
+          confirmBtn.style.opacity = '0.7';
+          confirmBtn.style.cursor = 'not-allowed';
 
-          // Xóa toàn bộ dữ liệu bài làm trên Supabase (nếu đã đăng nhập)
-          if (window.CloudStorage && window._supabase) {
-            try {
-              const { data: { user } } = await window._supabase.auth.getUser();
-              if (user) {
-                // Lấy tất cả key bài làm từ localStorage trước khi xóa
-                const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
-                const examKeys = Object.keys(localStorage).filter(k =>
-                  examPrefixes.some(p => k.startsWith(p))
-                );
-                // Xóa từng key trên Supabase (remove() tự parse và xóa đúng row/field)
-                for (const key of examKeys) {
-                  await window.CloudStorage.remove(key).catch(() => {});
+          try {
+            // Backup UI preferences
+            const tab = localStorage.getItem('activeTab');
+            const theme = localStorage.getItem('pet-theme');
+            const signedOut = localStorage.getItem('_user_signed_out');
+
+            // 1. Xóa trên Cloud nếu có thể (nhanh hơn bằng cách xóa toàn bộ progress của user)
+            if (window._supabase && window.CloudStorage) {
+              try {
+                const { data: { user } } = await window._supabase.auth.getUser();
+                if (user) {
+                  // Xóa toàn bộ row trong table progress của user này
+                  const { error } = await window._supabase
+                    .from('progress')
+                    .delete()
+                    .eq('user_id', user.id);
+                  
+                  if (error) throw error;
+                  console.log('[Reset] Cloud progress cleared for user:', user.id);
                 }
-                console.log('[Reset] Deleted', examKeys.length, 'items from Supabase');
+              } catch (cloudErr) {
+                console.error('[Reset] Cloud clear failed:', cloudErr);
+                // Vẫn tiếp tục xóa local
               }
-            } catch (e) {
-              console.error('[Reset] Cloud delete failed:', e);
             }
-          }
 
-          // Xóa localStorage
-          localStorage.clear();
-          if (tab)   localStorage.setItem('activeTab', tab);
-          if (theme) localStorage.setItem('pet-theme', theme);
-          Object.keys(sessionStorage).forEach(k => { if (k.startsWith('broken_link_')) sessionStorage.removeItem(k); });
+            // 2. Xóa localStorage (loại trừ các key hệ thống/config quan trọng)
+            // Thay vì localStorage.clear(), ta xóa các key liên quan đến bài làm
+            const keys = Object.keys(localStorage);
+            const preservedKeys = ['pet-theme', 'activeTab', '_user_signed_out', 'welcome_shown_v1', 'smart_onboarding_v1', 'onboardingPosition', 'helpButtonPosition'];
+            
+            keys.forEach(key => {
+              if (!preservedKeys.includes(key)) {
+                localStorage.removeItem(key);
+              }
+            });
 
-          // Cập nhật badge và tiến độ ngay, không cần reload
-          if (typeof window.initStatusBadges === 'function') {
-            window.initStatusBadges();
+            // Xóa sessionStorage (broken links)
+            Object.keys(sessionStorage).forEach(k => { 
+              if (k.startsWith('broken_link_')) sessionStorage.removeItem(k); 
+            });
+
+            console.log('[Reset] Local data cleared');
+
+            // 3. Cập nhật UI
+            if (typeof window.initStatusBadges === 'function') {
+              window.initStatusBadges();
+            }
+            if (typeof window.initResumeButtons === 'function') {
+              window.initResumeButtons();
+            }
+
+            // Notify other tabs
+            try {
+              const channel = new BroadcastChannel('pet_reset_channel');
+              channel.postMessage({ action: 'reset' });
+            } catch (e) {}
+
+            hide();
+          } catch (err) {
+            console.error('[Reset] Error during reset:', err);
+            alert('Có lỗi xảy ra khi dọn dẹp dữ liệu. Vui lòng thử lại.');
+          } finally {
+            // Restore button state
+            setTimeout(() => {
+              confirmBtn.disabled = false;
+              confirmBtn.innerHTML = originalConfirmText;
+              confirmBtn.style.opacity = '';
+              confirmBtn.style.cursor = '';
+            }, 500);
           }
-          hide();
         });
       }
 
@@ -4446,6 +4491,10 @@
     import { AuthUI } from './js/auth-ui.js';
     import { CloudStorage } from './js/cloud-storage.js';
 
+    // ── Expose CloudStorage & supabase to window for non-module scripts ──
+    window.CloudStorage = CloudStorage;
+    window._supabase = supabase;
+
     // ── Inject "Tham gia lớp" + "Dashboard GV" buttons vào trang chủ ──
     // Chạy đồng bộ (không chờ DOMContentLoaded) vì script ở cuối body
     const titleEl = document.querySelector('.header-left h1');
@@ -4468,12 +4517,7 @@
 
       // Chèn cloudBar vào titleWrapper kế bên h1
       titleWrapper.appendChild(cloudBar);
-
     }
-
-    // ── Expose CloudStorage & supabase to window for non-module scripts ──
-    window.CloudStorage = CloudStorage;
-    window._supabase = supabase;
 
     // ── Khởi tạo Auth UI ──
     const authUI = new AuthUI();
