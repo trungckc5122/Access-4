@@ -176,59 +176,72 @@ export class CloudStorage {
   // ─────────────────────────────────────────────
   static async syncCloudToLocal() {
     const user = await getCurrentUser();
-    if (!user) return 0;
-
-    console.log(`[CloudStorage] Pulling all progress for ${user.email}...`);
-
-    const { data, error } = await supabase
-      .from('progress')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('[CloudStorage] Sync error:', error);
+    if (!user) {
+      console.log('[CloudStorage] No user logged in, skipping sync.');
       return 0;
     }
 
-    if (!data || data.length === 0) return 0;
+    console.log(`[CloudStorage] Pulling all progress for ${user.email}...`);
 
-    let synced = 0;
-    data.forEach(row => {
-      const prefix = `${row.exam}_${row.skill}`;
-      const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+    try {
+      const { data, error } = await supabase
+        .from('progress')
+        .select('*')
+        .eq('user_id', user.id);
 
-      // 1. Sync Completed Result
-      if (row.status === 'completed') {
-        const completedData = {
-          correctCount: row.score,
-          totalQuestions: row.total,
-          answers: row.answers,
-          submitted: true
-        };
-        localStorage.setItem(baseKey, JSON.stringify(completedData));
-        synced++;
+      if (error) {
+        console.error('[CloudStorage] Sync error:', error);
+        return 0;
       }
 
-      // 2. Sync Draft (Chỉ sync nếu không có completed result)
-      if (row.answers && row.status === 'draft' && !localStorage.getItem(baseKey)) {
-        localStorage.setItem(baseKey + '_draft', JSON.stringify(row.answers));
-        synced++;
+      if (!data || data.length === 0) {
+        console.log('[CloudStorage] No data found on cloud for this user.');
+        return 0;
       }
 
-      // 3. Sync Highlights
-      if (row.highlights) {
-        localStorage.setItem(baseKey + '_highlights', JSON.stringify(row.highlights));
-        synced++;
-      }
+      let synced = 0;
+      data.forEach(row => {
+        const exam = row.exam || 'pet'; 
+        const prefix = `${exam}_${row.skill}`;
+        const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
 
-      // 4. Sync Note
-      if (row.note) {
-        localStorage.setItem(baseKey + '_note', row.note);
-        synced++;
-      }
-    });
+        // 1. Sync Completed Result
+        if (row.status === 'completed') {
+          const completedData = {
+            correctCount: row.score,
+            totalQuestions: row.total,
+            answers: row.answers,
+            submitted: true,
+            synced: true // Flag để biết đây là data từ cloud
+          };
+          localStorage.setItem(baseKey, JSON.stringify(completedData));
+          synced++;
+        }
 
-    console.log(`[CloudStorage] Synced ${synced} items from cloud.`);
-    return synced;
+        // 2. Sync Draft (Chỉ sync nếu máy hiện tại chưa có kết quả completed)
+        if (row.answers && row.status === 'draft' && !localStorage.getItem(baseKey)) {
+          localStorage.setItem(baseKey + '_draft', JSON.stringify(row.answers));
+          synced++;
+        }
+
+        // 3. Sync Highlights
+        if (row.highlights) {
+          localStorage.setItem(baseKey + '_highlights', JSON.stringify(row.highlights));
+          synced++;
+        }
+
+        // 4. Sync Note
+        if (row.note) {
+          localStorage.setItem(baseKey + '_note', row.note);
+          synced++;
+        }
+      });
+
+      console.log(`[CloudStorage] Successfully synced ${synced} items from cloud to this device.`);
+      return synced;
+    } catch (e) {
+      console.error('[CloudStorage] Sync process failed:', e);
+      return 0;
+    }
   }
 }
