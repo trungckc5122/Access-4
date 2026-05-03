@@ -1055,7 +1055,7 @@ class ListeningCore {
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
                 // Cloud sync (fire-and-forget)
-                if (this._cloudStorage) this._cloudStorage.save(key, draft).catch(() => {});
+                if (window.CloudStorage) window.CloudStorage.save(key, draft).catch(() => {});
             } catch (e) {
                 console.error('[Draft] FAILED to save:', e);
             }
@@ -1125,7 +1125,7 @@ class ListeningCore {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
         // Cloud sync
-        if (this._cloudStorage) this._cloudStorage.remove(key).catch(() => {});
+        if (window.CloudStorage) window.CloudStorage.remove(key).catch(() => {});
     }
 
     setupAudioControls() {
@@ -1713,10 +1713,13 @@ class ListeningCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
-        // Cloud sync
-        if (this._cloudStorage) {
-            this._cloudStorage.remove(draftKey).catch(() => {});
-            this._cloudStorage.remove(completedKey).catch(() => {});
+        // 2. Xóa Supabase (Sử dụng window.CloudStorage thay vì this._cloudStorage)
+        if (window.CloudStorage) {
+            window.CloudStorage.remove(draftKey).catch(() => { });
+            window.CloudStorage.remove(completedKey).catch(() => { });
+            if (clearHighlights) {
+                window.CloudStorage.remove(this.getHighlightStorageKey()).catch(() => { });
+            }
         }
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);

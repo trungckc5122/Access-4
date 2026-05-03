@@ -1050,7 +1050,7 @@ class ReadingCore {
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
                 // Cloud sync (fire-and-forget)
-                if (this._cloudStorage) this._cloudStorage.save(key, draft).catch(() => {});
+                if (window.CloudStorage) window.CloudStorage.save(key, draft).catch(() => {});
             } catch (e) {
                 console.error('[Reading Draft] FAILED to save:', e);
             }
@@ -1167,7 +1167,7 @@ class ReadingCore {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
         // Cloud sync
-        if (this._cloudStorage) this._cloudStorage.remove(key).catch(() => {});
+        if (window.CloudStorage) window.CloudStorage.remove(key).catch(() => {});
     }
 
     setupUI() {
@@ -2864,6 +2864,9 @@ class ReadingStorageManager {
         const resolvedPart = testData.part || part;
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         localStorage.removeItem(key);
+        if (window.CloudStorage) {
+            window.CloudStorage.remove(key);
+        }
         console.log('[Storage] Cleared submitted state:', key);
     }
 }
