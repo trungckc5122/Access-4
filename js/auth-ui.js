@@ -154,22 +154,28 @@ export class AuthUI {
 
   async signOut() {
     try {
+      // 1. Gọi lệnh signOut của Supabase
       await supabase.auth.signOut();
     } catch(e) {
       console.error("SignOut error:", e);
     }
     
-    // Đảm bảo xóa sạch token trên LocalStorage để tránh kẹt session
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-')) {
-        localStorage.removeItem(key);
+    // 2. CHỈ xóa các key liên quan đến session Supabase (bắt đầu bằng sb-)
+    // Giữ lại toàn bộ dữ liệu bài làm local (không dùng localStorage.clear)
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-')) {
+        keysToRemove.push(key);
       }
-    });
-
-    // Xóa các tham số hash/query trên URL (như access_token) mà không kích hoạt load lại ngay lập tức
-    window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
     
-    // Bắt buộc tải lại trang để làm sạch hoàn toàn trạng thái
+    // 3. Dọn sạch SessionStorage
+    sessionStorage.clear();
+
+    // 4. Xóa sạch Hash trên URL và reload lại trang sạch
+    window.history.replaceState("", document.title, window.location.pathname);
     window.location.reload();
   }
 
