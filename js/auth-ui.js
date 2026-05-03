@@ -166,7 +166,6 @@ export class AuthUI {
     }
     
     // 2. CHỈ xóa các key liên quan đến session Supabase
-    // Mở rộng bộ lọc để bao gồm mọi biến thể key mà Supabase có thể dùng
     const keysToRemove = Object.keys(localStorage).filter(k => 
       k.startsWith('sb-') || k.includes('supabase') || k.includes('auth-token')
     );
@@ -175,9 +174,13 @@ export class AuthUI {
     // 3. Dọn sạch SessionStorage
     sessionStorage.clear();
 
-    // 4. Xóa sạch Hash trên URL và reload lại trang sạch
+    // 4. Xóa sạch Hash trên URL
     window.history.replaceState("", document.title, window.location.pathname);
-    window.location.reload();
+    
+    // 5. Đợi một chút để Supabase dọn dẹp xong rồi mới reload
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   }
 
   onSignedIn(user) {
@@ -187,9 +190,17 @@ export class AuthUI {
       // Hiển thị trực tiếp email của người dùng
       txt.textContent = user.email;
     }
-    if (btn) btn.onclick = () => {
-      if (confirm('Đăng xuất khỏi hệ thống?')) this.signOut();
-    };
+    if (btn) {
+      // Xóa các listener cũ để tránh trùng lặp
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      
+      newBtn.addEventListener('click', () => {
+        if (confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')) {
+          this.signOut();
+        }
+      });
+    }
   }
 
   onSignedOut() {
