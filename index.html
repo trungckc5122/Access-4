@@ -4400,6 +4400,149 @@
     };
   </script>
 
+
+  <!-- ============================================================
+       SUPABASE CLOUD AUTH + JOIN CLASS (Phần 4)
+       Tải sau tất cả nội dung khác để không làm chậm trang
+       ============================================================ -->
+  <script type="module">
+    import { supabase, getCurrentUser } from './js/supabase-client.js';
+    import { AuthUI } from './js/auth-ui.js';
+    import { CloudStorage } from './js/cloud-storage.js';
+
+    // ── Khởi tạo Auth UI ──
+    const authUI = new AuthUI();
+    authUI.init();
+
+    // ── Migrate localStorage → cloud lần đầu sau khi đăng nhập ──
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        if (await CloudStorage.shouldMigrate()) {
+          const count = await CloudStorage.migrateLocalStorageToCloud();
+          if (count > 0) showCloudToast(`☁️ Đã đồng bộ ${count} bài lên cloud!`);
+        }
+      }
+    });
+
+    // ── Join Class (Phần 4 từ migration guide) ──
+    window.joinClass = async function(joinCode) {
+      const user = await getCurrentUser();
+      if (!user) { authUI.showModal(); return; }
+
+      const { data: cls, error } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('join_code', joinCode.toUpperCase().trim())
+        .single();
+
+      if (error || !cls) { alert('❌ Mã lớp không đúng hoặc không tồn tại!'); return; }
+
+      const { error: joinError } = await supabase
+        .from('class_students')
+        .insert({ class_id: cls.id, student_id: user.id });
+
+      if (joinError?.code === '23505') {
+        alert(`ℹ️ Bạn đã trong lớp "${cls.name}" rồi!`);
+      } else if (!joinError) {
+        alert(`✓ Đã tham gia lớp "${cls.name}"! Giáo viên sẽ thấy tiến độ của bạn.`);
+        document.getElementById('join-class-modal').style.display = 'none';
+      } else {
+        alert('Có lỗi xảy ra: ' + joinError.message);
+      }
+    };
+
+    // ── Toast helper ──
+    function showCloudToast(msg) {
+      const t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d9488;color:#fff;padding:12px 22px;border-radius:10px;z-index:99999;font-family:sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.25);';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
+
+    // ── Inject "Tham gia lớp" + "Dashboard GV" buttons vào trang chủ ──
+    document.addEventListener('DOMContentLoaded', () => {
+      // Gắn nút cloud kế bên tiêu đề "Hệ thống ôn tập tổng hợp"
+      const titleEl = document.querySelector('.header-left h1');
+      const headerRight = document.querySelector('.header-right');
+
+      if (titleEl && headerRight) {
+        // Tạo cloudBar chứa 2 nút
+        const cloudBar = document.createElement('div');
+        cloudBar.id = 'cloud-action-bar';
+        cloudBar.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+        cloudBar.innerHTML = `
+          <button id="join-class-btn" title="Tham gia lớp học qua mã lớp" style="
+            background:linear-gradient(135deg, #0d9488, #14b8a6);
+            border:none;color:#fff;padding:7px 16px;border-radius:10px;
+            font-size:13px;font-weight:700;cursor:pointer;
+            display:flex;align-items:center;gap:6px;font-family:inherit;
+            box-shadow:0 2px 8px rgba(13,148,136,0.3);
+            white-space:nowrap;
+          ">🏫 Tham gia lớp</button>
+          <a href="teacher-dashboard.html" target="_blank" title="Dashboard giáo viên" style="
+            background:linear-gradient(135deg, #3b82f6, #6366f1);
+            border:none;color:#fff;padding:7px 16px;border-radius:10px;
+            font-size:13px;font-weight:700;cursor:pointer;
+            display:flex;align-items:center;gap:6px;text-decoration:none;
+            font-family:inherit;
+            box-shadow:0 2px 8px rgba(59,130,246,0.3);
+            white-space:nowrap;
+          ">📊 Dashboard GV</a>
+        `;
+
+        // Chèn cloudBar vào .header-right, trước search-container
+        const searchContainer = headerRight.querySelector('.search-container');
+        if (searchContainer) {
+          headerRight.insertBefore(cloudBar, searchContainer.parentNode.firstChild);
+        } else {
+          headerRight.insertBefore(cloudBar, headerRight.firstChild);
+        }
+
+        // Event listener cho nút tham gia lớp
+        document.getElementById('join-class-btn').onclick = () => {
+          document.getElementById('join-class-modal').style.display = 'flex';
+        };
+      }
+    });
+  </script>
+
+  <!-- Join Class Modal -->
+  <div id="join-class-modal" style="
+    display:none;position:fixed;inset:0;z-index:99998;
+    background:rgba(0,0,0,0.5);align-items:center;justify-content:center;
+  ">
+    <div style="
+      background:#fff;border-radius:20px;padding:32px;width:340px;max-width:90vw;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;font-family:sans-serif;
+    ">
+      <h2 style="font-size:18px;font-weight:800;color:#0d9488;margin-bottom:8px;">
+        🏫 Tham gia lớp học
+      </h2>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px;">
+        Nhập mã lớp do giáo viên cung cấp để tham gia và đồng bộ tiến độ.
+      </p>
+      <input id="join-code-input" type="text" placeholder="Mã lớp (vd: ABC123)"
+        maxlength="10"
+        style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
+        font-size:16px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+        margin-bottom:12px;box-sizing:border-box;outline:none;text-align:center;font-family:inherit;"
+        oninput="this.value=this.value.toUpperCase()">
+      <button onclick="joinClass(document.getElementById('join-code-input').value)" style="
+        width:100%;padding:12px;border-radius:10px;background:#0d9488;
+        color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;margin-bottom:8px;font-family:inherit;
+      ">Tham gia</button>
+      <button onclick="document.getElementById('join-class-modal').style.display='none'" style="
+        width:100%;padding:10px;border-radius:10px;border:1.5px solid #e2e8f0;
+        color:#64748b;font-size:13px;font-weight:600;background:transparent;cursor:pointer;font-family:inherit;
+      ">Hủy</button>
+      <button onclick="document.getElementById('join-class-modal').style.display='none'" style="
+        position:absolute;top:16px;right:16px;background:none;border:none;
+        cursor:pointer;font-size:20px;color:#94a3b8;line-height:1;
+      ">✕</button>
+    </div>
+  </div>
+
 </body>
 
 </html>

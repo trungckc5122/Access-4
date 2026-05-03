@@ -738,6 +738,20 @@ class ReadingCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
+
+        // ── Supabase Cloud Sync (fire-and-forget, không block UI) ──
+        import('./js/supabase-client.js').then(async ({ default: _, ...mod }) => {
+            const { AuthUI } = await import('./js/auth-ui.js');
+            const { CloudStorage } = await import('./js/cloud-storage.js');
+            this._cloudStorage = CloudStorage;
+            if (!this._authUI) {
+                this._authUI = new AuthUI();
+                await this._authUI.init();
+            }
+            if (await CloudStorage.shouldMigrate()) {
+                CloudStorage.migrateLocalStorageToCloud();
+            }
+        }).catch(() => {});
     }
 
     isCompleted() {
@@ -1007,6 +1021,8 @@ class ReadingCore {
                 const draft = this.getDraftData();
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
+                // Cloud sync (fire-and-forget)
+                if (this._cloudStorage) this._cloudStorage.save(key, draft).catch(() => {});
             } catch (e) {
                 console.error('[Reading Draft] FAILED to save:', e);
             }
@@ -1122,6 +1138,8 @@ class ReadingCore {
     clearDraft() {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
+        // Cloud sync
+        if (this._cloudStorage) this._cloudStorage.remove(key).catch(() => {});
     }
 
     setupUI() {
@@ -2301,6 +2319,11 @@ class ReadingCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
+        // Cloud sync
+        if (this._cloudStorage) {
+            this._cloudStorage.remove(draftKey).catch(() => {});
+            this._cloudStorage.remove(completedKey).catch(() => {});
+        }
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);
 
