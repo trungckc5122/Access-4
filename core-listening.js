@@ -324,7 +324,12 @@ class PETNoteManager {
     }
 
     saveNote() {
-        localStorage.setItem(this.getNoteKey(), this.textarea.value);
+        const key = this.getNoteKey();
+        const content = this.textarea.value;
+        localStorage.setItem(key, content);
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, content);
+        }
     }
 
     loadNote() {
@@ -679,9 +684,10 @@ class ListeningCore {
         this.DEBOUNCE_MS = 300;
         this._isResetting = false;
         this.personalHighlightsVisible = true;
+        this.cloudSupportInitialized = false;
     }
 
-    initializeTest(testData) {
+    async initializeTest(testData) {
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
@@ -694,6 +700,9 @@ class ListeningCore {
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
+
+        // Khởi tạo Cloud Support
+        await this.initCloudSupport();
 
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
         const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
@@ -720,20 +729,34 @@ class ListeningCore {
         }
 
         console.log('Listening test initialized:', testData.title);
+    }
 
-        // ── Supabase Cloud Sync (fire-and-forget, không block UI) ──
-        import('./js/supabase-client.js').then(async ({ default: _, ...mod }) => {
-            const { AuthUI } = await import('./js/auth-ui.js');
-            const { CloudStorage } = await import('./js/cloud-storage.js');
-            this._cloudStorage = CloudStorage;
-            if (!this._authUI) {
-                this._authUI = new AuthUI();
-                await this._authUI.init();
+    async initCloudSupport() {
+        if (this.cloudSupportInitialized) return;
+        try {
+            // Xác định base path bằng cách tìm script core-listening.js
+            const script = document.querySelector('script[src*="core-listening.js"]');
+            let basePath = './';
+            if (script && script.src) {
+                const url = new URL(script.src);
+                basePath = url.origin + url.pathname.replace('core-listening.js', '');
             }
+            
+            const { AuthUI } = await import(basePath + 'js/auth-ui.js');
+            const { CloudStorage } = await import(basePath + 'js/cloud-storage.js');
+            
+            window.CloudStorage = CloudStorage;
+            this._authUI = new AuthUI();
+            await this._authUI.init();
+
             if (await CloudStorage.shouldMigrate()) {
                 CloudStorage.migrateLocalStorageToCloud();
             }
-        }).catch(() => {});
+            this.cloudSupportInitialized = true;
+            console.log('[Cloud] Support initialized at:', basePath);
+        } catch (e) {
+            console.warn('[Cloud] Failed to init:', e);
+        }
     }
 
     isCompleted() {
@@ -939,6 +962,15 @@ class ListeningCore {
     _safeSetStorage(key, value) {
         try {
             localStorage.setItem(key, value);
+            // Sync to Cloud
+            if (window.CloudStorage) {
+                try {
+                    const obj = JSON.parse(value);
+                    window.CloudStorage.save(key, obj);
+                } catch (e) {
+                    window.CloudStorage.save(key, value);
+                }
+            }
         } catch (e) {
             if (e.name === 'QuotaExceededError' || e.code === 22) {
                 console.warn('[Storage] Quota exceeded! Running emergency cleanup...');
@@ -2095,7 +2127,16 @@ class StorageManager {
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}`;
+        
+        // Save to localStorage (fallback)
         localStorage.setItem(key, JSON.stringify(partData));
+
+        // Sync to Cloud
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, partData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced results for:', key);
+            });
+        }
     }
 
     saveSubmittedState(testData, userAnswers) {
@@ -2108,7 +2149,16 @@ class StorageManager {
             answers: userAnswers,
             submitted: true
         };
+        
+        // Save to localStorage
         localStorage.setItem(key, JSON.stringify(submittedData));
+
+        // Sync to Cloud
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, submittedData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced submitted state for:', key);
+            });
+        }
         console.log('[Storage] Saved submitted state:', key);
     }
 
@@ -2135,7 +2185,12 @@ class StorageManager {
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        
         localStorage.removeItem(key);
+
+        if (window.CloudStorage) {
+            window.CloudStorage.remove(key);
+        }
         console.log('[Storage] Cleared submitted state:', key);
     }
 

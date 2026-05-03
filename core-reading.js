@@ -209,7 +209,12 @@ class PETNoteManager {
     }
 
     saveNote() {
-        localStorage.setItem(this.getNoteKey(), this.textarea.value);
+        const key = this.getNoteKey();
+        const content = this.textarea.value;
+        localStorage.setItem(key, content);
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, content);
+        }
     }
 
     loadNote() {
@@ -673,13 +678,17 @@ class ReadingCore {
 
         this.personalHighlightsVisible = true;
         this.flaggedQuestions = new Set();
+        this.cloudSupportInitialized = false;
     }
 
-    initializeTest(testData) {
+    async initializeTest(testData) {
         this.currentTestData = testData;
         this.explanationMode = false;
         this.currentSplit = false;
         this.flagsVisible = true;
+
+        // Khởi tạo Cloud Support
+        await this.initCloudSupport();
 
         this.setupUI();
 
@@ -724,20 +733,33 @@ class ReadingCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
+    }
 
-        // ── Supabase Cloud Sync (fire-and-forget, không block UI) ──
-        import('./js/supabase-client.js').then(async ({ default: _, ...mod }) => {
-            const { AuthUI } = await import('./js/auth-ui.js');
-            const { CloudStorage } = await import('./js/cloud-storage.js');
-            this._cloudStorage = CloudStorage;
-            if (!this._authUI) {
-                this._authUI = new AuthUI();
-                await this._authUI.init();
+    async initCloudSupport() {
+        if (this.cloudSupportInitialized) return;
+        try {
+            const script = document.querySelector('script[src*="core-reading.js"]');
+            let basePath = './';
+            if (script && script.src) {
+                const url = new URL(script.src);
+                basePath = url.origin + url.pathname.replace('core-reading.js', '');
             }
+            
+            const { AuthUI } = await import(basePath + 'js/auth-ui.js');
+            const { CloudStorage } = await import(basePath + 'js/cloud-storage.js');
+            
+            window.CloudStorage = CloudStorage;
+            this._authUI = new AuthUI();
+            await this._authUI.init();
+
             if (await CloudStorage.shouldMigrate()) {
                 CloudStorage.migrateLocalStorageToCloud();
             }
-        }).catch(() => {});
+            this.cloudSupportInitialized = true;
+            console.log('[Cloud] Support initialized at:', basePath);
+        } catch (e) {
+            console.warn('[Cloud] Failed to init cloud support:', e);
+        }
     }
 
     isCompleted() {
@@ -942,6 +964,15 @@ class ReadingCore {
     _safeSetStorage(key, value) {
         try {
             localStorage.setItem(key, value);
+            // Cloud sync
+            if (window.CloudStorage) {
+                try {
+                    const obj = JSON.parse(value);
+                    window.CloudStorage.save(key, obj);
+                } catch (e) {
+                    window.CloudStorage.save(key, value);
+                }
+            }
         } catch (e) {
             if (e.name === 'QuotaExceededError' || e.code === 22) {
                 console.warn('[Storage] Quota exceeded! Running emergency cleanup...');
@@ -2712,6 +2743,9 @@ class ReadingStorageManager {
         const resolvedPart = testData.part || part;
         const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
         localStorage.setItem(key, JSON.stringify(partData));
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, partData);
+        }
     }
 
     saveSubmittedState(testData, userAnswers) {
@@ -2726,6 +2760,9 @@ class ReadingStorageManager {
             submitted: true
         };
         localStorage.setItem(key, JSON.stringify(submittedData));
+        if (window.CloudStorage) {
+            window.CloudStorage.save(key, submittedData);
+        }
         console.log('[Storage] Saved submitted state:', key);
     }
 
@@ -2755,6 +2792,9 @@ class ReadingStorageManager {
         const resolvedPart = testData.part || part;
         const key = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         localStorage.removeItem(key);
+        if (window.CloudStorage) {
+            window.CloudStorage.remove(key);
+        }
         console.log('[Storage] Cleared submitted state:', key);
     }
 
