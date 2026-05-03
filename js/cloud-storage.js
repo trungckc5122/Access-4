@@ -158,6 +158,10 @@ export class CloudStorage {
     // Đánh dấu đã migrate
     localStorage.setItem('_cloud_migrated_' + user.id, '1');
     console.log(`[CloudStorage] Migrated ${migrated} items for ${user.email}`);
+    
+    // Sau khi migrate xong, sync ngược lại để đảm bảo local có đủ bản ghi (nếu login máy mới)
+    await this.syncCloudToLocal();
+    
     return migrated;
   }
 
@@ -165,5 +169,66 @@ export class CloudStorage {
     const user = await getCurrentUser();
     if (!user) return false;
     return !localStorage.getItem('_cloud_migrated_' + user.id);
+  }
+
+  // ─────────────────────────────────────────────
+  // SYNC: Tải toàn bộ dữ liệu từ Supabase về LocalStorage
+  // ─────────────────────────────────────────────
+  static async syncCloudToLocal() {
+    const user = await getCurrentUser();
+    if (!user) return 0;
+
+    console.log(`[CloudStorage] Pulling all progress for ${user.email}...`);
+
+    const { data, error } = await supabase
+      .from('progress')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('[CloudStorage] Sync error:', error);
+      return 0;
+    }
+
+    if (!data || data.length === 0) return 0;
+
+    let synced = 0;
+    data.forEach(row => {
+      const prefix = `${row.exam}_${row.skill}`;
+      const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+
+      // 1. Sync Completed Result
+      if (row.status === 'completed') {
+        const completedData = {
+          correctCount: row.score,
+          totalQuestions: row.total,
+          answers: row.answers,
+          submitted: true
+        };
+        localStorage.setItem(baseKey, JSON.stringify(completedData));
+        synced++;
+      }
+
+      // 2. Sync Draft (Chỉ sync nếu không có completed result)
+      if (row.answers && row.status === 'draft' && !localStorage.getItem(baseKey)) {
+        localStorage.setItem(baseKey + '_draft', JSON.stringify(row.answers));
+        synced++;
+      }
+
+      // 3. Sync Highlights
+      if (row.highlights) {
+        localStorage.setItem(baseKey + '_highlights', JSON.stringify(row.highlights));
+        synced++;
+      }
+
+      // 4. Sync Note
+      if (row.note) {
+        localStorage.setItem(baseKey + '_note', row.note);
+        synced++;
+      }
+    });
+
+    console.log(`[CloudStorage] Synced ${synced} items from cloud.`);
+    return synced;
   }
 }
