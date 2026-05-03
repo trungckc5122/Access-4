@@ -34,7 +34,8 @@ export class CloudStorage {
     else if (isNote)      upsertData.note = typeof data === 'string' ? data : JSON.stringify(data);
     else if (isSubmitted) {
       upsertData.status       = 'completed';
-      upsertData.answers      = data.answers || data;
+      // Lưu toàn bộ object data vào answers để bảo toàn cấu trúc (bao gồm details, correctCount...)
+      upsertData.answers      = data;
       upsertData.score        = data.score  ?? data.correctCount  ?? null;
       upsertData.total        = data.total  ?? data.totalQuestions ?? null;
       upsertData.submitted_at = new Date().toISOString();
@@ -42,7 +43,7 @@ export class CloudStorage {
     else {
       // completed result cũ hoặc result từ dashboard
       upsertData.status       = 'completed';
-      upsertData.answers      = data.answers || data;
+      upsertData.answers      = data;
       upsertData.score        = data.score  ?? data.correctCount;
       upsertData.total        = data.total  ?? data.totalQuestions;
       upsertData.submitted_at = new Date().toISOString();
@@ -261,13 +262,19 @@ export class CloudStorage {
 
         // 1. Sync Completed Result
         if (row.status === 'completed') {
-          const completedData = {
+          let completedData = {
             correctCount: row.score ?? 0,         // Fallback null to 0
             totalQuestions: row.total ?? 0,       // Fallback null to 0
-            answers: row.answers,
             submitted: true,
             synced: true
           };
+
+          // Nếu row.answers là object chứa dữ liệu đầy đủ (có details, correctCount...), hãy giải nén nó
+          if (row.answers && typeof row.answers === 'object') {
+            completedData = { ...completedData, ...row.answers };
+          } else {
+            completedData.answers = row.answers;
+          }
 
           // Flag để badge biết có điểm thật (tránh hiện 0/0 khi thực tế là null)
           if (row.score !== null && row.score !== undefined) {
@@ -277,12 +284,8 @@ export class CloudStorage {
           // Ghi vào CẢ HAI key để tương thích cả trang chủ và trang bài thi
           localStorage.setItem(baseKey, JSON.stringify(completedData));
           localStorage.setItem(baseKey + '_submitted', JSON.stringify({
-            answers: row.answers,
-            submitted: true,
-            correctCount: row.score ?? 0,
-            totalQuestions: row.total ?? 0,
-            timestamp: new Date(row.submitted_at || row.updated_at).getTime(),
-            _hasScore: completedData._hasScore
+            ...completedData,
+            timestamp: new Date(row.submitted_at || row.updated_at).getTime()
           }));
           synced++;
         }
