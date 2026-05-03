@@ -28,18 +28,8 @@ export class AuthUI {
   }
 
   injectAuthButton() {
-    // Trang bài thi: tìm .ielts-header
-    let header = document.querySelector('.ielts-header');
-    
-    // Trang chủ (index.html): tìm .header-right
-    if (!header) {
-      header = document.querySelector('.header-right');
-    }
-    
-    // Fallback cuối cùng
-    if (!header) {
-      header = document.querySelector('header') || document.querySelector('.main-header');
-    }
+    // Chỉ inject vào thanh công cụ cloud trên trang chủ
+    const header = document.getElementById('cloud-action-bar');
     if (!header) return;
 
     // Tránh inject 2 lần
