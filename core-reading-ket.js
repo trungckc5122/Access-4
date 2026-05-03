@@ -2797,6 +2797,25 @@ class ReadingStorageManager {
     }
 
     saveSubmittedState(testData, userAnswers) {
+        // Calculate scores to include in the submitted state for cloud sync
+        let correctCount = 0;
+        const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
+        const questionRangeStart = Math.min(...questions.map(q => q.num));
+        const questionRangeEnd = Math.max(...questions.map(q => q.num));
+        let totalQuestions = 0;
+
+        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
+            totalQuestions++;
+            const userAnswer = userAnswers[i];
+            const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
+            let isCorrect = false;
+            if (userAnswer) {
+                if (Array.isArray(answerKeyRaw)) isCorrect = answerKeyRaw.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+                else if (typeof answerKeyRaw === 'string') isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
+            }
+            if (isCorrect) correctCount++;
+        }
+
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
         const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
         const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
@@ -2805,7 +2824,9 @@ class ReadingStorageManager {
         const submittedData = {
             timestamp: Date.now(),
             answers: userAnswers,
-            submitted: true
+            submitted: true,
+            correctCount,
+            totalQuestions
         };
         localStorage.setItem(key, JSON.stringify(submittedData));
         if (window.CloudStorage) {
