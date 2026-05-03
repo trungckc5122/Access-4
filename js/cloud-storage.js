@@ -225,7 +225,6 @@ export class CloudStorage {
         return 0;
       }
 
-      let synced = 0;
       data.forEach(row => {
         const exam = row.exam || 'pet'; 
         const prefix = `${exam}_${row.skill}`;
