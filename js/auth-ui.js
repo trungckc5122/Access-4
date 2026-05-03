@@ -7,9 +7,11 @@ export class AuthUI {
   }
 
   // Gọi hàm này ở đầu mỗi trang
-  async init() {
+  async init(options = { injectButton: true }) {
     this.injectModal();
-    this.injectAuthButton();
+    if (options.injectButton) {
+      this.injectAuthButton();
+    }
 
     // Lắng nghe thay đổi auth state
     supabase.auth.onAuthStateChange((event, session) => {
@@ -150,8 +152,8 @@ export class AuthUI {
   }
 
   async signOut() {
-    // 0. Hiển thị trạng thái đang thoát
-    this.onSignedOut();
+    // Hiển thị thông báo để chắc chắn code mới đang chạy
+    alert("Đang tiến hành đăng xuất và xóa sạch session...");
 
     try {
       // 1. Gọi lệnh signOut của Supabase
@@ -202,8 +204,9 @@ export class AuthUI {
       localStorage.setItem(k, v);
     });
     
-    // 7. Điều hướng về trang sạch hoàn toàn (loại bỏ mọi hash/token)
-    window.location.replace(window.location.origin + window.location.pathname);
+    // 7. PHÁ CACHE: Điều hướng về trang sạch kèm mã thời gian để ép trình duyệt tải mới
+    const cleanURL = window.location.origin + window.location.pathname + "?t=" + Date.now();
+    window.location.replace(cleanURL);
   }
 
   onSignedIn(user) {
