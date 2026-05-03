@@ -154,21 +154,17 @@ export class AuthUI {
 
   async signOut() {
     try {
-      // 1. Gọi lệnh signOut của Supabase
-      await supabase.auth.signOut();
+      // 1. Gọi lệnh signOut của Supabase với phạm vi toàn cục
+      await supabase.auth.signOut({ scope: 'global' });
     } catch(e) {
       console.error("SignOut error:", e);
     }
     
-    // 2. CHỈ xóa các key liên quan đến session Supabase (bắt đầu bằng sb-)
-    // Giữ lại toàn bộ dữ liệu bài làm local (không dùng localStorage.clear)
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('sb-')) {
-        keysToRemove.push(key);
-      }
-    }
+    // 2. CHỈ xóa các key liên quan đến session Supabase
+    // Mở rộng bộ lọc để bao gồm mọi biến thể key mà Supabase có thể dùng
+    const keysToRemove = Object.keys(localStorage).filter(k => 
+      k.startsWith('sb-') || k.includes('supabase') || k.includes('auth-token')
+    );
     keysToRemove.forEach(k => localStorage.removeItem(k));
     
     // 3. Dọn sạch SessionStorage
