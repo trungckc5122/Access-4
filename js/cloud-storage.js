@@ -252,6 +252,8 @@ export class CloudStorage {
         return 0;
       }
 
+      let synced = 0;
+      console.log(`[CloudStorage] Found ${data.length} rows on cloud. Applying to local...`);
       data.forEach(row => {
         const exam = row.exam || 'pet'; 
         const prefix = `${exam}_${row.skill}`;
