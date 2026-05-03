@@ -183,12 +183,26 @@ export class AuthUI {
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
     }
 
-    // 5. Khôi phục lại dữ liệu bài làm từ bản sao lưu
+    // 5. Xóa sạch IndexedDB (Supabase đôi khi lưu session ở đây)
+    if (window.indexedDB && window.indexedDB.databases) {
+      try {
+        const dbs = await window.indexedDB.databases();
+        dbs.forEach(db => {
+          if (db.name && (db.name.includes('supabase') || db.name.includes('auth'))) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        });
+      } catch (e) {
+        console.error("IndexedDB clear error:", e);
+      }
+    }
+
+    // 6. Khôi phục lại dữ liệu bài làm từ bản sao lưu
     Object.entries(backup).forEach(([k, v]) => {
       localStorage.setItem(k, v);
     });
     
-    // 6. Điều hướng về trang sạch hoàn toàn (loại bỏ mọi hash/token)
+    // 7. Điều hướng về trang sạch hoàn toàn (loại bỏ mọi hash/token)
     window.location.replace(window.location.origin + window.location.pathname);
   }
 
