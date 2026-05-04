@@ -2466,7 +2466,23 @@
         if (typeof window.scanExistingLinks === 'function') window.scanExistingLinks();
         if (typeof initStatusBadges === 'function') setTimeout(() => initStatusBadges(), 200);
       };
-      document.addEventListener('visibilitychange', function () { if (!document.hidden) window.forceBrokenLinksRecheck(); });
+      document.addEventListener('visibilitychange', async function () {
+        if (!document.hidden) {
+          window.forceBrokenLinksRecheck();  // kiểm tra broken links như cũ
+          // Thêm: sync cloud trước khi cập nhật badge
+          if (window.CloudStorage && window._supabase) {
+            try {
+              const { data: { user } } = await window._supabase.auth.getUser();
+              if (user) {
+                await window.CloudStorage.syncCloudToLocal();
+                if (typeof window.initStatusBadges === 'function') {
+                  window.initStatusBadges();
+                }
+              }
+            } catch (e) { /* offline, bỏ qua */ }
+          }
+        }
+      });
 
       // --- 3. Status badges & progress (cho cả PET và KET) ---
       window.initStatusBadges = function initStatusBadges() {
@@ -3209,17 +3225,51 @@
           initResumeButtons(); 
         });
         window.addEventListener('storage', () => { initStatusBadges(); initResumeButtons(); });
-        try {
-          const channel = new BroadcastChannel('pet_reset_channel');
-          channel.onmessage = (e) => { 
-            if (e.data.action === 'reset' || e.data.action === 'reset_full') {
-              // Nếu đang ở trang chủ thì cập nhật badge
-              initStatusBadges(); 
-              initResumeButtons();
-              // Nếu là reset_full và đang ở trang bài tập thì nên reload (nhưng đây là index nên chỉ cần init)
+
+        // ── Debounced sync + badge refresh ──────────────────────────────────────
+        let _badgeRefreshTimer;
+        async function syncAndRefreshBadges() {
+          clearTimeout(_badgeRefreshTimer);
+          _badgeRefreshTimer = setTimeout(async () => {
+            // Sync cloud nếu đã đăng nhập
+            if (window.CloudStorage && window._supabase) {
+              try {
+                const { data: { user } } = await window._supabase.auth.getUser();
+                if (user) await window.CloudStorage.syncCloudToLocal();
+              } catch (e) { /* offline, bỏ qua */ }
             }
+            if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
+            if (typeof window.initResumeButtons === 'function') window.initResumeButtons();
+          }, 500); // debounce 500ms để tránh gọi trùng khi nhiều event cùng lúc
+        }
+        window.syncAndRefreshBadges = syncAndRefreshBadges; // expose để dùng ở nơi khác
+
+        // ── BroadcastChannel listeners ───────────────────────────────────────────
+        try {
+          // PET: nộp bài / cập nhật trạng thái
+          const petUpdateCh = new BroadcastChannel('pet_update_channel');
+          petUpdateCh.onmessage = (e) => {
+            if (e.data.action === 'status_updated') syncAndRefreshBadges();
           };
-        } catch (e) { }
+
+          // KET: nộp bài / cập nhật trạng thái
+          const ketUpdateCh = new BroadcastChannel('ket_update_channel');
+          ketUpdateCh.onmessage = (e) => {
+            if (e.data.action === 'status_updated') syncAndRefreshBadges();
+          };
+
+          // PET: reset bài
+          const petResetCh = new BroadcastChannel('pet_reset_channel');
+          petResetCh.onmessage = (e) => {
+            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
+          };
+
+          // KET: reset bài
+          const ketResetCh = new BroadcastChannel('ket_reset_channel');
+          ketResetCh.onmessage = (e) => {
+            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
+          };
+        } catch (e) { /* BroadcastChannel not supported */ }
       });
     })();
   </script>
@@ -4602,10 +4652,57 @@
     const authUI = new AuthUI();
     authUI.init();
 
+    // ── Supabase Realtime: tự động cập nhật khi thiết bị khác nộp bài ────────
+    let _realtimeChannel = null;
+
+    async function setupRealtimeSync() {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      // Hủy subscription cũ để tránh duplicate
+      if (_realtimeChannel) {
+        await supabase.removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
+      }
+
+      _realtimeChannel = supabase
+        .channel(`progress-${user.id}`)   // tên channel unique theo user
+        .on(
+          'postgres_changes',
+          {
+            event: '*',         // lắng nghe INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'progress',
+            filter: `user_id=eq.${user.id}`  // chỉ nhận dữ liệu của mình
+          },
+          async (payload) => {
+            console.log('[Realtime] Progress changed:', payload.eventType, payload.new);
+            window._lastRealtimeUpdate = Date.now(); // cho visibilitychange tối ưu
+
+            // Dùng syncAndRefreshBadges() (có debounce) để tránh gọi dồn dập
+            if (typeof window.syncAndRefreshBadges === 'function') {
+              await window.syncAndRefreshBadges();
+            } else {
+              // Fallback nếu chưa có hàm debounce
+              await CloudStorage.syncCloudToLocal();
+              if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] Connected — watching progress table');
+          }
+          if (status === 'CHANNEL_ERROR') {
+            console.error('[Realtime] Channel error:', err);
+          }
+        });
+    }
+
     // ── Đồng bộ & Migrate ──
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[Cloud] Auth Event:', event);
-      
+
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         // Nếu người dùng đã chủ động đăng xuất → bỏ qua INITIAL_SESSION tự động
         if (event === 'INITIAL_SESSION' && localStorage.getItem('_user_signed_out') === '1') {
@@ -4613,7 +4710,7 @@
           await supabase.auth.signOut({ scope: 'local' });
           return;
         }
-        
+
         // Nếu người dùng chủ động đăng nhập → xóa flag đăng xuất
         if (event === 'SIGNED_IN') {
           localStorage.removeItem('_user_signed_out');
@@ -4624,11 +4721,12 @@
 
         // 1. Luôn ưu tiên sync từ Cloud về Local trước
         const syncedCount = await CloudStorage.syncCloudToLocal();
+        // Luôn gọi initStatusBadges sau sync, bất kể count
+        if (typeof window.initStatusBadges === 'function') {
+          window.initStatusBadges();
+        }
         if (syncedCount > 0) {
           showCloudToast(`☁️ Đã tải ${syncedCount} bài từ đám mây!`);
-          if (typeof window.initStatusBadges === 'function') {
-            window.initStatusBadges();
-          }
         }
 
         // 2. Nếu có dữ liệu local chưa có trên cloud (migrate lần đầu)
@@ -4638,6 +4736,17 @@
           if (typeof window.initStatusBadges === 'function') {
             window.initStatusBadges();
           }
+        }
+
+        // 3. Setup realtime sync sau khi đăng nhập
+        await setupRealtimeSync();
+      }
+
+      if (event === 'SIGNED_OUT') {
+        // ✅ Hủy Realtime khi đăng xuất để tránh memory leak
+        if (_realtimeChannel) {
+          await supabase.removeChannel(_realtimeChannel);
+          _realtimeChannel = null;
         }
       }
     });

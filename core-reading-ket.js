@@ -194,13 +194,25 @@ class KETNoteManager {
     }
 
     saveNote() {
-        localStorage.setItem(this.getNoteKey(), this.textarea.value);
+        const content = {
+            text: this.textarea.value,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(this.getNoteKey(), JSON.stringify(content));
+        if (window.CloudStorage) {
+            window.CloudStorage.save(this.getNoteKey(), content);
+        }
     }
 
     loadNote() {
         const saved = localStorage.getItem(this.getNoteKey());
         if (saved) {
-            this.textarea.value = saved;
+            try {
+                const parsed = JSON.parse(saved);
+                this.textarea.value = parsed.text || parsed;
+            } catch {
+                this.textarea.value = saved;
+            }
             this.autoExpand();
         }
         this.updateBadge();
@@ -959,7 +971,11 @@ class ReadingCore {
 
     getDraftData() {
         const questionRange = this.getQuestionRange();
-        const draft = { type: this.currentTestData.type, slotState: { ...this.slotState } };
+        const draft = {
+            type: this.currentTestData.type,
+            slotState: { ...this.slotState },
+            timestamp: Date.now()
+        };
         for (let i = questionRange.start; i <= questionRange.end; i++) {
             draft[`q${i}`] = this.getUserAnswer(i);
         }

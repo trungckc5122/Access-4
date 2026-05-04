@@ -210,8 +210,11 @@ class PETNoteManager {
 
     saveNote() {
         const key = this.getNoteKey();
-        const content = this.textarea.value;
-        localStorage.setItem(key, content);
+        const content = {
+            text: this.textarea.value,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(content));
         if (window.CloudStorage) {
             window.CloudStorage.save(key, content);
         }
@@ -220,7 +223,12 @@ class PETNoteManager {
     loadNote() {
         const saved = localStorage.getItem(this.getNoteKey());
         if (saved) {
-            this.textarea.value = saved;
+            try {
+                const parsed = JSON.parse(saved);
+                this.textarea.value = parsed.text || parsed;
+            } catch {
+                this.textarea.value = saved;
+            }
             this.autoExpand();
         }
         this.updateBadge();
@@ -953,7 +961,10 @@ class ReadingCore {
 
     getDraftData() {
         const questionRange = this.getQuestionRange();
-        const draft = { type: this.currentTestData.type };
+        const draft = {
+            type: this.currentTestData.type,
+            timestamp: Date.now()
+        };
 
         if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
