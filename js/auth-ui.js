@@ -18,6 +18,7 @@ export class AuthUI {
       console.log('[AuthUI] Event:', event);
 
       if (event === 'SIGNED_IN') {
+        localStorage.removeItem('_user_signed_out'); // xóa flag khi đăng nhập thành công
         this.onSignedIn(session.user);
         this.hideModal();
       }
@@ -228,9 +229,7 @@ export class AuthUI {
       btn.parentNode.replaceChild(newBtn, btn);
       
       newBtn.addEventListener('click', () => {
-        if (confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')) {
-          this.signOut();
-        }
+        this.signOut(); // chỉ gọi signOut, confirm sẽ hiển thị ở đó
       });
     }
   }

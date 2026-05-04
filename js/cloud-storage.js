@@ -238,15 +238,29 @@ export class CloudStorage {
       }
 
       // Chỉ thực hiện xóa nếu user đã được đánh dấu là đã migrate
+      const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+      const LAST_SYNC_KEY = '_last_cloud_sync_' + user.id;
+      const lastSyncTime = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0');
+      const now = Date.now();
+
       if (localStorage.getItem('_cloud_migrated_' + user.id)) {
-        const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
         Object.keys(localStorage).forEach(localKey => {
           if (examPrefixes.some(p => localKey.startsWith(p)) && !cloudKeys.has(localKey)) {
-            localStorage.removeItem(localKey);
-            console.log('[CloudStorage] Parity: Removed local key missing from cloud:', localKey);
+            const localTimestamp = getLocalDataTimestamp(localKey);
+
+            if (localTimestamp < lastSyncTime) {
+              // Dữ liệu cũ hơn lần sync cuối → có thể đã bị xóa trên cloud hoặc thiết bị khác
+              localStorage.removeItem(localKey);
+              console.log('[CloudStorage] Parity: Removed old local key missing from cloud:', localKey);
+            } else if (localTimestamp > 0) {
+              // Dữ liệu mới hơn lần sync cuối → có thể là bài mới làm offline → Giữ lại để sync lên sau
+              console.log('[CloudStorage] Parity: Preserved newer local work missing from cloud:', localKey);
+            }
           }
         });
       }
+      // Luôn cập nhật LAST_SYNC_KEY sau mỗi lần sync
+      localStorage.setItem(LAST_SYNC_KEY, now.toString());
 
       if (!data || data.length === 0) {
         console.log('[CloudStorage] No data found on cloud for this user.');
@@ -254,58 +268,101 @@ export class CloudStorage {
       }
 
       let synced = 0;
-      console.log(`[CloudStorage] Found ${data.length} rows on cloud. Applying to local...`);
       data.forEach(row => {
         const exam = row.exam || 'pet'; 
         const prefix = `${exam}_${row.skill}`;
         const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
 
+        const cloudTimestamp = new Date(row.submitted_at || row.updated_at).getTime();
+        const localValue = localStorage.getItem(baseKey);
+        const localData = localValue ? JSON.parse(localValue) : null;
+        const localTimestamp = localData?.timestamp || (localData?.submitted_at ? new Date(localData.submitted_at).getTime() : 0);
+
         // 1. Sync Completed Result
         if (row.status === 'completed') {
-          let completedData = {
-            correctCount: row.score ?? 0,         // Fallback null to 0
-            totalQuestions: row.total ?? 0,       // Fallback null to 0
-            submitted: true,
-            synced: true
-          };
+          if (!localData || cloudTimestamp > localTimestamp) {
+            // Cloud mới hơn hoặc local chưa có → Kéo về
+            let completedData = {
+              correctCount: row.score ?? 0,
+              totalQuestions: row.total ?? 0,
+              submitted: true,
+              synced: true
+            };
 
-          // Nếu row.answers là object chứa dữ liệu đầy đủ (có details, correctCount...), hãy giải nén nó
-          if (row.answers && typeof row.answers === 'object') {
-            completedData = { ...completedData, ...row.answers };
-          } else {
-            completedData.answers = row.answers;
-          }
+            if (row.answers && typeof row.answers === 'object') {
+              completedData = { ...completedData, ...row.answers };
+            } else {
+              completedData.answers = row.answers;
+            }
 
-          // Flag để badge biết có điểm thật (tránh hiện 0/0 khi thực tế là null)
-          if (row.score !== null && row.score !== undefined) {
-            completedData._hasScore = true;
+            if (row.score !== null && row.score !== undefined) {
+              completedData._hasScore = true;
+            }
+            
+            localStorage.setItem(baseKey, JSON.stringify(completedData));
+            localStorage.setItem(baseKey + '_submitted', JSON.stringify({
+              ...completedData,
+              timestamp: cloudTimestamp
+            }));
+            synced++;
+          } else if (localTimestamp > cloudTimestamp) {
+            // Local mới hơn (vừa làm xong offline) → Đẩy lên cloud
+            CloudStorage.save(baseKey, localData);
+            console.log('[CloudStorage] Local newer than cloud, pushed up:', baseKey);
           }
-          
-          // Ghi vào CẢ HAI key để tương thích cả trang chủ và trang bài thi
-          localStorage.setItem(baseKey, JSON.stringify(completedData));
-          localStorage.setItem(baseKey + '_submitted', JSON.stringify({
-            ...completedData,
-            timestamp: new Date(row.submitted_at || row.updated_at).getTime()
-          }));
-          synced++;
         }
 
-        // 2. Sync Draft (Chỉ sync nếu máy hiện tại chưa có kết quả completed)
-        if (row.answers && row.status === 'draft' && !localStorage.getItem(baseKey)) {
-          localStorage.setItem(baseKey + '_draft', JSON.stringify(row.answers));
-          synced++;
+        // 2. Sync Draft
+        if (row.answers && row.status === 'draft') {
+          const draftKey = baseKey + '_draft';
+          const localDraftVal = localStorage.getItem(draftKey);
+          const localDraftData = localDraftVal ? JSON.parse(localDraftVal) : null;
+          const localDraftTimestamp = localDraftData?.timestamp || 0;
+          const cloudDraftTimestamp = new Date(row.updated_at).getTime();
+
+          if (!localDraftVal || cloudDraftTimestamp > localDraftTimestamp) {
+            // Cloud mới hơn → Kéo về
+            localStorage.setItem(draftKey, JSON.stringify(row.answers));
+            synced++;
+          } else if (localDraftTimestamp > cloudDraftTimestamp) {
+            // Local mới hơn → Đẩy lên
+            CloudStorage.save(draftKey, localDraftData);
+            console.log('[CloudStorage] Local draft newer than cloud, pushed up:', draftKey);
+          }
         }
 
-        // 3. Sync Highlights
+        // 3. Sync Highlights (với timestamp comparison)
         if (row.highlights) {
-          localStorage.setItem(baseKey + '_highlights', JSON.stringify(row.highlights));
-          synced++;
+          const highlightKey = baseKey + '_highlights';
+          const localHighlight = localStorage.getItem(highlightKey);
+          const cloudHighlightTimestamp = new Date(row.updated_at).getTime();
+          const localHighlightTimestamp = localHighlight
+            ? (JSON.parse(localHighlight)?.timestamp || 0)
+            : 0;
+
+          if (!localHighlight || cloudHighlightTimestamp > localHighlightTimestamp) {
+            localStorage.setItem(highlightKey, JSON.stringify(row.highlights));
+            synced++;
+          } else if (localHighlightTimestamp > cloudHighlightTimestamp) {
+            CloudStorage.save(highlightKey, JSON.parse(localHighlight));
+          }
         }
 
-        // 4. Sync Note
+        // 4. Sync Note (với timestamp comparison)
         if (row.note) {
-          localStorage.setItem(baseKey + '_note', row.note);
-          synced++;
+          const noteKey = baseKey + '_note';
+          const localNote = localStorage.getItem(noteKey);
+          const cloudNoteTimestamp = new Date(row.updated_at).getTime();
+          const localNoteTimestamp = localNote
+            ? (JSON.parse(localNote)?.timestamp || 0)
+            : 0;
+
+          if (!localNote || cloudNoteTimestamp > localNoteTimestamp) {
+            localStorage.setItem(noteKey, row.note);
+            synced++;
+          } else if (localNoteTimestamp > cloudNoteTimestamp) {
+            CloudStorage.save(noteKey, JSON.parse(localNote));
+          }
         }
       });
 
@@ -315,5 +372,17 @@ export class CloudStorage {
       console.error('[CloudStorage] Sync process failed:', e);
       return 0;
     }
+  }
+}
+
+// Helper: trích xuất timestamp từ dữ liệu local
+function getLocalDataTimestamp(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    return data?.timestamp || (data?.submitted_at ? new Date(data.submitted_at).getTime() : 0);
+  } catch {
+    return 0;
   }
 }
