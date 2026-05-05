@@ -55,6 +55,11 @@ export class CloudStorage {
         onConflict: 'user_id,exam,skill,book,test,part'
       });
 
+    if (!error) {
+      // Suppress Realtime echo trên chính tab này trong 2 giây (tránh tự reload)
+      window._suppressRealtimeUntil = Date.now() + 2000;
+    }
+
     return { synced: !error, error };
   }
 
@@ -172,6 +177,42 @@ export class CloudStorage {
   }
 
   // ─────────────────────────────────────────────
+  // REMOVE ALL — xóa toàn bộ row (dùng khi reset, gọi 1 lần thay vì 3 lần)
+  // suppress signal để tab hiện tại không tự reload
+  // ─────────────────────────────────────────────
+  static async removeAll(baseKey) {
+    localStorage.removeItem(baseKey);
+    localStorage.removeItem(baseKey + '_draft');
+    localStorage.removeItem(baseKey + '_submitted');
+    localStorage.removeItem(baseKey + '_highlights');
+    localStorage.removeItem(baseKey + '_note');
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const params = parseStorageKey(baseKey);
+    if (!params) return;
+
+    // Suppress echo realtime trên tab hiện tại
+    window._suppressRealtimeUntil = Date.now() + 3000;
+
+    try {
+      const { error } = await supabase.from('progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('exam',    params.exam)
+        .eq('skill',   params.skill)
+        .eq('book',    params.book)
+        .eq('test',    params.test)
+        .eq('part',    params.part);
+      if (error) console.error('[CloudStorage] removeAll failed:', error);
+      else console.log('[CloudStorage] Row deleted for:', baseKey);
+    } catch (e) {
+      console.error('[CloudStorage] removeAll exception:', e);
+    }
+  }
+
+    // ─────────────────────────────────────────────
   // MIGRATE: Đẩy toàn bộ localStorage cũ lên Supabase
   // Gọi 1 lần sau khi user đăng nhập lần đầu
   // ─────────────────────────────────────────────
