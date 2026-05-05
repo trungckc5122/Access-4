@@ -1,19 +1,34 @@
 // js/cloud-storage.js
 import { supabase, getCurrentUser, parseStorageKey } from './supabase-client.js';
 
+// ── Helper đọc mode (không cần file riêng) ───────────────────────────────────
+function _isCloudOnly() { return localStorage.getItem('_storage_mode') === 'cloud_only'; }
+
 export class CloudStorage {
 
   // ─────────────────────────────────────────────
   // SAVE PROGRESS (draft hoặc completed)
   // Gọi thay cho: localStorage.setItem(key, JSON.stringify(data))
+  // cloud_only → bỏ qua localStorage, chỉ ghi Supabase
+  // hybrid     → ghi cả hai (hành vi cũ)
   // ─────────────────────────────────────────────
   static async save(localStorageKey, data) {
-    // 1. Luôn lưu localStorage trước (offline fallback)
-    try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch {}
+    const cloudOnly = _isCloudOnly();
+
+    // 1. Lưu localStorage (chỉ khi không phải cloud_only)
+    if (!cloudOnly) {
+      try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch {}
+    }
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
     const user = await getCurrentUser();
-    if (!user) return { synced: false };
+    if (!user) {
+      if (cloudOnly) console.error('[CloudStorage] cloud_only + no user — data NOT saved!', localStorageKey);
+      window.__currentCloudUser = null;
+      return { synced: false };
+    }
+    // Expose user cho các UI manager (storage indicator, modal) dùng sync
+    window.__currentCloudUser = user;
 
     const params = parseStorageKey(localStorageKey);
     if (!params) return { synced: false };
@@ -55,16 +70,28 @@ export class CloudStorage {
         onConflict: 'user_id,exam,skill,book,test,part'
       });
 
+    if (error && cloudOnly) {
+      // cloud_only + lỗi mạng → cache tạm sessionStorage để không mất data
+      try {
+        sessionStorage.setItem('_cloud_failsafe_' + localStorageKey, JSON.stringify(data));
+        console.warn('[CloudStorage] cloud_only offline failsafe: cached in sessionStorage');
+      } catch {}
+    } else if (!error && cloudOnly) {
+      sessionStorage.removeItem('_cloud_failsafe_' + localStorageKey);
+    }
+
     return { synced: !error, error };
   }
 
   // ─────────────────────────────────────────────
   // LOAD PROGRESS
-  // Ưu tiên: Supabase (nếu đăng nhập) → localStorage (fallback)
+  // cloud_only → chỉ Supabase (+ sessionStorage failsafe nếu offline)
+  // hybrid     → Supabase trước, localStorage fallback (hành vi cũ)
   // ─────────────────────────────────────────────
   static async load(localStorageKey) {
-    // Thử load từ Supabase trước
+    const cloudOnly = _isCloudOnly();
     const user = await getCurrentUser();
+
     if (user) {
       const params = parseStorageKey(localStorageKey);
       if (params) {
@@ -96,10 +123,25 @@ export class CloudStorage {
             status:         data.status
           };
         }
+
+        // cloud_only + Supabase lỗi → thử sessionStorage failsafe (offline tạm)
+        if (cloudOnly && error) {
+          const failsafe = sessionStorage.getItem('_cloud_failsafe_' + localStorageKey);
+          if (failsafe) {
+            console.warn('[CloudStorage] cloud_only offline: loaded from sessionStorage failsafe');
+            try { return JSON.parse(failsafe); } catch {}
+          }
+          console.warn('[CloudStorage] cloud_only: no data for', localStorageKey);
+          return null;
+        }
       }
+    } else if (cloudOnly) {
+      // cloud_only nhưng không có user → không đọc local
+      console.warn('[CloudStorage] cloud_only + no user: cannot load', localStorageKey);
+      return null;
     }
 
-    // Fallback: localStorage
+    // Fallback: localStorage (chỉ khi hybrid)
     try {
       const raw = localStorage.getItem(localStorageKey);
       return raw ? JSON.parse(raw) : null;
@@ -112,7 +154,8 @@ export class CloudStorage {
   // DELETE
   // ─────────────────────────────────────────────
   static async remove(localStorageKey) {
-    localStorage.removeItem(localStorageKey);
+    // cloud_only → không removeItem local; hybrid → xóa cả hai
+    if (!_isCloudOnly()) localStorage.removeItem(localStorageKey);
 
     const user = await getCurrentUser();
     if (!user) return;
@@ -208,7 +251,8 @@ export class CloudStorage {
       return 0;
     }
 
-    console.log(`[CloudStorage] Pulling all progress for ${user.email}...`);
+    const cloudOnly = _isCloudOnly();
+    console.log(`[CloudStorage] Pulling progress for ${user.email}... (mode: ${cloudOnly ? 'cloud_only' : 'hybrid'})`);
 
     try {
       const { data, error } = await supabase
@@ -219,6 +263,12 @@ export class CloudStorage {
       if (error) {
         console.error('[CloudStorage] Sync error:', error);
         return 0;
+      }
+
+      // cloud_only: không ghi localStorage, chỉ đếm records
+      if (cloudOnly) {
+        console.log(`[CloudStorage] cloud_only: skipping local write, ${(data||[]).length} record(s) on cloud.`);
+        return (data||[]).length;
       }
 
       // 1. Xóa các key local KHÔNG có trên cloud (Parity Check)
