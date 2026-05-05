@@ -766,10 +766,15 @@ class ReadingCore {
                 basePath = url.origin + url.pathname.replace('core-reading-ket.js', '');
             }
             
+            // Import supabase, AuthUI, CloudStorage và expose ra window
+            const { supabase, getCurrentUser } = await import(basePath + 'js/supabase-client.js');
             const { AuthUI } = await import(basePath + 'js/auth-ui.js');
             const { CloudStorage } = await import(basePath + 'js/cloud-storage.js');
             
+            // Expose to window cho non-module scripts
+            window._supabase = supabase;
             window.CloudStorage = CloudStorage;
+            
             this._authUI = new AuthUI();
             await this._authUI.init({ injectButton: false });
 
