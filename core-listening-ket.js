@@ -1886,6 +1886,19 @@ class ListeningCore {
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);
 
+        // Gửi BroadcastChannel thông báo đã reset
+        try {
+            const channel = new BroadcastChannel('ket_reset_channel');
+            channel.postMessage({
+                action: 'reset',
+                type: 'listening',
+                book: this.currentTestData.book,
+                test: this.currentTestData.test,
+                part: this.currentTestData.part
+            });
+            channel.close();
+        } catch (e) { }
+
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
         if (!book || !test || !part) {

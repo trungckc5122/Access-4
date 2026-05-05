@@ -2394,6 +2394,19 @@ class ReadingCore {
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);
 
+        // Gửi BroadcastChannel thông báo đã reset
+        try {
+            const channel = new BroadcastChannel('ket_reset_channel');
+            channel.postMessage({
+                action: 'reset',
+                type: 'reading',
+                book: this.currentTestData.book,
+                test: this.currentTestData.test,
+                part: this.currentTestData.part
+            });
+            channel.close();
+        } catch (e) { }
+
         const testInfo = this.storageManager.parseTestInfo(document.querySelector('.candidate')?.textContent || '');
         const book = this.currentTestData.book || testInfo.book || 1;
         const test = this.currentTestData.test || testInfo.test || 1;
