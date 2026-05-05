@@ -124,35 +124,46 @@ export class CloudStorage {
     const isNote      = localStorageKey.endsWith('_note');
     const isDraft     = localStorageKey.endsWith('_draft');
 
-    const matchClause = {
-      user_id: user.id,
-      exam:    params.exam,
-      skill:   params.skill,
-      book:    params.book,
-      test:    params.test,
-      part:    params.part
-    };
-
     try {
       if (isHighlight) {
         await supabase.from('progress')
           .update({ highlights: null })
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else if (isNote) {
         await supabase.from('progress')
           .update({ note: null })
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else if (isDraft) {
         // Chỉ xóa phần draft, giữ lại row nếu đã completed
         await supabase.from('progress')
-          .update({ answers: null })
+          .update({ answers: null, status: 'completed' })
           .eq('status', 'draft')
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else {
         // completed key (no suffix) hoặc _submitted → xóa hẳn row
         await supabase.from('progress')
           .delete()
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       }
       console.log('[CloudStorage] Removed from cloud:', localStorageKey);
     } catch (e) {
