@@ -781,7 +781,60 @@ class ListeningCore {
                     location.reload();
                 }
             });
-        } catch (e) {
+       
+
+            // ── Realtime Sync — nhận thay đổi từ thiết bị khác ngay lập tức ──
+            const user = await getCurrentUser();
+            if (user) {
+                if (this._realtimeChannel) {
+                    await supabase.removeChannel(this._realtimeChannel);
+                    this._realtimeChannel = null;
+                }
+                this._realtimeChannel = supabase
+                    .channel(`progress-test-${user.id}`)
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'progress', filter: `user_id=eq.${user.id}` },
+                        async (payload) => {
+                            console.log('[Realtime] Remote change:', payload.eventType, payload.new || payload.old);
+                            if (window._suppressRealtimeUntil && Date.now() < window._suppressRealtimeUntil) {
+                                console.log('[Realtime] Suppressed (local write cooldown)');
+                                return;
+                            }
+                            const wasCompleted = this.isCompleted();
+                            if (payload.eventType === 'DELETE') {
+                                const old = payload.old;
+                                if (old) {
+                                    const exam = old.exam || 'pet';
+                                    const baseKey = `${exam}_${old.skill}_book${old.book}_test${old.test}_part${old.part}`;
+                                    if (baseKey === this.getStorageKey(false)) {
+                                        console.log('[Realtime] This test was reset on another device - reloading');
+                                        localStorage.removeItem(baseKey);
+                                        localStorage.removeItem(baseKey + '_draft');
+                                        localStorage.removeItem(baseKey + '_submitted');
+                                        localStorage.removeItem(baseKey + '_highlights');
+                                        location.reload(); return;
+                                    }
+                                }
+                                await CloudStorage.syncCloudToLocal(); return;
+                            }
+                            await CloudStorage.syncCloudToLocal();
+                            const nowCompleted = this.isCompleted();
+                            if (wasCompleted !== nowCompleted || nowCompleted) {
+                                console.log('[Realtime] State updated from remote, reloading...');
+                                location.reload();
+                            }
+                        }
+                    )
+                    .subscribe((status, err) => {
+                        if (status === 'SUBSCRIBED') console.log('[Realtime] Connected on test page');
+                        if (status === 'CHANNEL_ERROR') { console.error('[Realtime] Error:', err); }
+                    });
+                window.addEventListener('beforeunload', () => {
+                    if (this._realtimeChannel) supabase.removeChannel(this._realtimeChannel);
+                });
+            }
+ } catch (e) {
             console.warn('[Cloud] Failed to init:', e);
         }
     }
