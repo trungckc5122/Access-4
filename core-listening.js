@@ -2285,6 +2285,28 @@ class UIManager {
         });
     }
 
+    // Helper: Lấy current user từ cả __currentCloudUser và _supabase
+    async _getCurrentUser() {
+        // Ưu tiên __currentCloudUser nếu có
+        if (window.__currentCloudUser) {
+            return window.__currentCloudUser;
+        }
+        // Nếu không, thử lấy từ _supabase (được expose từ index.html)
+        if (window._supabase) {
+            try {
+                const { data: { session } } = await window._supabase.auth.getSession();
+                if (session?.user) {
+                    // Cache lại để lần sau dùng
+                    window.__currentCloudUser = session.user;
+                    return session.user;
+                }
+            } catch (e) {
+                console.warn('[Auth] Failed to get session from _supabase:', e);
+            }
+        }
+        return null;
+    }
+
     injectHeaderControls(coreInstance) {
         const header = document.querySelector('.ielts-header');
         if (!header) return;
@@ -2541,6 +2563,18 @@ class UIManager {
             });
             window.__storageOnlineListenerAdded = true;
         }
+
+        // Refresh user cache mỗi 3 giây
+        this._refreshUserCache();
+        if (!this._userCacheInterval) {
+            this._userCacheInterval = setInterval(() => this._refreshUserCache(), 3000);
+        }
+    }
+
+    // Refresh user cache async
+    async _refreshUserCache() {
+        const user = await this._getCurrentUser();
+        this._cachedUser = user;
     }
 
     updateStorageIndicator() {
@@ -2549,7 +2583,7 @@ class UIManager {
 
         // Kiểm tra chế độ cloud-only
         const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
-        const currentUser = window.__currentCloudUser;
+        const currentUser = this._cachedUser || window.__currentCloudUser;
 
         // Kiểm tra trạng thái online/offline
         const isOnline = navigator.onLine;
@@ -2775,9 +2809,10 @@ class UIManager {
         });
     }
 
-    _showHybridManageModal() {
+    async _showHybridManageModal() {
         // Kiểm tra đăng nhập
-        if (!window.__currentCloudUser) {
+        const currentUser = await this._getCurrentUser();
+        if (!currentUser) {
             this._showStorageToast('⚠️ Vui lòng đăng nhập để sử dụng tính năng này', '#d97706');
             const authBtn = document.getElementById('auth-btn');
             if (authBtn) authBtn.click();
@@ -2832,9 +2867,10 @@ class UIManager {
         });
     }
 
-    _showCloudOnlyActivateModal() {
+    async _showCloudOnlyActivateModal() {
         // Kiểm tra đăng nhập
-        if (!window.__currentCloudUser) {
+        const currentUser = await this._getCurrentUser();
+        if (!currentUser) {
             this._showStorageToast('⚠️ Vui lòng đăng nhập trước khi kích hoạt Cloud-Only', '#d97706');
             const authBtn = document.getElementById('auth-btn');
             if (authBtn) authBtn.click();
@@ -2871,9 +2907,9 @@ class UIManager {
         });
     }
 
-    _showCloudOnlyManageModal() {
+    async _showCloudOnlyManageModal() {
         const isOnline = navigator.onLine;
-        const currentUser = window.__currentCloudUser;
+        const currentUser = await this._getCurrentUser();
 
         const existing = document.getElementById('cloudManageOverlay');
         if (existing) existing.remove();
