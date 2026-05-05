@@ -1108,7 +1108,7 @@ class ListeningCore {
                     try { window.CloudStorage.save(this._pendingQuotaKey, JSON.parse(this._pendingQuotaValue)); }
                     catch { window.CloudStorage.save(this._pendingQuotaKey, this._pendingQuotaValue); }
                 }
-                this._showStorageToast(
+                this.constructor._showStorageToast(
                     removed > 0
                         ? `✅ Đã dọn ${removed} file cũ, lưu thành công!`
                         : `✅ Đã giải phóng bộ nhớ, lưu thành công!`,
@@ -1126,7 +1126,7 @@ class ListeningCore {
             modal.remove();
             const user = window.__currentCloudUser || null;
             if (!user) {
-                this._showStorageToast('🔑 Vui lòng đăng nhập, sau đó thử lại.', '#b45309');
+                this.constructor._showStorageToast('🔑 Vui lòng đăng nhập, sau đó thử lại.', '#b45309');
                 document.getElementById('auth-btn')?.click();
                 this._pendingQuotaKey = this._pendingQuotaValue = null;
                 return;
@@ -1139,7 +1139,7 @@ class ListeningCore {
                 try { window.CloudStorage.save(this._pendingQuotaKey, JSON.parse(this._pendingQuotaValue)); }
                 catch { window.CloudStorage.save(this._pendingQuotaKey, this._pendingQuotaValue); }
             }
-            this._showStorageToast('☁️ Đã chuyển sang Cloud-Only!', '#0d9488');
+            this.constructor._showStorageToast('☁️ Đã chuyển sang Cloud-Only!', '#0d9488');
             const ind = document.getElementById('storageIndicator');
             if (ind) { ind.className = 'storage-indicator cloud-badge'; ind.innerHTML = '☁️ Cloud'; ind.style.background = ''; }
             document.getElementById('storageWarningMsg')?.remove();
@@ -2729,7 +2729,7 @@ class UIManager {
 
         // Sync toàn bộ local lên cloud trước khi chuyển mode
         if (window.CloudStorage) {
-            if (uiRef) uiRef._showStorageToast('⏳ Đang đồng bộ dữ liệu lên cloud...', '#0d9488');
+            if (uiRef) this._showStorageToast('⏳ Đang đồng bộ dữ liệu lên cloud...', '#0d9488');
             try { await window.CloudStorage.migrateLocalStorageToCloud(); }
             catch (e) { console.warn('[StorageMode] Pre-sync failed:', e); }
         }
@@ -2746,7 +2746,7 @@ class UIManager {
 
         // Pull toàn bộ dữ liệu cloud về local sau khi chuyển về hybrid
         if (window.CloudStorage) {
-            if (uiRef) uiRef._showStorageToast('⏳ Đang tải dữ liệu từ cloud...', '#0d9488');
+            if (uiRef) this._showStorageToast('⏳ Đang tải dữ liệu từ cloud...', '#0d9488');
             try { await window.CloudStorage.syncCloudToLocal(); }
             catch (e) { console.warn('[StorageMode] Post-sync failed:', e); }
         }
