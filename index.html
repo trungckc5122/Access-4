@@ -3260,25 +3260,13 @@
           // PET: reset bài
           const petResetCh = new BroadcastChannel('pet_reset_channel');
           petResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset') syncAndRefreshBadges();
+            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
           };
 
           // KET: reset bài
           const ketResetCh = new BroadcastChannel('ket_reset_channel');
           ketResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset') syncAndRefreshBadges();
-          };
-
-          // PET: reset bài
-          const petResetCh2 = new BroadcastChannel('pet_reset_channel');
-          petResetCh2.onmessage = (e) => {
-            if (e.data.action === 'reset_full') syncAndRefreshBadges();
-          };
-
-          // KET: reset bài
-          const ketResetCh2 = new BroadcastChannel('ket_reset_channel');
-          ketResetCh2.onmessage = (e) => {
-            if (e.data.action === 'reset_full') syncAndRefreshBadges();
+            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
           };
         } catch (e) { /* BroadcastChannel not supported */ }
       });
@@ -4661,7 +4649,14 @@
 
     // ── Khởi tạo Auth UI ──
     const authUI = new AuthUI();
-    authUI.init();
+    await authUI.init();
+
+    // Fallback: nếu không có user đăng nhập, vẫn hiển thị badge từ localStorage
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
+      if (typeof window.initResumeButtons === 'function') window.initResumeButtons();
+    }
 
     // ── Supabase Realtime: tự động cập nhật khi thiết bị khác nộp bài ────────
     let _realtimeChannel = null;
