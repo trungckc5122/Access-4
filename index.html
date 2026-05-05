@@ -3212,9 +3212,8 @@
         enableHoverForAllDetails();
         initTheme();
         initGlobalStacking();
-        initStatusBadges();
+        // initStatusBadges và initResumeButtons sẽ được gọi sau khi sync từ cloud
         initFilters();
-        initResumeButtons();
         initHeaderAutoHide();
         initReset();
         initSmartSearch();
@@ -3261,13 +3260,25 @@
           // PET: reset bài
           const petResetCh = new BroadcastChannel('pet_reset_channel');
           petResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
+            if (e.data.action === 'reset') syncAndRefreshBadges();
           };
 
           // KET: reset bài
           const ketResetCh = new BroadcastChannel('ket_reset_channel');
           ketResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
+            if (e.data.action === 'reset') syncAndRefreshBadges();
+          };
+
+          // PET: reset bài
+          const petResetCh2 = new BroadcastChannel('pet_reset_channel');
+          petResetCh2.onmessage = (e) => {
+            if (e.data.action === 'reset_full') syncAndRefreshBadges();
+          };
+
+          // KET: reset bài
+          const ketResetCh2 = new BroadcastChannel('ket_reset_channel');
+          ketResetCh2.onmessage = (e) => {
+            if (e.data.action === 'reset_full') syncAndRefreshBadges();
           };
         } catch (e) { /* BroadcastChannel not supported */ }
       });
@@ -4721,9 +4732,12 @@
 
         // 1. Luôn ưu tiên sync từ Cloud về Local trước
         const syncedCount = await CloudStorage.syncCloudToLocal();
-        // Luôn gọi initStatusBadges sau sync, bất kể count
+        // Luôn gọi initStatusBadges và initResumeButtons sau sync, bất kể count
         if (typeof window.initStatusBadges === 'function') {
           window.initStatusBadges();
+        }
+        if (typeof window.initResumeButtons === 'function') {
+          window.initResumeButtons();
         }
         if (syncedCount > 0) {
           showCloudToast(`☁️ Đã tải ${syncedCount} bài từ đám mây!`);
@@ -4735,6 +4749,9 @@
           if (count > 0) showCloudToast(`☁️ Đã đồng bộ thêm ${count} bài lên đám mây!`);
           if (typeof window.initStatusBadges === 'function') {
             window.initStatusBadges();
+          }
+          if (typeof window.initResumeButtons === 'function') {
+            window.initResumeButtons();
           }
         }
 
