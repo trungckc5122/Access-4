@@ -4597,7 +4597,12 @@
       const themeBtn = document.getElementById('theme-toggle');
       const authBtn = document.getElementById('auth-btn');
       const firstTest = document.querySelector('.content-panel.active-panel details');
-      const mixTestBtn = document.querySelector('a[href="mix test.html"]');
+      // Find visible mix test button (might be in KET or PET panel depending on active tab)
+      const allMixTestBtns = document.querySelectorAll('a[href="mix test.html"]');
+      const mixTestBtn = Array.from(allMixTestBtns).find(btn => {
+        const rect = btn.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
       const resetBtn = document.getElementById('show-reset-modal');
       const widgetEl = document.getElementById('onboardingWidget');
 
@@ -4647,20 +4652,15 @@
           if (!el) { resolve(); return; }
           const isInHeader = header && header.contains(el);
           const isFixed = ['fixed', 'sticky'].includes(getComputedStyle(el).position);
-          // Check if this is the mix test button (needs scroll to see it)
-          const isMixTest = el.getAttribute('href') === 'mix test.html';
           if (isInHeader || isFixed) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             if (header) header.classList.remove('collapsed');
             setTimeout(resolve, 350);
-          } else if (isMixTest) {
-            // For mix test button, scroll to bring it into center view
+          } else {
+            // Scroll element to center view
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             if (header) header.classList.remove('collapsed');
             setTimeout(resolve, 400);
-          } else {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(resolve, 350);
           }
         });
       });
