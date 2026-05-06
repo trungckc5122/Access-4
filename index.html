@@ -3326,7 +3326,7 @@
         <div class="step-checkbox" style="flex-shrink:0; margin-top:2px;"></div>
         <span class="tip-text" id="tipText">Bắt đầu bằng cách chọn một tab ở trên!</span>
       </div>
-      <button onclick="window.startGuidedTour && window.startGuidedTour()" title="Xem lại tour hướng dẫn" style="
+      <button onclick="showWelcomingForTour()" title="Xem lại tour hướng dẫn" style="
         display:flex; align-items:center; gap:6px; justify-content:center;
         width:100%; margin-top:12px; padding:9px 14px;
         background:rgba(var(--primary-rgb),0.08);
@@ -4039,7 +4039,7 @@
           const welcomeShown = localStorage.getItem(WELCOME_SHOWN_KEY);
 
           if (!welcomeShown) {
-            // First time: show welcome modal
+            // First time: show welcome modal first
             document.getElementById('welcomeOverlay').classList.add('show');
             // Hide both widget and icon initially
             document.getElementById('onboardingWidget').classList.remove('show');
@@ -4370,19 +4370,32 @@
         isCollapsedToIcon = false;
         document.getElementById('helpButton').classList.add('hidden');
         document.getElementById('onboardingWidget').classList.add('show');
-        // Start guided tour if not already shown
+        // Start guided tour after clicking "Bắt đầu ngay"
         setTimeout(() => window.startGuidedTour && window.startGuidedTour(), 400);
       };
       window.skipWelcome = function () {
         localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
         document.getElementById('welcomeOverlay').classList.remove('show');
-        // Show icon (?), hide widget (user can toggle later)
-        isCollapsedToIcon = true;
-        document.getElementById('helpButton').classList.remove('hidden');
-        document.getElementById('onboardingWidget').classList.remove('show');
+        // Show widget (not icon) so user can continue onboarding
+        isCollapsedToIcon = false;
+        document.getElementById('helpButton').classList.add('hidden');
+        document.getElementById('onboardingWidget').classList.add('show');
+        // When skipping welcoming during "xem lại tour", go to tour immediately
+        setTimeout(() => {
+          if (window.startGuidedTour) window.startGuidedTour();
+        }, 300);
       };
       window.goToOnboardingStep = function (index) {
         if (window.onboarding) window.onboarding.goToStep(index);
+      };
+
+      // Show welcoming modal for "xem lại tour" flow
+      window.showWelcomingForTour = function () {
+        // Show welcome modal
+        document.getElementById('welcomeOverlay').classList.add('show');
+        // Hide widget and icon during welcoming
+        document.getElementById('onboardingWidget').classList.remove('show');
+        document.getElementById('helpButton').classList.add('hidden');
       };
 
       // Initialize
@@ -4619,16 +4632,32 @@
         disableInteraction: false
       });
 
+      // Restore widget after tour ends (for "xem lại tour" flow)
+      const restoreWidget = () => {
+        document.getElementById('onboardingWidget').classList.add('show');
+        document.getElementById('helpButton').classList.add('hidden');
+        isCollapsedToIcon = false;
+      };
+      tour.oncomplete(restoreWidget);
+      tour.onexit(restoreWidget);
+
       // Scroll đúng vị trí trước khi hiện tooltip
       tour.onbeforechange(function (el) {
         return new Promise(resolve => {
           if (!el) { resolve(); return; }
           const isInHeader = header && header.contains(el);
           const isFixed = ['fixed', 'sticky'].includes(getComputedStyle(el).position);
+          // Check if this is the mix test button (needs scroll to see it)
+          const isMixTest = el.getAttribute('href') === 'mix test.html';
           if (isInHeader || isFixed) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             if (header) header.classList.remove('collapsed');
             setTimeout(resolve, 350);
+          } else if (isMixTest) {
+            // For mix test button, scroll to bring it into center view
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (header) header.classList.remove('collapsed');
+            setTimeout(resolve, 400);
           } else {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(resolve, 350);
