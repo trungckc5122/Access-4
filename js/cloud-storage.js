@@ -8,8 +8,10 @@ export class CloudStorage {
   // Gọi thay cho: localStorage.setItem(key, JSON.stringify(data))
   // ─────────────────────────────────────────────
   static async save(localStorageKey, data) {
-    // 1. Luôn lưu localStorage trước (offline fallback)
-    try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch {}
+    // 1. Chỉ ghi localStorage khi KHÔNG phải Cloud-Only mode
+    if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
+      try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch {}
+    }
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
     const user = await getCurrentUser();
@@ -54,6 +56,11 @@ export class CloudStorage {
       .upsert(upsertData, {
         onConflict: 'user_id,exam,skill,book,test,part'
       });
+
+    if (!error) {
+      // Suppress Realtime echo trên chính tab này trong 2 giây (tránh tự reload)
+      window._suppressRealtimeUntil = Date.now() + 2000;
+    }
 
     return { synced: !error, error };
   }
@@ -124,35 +131,46 @@ export class CloudStorage {
     const isNote      = localStorageKey.endsWith('_note');
     const isDraft     = localStorageKey.endsWith('_draft');
 
-    const matchClause = {
-      user_id: user.id,
-      exam:    params.exam,
-      skill:   params.skill,
-      book:    params.book,
-      test:    params.test,
-      part:    params.part
-    };
-
     try {
       if (isHighlight) {
         await supabase.from('progress')
           .update({ highlights: null })
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else if (isNote) {
         await supabase.from('progress')
           .update({ note: null })
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else if (isDraft) {
         // Chỉ xóa phần draft, giữ lại row nếu đã completed
         await supabase.from('progress')
-          .update({ answers: null })
+          .update({ answers: null, status: 'completed' })
           .eq('status', 'draft')
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       } else {
         // completed key (no suffix) hoặc _submitted → xóa hẳn row
         await supabase.from('progress')
           .delete()
-          .match(matchClause);
+          .eq('user_id', user.id)
+          .eq('exam', params.exam)
+          .eq('skill', params.skill)
+          .eq('book', params.book)
+          .eq('test', params.test)
+          .eq('part', params.part);
       }
       console.log('[CloudStorage] Removed from cloud:', localStorageKey);
     } catch (e) {
@@ -161,6 +179,42 @@ export class CloudStorage {
   }
 
   // ─────────────────────────────────────────────
+  // REMOVE ALL — xóa toàn bộ row (dùng khi reset, gọi 1 lần thay vì 3 lần)
+  // suppress signal để tab hiện tại không tự reload
+  // ─────────────────────────────────────────────
+  static async removeAll(baseKey) {
+    localStorage.removeItem(baseKey);
+    localStorage.removeItem(baseKey + '_draft');
+    localStorage.removeItem(baseKey + '_submitted');
+    localStorage.removeItem(baseKey + '_highlights');
+    localStorage.removeItem(baseKey + '_note');
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const params = parseStorageKey(baseKey);
+    if (!params) return;
+
+    // Suppress echo realtime trên tab hiện tại
+    window._suppressRealtimeUntil = Date.now() + 3000;
+
+    try {
+      const { error } = await supabase.from('progress')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('exam',    params.exam)
+        .eq('skill',   params.skill)
+        .eq('book',    params.book)
+        .eq('test',    params.test)
+        .eq('part',    params.part);
+      if (error) console.error('[CloudStorage] removeAll failed:', error);
+      else console.log('[CloudStorage] Row deleted for:', baseKey);
+    } catch (e) {
+      console.error('[CloudStorage] removeAll exception:', e);
+    }
+  }
+
+    // ─────────────────────────────────────────────
   // MIGRATE: Đẩy toàn bộ localStorage cũ lên Supabase
   // Gọi 1 lần sau khi user đăng nhập lần đầu
   // ─────────────────────────────────────────────
@@ -248,8 +302,8 @@ export class CloudStorage {
           if (examPrefixes.some(p => localKey.startsWith(p)) && !cloudKeys.has(localKey)) {
             const localTimestamp = getLocalDataTimestamp(localKey);
 
-            if (localTimestamp < lastSyncTime) {
-              // Dữ liệu cũ hơn lần sync cuối → có thể đã bị xóa trên cloud hoặc thiết bị khác
+            if (localTimestamp <= lastSyncTime) {
+              // Dữ liệu cũ hơn hoặc bằng lần sync cuối → có thể đã bị xóa trên cloud hoặc thiết bị khác
               localStorage.removeItem(localKey);
               console.log('[CloudStorage] Parity: Removed old local key missing from cloud:', localKey);
             } else if (localTimestamp > 0) {
@@ -299,6 +353,9 @@ export class CloudStorage {
               completedData._hasScore = true;
             }
             
+            // Luôn ghi completed result vào localStorage (kể cả cloud-only)
+            // vì isCompleted(), loadSubmittedState() là sync và đọc từ localStorage.
+            // Không có cache này → isCompleted() luôn false → UI bị broken.
             localStorage.setItem(baseKey, JSON.stringify(completedData));
             localStorage.setItem(baseKey + '_submitted', JSON.stringify({
               ...completedData,
@@ -372,6 +429,66 @@ export class CloudStorage {
       console.error('[CloudStorage] Sync process failed:', e);
       return 0;
     }
+  }
+
+  // ─────────────────────────────────────────────
+  // GET ALL PROGRESS (cho Cloud-Only mode)
+  // Trả về object map với key là storageKey, value là dữ liệu
+  // ─────────────────────────────────────────────
+  static async getAllProgress() {
+    const user = await getCurrentUser();
+    // Nếu có user, lấy từ Supabase (ưu tiên vì đồng bộ nhất)
+    if (user) {
+      const { data, error } = await supabase
+        .from('progress')
+        .select('*')
+        .eq('user_id', user.id);
+      if (!error && data) {
+        const map = {};
+        data.forEach(row => {
+          const exam = row.exam || 'pet';
+          const prefix = `${exam}_${row.skill}`;
+          const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+          
+          // Lưu kết quả completed (nếu có)
+          if (row.status === 'completed' && row.answers) {
+            map[baseKey] = {
+              correctCount: row.score ?? 0,
+              totalQuestions: row.total ?? 0,
+              answers: row.answers,
+              status: 'completed'
+            };
+          }
+          // Draft
+          if (row.answers && row.status === 'draft') {
+            map[baseKey + '_draft'] = row.answers;
+          }
+          // Highlights
+          if (row.highlights) {
+            map[baseKey + '_highlights'] = row.highlights;
+          }
+          // Note
+          if (row.note) {
+            map[baseKey + '_note'] = row.note;
+          }
+        });
+        return map;
+      }
+    }
+    // Fallback: đọc localStorage (hoặc dùng khi không có user)
+    const map = {};
+    const prefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (prefixes.some(p => key.startsWith(p))) {
+        try {
+          map[key] = JSON.parse(localStorage.getItem(key));
+        } catch {
+          map[key] = localStorage.getItem(key);
+        }
+      }
+    }
+    return map;
   }
 }
 
