@@ -2947,7 +2947,7 @@ class ReadingStorageManager {
         }
 
         const partId = testData.part || this.parseTestInfo(document.title).part;
-        const partData = { partId, name: `Part ${partId}`, totalQuestions: details.length, correctCount, details };
+        const partData = { partId, name: `Part ${partId}`, totalQuestions: details.length, correctCount, details, timestamp: Date.now() };
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
         const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
         const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;

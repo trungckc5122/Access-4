@@ -2427,7 +2427,8 @@ class StorageManager {
             name: `Part ${testData.part}`,
             totalQuestions: details.length,
             correctCount,
-            details
+            details,
+            timestamp: Date.now()
         };
 
         const book = testData.book || this.parseTestInfo(testData.title).book;

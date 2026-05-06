@@ -5573,7 +5573,7 @@ class ReadingStorageManager {
 
         const partId = testData.part || this.parseTestInfo(document.title).part;
 
-        const partData = { partId, name: `Part ${partId}`, totalQuestions: details.length, correctCount, details };
+        const partData = { partId, name: `Part ${partId}`, totalQuestions: details.length, correctCount, details, timestamp: Date.now() };
 
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
 
