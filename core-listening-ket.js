@@ -2789,12 +2789,23 @@ class UIManager {
         const resetBtn = document.getElementById('resetBtn');
         if (!bottomBar || !resetBtn || document.getElementById('storageIndicator')) return;
 
+        const container = document.createElement('div');
+        container.id = 'storageContainer';
+        container.style.cssText = 'display: inline-flex; gap: 8px; align-items: center; margin-left: 10px;';
+
+        const modeBadge = document.createElement('div');
+        modeBadge.id = 'storageModeBadge';
+        modeBadge.style.cssText = 'font-size: 13px; font-weight: 600; border-radius: 6px; padding: 5px 10px; cursor: help; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease;';
+
         const indicator = document.createElement('div');
         indicator.id = 'storageIndicator';
         indicator.className = 'storage-indicator';
-        indicator.style.cssText = 'display: inline-flex; align-items: center; margin-left: 10px; font-size: 13px; font-weight: 600; border-radius: 6px; padding: 5px 10px; cursor: help; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);';
+        indicator.style.cssText = 'font-size: 13px; font-weight: 600; border-radius: 6px; padding: 5px 10px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);';
 
-        resetBtn.parentNode.insertBefore(indicator, resetBtn.nextSibling);
+        container.appendChild(modeBadge);
+        container.appendChild(indicator);
+
+        resetBtn.parentNode.insertBefore(container, resetBtn.nextSibling);
 
         // Đăng ký hàm dọn dẹp toàn cục (cross-module: pet & ket, reading & listening)
         window.__petKetCleanStorage = () => {
@@ -2849,18 +2860,38 @@ class UIManager {
 
     updateStorageIndicator() {
         const indicator = document.getElementById('storageIndicator');
-        if (!indicator) return;
+        const modeBadge = document.getElementById('storageModeBadge');
+        if (!indicator || !modeBadge) return;
 
         // Kiểm tra chế độ cloud-only
         const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
         const currentUser = this._cachedUser || window.__currentCloudUser;
-
-        // Kiểm tra trạng thái online/offline
         const isOnline = navigator.onLine;
+
+        // Cập nhật Mode Badge
+        if (isCloudOnly) {
+            modeBadge.innerHTML = '☁️ Mode: Cloud-Only';
+            modeBadge.style.backgroundColor = '#e0f2fe';
+            modeBadge.style.color = '#0369a1';
+            modeBadge.title = 'Dữ liệu lưu 100% trên mây. Không tốn dung lượng thiết bị, an toàn khi đổi máy.';
+        } else {
+            modeBadge.innerHTML = '🔄 Mode: Hybrid';
+            modeBadge.style.backgroundColor = '#f3e8ff';
+            modeBadge.style.color = '#7e22ce';
+            modeBadge.title = 'Lưu kép (Thiết bị + Mây). Chạy mượt offline, đồng bộ ngay khi có mạng.';
+        }
+
+        indicator.onclick = () => {
+            if (localStorage.getItem('_storage_mode') === 'cloud_only') {
+                this._showCloudOnlyManageModal();
+            } else {
+                this._showHybridManageModal();
+            }
+        };
 
         // Nếu đang cloud-only
         if (isCloudOnly) {
-            let badgeText = '☁️ Cloud';
+            let badgeText = '☁️ Quản lý Cloud';
             let color = '#0d9488'; // teal
             let bgColor = '#ccfbf1';
             let tooltip = 'Đang lưu trữ Cloud-Only. Nhấn để quản lý.';
@@ -2871,7 +2902,7 @@ class UIManager {
                 bgColor = '#e5e7eb';
                 tooltip = 'Mất kết nối mạng. Dữ liệu tạm lưu trong session.';
             } else if (!currentUser) {
-                badgeText = '☁️ Cloud ⚠️';
+                badgeText = '☁️ Quản lý ⚠️';
                 color = '#d97706'; // amber
                 bgColor = '#fef3c7';
                 tooltip = 'Chưa đăng nhập. Nhấn để đăng nhập lại.';
@@ -2881,17 +2912,7 @@ class UIManager {
             indicator.style.backgroundColor = bgColor;
             indicator.title = tooltip;
             indicator.innerHTML = badgeText;
-            indicator.style.cursor = 'pointer';
-
-            // Gắn sự kiện click nếu chưa có
-            if (!indicator._cloudClickHandler) {
-                indicator._cloudClickHandler = () => {
-                    if (isCloudOnly) {
-                        this._showCloudOnlyManageModal();
-                    }
-                };
-                indicator.addEventListener('click', indicator._cloudClickHandler);
-            }
+            
             return;
         }
 
@@ -2922,14 +2943,7 @@ class UIManager {
         indicator.style.color = color;
         indicator.style.backgroundColor = bgColor;
         indicator.title = `Đã dùng: ${usedPercentage.toFixed(1)}%. Nhấn để quản lý.`;
-        indicator.innerHTML = `💾 Trống: ${remainingMB}MB`;
-        indicator.style.cursor = 'pointer';
-
-        // Gắn sự kiện click cho badge hybrid
-        if (!indicator._hybridClickHandler) {
-            indicator._hybridClickHandler = () => this._showHybridManageModal();
-            indicator.addEventListener('click', indicator._hybridClickHandler);
-        }
+        indicator.innerHTML = `💾 Quản lý Local: ${remainingMB}MB`;
 
         // Cảnh báo khi sắp đầy (chỉ ở chế độ hybrid)
         let warningEl = document.getElementById('storageWarningMsg');
