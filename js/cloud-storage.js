@@ -303,9 +303,13 @@ export class CloudStorage {
             const localTimestamp = getLocalDataTimestamp(localKey);
 
             if (localTimestamp <= lastSyncTime) {
-              // Dữ liệu cũ hơn hoặc bằng lần sync cuối → có thể đã bị xóa trên cloud hoặc thiết bị khác
-              localStorage.removeItem(localKey);
-              console.log('[CloudStorage] Parity: Removed old local key missing from cloud:', localKey);
+              if (localTimestamp === 0 && (localKey.endsWith('_highlights') || localKey.endsWith('_note'))) {
+                console.log('[CloudStorage] Parity: Kept local sub-key with no timestamp:', localKey);
+              } else {
+                // Dữ liệu cũ hơn hoặc bằng lần sync cuối → có thể đã bị xóa trên cloud hoặc thiết bị khác
+                localStorage.removeItem(localKey);
+                console.log('[CloudStorage] Parity: Removed old local key missing from cloud:', localKey);
+              }
             } else if (localTimestamp > 0) {
               // Dữ liệu mới hơn lần sync cuối → có thể là bài mới làm offline → Giữ lại để sync lên sau
               console.log('[CloudStorage] Parity: Preserved newer local work missing from cloud:', localKey);
