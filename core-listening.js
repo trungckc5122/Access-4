@@ -474,7 +474,7 @@ class MiniDashboardManager {
         return this.petListeningScoreMap[correct] || { cambridge: 0, cefr: '-' };
     }
 
-    refreshData() {
+    async refreshData() {
         const meta = this.core.getTestMeta();
         const book = meta.book;
         const test = meta.test;
@@ -482,13 +482,18 @@ class MiniDashboardManager {
         const titleEl = document.getElementById('mini-dashboard-title');
         if (titleEl) titleEl.textContent = `PET ${book} - Test ${test}`;
 
-        const readingData = this.fetchSkillData('reading', book, test);
-        const listeningData = this.fetchSkillData('listening', book, test);
+        let progressMap = {};
+        if (localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+            progressMap = await window.CloudStorage.getAllProgress();
+        }
+
+        const readingData = this.fetchSkillData('reading', book, test, progressMap);
+        const listeningData = this.fetchSkillData('listening', book, test, progressMap);
 
         this.renderContent(readingData, listeningData);
     }
 
-    fetchSkillData(skill, book, test) {
+    fetchSkillData(skill, book, test, progressMap = {}) {
         const parts = skill === 'reading' ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4];
 
         return parts.map(part => {
@@ -497,6 +502,13 @@ class MiniDashboardManager {
 
             let dataCompleted = localStorage.getItem(keyCompleted);
             let dataDraft = localStorage.getItem(keyDraft);
+
+            if (!dataCompleted && progressMap[keyCompleted]) {
+                 dataCompleted = JSON.stringify(progressMap[keyCompleted]);
+            }
+            if (!dataDraft && progressMap[keyDraft]) {
+                 dataDraft = JSON.stringify(progressMap[keyDraft]);
+            }
 
             if (dataCompleted) {
                 try {
@@ -704,7 +716,7 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
-        this.loadHighlightDraft();
+        await this.loadHighlightDraft();
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
@@ -718,7 +730,7 @@ class ListeningCore {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
         } else if (!this.isCompleted()) {
-            this.loadDraft();
+            await this.loadDraft();
         }
 
         this.noteManager = new PETNoteManager(this);
@@ -750,10 +762,15 @@ class ListeningCore {
                 basePath = url.origin + url.pathname.replace('core-listening.js', '');
             }
             
+            // Import supabase, AuthUI, CloudStorage và expose ra window
+            const { supabase, getCurrentUser } = await import(basePath + 'js/supabase-client.js');
             const { AuthUI } = await import(basePath + 'js/auth-ui.js');
             const { CloudStorage } = await import(basePath + 'js/cloud-storage.js');
             
+            // Expose to window cho non-module scripts
+            window._supabase = supabase;
             window.CloudStorage = CloudStorage;
+            
             this._authUI = new AuthUI();
             await this._authUI.init({ injectButton: false });
 
@@ -776,7 +793,60 @@ class ListeningCore {
                     location.reload();
                 }
             });
-        } catch (e) {
+       
+
+            // ── Realtime Sync — nhận thay đổi từ thiết bị khác ngay lập tức ──
+            const user = await getCurrentUser();
+            if (user) {
+                if (this._realtimeChannel) {
+                    await supabase.removeChannel(this._realtimeChannel);
+                    this._realtimeChannel = null;
+                }
+                this._realtimeChannel = supabase
+                    .channel(`progress-test-${user.id}`)
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'progress', filter: `user_id=eq.${user.id}` },
+                        async (payload) => {
+                            console.log('[Realtime] Remote change:', payload.eventType, payload.new || payload.old);
+                            if (window._suppressRealtimeUntil && Date.now() < window._suppressRealtimeUntil) {
+                                console.log('[Realtime] Suppressed (local write cooldown)');
+                                return;
+                            }
+                            const wasCompleted = this.isCompleted();
+                            if (payload.eventType === 'DELETE') {
+                                const old = payload.old;
+                                if (old) {
+                                    const exam = old.exam || 'pet';
+                                    const baseKey = `${exam}_${old.skill}_book${old.book}_test${old.test}_part${old.part}`;
+                                    if (baseKey === this.getStorageKey(false)) {
+                                        console.log('[Realtime] This test was reset on another device - reloading');
+                                        localStorage.removeItem(baseKey);
+                                        localStorage.removeItem(baseKey + '_draft');
+                                        localStorage.removeItem(baseKey + '_submitted');
+                                        localStorage.removeItem(baseKey + '_highlights');
+                                        location.reload(); return;
+                                    }
+                                }
+                                await CloudStorage.syncCloudToLocal(); return;
+                            }
+                            await CloudStorage.syncCloudToLocal();
+                            const nowCompleted = this.isCompleted();
+                            if (wasCompleted !== nowCompleted || nowCompleted) {
+                                console.log('[Realtime] State updated from remote, reloading...');
+                                location.reload();
+                            }
+                        }
+                    )
+                    .subscribe((status, err) => {
+                        if (status === 'SUBSCRIBED') console.log('[Realtime] Connected on test page');
+                        if (status === 'CHANNEL_ERROR') { console.error('[Realtime] Error:', err); }
+                    });
+                window.addEventListener('beforeunload', () => {
+                    if (this._realtimeChannel) supabase.removeChannel(this._realtimeChannel);
+                });
+            }
+ } catch (e) {
             console.warn('[Cloud] Failed to init:', e);
         }
     }
@@ -830,9 +900,21 @@ class ListeningCore {
         }
     }
 
-    loadHighlightDraft() {
+    async loadHighlightDraft() {
         const key = this.getHighlightStorageKey();
-        const savedData = localStorage.getItem(key);
+        let savedData = localStorage.getItem(key);
+
+        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData) {
+                    savedData = JSON.stringify(cloudData);
+                    localStorage.setItem(key, savedData); // Tạm lưu để UI dùng
+                }
+            } catch (e) {
+                console.error('[Highlight] Cloud load failed:', e);
+            }
+        }
 
         if (!savedData) {
             console.log('[Highlight] No saved data found for key:', key);
@@ -984,9 +1066,26 @@ class ListeningCore {
     }
 
     _safeSetStorage(key, value) {
+        // Kiểm tra chế độ cloud-only
+        const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
+
+        if (isCloudOnly) {
+            // Chế độ cloud-only: chỉ lưu lên cloud, không đụng localStorage
+            if (window.CloudStorage) {
+                try {
+                    const obj = JSON.parse(value);
+                    window.CloudStorage.save(key, obj);
+                } catch (e) {
+                    window.CloudStorage.save(key, value);
+                }
+            }
+            return;
+        }
+
+        // Chế độ hybrid: lưu local trước, sau đó sync cloud
         try {
             localStorage.setItem(key, value);
-            // Sync to Cloud
+            // Cloud sync
             if (window.CloudStorage) {
                 try {
                     const obj = JSON.parse(value);
@@ -997,23 +1096,9 @@ class ListeningCore {
             }
         } catch (e) {
             if (e.name === 'QuotaExceededError' || e.code === 22) {
-                console.warn('[Storage] Quota exceeded! Running emergency cleanup...');
-
-                // Dọn dẹp khẩn cấp – ưu tiên hàm toàn cục nếu có
-                const removed = window.__petKetCleanStorage?.() ?? 0;
-                if (removed === 0) this._cleanOldDrafts();
-
-                // Hiện toast cảnh báo cho học sinh
-                this._showEmergencyToast(removed);
-
-                // Thử lưu lại lần 2
-                try {
-                    localStorage.setItem(key, value);
-                    console.log('[Storage] Saved successfully after emergency cleanup.');
-                } catch (e2) {
-                    console.error('[Storage] Still failed after cleanup:', e2);
-                    this._showCriticalStorageError();
-                }
+                console.warn('[Storage] Quota exceeded! Showing quota modal...');
+                // Hiển thị modal 3 lựa chọn thay vì auto cleanup
+                this.uiManager._showQuotaModal(key, value);
             } else {
                 console.error('[Storage] Failed to save:', e);
             }
@@ -1115,9 +1200,21 @@ class ListeningCore {
         }
     }
 
-    loadDraft() {
+    async loadDraft() {
         const key = this.getStorageKey(true);
-        const draftJson = localStorage.getItem(key);
+        let draftJson = localStorage.getItem(key);
+        
+        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData) {
+                    draftJson = JSON.stringify(cloudData);
+                    localStorage.setItem(key, draftJson); // Tạm lưu để UI dùng
+                }
+            } catch (e) {
+                console.error('[loadDraft] Cloud load failed:', e);
+            }
+        }
         if (!draftJson) return false;
 
         try {
@@ -1735,16 +1832,25 @@ class ListeningCore {
         localStorage.removeItem(completedKey);
         localStorage.removeItem(draftKey);
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
-        // 2. Xóa Supabase (Sử dụng window.CloudStorage thay vì this._cloudStorage)
+        // 2. Xóa Supabase (dùng removeAll để xóa 1 lần + có suppress)
         if (window.CloudStorage) {
-            window.CloudStorage.remove(draftKey).catch(() => { });
-            window.CloudStorage.remove(completedKey).catch(() => { });
-            if (clearHighlights) {
-                window.CloudStorage.remove(this.getHighlightStorageKey()).catch(() => { });
-            }
+            window.CloudStorage.removeAll(completedKey).catch(() => { });
         }
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);
+
+        // Gửi BroadcastChannel thông báo đã reset
+        try {
+            const channel = new BroadcastChannel('pet_reset_channel');
+            channel.postMessage({
+                action: 'reset',
+                type: 'listening',
+                book: this.currentTestData.book,
+                test: this.currentTestData.test,
+                part: this.currentTestData.part
+            });
+            channel.close();
+        } catch (e) { }
 
         const d = this.currentTestData;
         let book = d.book, test = d.test, part = d.part;
@@ -2155,8 +2261,10 @@ class StorageManager {
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}`;
         
-        // Save to localStorage (fallback)
-        localStorage.setItem(key, JSON.stringify(partData));
+        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
+            localStorage.setItem(key, JSON.stringify(partData));
+        }
 
         // Sync to Cloud
         if (window.CloudStorage) {
@@ -2191,8 +2299,10 @@ class StorageManager {
             totalQuestions
         };
         
-        // Save to localStorage
-        localStorage.setItem(key, JSON.stringify(submittedData));
+        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
+            localStorage.setItem(key, JSON.stringify(submittedData));
+        }
 
         // Sync to Cloud
         if (window.CloudStorage) {
@@ -2280,6 +2390,28 @@ class UIManager {
             el.className = `transcript-content font-${size}`;
             if (el.classList.contains('questions-list')) el.classList.add('centered');
         });
+    }
+
+    // Helper: Lấy current user từ cả __currentCloudUser và _supabase
+    async _getCurrentUser() {
+        // Ưu tiên __currentCloudUser nếu có
+        if (window.__currentCloudUser) {
+            return window.__currentCloudUser;
+        }
+        // Nếu không, thử lấy từ _supabase (được expose từ index.html)
+        if (window._supabase) {
+            try {
+                const { data: { session } } = await window._supabase.auth.getSession();
+                if (session?.user) {
+                    // Cache lại để lần sau dùng
+                    window.__currentCloudUser = session.user;
+                    return session.user;
+                }
+            } catch (e) {
+                console.warn('[Auth] Failed to get session from _supabase:', e);
+            }
+        }
+        return null;
     }
 
     injectHeaderControls(coreInstance) {
@@ -2525,12 +2657,82 @@ class UIManager {
         this.updateStorageIndicator();
         setInterval(() => this.updateStorageIndicator(), 5000);
         window.addEventListener('storage', () => this.updateStorageIndicator());
+
+        // Đăng ký listener cho online/offline (chỉ 1 lần)
+        if (!window.__storageOnlineListenerAdded) {
+            window.addEventListener('online', () => {
+                console.log('[Storage] Network is online');
+                this.updateStorageIndicator();
+            });
+            window.addEventListener('offline', () => {
+                console.log('[Storage] Network is offline');
+                this.updateStorageIndicator();
+            });
+            window.__storageOnlineListenerAdded = true;
+        }
+
+        // Refresh user cache mỗi 3 giây
+        this._refreshUserCache();
+        if (!this._userCacheInterval) {
+            this._userCacheInterval = setInterval(() => this._refreshUserCache(), 3000);
+        }
+    }
+
+    // Refresh user cache async
+    async _refreshUserCache() {
+        const user = await this._getCurrentUser();
+        this._cachedUser = user;
     }
 
     updateStorageIndicator() {
         const indicator = document.getElementById('storageIndicator');
         if (!indicator) return;
 
+        // Kiểm tra chế độ cloud-only
+        const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
+        const currentUser = this._cachedUser || window.__currentCloudUser;
+
+        // Kiểm tra trạng thái online/offline
+        const isOnline = navigator.onLine;
+
+        // Nếu đang cloud-only
+        if (isCloudOnly) {
+            let badgeText = '☁️ Cloud';
+            let color = '#0d9488'; // teal
+            let bgColor = '#ccfbf1';
+            let tooltip = 'Đang lưu trữ Cloud-Only. Nhấn để quản lý.';
+
+            if (!isOnline) {
+                badgeText = '📵 Offline';
+                color = '#6b7280'; // gray
+                bgColor = '#e5e7eb';
+                tooltip = 'Mất kết nối mạng. Dữ liệu tạm lưu trong session.';
+            } else if (!currentUser) {
+                badgeText = '☁️ Cloud ⚠️';
+                color = '#d97706'; // amber
+                bgColor = '#fef3c7';
+                tooltip = 'Chưa đăng nhập. Nhấn để đăng nhập lại.';
+            }
+
+            indicator.style.color = color;
+            indicator.style.backgroundColor = bgColor;
+            indicator.title = tooltip;
+            indicator.innerHTML = badgeText;
+            indicator.style.cursor = 'pointer';
+
+            // Gắn sự kiện click nếu chưa có
+            if (!indicator._cloudClickHandler) {
+                indicator._cloudClickHandler = () => {
+                    if (isCloudOnly) {
+                        this._showCloudOnlyManageModal();
+                    }
+                };
+                indicator.addEventListener('click', indicator._cloudClickHandler);
+            }
+            return;
+        }
+
+        // Chế độ hybrid - hiển thị dung lượng
         let total = 0;
         try {
             for (let i = 0; i < localStorage.length; i++) {
@@ -2556,9 +2758,17 @@ class UIManager {
 
         indicator.style.color = color;
         indicator.style.backgroundColor = bgColor;
-        indicator.title = `Đã dùng: ${usedPercentage.toFixed(1)}%`;
+        indicator.title = `Đã dùng: ${usedPercentage.toFixed(1)}%. Nhấn để quản lý.`;
         indicator.innerHTML = `💾 Trống: ${remainingMB}MB`;
+        indicator.style.cursor = 'pointer';
 
+        // Gắn sự kiện click cho badge hybrid
+        if (!indicator._hybridClickHandler) {
+            indicator._hybridClickHandler = () => this._showHybridManageModal();
+            indicator.addEventListener('click', indicator._hybridClickHandler);
+        }
+
+        // Cảnh báo khi sắp đầy (chỉ ở chế độ hybrid)
         let warningEl = document.getElementById('storageWarningMsg');
         if (usedPercentage > 90) {
             if (!warningEl) {
@@ -2567,8 +2777,9 @@ class UIManager {
                 warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: white; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff5252; animation: storageSlideUp 0.4s ease; min-width: 340px;';
                 warningEl.innerHTML = `
                     <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Draft và highlight cũ sẽ bị mất nếu không dọn dẹp.</span></div>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                         <button id="storageAutoCleanBtn" style="background: #fff176; border: none; color: #5d4037; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">🧹 Tự dọn dẹp</button>
+                        <button id="storageCloudBtn" style="background: #0d9488; border: none; color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">☁️ Chuyển sang Cloud</button>
                         <button onclick="document.getElementById('storageWarningMsg')?.remove()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-size: 13px;">Đã hiểu</button>
                     </div>
                 `;
@@ -2592,6 +2803,15 @@ class UIManager {
                     });
                 }
 
+                // Gắn sự kiện nút Chuyển sang Cloud
+                const cloudBtn = document.getElementById('storageCloudBtn');
+                if (cloudBtn) {
+                    cloudBtn.addEventListener('click', () => {
+                        document.getElementById('storageWarningMsg')?.remove();
+                        this._showCloudOnlyActivateModal();
+                    });
+                }
+
                 if (!document.getElementById('storageWarningStyles')) {
                     const style = document.createElement('style');
                     style.id = 'storageWarningStyles';
@@ -2601,6 +2821,331 @@ class UIManager {
             }
         } else {
             if (warningEl) warningEl.remove();
+        }
+    }
+
+    // ==================== CLOUD-ONLY MODE METHODS ====================
+
+    _showStorageToast(message, bgColor = '#1b5e20') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: ${bgColor}; color: white; padding: 10px 22px; border-radius: 8px; z-index: 10000; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 12px rgba(0,0,0,0.3); animation: storageSlideUp 0.4s ease;`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    _showQuotaModal(key, value) {
+        // Lưu lại key/value để retry sau
+        this._pendingQuotaKey = key;
+        this._pendingQuotaValue = value;
+
+        const existing = document.getElementById('quotaModalOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'quotaModalOverlay';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px);';
+
+        overlay.innerHTML = `
+            <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+                <div style="font-size: 42px; margin-bottom: 12px;">💾</div>
+                <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Bộ nhớ đã đầy!</h3>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Bạn có thể dọn dẹp hoặc chuyển sang chế độ Cloud-Only.</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="quotaCleanBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Tự dọn dẹp và thử lại</button>
+                    <button id="quotaCloudBtn" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
+                    <button id="quotaCancelBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Hủy</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('quotaCleanBtn').addEventListener('click', () => {
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+            overlay.remove();
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+            // Thử lưu lại
+            if (this._pendingQuotaKey) {
+                try {
+                    localStorage.setItem(this._pendingQuotaKey, this._pendingQuotaValue);
+                    this._showStorageToast('✅ Đã lưu thành công!');
+                } catch (e) {
+                    this._showCriticalStorageError();
+                }
+            }
+        });
+
+        document.getElementById('quotaCloudBtn').addEventListener('click', () => {
+            overlay.remove();
+            this._showCloudOnlyActivateModal();
+        });
+
+        document.getElementById('quotaCancelBtn').addEventListener('click', () => {
+            overlay.remove();
+        });
+    }
+
+    _showCriticalStorageError() {
+        const existing = document.getElementById('criticalStorageOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'criticalStorageOverlay';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100001; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+
+        overlay.innerHTML = `
+            <div style="background: #fef2f2; padding: 28px; border-radius: 16px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); border: 2px solid #ef4444;">
+                <div style="font-size: 42px; margin-bottom: 12px;">🚨</div>
+                <h3 style="margin: 0 0 12px; font-size: 20px; color: #991b1b;">Không thể lưu dữ liệu!</h3>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Bộ nhớ trình duyệt đã <strong>hoàn toàn đầy</strong>. Câu trả lời hiện tại có thể không được lưu.</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="criticalCloudBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Dùng Cloud ngay</button>
+                    <button id="criticalOkBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Đã hiểu</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('criticalCloudBtn').addEventListener('click', () => {
+            overlay.remove();
+            this._showCloudOnlyActivateModal();
+        });
+
+        document.getElementById('criticalOkBtn').addEventListener('click', () => {
+            overlay.remove();
+        });
+    }
+
+    async _showHybridManageModal() {
+        // Kiểm tra đăng nhập
+        const currentUser = await this._getCurrentUser();
+        if (!currentUser) {
+            this._showStorageToast('⚠️ Vui lòng đăng nhập để sử dụng tính năng này', '#d97706');
+            const authBtn = document.getElementById('auth-btn');
+            if (authBtn) authBtn.click();
+            return;
+        }
+
+        const existing = document.getElementById('hybridManageOverlay');
+        if (existing) existing.remove();
+
+        // Tính dung lượng
+        let total = 0;
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                total += (localStorage.getItem(key).length + key.length) * 2;
+            }
+        } catch (e) { }
+        const usedMB = (total / (1024 * 1024)).toFixed(2);
+
+        const overlay = document.createElement('div');
+        overlay.id = 'hybridManageOverlay';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px);';
+
+        overlay.innerHTML = `
+            <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+                <div style="font-size: 42px; margin-bottom: 12px;">💾</div>
+                <h3 style="margin: 0 0 8px; font-size: 20px; color: #1f2937;">Quản lý bộ nhớ</h3>
+                <p style="margin: 0 0 16px; font-size: 13px; color: #6b7280;">Đang dùng: <strong>${usedMB} MB</strong> (Hybrid Mode)</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="hmmActivateCloudBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
+                    <button id="hmmCleanNowBtn" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Dọn bản nháp cũ ngay</button>
+                    <button id="hmmCloseBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Đóng</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('hmmActivateCloudBtn').addEventListener('click', async () => {
+            overlay.remove();
+            await this._activateCloudOnly();
+        });
+
+        document.getElementById('hmmCleanNowBtn').addEventListener('click', () => {
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+            overlay.remove();
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+            this.updateStorageIndicator();
+        });
+
+        document.getElementById('hmmCloseBtn').addEventListener('click', () => {
+            overlay.remove();
+        });
+    }
+
+    async _showCloudOnlyActivateModal() {
+        // Kiểm tra đăng nhập
+        const currentUser = await this._getCurrentUser();
+        if (!currentUser) {
+            this._showStorageToast('⚠️ Vui lòng đăng nhập trước khi kích hoạt Cloud-Only', '#d97706');
+            const authBtn = document.getElementById('auth-btn');
+            if (authBtn) authBtn.click();
+            return;
+        }
+
+        const existing = document.getElementById('cloudActivateOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'cloudActivateOverlay';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px);';
+
+        overlay.innerHTML = `
+            <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+                <div style="font-size: 42px; margin-bottom: 12px;">☁️</div>
+                <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Kích hoạt Cloud-Only</h3>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Dữ liệu sẽ được <strong>đồng bộ lên Cloud</strong> và không còn lưu trên thiết bị này. Bạn có chắc chắn?</p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="coaConfirmBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">✅ Xác nhận kích hoạt</button>
+                    <button id="coaCancelBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Hủy</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('coaConfirmBtn').addEventListener('click', async () => {
+            overlay.remove();
+            await this._activateCloudOnly();
+        });
+
+        document.getElementById('coaCancelBtn').addEventListener('click', () => {
+            overlay.remove();
+        });
+    }
+
+    async _showCloudOnlyManageModal() {
+        const isOnline = navigator.onLine;
+        const currentUser = await this._getCurrentUser();
+
+        const existing = document.getElementById('cloudManageOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'cloudManageOverlay';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px);';
+
+        let content = `
+            <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+                <div style="font-size: 42px; margin-bottom: 12px;">☁️</div>
+                <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Quản lý Cloud-Only</h3>
+        `;
+
+        if (!isOnline) {
+            content += `<p style="margin: 0 0 20px; font-size: 14px; color: #dc2626;">📵 Mất kết nối mạng. Dữ liệu tạm lưu trong session.</p>`;
+        } else if (!currentUser) {
+            content += `
+                <p style="margin: 0 0 20px; font-size: 14px; color: #d97706;">⚠️ Chưa đăng nhập. Vui lòng đăng nhập lại.</p>
+                <button id="cmLoginBtn" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">🔑 Đăng nhập lại</button>
+            `;
+        } else {
+            // Kiểm tra dung lượng local để quyết định có cho phép quay về hybrid không
+            let total = 0;
+            const prefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && prefixes.some(p => key.startsWith(p))) {
+                    total += (localStorage.getItem(key).length + key.length) * 2;
+                }
+            }
+            const examDataMB = (total / (1024 * 1024)).toFixed(2);
+            const canReturnHybrid = total < 1 * 1024 * 1024; // < 1MB
+
+            content += `<p style="margin: 0 0 16px; font-size: 14px; color: #4b5563;">Tài khoản: <strong>${currentUser.email || currentUser.id.substring(0, 8)}...</strong></p>`;
+            content += `<p style="margin: 0 0 20px; font-size: 13px; color: #6b7280;">Dữ liệu local: ${examDataMB} MB</p>`;
+
+            if (canReturnHybrid) {
+                content += `<button id="cmReturnHybridBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 10px;">💾 Quay về Hybrid</button>`;
+            } else {
+                content += `<p style="margin: 0 0 12px; font-size: 13px; color: #d97706;">⚠️ Cần dọn sạch dữ liệu local (${examDataMB}MB > 1MB) để quay về Hybrid.</p>`;
+                content += `<button id="cmClearLocalBtn" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 10px;">🗑️ Dọn sạch toàn bộ</button>`;
+            }
+        }
+
+        content += `<button id="cmCloseBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; width: 100%;">Đóng</button></div>`;
+
+        overlay.innerHTML = content;
+        document.body.appendChild(overlay);
+
+        // Gắn sự kiện
+        const loginBtn = document.getElementById('cmLoginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => {
+                overlay.remove();
+                const authBtn = document.getElementById('auth-btn');
+                if (authBtn) authBtn.click();
+            });
+        }
+
+        const returnHybridBtn = document.getElementById('cmReturnHybridBtn');
+        if (returnHybridBtn) {
+            returnHybridBtn.addEventListener('click', async () => {
+                overlay.remove();
+                await this._switchToHybrid();
+            });
+        }
+
+        const clearLocalBtn = document.getElementById('cmClearLocalBtn');
+        if (clearLocalBtn) {
+            clearLocalBtn.addEventListener('click', () => {
+                // Xóa tất cả exam data local
+                const prefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+                let removed = 0;
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && prefixes.some(p => key.startsWith(p))) {
+                        keys.push(key);
+                    }
+                }
+                keys.forEach(k => {
+                    localStorage.removeItem(k);
+                    removed++;
+                });
+                overlay.remove();
+                this._showStorageToast(`✅ Đã xóa ${removed} mục local`);
+                setTimeout(() => this._showCloudOnlyManageModal(), 500);
+            });
+        }
+
+        document.getElementById('cmCloseBtn').addEventListener('click', () => {
+            overlay.remove();
+        });
+    }
+
+    async _activateCloudOnly() {
+        this._showStorageToast('Đang đồng bộ dữ liệu lên Cloud...', '#3b82f6');
+
+        try {
+            if (window.CloudStorage) {
+                await window.CloudStorage.migrateLocalStorageToCloud();
+            }
+
+            localStorage.setItem('_storage_mode', 'cloud_only');
+
+            this._showStorageToast('✅ Đã kích hoạt Cloud-Only thành công!', '#0d9488');
+            this.updateStorageIndicator();
+        } catch (e) {
+            console.error('[CloudOnly] Activation failed:', e);
+            this._showStorageToast('❌ Kích hoạt thất bại. Vui lòng thử lại.', '#dc2626');
+        }
+    }
+
+    async _switchToHybrid() {
+        this._showStorageToast('Đang đồng bộ dữ liệu về thiết bị...', '#3b82f6');
+
+        try {
+            localStorage.setItem('_storage_mode', 'hybrid');
+
+            if (window.CloudStorage) {
+                await window.CloudStorage.syncCloudToLocal();
+            }
+
+            this._showStorageToast('✅ Đã quay về Hybrid mode!', '#0d9488');
+            this.updateStorageIndicator();
+        } catch (e) {
+            console.error('[CloudOnly] Switch to hybrid failed:', e);
+            this._showStorageToast('❌ Chuyển đổi thất bại. Vui lòng thử lại.', '#dc2626');
         }
     }
 }

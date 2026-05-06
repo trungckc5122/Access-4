@@ -2346,22 +2346,28 @@
       }
 
       // --- Kiểm tra draft có câu trả lời thực không ---
-      function hasValidDraftData(key) {
-        const draft = localStorage.getItem(key);
-        if (!draft || draft === '{}' || draft === 'null' || draft === 'undefined') return false;
-        try {
-          const data = JSON.parse(draft);
-          if (!data || typeof data !== 'object') return false;
-          const answerKeys = Object.keys(data).filter(k => k.match(/^q\d+$/));
-          return answerKeys.some(k => {
-            const v = data[k];
-            if (v === null || v === undefined) return false;
-            if (typeof v === 'number') return true;
-            if (typeof v === 'string') return v.trim() !== '';
-            if (typeof v === 'object' && v !== null) return v.value !== null && v.value !== undefined && String(v.value).trim() !== '';
-            return false;
-          });
-        } catch (e) { return false; }
+      // progressMap: object map từ CloudStorage.getAllProgress()
+      function hasValidDraftData(key, progressMap = {}) {
+        const draft = progressMap[key];
+        if (!draft) return false;
+        // Chuẩn hóa draft thành object
+        let data = draft;
+        if (typeof draft === 'string') {
+          if (draft === '{}' || draft === 'null' || draft === 'undefined') return false;
+          try {
+            data = JSON.parse(draft);
+          } catch { return false; }
+        }
+        if (!data || typeof data !== 'object') return false;
+        const answerKeys = Object.keys(data).filter(k => k.match(/^q\d+$/));
+        return answerKeys.some(k => {
+          const v = data[k];
+          if (v === null || v === undefined) return false;
+          if (typeof v === 'number') return true;
+          if (typeof v === 'string') return v.trim() !== '';
+          if (typeof v === 'object' && v !== null) return v.value !== null && v.value !== undefined && String(v.value).trim() !== '';
+          return false;
+        });
       }
 
       // --- 1. Hover cho details (giữ nguyên) ---
@@ -2485,9 +2491,15 @@
       });
 
       // --- 3. Status badges & progress (cho cả PET và KET) ---
-      window.initStatusBadges = function initStatusBadges() {
+      window.initStatusBadges = async function initStatusBadges() {
         const badges = document.querySelectorAll('.status-badge, .score-badge');
         badges.forEach(b => b.remove());
+
+        // Lấy dữ liệu từ nguồn phù hợp (Cloud nếu có user, nếu không thì Local)
+        const progressMap = window.CloudStorage
+          ? await window.CloudStorage.getAllProgress()
+          : {};
+
         const panels = ['pet', 'ket'];
         panels.forEach(type => {
           const panel = document.getElementById(`${type}-panel`);
@@ -2501,10 +2513,10 @@
             if (!testInfo) return;
             const completedKey = getStorageKeyForTest(testInfo, false);
             const draftKey = getStorageKeyForTest(testInfo, true);
-            const hasCompleted = localStorage.getItem(completedKey) !== null;
-            const hasDraft = hasValidDraftData(draftKey);
+            const hasCompleted = progressMap[completedKey] !== undefined;
+            const hasDraft = hasValidDraftData(draftKey, progressMap);
             const noteKey = completedKey + '_note';
-            const hasNote = localStorage.getItem(noteKey) && localStorage.getItem(noteKey).trim().length > 0;
+            const hasNote = progressMap[noteKey] && progressMap[noteKey].trim().length > 0;
             if (hasNote) {
               const noteBadge = document.createElement('span');
               noteBadge.className = 'status-badge note';
@@ -2516,10 +2528,10 @@
               badge.className = 'status-badge completed';
               badge.innerHTML = '✓ Đã xong';
               link.appendChild(badge);
-              const resultData = localStorage.getItem(completedKey);
+              const resultData = progressMap[completedKey];
               if (resultData) {
                 try {
-                  const parsed = JSON.parse(resultData);
+                  const parsed = typeof resultData === 'string' ? JSON.parse(resultData) : resultData;
                   if (
                     parsed.correctCount !== undefined && parsed.correctCount !== null &&
                     parsed.totalQuestions !== undefined && parsed.totalQuestions !== null &&
@@ -2640,7 +2652,11 @@
       }
 
       // --- 4. Resume banner cho PET và KET ---
-      function initResumeButtons() {
+      async function initResumeButtons() {
+        let progressMap = {};
+        if (localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+            progressMap = await window.CloudStorage.getAllProgress();
+        }
         const types = ['pet', 'ket'];
         types.forEach(type => {
           const banner = document.getElementById(`${type}-resume-banner`);
@@ -2657,7 +2673,7 @@
             const testInfo = parseTestFromFilename(lastUrl);
             if (testInfo) {
               const draftKey = getStorageKeyForTest(testInfo, true);
-              hasDraft = hasValidDraftData(draftKey);
+              hasDraft = hasValidDraftData(draftKey, progressMap);
             }
           }
           if (lastUrl && lastUrl !== ignoredUrl && hasDraft && lastUrl.includes(type)) {
@@ -3219,26 +3235,36 @@
         initSmartSearch();
         checkBrokenLinks();
         window.addEventListener('focus', async () => { 
-          if (window.CloudStorage) await window.CloudStorage.syncCloudToLocal();
-          initStatusBadges(); 
-          initResumeButtons(); 
+          // Cloud-Only: không cần syncCloudToLocal, chỉ refresh badge từ cloud
+          if (typeof window.initStatusBadges === 'function') {
+            await window.initStatusBadges();
+          }
+          if (typeof window.initResumeButtons === 'function') {
+            window.initResumeButtons();
+          }
         });
-        window.addEventListener('storage', () => { initStatusBadges(); initResumeButtons(); });
+        window.addEventListener('storage', async () => {
+          if (typeof window.initStatusBadges === 'function') {
+            await window.initStatusBadges();
+          }
+          if (typeof window.initResumeButtons === 'function') {
+            window.initResumeButtons();
+          }
+        });
 
         // ── Debounced sync + badge refresh ──────────────────────────────────────
         let _badgeRefreshTimer;
         async function syncAndRefreshBadges() {
           clearTimeout(_badgeRefreshTimer);
           _badgeRefreshTimer = setTimeout(async () => {
-            // Sync cloud nếu đã đăng nhập
-            if (window.CloudStorage && window._supabase) {
-              try {
-                const { data: { user } } = await window._supabase.auth.getUser();
-                if (user) await window.CloudStorage.syncCloudToLocal();
-              } catch (e) { /* offline, bỏ qua */ }
+            // Cloud-Only: Không cần syncCloudToLocal (vì không ghi localStorage)
+            // initStatusBadges sẽ tự động gọi CloudStorage.getAllProgress()
+            if (typeof window.initStatusBadges === 'function') {
+              await window.initStatusBadges();
             }
-            if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
-            if (typeof window.initResumeButtons === 'function') window.initResumeButtons();
+            if (typeof window.initResumeButtons === 'function') {
+              window.initResumeButtons();
+            }
           }, 500); // debounce 500ms để tránh gọi trùng khi nhiều event cùng lúc
         }
         window.syncAndRefreshBadges = syncAndRefreshBadges; // expose để dùng ở nơi khác
@@ -4654,7 +4680,7 @@
     // Fallback: nếu không có user đăng nhập, vẫn hiển thị badge từ localStorage
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
+      if (typeof window.initStatusBadges === 'function') await window.initStatusBadges();
       if (typeof window.initResumeButtons === 'function') window.initResumeButtons();
     }
 
@@ -4682,6 +4708,12 @@
             filter: `user_id=eq.${user.id}`  // chỉ nhận dữ liệu của mình
           },
           async (payload) => {
+            // ✅ Guard: Bỏ qua nếu là echo từ chính tab này (vừa save xong)
+            if (window._suppressRealtimeUntil && Date.now() < window._suppressRealtimeUntil) {
+              console.log('[Realtime] Suppressed echo on index');
+              return;
+            }
+
             console.log('[Realtime] Progress changed:', payload.eventType, payload.new);
             window._lastRealtimeUpdate = Date.now(); // cho visibilitychange tối ưu
 
@@ -4689,9 +4721,10 @@
             if (typeof window.syncAndRefreshBadges === 'function') {
               await window.syncAndRefreshBadges();
             } else {
-              // Fallback nếu chưa có hàm debounce
-              await CloudStorage.syncCloudToLocal();
-              if (typeof window.initStatusBadges === 'function') window.initStatusBadges();
+              // Fallback: Cloud-Only không cần syncCloudToLocal, chỉ refresh badge
+              if (typeof window.initStatusBadges === 'function') {
+                await window.initStatusBadges();
+              }
             }
           }
         )
@@ -4729,7 +4762,7 @@
         const syncedCount = await CloudStorage.syncCloudToLocal();
         // Luôn gọi initStatusBadges và initResumeButtons sau sync, bất kể count
         if (typeof window.initStatusBadges === 'function') {
-          window.initStatusBadges();
+          await window.initStatusBadges();
         }
         if (typeof window.initResumeButtons === 'function') {
           window.initResumeButtons();
@@ -4743,7 +4776,7 @@
           const count = await CloudStorage.migrateLocalStorageToCloud();
           if (count > 0) showCloudToast(`☁️ Đã đồng bộ thêm ${count} bài lên đám mây!`);
           if (typeof window.initStatusBadges === 'function') {
-            window.initStatusBadges();
+            await window.initStatusBadges();
           }
           if (typeof window.initResumeButtons === 'function') {
             window.initResumeButtons();
