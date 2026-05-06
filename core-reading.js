@@ -1243,7 +1243,7 @@ class TestTourManager {
 
             const nextPartBtn = document.querySelector('.nav-next-part');
 
-            const storageIndicator = document.getElementById('storageIndicator');
+            const storageContainer = document.getElementById('storageContainer') || document.getElementById('storageIndicator');
 
 
 
@@ -1279,7 +1279,7 @@ class TestTourManager {
 
             if (dashboardBtn) steps.push({ element: dashboardBtn, title: '📊 Tiến độ bài thi', intro: 'Mở bảng theo dõi số lượng câu đã làm ở các Part khác.' });
 
-            if (storageIndicator) steps.push({ element: storageIndicator, title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ khả dụng còn lại của trình duyệt.' });
+            if (storageContainer) steps.push({ element: storageContainer, title: '💾 Lưu trữ & Đồng bộ', intro: 'Theo dõi chế độ lưu dữ liệu (Cloud/Hybrid) và quản lý bộ nhớ của bài làm.' });
 
 
 

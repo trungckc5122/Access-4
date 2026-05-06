@@ -120,7 +120,7 @@ class TestTourManager {
                 { el: '.right-col, .questions-list', title: '📝 Danh sách câu hỏi', intro: 'Trả lời các câu hỏi tại khu vực này.' },
                 { el: '.note-toggle-btn', title: '🗒️ Ghi chú nhanh', intro: 'Mở popup ghi chú để nháp thông tin.' },
                 { el: '#mini-dashboard-toggle', title: '📊 Tiến độ bài thi', intro: 'Theo dõi số lượng câu đã làm ở các Part khác.' },
-                { el: '#storageIndicator', title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ còn lại của trình duyệt.' },
+                { el: '#storageContainer, #storageIndicator', title: '💾 Lưu trữ & Đồng bộ', intro: 'Theo dõi chế độ lưu dữ liệu (Cloud/Hybrid) và quản lý bộ nhớ của bài làm.' },
                 { el: '.nav-prev-part', title: '⬅️ Part trước', intro: 'Chuyển về Part trước đó.' },
                 { el: '.nav-next-part', title: '➡️ Part tiếp theo', intro: 'Chuyển sang Part tiếp theo.' },
                 { el: '#submitBtn', title: '✅ Nộp bài', intro: 'Nhấn Nộp bài để xem điểm số và giải thích chi tiết.' }

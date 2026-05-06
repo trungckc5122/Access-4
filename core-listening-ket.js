@@ -688,7 +688,7 @@ class TestTourManager {
             const highlightToggle = document.querySelector('.highlight-toggle-wrapper');
             const prevPartBtn = document.querySelector('.nav-prev-part');
             const nextPartBtn = document.querySelector('.nav-next-part');
-            const storageIndicator = document.getElementById('storageIndicator');
+            const storageContainer = document.getElementById('storageContainer') || document.getElementById('storageIndicator');
 
             const steps = [];
 
@@ -706,7 +706,7 @@ class TestTourManager {
             if (rightCol) steps.push({ element: rightCol, title: '📝 Danh sách câu hỏi', intro: 'Trả lời các câu hỏi tại khu vực này. Trạng thái sẽ được lưu tự động.' });
             if (noteBtn) steps.push({ element: noteBtn, title: '🗒️ Ghi chú nhanh', intro: 'Mở popup ghi chú để nháp thông tin trong lúc làm bài.' });
             if (dashboardBtn) steps.push({ element: dashboardBtn, title: '📊 Tiến độ bài thi', intro: 'Mở bảng theo dõi số lượng câu đã làm ở các Part khác.' });
-            if (storageIndicator) steps.push({ element: storageIndicator, title: '💾 Dung lượng trống', intro: 'Hiển thị dung lượng lưu trữ khả dụng còn lại của trình duyệt.' });
+            if (storageContainer) steps.push({ element: storageContainer, title: '💾 Lưu trữ & Đồng bộ', intro: 'Theo dõi chế độ lưu dữ liệu (Cloud/Hybrid) và quản lý bộ nhớ của bài làm.' });
 
             if (prevPartBtn) steps.push({ element: prevPartBtn, title: '⬅️ Part trước', intro: 'Chuyển về Part trước đó.' });
             if (nextPartBtn) steps.push({ element: nextPartBtn, title: '➡️ Part tiếp theo', intro: 'Chuyển sang Part tiếp theo.' });
