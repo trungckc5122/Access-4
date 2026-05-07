@@ -291,12 +291,52 @@ export class CloudStorage {
         });
       }
 
-      // Chỉ thực hiện xóa nếu user đã được đánh dấu là đã migrate
+      // Khai báo biến dùng chung cho upload offline và parity check
       const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
       const LAST_SYNC_KEY = '_last_cloud_sync_' + user.id;
       const lastSyncTime = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0');
       const now = Date.now();
 
+
+      // Scan localStorage tìm dữ liệu mới hơn lastSyncTime mà cloud chưa có
+      // → đây là bài làm khi offline / chưa đăng nhập → đẩy lên cloud trước
+      const offlineKeys = Object.keys(localStorage).filter(k =>
+        examPrefixes.some(p => k.startsWith(p)) && !cloudKeys.has(k)
+      );
+      const uploadPromises = [];
+      for (const localKey of offlineKeys) {
+        const localTimestamp = getLocalDataTimestamp(localKey);
+        if (localTimestamp > lastSyncTime) {
+          try {
+            const raw = localStorage.getItem(localKey);
+            const parsed = JSON.parse(raw);
+            console.log('[CloudStorage] Uploading offline data:', localKey);
+            uploadPromises.push(CloudStorage.save(localKey, parsed));
+          } catch {}
+        }
+      }
+      if (uploadPromises.length > 0) {
+        await Promise.allSettled(uploadPromises);
+        // Re-fetch cloudKeys after upload
+        const { data: refreshedData } = await supabase
+          .from('progress')
+          .select('*')
+          .eq('user_id', user.id);
+        if (refreshedData) {
+          refreshedData.forEach(row => {
+            const exam = row.exam || 'pet';
+            const prefix = `${exam}_${row.skill}`;
+            const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+            cloudKeys.add(baseKey);
+            cloudKeys.add(baseKey + '_submitted');
+            cloudKeys.add(baseKey + '_draft');
+            cloudKeys.add(baseKey + '_highlights');
+            cloudKeys.add(baseKey + '_note');
+          });
+        }
+      }
+
+      // Chỉ thực hiện xóa nếu user đã được đánh dấu là đã migrate
       if (localStorage.getItem('_cloud_migrated_' + user.id)) {
         Object.keys(localStorage).forEach(localKey => {
           if (examPrefixes.some(p => localKey.startsWith(p)) && !cloudKeys.has(localKey)) {
@@ -311,7 +351,7 @@ export class CloudStorage {
                 console.log('[CloudStorage] Parity: Removed old local key missing from cloud:', localKey);
               }
             } else if (localTimestamp > 0) {
-              // Dữ liệu mới hơn lần sync cuối → có thể là bài mới làm offline → Giữ lại để sync lên sau
+              // Dữ liệu mới hơn lần sync cuối → giữ lại (đã được upload ở bước 0)
               console.log('[CloudStorage] Parity: Preserved newer local work missing from cloud:', localKey);
             }
           }
