@@ -1438,15 +1438,7 @@ class ReadingCore {
 
 
         await this.loadHighlightDraft();
-
-
-
-
-
-        this.setupEventListeners();
-
         this.setupBeforeUnload();
-
         this.createNavigation();
 
 
@@ -1462,13 +1454,10 @@ class ReadingCore {
             this.restoreSubmittedState(submittedState);
 
         } else {
-
             await this.loadDraft();
-
         }
 
-
-
+        this.setupEventListeners();
         this.attachInputEvents();
 
 
@@ -3354,10 +3343,8 @@ class ReadingCore {
 
 
     setupEventListeners() {
-
         this._boundChangeHandler = (e) => {
-
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
 
             if (e.target && e.target.matches('input[type="radio"]')) {
 
@@ -3374,8 +3361,7 @@ class ReadingCore {
 
 
         this._boundDocInputHandler = (e) => {
-
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
 
             if (e.target && e.target.matches('.gap-input')) return;
 

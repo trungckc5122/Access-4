@@ -739,10 +739,6 @@ class ReadingCore {
         await this.loadHighlightDraft();
 
 
-        this.setupEventListeners();
-        this.setupBeforeUnload();
-        this.createNavigation();
-
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
         const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
         if (submittedState && submittedState.submitted) {
@@ -752,6 +748,9 @@ class ReadingCore {
             await this.loadDraft();
         }
 
+        this.setupEventListeners();
+        this.setupBeforeUnload();
+        this.createNavigation();
         this.attachInputEvents();
 
         this.noteManager = new KETNoteManager(this);
@@ -1818,7 +1817,7 @@ class ReadingCore {
 
     setupEventListeners() {
         this._boundChangeHandler = (e) => {
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
@@ -1827,7 +1826,7 @@ class ReadingCore {
         document.addEventListener('change', this._boundChangeHandler);
 
         this._boundDocInputHandler = (e) => {
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
             if (e.target && e.target.matches('.gap-input')) return;
 
             if (e.target && (e.target.matches('input[type="text"]') || e.target.matches('textarea'))) {

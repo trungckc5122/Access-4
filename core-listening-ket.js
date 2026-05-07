@@ -771,7 +771,6 @@ class ListeningCore {
         this.renderQuestions();
 
         await this.loadHighlightDraft();
-        this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
 
@@ -786,6 +785,8 @@ class ListeningCore {
         } else if (!(await this.isCompleted())) {
             await this.loadDraft();
         }
+
+        this.setupEventListeners();
 
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
@@ -1558,7 +1559,7 @@ class ListeningCore {
 
     setupEventListeners() {
         this._boundChangeHandler = (e) => {
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
@@ -1567,7 +1568,7 @@ class ListeningCore {
         document.addEventListener('change', this._boundChangeHandler);
 
         this._boundInputHandler = (e) => {
-            if (this._isResetting) return;
+            if (this._isResetting || this.isLoadingDraft) return;
             if (e.target && e.target.matches('.fill-input')) {
                 this.updateAnswerCount();
                 this.saveDraft();
