@@ -1567,11 +1567,11 @@ class ReadingCore {
 
                 if (this._isResetting || !this.cloudSupportInitialized) return;
 
-                const wasCompleted = await this.isCompleted();
+                const wasCompleted = this.isCompleted();
 
                 await CloudStorage.syncCloudToLocal();
 
-                const nowCompleted = await this.isCompleted();
+                const nowCompleted = this.isCompleted();
 
                 
 
@@ -1595,20 +1595,13 @@ class ReadingCore {
 
 
 
-    async isCompleted() {
+    isCompleted() {
 
         if (!this.currentTestData) return false;
 
         const key = this.getStorageKey(false);
 
-        if (localStorage.getItem(key) !== null) return true;
-
-        if (window.CloudStorage) {
-            const cloudData = await window.CloudStorage.load(key);
-            if (cloudData) return true;
-        }
-
-        return false;
+        return localStorage.getItem(key) !== null;
 
     }
 
