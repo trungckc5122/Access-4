@@ -860,7 +860,7 @@ class ListeningCore {
         if (localStorage.getItem(key) !== null) return true;
         if (window.CloudStorage) {
             const cloudData = await window.CloudStorage.load(key);
-            if (cloudData) return true;
+            if (cloudData && cloudData.status === 'completed') return true;
         }
         return false;
     }
