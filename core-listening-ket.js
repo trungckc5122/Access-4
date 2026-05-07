@@ -1254,6 +1254,7 @@ class ListeningCore {
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
+                if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
                 // Cloud sync (fire-and-forget)
@@ -1272,8 +1273,7 @@ class ListeningCore {
 
         try {
             const draft = this.getDraftData();
-            const hasAnswers = Object.values(draft).some(v => v !== null && v !== undefined && v !== '');
-            if (!hasAnswers) return;
+            if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
 
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
@@ -1293,6 +1293,13 @@ class ListeningCore {
         } catch (e) {
             console.error('[Draft] Immediate save failed:', e);
         }
+    }
+
+    draftHasAnswers(draft) {
+        const { type, slotState, timestamp, flaggedQuestions, ...answers } = draft;
+        const hasValues = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        const hasSlots = slotState && Object.values(slotState).some(val => val !== null && val !== undefined && val !== '');
+        return hasValues || hasSlots;
     }
 
     async loadDraft() {

@@ -2196,11 +2196,9 @@ class ReadingCore {
 
 
         this.debounceTimer = setTimeout(() => {
-
             try {
-
                 const draft = this.getDraftData();
-
+                if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
                 const key = this.getStorageKey(true);
 
                 this._safeSetStorage(key, JSON.stringify(draft));
@@ -2284,15 +2282,10 @@ class ReadingCore {
 
 
     draftHasAnswers(draft) {
-
-        const { type, slotState, ...answers } = draft;
-
-        const radioAnswers = Object.entries(answers).some(([key, val]) => val !== null && val !== undefined && val !== '');
-
-        if (slotState && Object.keys(slotState).length > 0) return true;
-
-        return radioAnswers;
-
+        const { type, slotState, timestamp, ...answers } = draft;
+        const hasValues = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        const hasSlots = slotState && Object.values(slotState).some(val => val !== null && val !== undefined && val !== '');
+        return hasValues || hasSlots;
     }
 
 
