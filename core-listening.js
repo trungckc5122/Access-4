@@ -708,6 +708,7 @@ class ListeningCore {
     }
 
     async initializeTest(testData) {
+        this.isLoadingDraft = true; // Prevents saving blank data while loading
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
@@ -748,6 +749,7 @@ class ListeningCore {
             new TestTourManager().init();
         }
 
+        this.isLoadingDraft = false; // Finished loading
         console.log('Listening test initialized:', testData.title);
     }
 
@@ -874,6 +876,7 @@ class ListeningCore {
     }
 
     saveHighlightDraft() {
+        if (this.isLoadingDraft) return;
         const potentialSelectors = [
             '#transcriptContent',
             '#questionsContainer',
@@ -1157,7 +1160,7 @@ class ListeningCore {
     }
 
     saveDraft() {
-        if (this.examSubmitted || this._isResetting) return;
+        if (this.examSubmitted || this._isResetting || this.isLoadingDraft) return;
         if (!this.currentTestData) return;
 
         clearTimeout(this.debounceTimer);
@@ -1175,7 +1178,7 @@ class ListeningCore {
     }
 
     saveDraftImmediate() {
-        if (this._isResetting) return;
+        if (this._isResetting || this.isLoadingDraft) return;
         if (this.examSubmitted || !this.currentTestData) return;
 
         clearTimeout(this.debounceTimer);

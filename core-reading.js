@@ -1395,6 +1395,8 @@ class ReadingCore {
 
     async initializeTest(testData) {
 
+        this.isLoadingDraft = true; // Prevents saving blank data while loading
+
         this.currentTestData = testData;
 
         this.explanationMode = false;
@@ -1494,6 +1496,8 @@ class ReadingCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
 
 
+
+        this.isLoadingDraft = false; // Finished loading
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
 
@@ -1637,7 +1641,7 @@ class ReadingCore {
 
 
     saveHighlightDraft() {
-
+        if (this.isLoadingDraft) return;
         const potentialSelectors = [
 
             '#readingContent',
@@ -2192,7 +2196,7 @@ class ReadingCore {
 
     saveDraft() {
 
-        if (this.examSubmitted || this._isResetting) return;
+        if (this.examSubmitted || this._isResetting || this.isLoadingDraft) return;
 
         if (!this.currentTestData) return;
 
@@ -2230,7 +2234,7 @@ class ReadingCore {
 
     saveDraftImmediate() {
 
-        if (this._isResetting) return;
+        if (this._isResetting || this.isLoadingDraft) return;
 
         if (this.examSubmitted || !this.currentTestData) return;
 
