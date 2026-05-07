@@ -189,7 +189,7 @@ export class AuthUI {
               position:absolute;left:12px;top:50%;transform:translateY(-50%);
               font-size:15px;pointer-events:none;
             ">👤</span>
-            <input id="reg-display-name" type="text" placeholder="Tên hiển thị" autocomplete="name"
+            <input id="reg-display-name" type="text" placeholder="Tên hiển thị (vd: Minh Trung)" autocomplete="name"
               style="width:100%;padding:11px 14px 11px 36px;border-radius:10px;border:1.5px solid #e2e8f0;
               font-size:14px;box-sizing:border-box;outline:none;transition:border-color .2s;
               color:var(--text,#0f172a);"
@@ -313,7 +313,7 @@ export class AuthUI {
       const { data, error } = await supabase
         .from('profiles')
         .select('display_name')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
       if (!error && data?.display_name) return data.display_name;
     } catch {}
