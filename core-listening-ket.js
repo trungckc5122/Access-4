@@ -940,14 +940,21 @@ class ListeningCore {
     async isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        // Check localStorage first
-        if (localStorage.getItem(key) !== null) return true;
-        // Also check cloud storage for hybrid/cloud mode
+        
+        // Kiểm tra Local: Phải có data và phải là trạng thái submitted
+        const localVal = localStorage.getItem(key);
+        if (localVal) {
+            try {
+                const data = JSON.parse(localVal);
+                if (data.submitted) return true;
+            } catch(e) {}
+        }
+
+        // Kiểm tra Cloud
         if (window.CloudStorage) {
             const cloudData = await window.CloudStorage.load(key);
-            // Quan trọng: Chỉ coi là hoàn thành nếu status là 'completed'
-            // Nếu là 'draft', phải trả về false để loadDraft() được chạy
-            if (cloudData && cloudData.status === 'completed') return true;
+            // Chỉ coi là hoàn thành nếu status là 'completed' hoặc có điểm số (legacy)
+            if (cloudData && (cloudData.status === 'completed' || cloudData.correctCount !== undefined)) return true;
         }
         return false;
     }
@@ -1310,18 +1317,24 @@ class ListeningCore {
     async loadDraft() {
         const key = this.getStorageKey(true);
         let draftJson = localStorage.getItem(key);
-        
-        if (!draftJson && window.CloudStorage) {  // ← CHỈ SỬA DÒNG NÀY
+        let draft = draftJson ? JSON.parse(draftJson) : null;
+
+        // Nếu Local trống hoặc không có đáp án, ép buộc kiểm tra Cloud
+        if ((!draft || !this.draftHasAnswers(draft)) && window.CloudStorage) {
+            console.log('%c[Draft] Local empty/incomplete, checking Cloud...', 'color: #e67e22');
             try {
                 const cloudData = await window.CloudStorage.load(key);
-                if (cloudData) {
-                    draftJson = JSON.stringify(cloudData);
-                    localStorage.setItem(key, draftJson);
+                if (cloudData && this.draftHasAnswers(cloudData)) {
+                    console.log('%c[Draft] Found valid draft on Cloud, restoring...', 'color: #2ecc71');
+                    draft = cloudData;
+                    localStorage.setItem(key, JSON.stringify(draft));
+                    draftJson = JSON.stringify(draft);
                 }
             } catch (e) {
-                console.error('[loadDraft] Cloud load failed:', e);
+                console.error('[Draft] Cloud load failed:', e);
             }
         }
+
         if (!draftJson) return false;
 
         try {
