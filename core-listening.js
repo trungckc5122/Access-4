@@ -729,7 +729,7 @@ class ListeningCore {
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
-        } else if (!this.isCompleted()) {
+        } else if (!(await this.isCompleted())) {
             await this.loadDraft();
         }
 
@@ -785,9 +785,9 @@ class ListeningCore {
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
                 if (this._isResetting || !this.cloudSupportInitialized) return;
-                const wasCompleted = this.isCompleted();
+                const wasCompleted = await this.isCompleted();
                 await CloudStorage.syncCloudToLocal();
-                const nowCompleted = this.isCompleted();
+                const nowCompleted = await this.isCompleted();
                 if (wasCompleted !== nowCompleted) {
                     console.log(`[Cloud] Data status changed (${wasCompleted} -> ${nowCompleted}), reloading...`);
                     location.reload();
@@ -813,7 +813,7 @@ class ListeningCore {
                                 console.log('[Realtime] Suppressed (local write cooldown)');
                                 return;
                             }
-                            const wasCompleted = this.isCompleted();
+                            const wasCompleted = await this.isCompleted();
                             if (payload.eventType === 'DELETE') {
                                 const old = payload.old;
                                 if (old) {
@@ -831,7 +831,7 @@ class ListeningCore {
                                 await CloudStorage.syncCloudToLocal(); return;
                             }
                             await CloudStorage.syncCloudToLocal();
-                            const nowCompleted = this.isCompleted();
+                            const nowCompleted = await this.isCompleted();
                             if (wasCompleted !== nowCompleted || nowCompleted) {
                                 console.log('[Realtime] State updated from remote, reloading...');
                                 location.reload();
@@ -851,10 +851,15 @@ class ListeningCore {
         }
     }
 
-    isCompleted() {
+    async isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        return localStorage.getItem(key) !== null;
+        if (localStorage.getItem(key) !== null) return true;
+        if (window.CloudStorage) {
+            const cloudData = await window.CloudStorage.load(key);
+            if (cloudData) return true;
+        }
+        return false;
     }
 
     getStorageKey(isDraft = false) {
@@ -904,7 +909,7 @@ class ListeningCore {
         const key = this.getHighlightStorageKey();
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!savedData && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -1204,7 +1209,7 @@ class ListeningCore {
         const key = this.getStorageKey(true);
         let draftJson = localStorage.getItem(key);
         
-        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!draftJson && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
