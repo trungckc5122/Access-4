@@ -761,6 +761,7 @@ class ListeningCore {
     }
 
     async initializeTest(testData) {
+        this.isLoadingDraft = true; // Chặn lưu nháp đè dữ liệu trống khi đang load
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
@@ -782,7 +783,7 @@ class ListeningCore {
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
-        } else if (!this.isCompleted()) {
+        } else if (!(await this.isCompleted())) {
             await this.loadDraft();
         }
 
@@ -796,6 +797,7 @@ class ListeningCore {
 
         this.updateAnswerCount();
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
+        this.isLoadingDraft = false; // Mở khóa cho phép lưu bài
         console.log('Listening test initialized:', testData.title);
     }
 
@@ -832,9 +834,9 @@ class ListeningCore {
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
                 if (this._isResetting || !this.cloudSupportInitialized) return;
-                const wasCompleted = this.isCompleted();
+                const wasCompleted = await this.isCompleted();
                 await CloudStorage.syncCloudToLocal();
-                const nowCompleted = this.isCompleted();
+                const nowCompleted = await this.isCompleted();
                 if (wasCompleted !== nowCompleted) {
                     console.log(`[Cloud] Data status changed (${wasCompleted} -> ${nowCompleted}), reloading...`);
                     location.reload();
@@ -869,7 +871,7 @@ class ListeningCore {
                                 return;
                             }
 
-                            const wasCompleted = this.isCompleted();
+                            const wasCompleted = await this.isCompleted();
 
                             if (payload.eventType === 'DELETE') {
                                 // Thiết bị khác đã reset bài → xóa local và reload
@@ -895,7 +897,7 @@ class ListeningCore {
 
                             // INSERT hoặc UPDATE
                             await CloudStorage.syncCloudToLocal();
-                            const nowCompleted = this.isCompleted();
+                            const nowCompleted = await this.isCompleted();
 
                             if (wasCompleted !== nowCompleted) {
                                 console.log('[Realtime] Status changed, reloading...');
@@ -935,10 +937,19 @@ class ListeningCore {
         }
     }
 
-    isCompleted() {
+    async isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        return localStorage.getItem(key) !== null;
+        // Check localStorage first
+        if (localStorage.getItem(key) !== null) return true;
+        // Also check cloud storage for hybrid/cloud mode
+        if (window.CloudStorage) {
+            const cloudData = await window.CloudStorage.load(key);
+            // Quan trọng: Chỉ coi là hoàn thành nếu status là 'completed'
+            // Nếu là 'draft', phải trả về false để loadDraft() được chạy
+            if (cloudData && cloudData.status === 'completed') return true;
+        }
+        return false;
     }
 
     getStorageKey(isDraft = false) {
@@ -988,7 +999,7 @@ class ListeningCore {
         const key = this.getHighlightStorageKey();
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!savedData && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -1242,10 +1253,12 @@ class ListeningCore {
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => {
             try {
+                if (this.isLoadingDraft) return; // Đang load thì không lưu
                 const draft = this.getDraftData();
+                if (!this.draftHasAnswers(draft)) return; // Không lưu nháp rỗng (tránh ghi đè)
+
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
-                // Cloud sync (fire-and-forget)
                 if (window.CloudStorage) window.CloudStorage.save(key, draft).catch(() => {});
             } catch (e) {
                 console.error('[Draft] FAILED to save:', e);
@@ -1254,15 +1267,14 @@ class ListeningCore {
     }
 
     saveDraftImmediate() {
-        if (this._isResetting) return;
+        if (this._isResetting || this.isLoadingDraft) return;
         if (this.examSubmitted || !this.currentTestData) return;
 
         clearTimeout(this.debounceTimer);
 
         try {
             const draft = this.getDraftData();
-            const hasAnswers = Object.values(draft).some(v => v !== null && v !== undefined && v !== '');
-            if (!hasAnswers) return;
+            if (!this.draftHasAnswers(draft)) return; // Không lưu nháp rỗng
 
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
@@ -1280,20 +1292,31 @@ class ListeningCore {
                 channel.close();
             } catch (e) { }
         } catch (e) {
-            console.error('[Draft] Immediate save failed:', e);
+            console.error('[Draft] FAILED to save:', e);
         }
+    }
+
+    draftHasAnswers(draft) {
+        if (!draft) return false;
+        // Loại bỏ metadata để kiểm tra xem thực sự có đáp án không
+        const { type, slotState, timestamp, flaggedQuestions, ...answers } = draft;
+        
+        const hasValues = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        const hasSlots = slotState && Object.values(slotState).some(val => val !== null && val !== undefined && val !== '');
+        
+        return hasValues || hasSlots;
     }
 
     async loadDraft() {
         const key = this.getStorageKey(true);
         let draftJson = localStorage.getItem(key);
         
-        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!draftJson && window.CloudStorage) {  // ← CHỈ SỬA DÒNG NÀY
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
                     draftJson = JSON.stringify(cloudData);
-                    localStorage.setItem(key, draftJson); // Tạm lưu để UI dùng
+                    localStorage.setItem(key, draftJson);
                 }
             } catch (e) {
                 console.error('[loadDraft] Cloud load failed:', e);

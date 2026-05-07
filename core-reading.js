@@ -1394,7 +1394,7 @@ class ReadingCore {
 
 
     async initializeTest(testData) {
-
+        this.isLoadingDraft = true;
         this.currentTestData = testData;
 
         this.explanationMode = false;
@@ -1493,7 +1493,8 @@ class ReadingCore {
 
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
 
-
+        
+        this.isLoadingDraft = false;
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
 
@@ -1567,11 +1568,11 @@ class ReadingCore {
 
                 if (this._isResetting || !this.cloudSupportInitialized) return;
 
-                const wasCompleted = this.isCompleted();
+                const wasCompleted = await this.isCompleted();
 
                 await CloudStorage.syncCloudToLocal();
 
-                const nowCompleted = this.isCompleted();
+                const nowCompleted = await this.isCompleted();
 
                 
 
@@ -1595,13 +1596,20 @@ class ReadingCore {
 
 
 
-    isCompleted() {
+    async isCompleted() {
 
         if (!this.currentTestData) return false;
 
         const key = this.getStorageKey(false);
 
-        return localStorage.getItem(key) !== null;
+        if (localStorage.getItem(key) !== null) return true;
+
+        if (window.CloudStorage) {
+            const cloudData = await window.CloudStorage.load(key);
+            return cloudData && (cloudData.status === 'completed' || cloudData.correctCount !== undefined);
+        }
+
+        return false;
 
     }
 
@@ -1697,7 +1705,7 @@ class ReadingCore {
 
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!savedData && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -2185,7 +2193,7 @@ class ReadingCore {
 
     saveDraft() {
 
-        if (this.examSubmitted || this._isResetting) return;
+        if (this.examSubmitted || this._isResetting || this.isLoadingDraft) return;
 
         if (!this.currentTestData) return;
 
@@ -2200,6 +2208,8 @@ class ReadingCore {
             try {
 
                 const draft = this.getDraftData();
+
+                if (!this.draftHasAnswers(draft)) return;
 
                 const key = this.getStorageKey(true);
 
@@ -2330,7 +2340,7 @@ class ReadingCore {
         let draftJson = localStorage.getItem(this.getStorageKey(true));
         
         // Cloud-Only: Thử load từ cloud nếu localStorage trống
-        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!draftJson && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(this.getStorageKey(true));
                 if (cloudData) {
