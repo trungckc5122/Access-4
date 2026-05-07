@@ -904,10 +904,15 @@ class ReadingCore {
         }
     }
 
-    isCompleted() {
+       async isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        return localStorage.getItem(key) !== null;
+        if (localStorage.getItem(key) !== null) return true;
+        if (window.CloudStorage) {
+            const cloudData = await window.CloudStorage.load(key);
+            if (cloudData) return true;
+        }
+        return false;
     }
 
     getStorageKey(isDraft = false) {
@@ -956,7 +961,7 @@ class ReadingCore {
         const key = this.getHighlightStorageKey();
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!savedData && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -1259,16 +1264,16 @@ class ReadingCore {
         });
     }
 
-    async loadDraft() {
+      async loadDraft() {
         const key = this.getStorageKey(true);
         let draftJson = localStorage.getItem(key);
         
-        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
+        if (!draftJson && window.CloudStorage) {  // ← CHỈ SỬA DÒNG NÀY
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
                     draftJson = JSON.stringify(cloudData);
-                    localStorage.setItem(key, draftJson); // Tạm lưu để UI dùng
+                    localStorage.setItem(key, draftJson);
                 }
             } catch (e) {
                 console.error('[loadDraft] Cloud load failed:', e);
