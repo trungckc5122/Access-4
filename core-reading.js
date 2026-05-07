@@ -1395,8 +1395,6 @@ class ReadingCore {
 
     async initializeTest(testData) {
 
-        this.isLoadingDraft = true; // Prevents saving blank data while loading
-
         this.currentTestData = testData;
 
         this.explanationMode = false;
@@ -1438,7 +1436,15 @@ class ReadingCore {
 
 
         await this.loadHighlightDraft();
+
+
+
+
+
+        this.setupEventListeners();
+
         this.setupBeforeUnload();
+
         this.createNavigation();
 
 
@@ -1454,10 +1460,13 @@ class ReadingCore {
             this.restoreSubmittedState(submittedState);
 
         } else {
+
             await this.loadDraft();
+
         }
 
-        this.setupEventListeners();
+
+
         this.attachInputEvents();
 
 
@@ -1485,8 +1494,6 @@ class ReadingCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
 
 
-
-        this.isLoadingDraft = false; // Finished loading
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
 
@@ -1560,11 +1567,11 @@ class ReadingCore {
 
                 if (this._isResetting || !this.cloudSupportInitialized) return;
 
-                const wasCompleted = await this.isCompleted();
+                const wasCompleted = this.isCompleted();
 
                 await CloudStorage.syncCloudToLocal();
 
-                const nowCompleted = await this.isCompleted();
+                const nowCompleted = this.isCompleted();
 
                 
 
@@ -1588,20 +1595,13 @@ class ReadingCore {
 
 
 
-    async isCompleted() {
+    isCompleted() {
 
         if (!this.currentTestData) return false;
 
         const key = this.getStorageKey(false);
 
-        if (localStorage.getItem(key) !== null) return true;
-
-        if (window.CloudStorage) {
-            const cloudData = await window.CloudStorage.load(key);
-            if (cloudData && cloudData.status === 'completed') return true;
-        }
-
-        return false;
+        return localStorage.getItem(key) !== null;
 
     }
 
@@ -1630,7 +1630,7 @@ class ReadingCore {
 
 
     saveHighlightDraft() {
-        if (this.isLoadingDraft) return;
+
         const potentialSelectors = [
 
             '#readingContent',
@@ -1697,7 +1697,7 @@ class ReadingCore {
 
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && window.CloudStorage) {
+        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -2185,7 +2185,7 @@ class ReadingCore {
 
     saveDraft() {
 
-        if (this.examSubmitted || this._isResetting || this.isLoadingDraft) return;
+        if (this.examSubmitted || this._isResetting) return;
 
         if (!this.currentTestData) return;
 
@@ -2196,9 +2196,11 @@ class ReadingCore {
 
 
         this.debounceTimer = setTimeout(() => {
+
             try {
+
                 const draft = this.getDraftData();
-                if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
+
                 const key = this.getStorageKey(true);
 
                 this._safeSetStorage(key, JSON.stringify(draft));
@@ -2221,7 +2223,7 @@ class ReadingCore {
 
     saveDraftImmediate() {
 
-        if (this._isResetting || this.isLoadingDraft) return;
+        if (this._isResetting) return;
 
         if (this.examSubmitted || !this.currentTestData) return;
 
@@ -2282,10 +2284,15 @@ class ReadingCore {
 
 
     draftHasAnswers(draft) {
-        const { type, slotState, timestamp, ...answers } = draft;
-        const hasValues = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
-        const hasSlots = slotState && Object.values(slotState).some(val => val !== null && val !== undefined && val !== '');
-        return hasValues || hasSlots;
+
+        const { type, slotState, ...answers } = draft;
+
+        const radioAnswers = Object.entries(answers).some(([key, val]) => val !== null && val !== undefined && val !== '');
+
+        if (slotState && Object.keys(slotState).length > 0) return true;
+
+        return radioAnswers;
+
     }
 
 
@@ -2323,7 +2330,7 @@ class ReadingCore {
         let draftJson = localStorage.getItem(this.getStorageKey(true));
         
         // Cloud-Only: Thử load từ cloud nếu localStorage trống
-        if (!draftJson && window.CloudStorage) {
+        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(this.getStorageKey(true));
                 if (cloudData) {
@@ -3336,8 +3343,10 @@ class ReadingCore {
 
 
     setupEventListeners() {
+
         this._boundChangeHandler = (e) => {
-            if (this._isResetting || this.isLoadingDraft) return;
+
+            if (this._isResetting) return;
 
             if (e.target && e.target.matches('input[type="radio"]')) {
 
@@ -3354,7 +3363,8 @@ class ReadingCore {
 
 
         this._boundDocInputHandler = (e) => {
-            if (this._isResetting || this.isLoadingDraft) return;
+
+            if (this._isResetting) return;
 
             if (e.target && e.target.matches('.gap-input')) return;
 

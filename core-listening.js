@@ -708,7 +708,6 @@ class ListeningCore {
     }
 
     async initializeTest(testData) {
-        this.isLoadingDraft = true; // Prevents saving blank data while loading
         this.currentTestData = testData;
         this.examSubmitted = false;
         this.explanationMode = false;
@@ -718,6 +717,7 @@ class ListeningCore {
         this.renderQuestions();
 
         await this.loadHighlightDraft();
+        this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
 
@@ -729,11 +729,9 @@ class ListeningCore {
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
-        } else if (!(await this.isCompleted())) {
+        } else if (!this.isCompleted()) {
             await this.loadDraft();
         }
-
-        this.setupEventListeners();
 
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
@@ -750,7 +748,6 @@ class ListeningCore {
             new TestTourManager().init();
         }
 
-        this.isLoadingDraft = false; // Finished loading
         console.log('Listening test initialized:', testData.title);
     }
 
@@ -788,9 +785,9 @@ class ListeningCore {
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
                 if (this._isResetting || !this.cloudSupportInitialized) return;
-                const wasCompleted = await this.isCompleted();
+                const wasCompleted = this.isCompleted();
                 await CloudStorage.syncCloudToLocal();
-                const nowCompleted = await this.isCompleted();
+                const nowCompleted = this.isCompleted();
                 if (wasCompleted !== nowCompleted) {
                     console.log(`[Cloud] Data status changed (${wasCompleted} -> ${nowCompleted}), reloading...`);
                     location.reload();
@@ -816,7 +813,7 @@ class ListeningCore {
                                 console.log('[Realtime] Suppressed (local write cooldown)');
                                 return;
                             }
-                            const wasCompleted = await this.isCompleted();
+                            const wasCompleted = this.isCompleted();
                             if (payload.eventType === 'DELETE') {
                                 const old = payload.old;
                                 if (old) {
@@ -834,7 +831,7 @@ class ListeningCore {
                                 await CloudStorage.syncCloudToLocal(); return;
                             }
                             await CloudStorage.syncCloudToLocal();
-                            const nowCompleted = await this.isCompleted();
+                            const nowCompleted = this.isCompleted();
                             if (wasCompleted !== nowCompleted || nowCompleted) {
                                 console.log('[Realtime] State updated from remote, reloading...');
                                 location.reload();
@@ -854,15 +851,10 @@ class ListeningCore {
         }
     }
 
-    async isCompleted() {
+    isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        if (localStorage.getItem(key) !== null) return true;
-        if (window.CloudStorage) {
-            const cloudData = await window.CloudStorage.load(key);
-            if (cloudData && cloudData.status === 'completed') return true;
-        }
-        return false;
+        return localStorage.getItem(key) !== null;
     }
 
     getStorageKey(isDraft = false) {
@@ -877,7 +869,6 @@ class ListeningCore {
     }
 
     saveHighlightDraft() {
-        if (this.isLoadingDraft) return;
         const potentialSelectors = [
             '#transcriptContent',
             '#questionsContainer',
@@ -913,7 +904,7 @@ class ListeningCore {
         const key = this.getHighlightStorageKey();
         let savedData = localStorage.getItem(key);
 
-        if (!savedData && window.CloudStorage) {
+        if (!savedData && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -1161,14 +1152,13 @@ class ListeningCore {
     }
 
     saveDraft() {
-        if (this.examSubmitted || this._isResetting || this.isLoadingDraft) return;
+        if (this.examSubmitted || this._isResetting) return;
         if (!this.currentTestData) return;
 
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => {
             try {
                 const draft = this.getDraftData();
-                if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
                 // Cloud sync (fire-and-forget)
@@ -1180,14 +1170,15 @@ class ListeningCore {
     }
 
     saveDraftImmediate() {
-        if (this._isResetting || this.isLoadingDraft) return;
+        if (this._isResetting) return;
         if (this.examSubmitted || !this.currentTestData) return;
 
         clearTimeout(this.debounceTimer);
 
         try {
             const draft = this.getDraftData();
-            if (!this.draftHasAnswers(draft)) return; // Safety: Don't save empty drafts
+            const hasAnswers = Object.values(draft).some(v => v !== null && v !== undefined && v !== '');
+            if (!hasAnswers) return;
 
             const key = this.getStorageKey(true);
             this._safeSetStorage(key, JSON.stringify(draft));
@@ -1209,16 +1200,11 @@ class ListeningCore {
         }
     }
 
-    draftHasAnswers(draft) {
-        const { timestamp, ...answers } = draft;
-        return Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
-    }
-
     async loadDraft() {
         const key = this.getStorageKey(true);
         let draftJson = localStorage.getItem(key);
         
-        if (!draftJson && window.CloudStorage) {
+        if (!draftJson && localStorage.getItem('_storage_mode') === 'cloud_only' && window.CloudStorage) {
             try {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData) {
@@ -1406,7 +1392,7 @@ class ListeningCore {
 
     setupEventListeners() {
         this._boundChangeHandler = (e) => {
-            if (this._isResetting || this.isLoadingDraft) return;
+            if (this._isResetting) return;
             if (e.target && e.target.matches('input[type="radio"]')) {
                 this.updateAnswerCount();
                 this.saveDraftImmediate();
@@ -1415,7 +1401,7 @@ class ListeningCore {
         document.addEventListener('change', this._boundChangeHandler);
 
         this._boundInputHandler = (e) => {
-            if (this._isResetting || this.isLoadingDraft) return;
+            if (this._isResetting) return;
             if (e.target && e.target.matches('.fill-input')) {
                 this.updateAnswerCount();
                 this.saveDraft();
