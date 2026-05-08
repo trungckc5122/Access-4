@@ -55,6 +55,7 @@
             h1.style.justifyContent = 'center';
             h1.style.gap = '16px';
             h1.style.position = 'relative';
+            h1.style.paddingLeft = '60px';
 
             h1.prepend(homeBtn);
         }
