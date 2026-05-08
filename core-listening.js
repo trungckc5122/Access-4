@@ -1225,8 +1225,10 @@ class ListeningCore {
 
     async loadDraft() {
         const key = this.getStorageKey(true);
-        let draftJson = localStorage.getItem(key);
-        let draft = draftJson ? JSON.parse(draftJson) : null;
+        const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
+        
+        let localDraftJson = localStorage.getItem(key);
+        let draft = localDraftJson ? JSON.parse(localDraftJson) : null;
 
         // Nếu Local trống hoặc không có đáp án, ép buộc kiểm tra Cloud
         if ((!draft || !this.draftHasAnswers(draft)) && window.CloudStorage) {
@@ -1235,18 +1237,21 @@ class ListeningCore {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData && this.draftHasAnswers(cloudData)) {
                     console.log('%c[Draft] Found valid draft on Cloud, restoring...', 'color: #2ecc71');
-                    draft = cloudData;
-                    localStorage.setItem(key, JSON.stringify(draft));
-                    draftJson = JSON.stringify(draft);
+                    
+                    draft = (typeof cloudData === 'string') ? JSON.parse(cloudData) : cloudData;
+                    
+                    if (!isCloudOnly) {
+                        localStorage.setItem(key, JSON.stringify(draft));
+                    }
                 }
             } catch (e) {
                 console.error('[Draft] Cloud load failed:', e);
             }
         }
-        if (!draftJson) return false;
+
+        if (!draft) return false;
 
         try {
-            const draft = JSON.parse(draftJson);
             const questionRange = this.getQuestionRange();
 
             for (let i = questionRange.start; i <= questionRange.end; i++) {
