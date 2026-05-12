@@ -3046,12 +3046,18 @@
 
           let category = '';
           if (val.includes('REVIEW')) category = 'Review';
-          else if (val.includes('MODULE') || val.includes('WORKBOOK')) category = 'Module';
+          else if (val.includes('MODULE')) category = 'Module';
 
           let type = '';
           if (val.includes('MIDTERM')) type = 'Midterm';
           else if (val.includes('FINAL')) type = 'Final';
-          return { skill, book, test, part, course, category, type, variant, exam };
+          else {
+            const modMatch = val.match(/MODULE\s+(\d+)/i);
+            if (modMatch) type = modMatch[1];
+          }
+
+          let variant = parts.find(p => p === 'A' || p === 'B' || p === 'C' || p === 'D' || p === 'E' || p === 'F' || p === 'G' || p === 'H') || '';
+          return { skill, book, test, part, course, category, type, variant, exam, solLevel };
         }
         function updateSuggestions(isDeleting) {
           const val = input.value.trim().toUpperCase();
@@ -3135,13 +3141,13 @@
               const book = info.solLevel;
               const bookTitle = book === 'preinterm' ? 'Pre-Intermediate' : 'Intermediate';
               if (!info.category) {
-                suggestions = [`Solution ${bookTitle} Workbook`, `Solution ${bookTitle} Review`];
+                suggestions = [`Solution ${bookTitle} Module`, `Solution ${bookTitle} Review`];
               } else if (info.category === 'Module') {
                 if (!info.type) {
-                  suggestions = Object.keys(solModules[book]).sort((a, b) => a - b).map(m => `Solution ${bookTitle} Workbook Module ${m}`);
+                  suggestions = Object.keys(solModules[book]).sort((a, b) => a - b).map(m => `Solution ${bookTitle} Module ${m}`);
                 } else {
                   const variants = solModules[book][info.type] || [];
-                  suggestions = variants.sort().map(v => `Solution ${bookTitle} Workbook Module ${info.type} ${v}`);
+                  suggestions = variants.sort().map(v => `Solution ${bookTitle} Module ${info.type} ${v}`);
                 }
               } else if (info.category === 'Review') {
                 if (!info.type) {
@@ -3210,21 +3216,21 @@
               return false; // Cả 4 Test đều broken
             }
             // Solution
-            let solMatch = s.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+(WORKBOOK\s+MODULE|REVIEW\s+MODULE|REVIEW)\s+(\d+|MIDTERM|FINAL)\s*([A-H])?/i);
+            let solMatch = s.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+(MODULE|REVIEW)\s+(\d+|MIDTERM|FINAL)\s*([A-H])?/i);
             if (solMatch) {
               const book = solMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
               const cat = solMatch[2].toUpperCase();
               const type = solMatch[3].toLowerCase();
               const variant = (solMatch[4] || '').toLowerCase();
               let url = '';
-              if (cat.includes('WORKBOOK')) {
+              if (cat === 'MODULE') {
                 if (variant) url = `solution-${book}-${type}${variant}.html`;
-                else return true; // Just Module selection level
-              } else if (cat.includes('REVIEW')) {
-                if (cat.includes('MODULE')) url = `solution-${book}-review ${type}.html`;
+                else return true;
+              } else if (cat === 'REVIEW') {
+                if (s.includes('REVIEW MODULE')) url = `solution-${book}-review ${type}.html`;
                 else {
                   if (variant) url = `solution-${book}-${type} ${variant}.html`;
-                  else return true; // Just Midterm/Final selection level
+                  else return true;
                 }
               }
               return url ? (existingLinks.has(url) && !isLinkBroken(url)) : true;
@@ -3349,28 +3355,30 @@
             let reviewMatch = val.match(/ACCESS\s*4\s+REVIEW\s+(MIDTERM|FINAL)\s+([ABC])/i);
             if (reviewMatch) selectedUrl = `${reviewMatch[1].toLowerCase()}4${reviewMatch[2].toLowerCase()}.html`;
             else {
-            let moduleMatch = val.match(/ACCESS\s*4\s+MODULE\s+(\d+)\s+([ABC])/i);
-            if (moduleMatch) selectedUrl = `${moduleMatch[1]}${moduleMatch[2].toLowerCase()}.html`;
-            else {
-              // Solution
-              let solMatch = val.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+(WORKBOOK\s+MODULE|REVIEW\s+MODULE|REVIEW)\s+(\d+|MIDTERM|FINAL)\s+([A-H])/i);
-              if (solMatch) {
-                const book = solMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
-                const cat = solMatch[2].toUpperCase();
-                const type = solMatch[3].toLowerCase();
-                const variant = solMatch[4].toLowerCase();
-                if (cat.includes('WORKBOOK')) selectedUrl = `solution-${book}-${type}${variant}.html`;
-                else if (cat.includes('REVIEW') && !cat.includes('MODULE')) selectedUrl = `solution-${book}-${type} ${variant}.html`;
-              } else {
-                let solRevModMatch = val.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+REVIEW\s+MODULE\s+(\d+)/i);
-                if (solRevModMatch) {
-                  const book = solRevModMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
-                  selectedUrl = `solution-${book}-review ${solRevModMatch[2]}.html`;
+              let moduleMatch = val.match(/ACCESS\s*4\s+MODULE\s+(\d+)\s+([ABC])/i);
+              if (moduleMatch) selectedUrl = `${moduleMatch[1]}${moduleMatch[2].toLowerCase()}.html`;
+              else {
+                // Solution
+                let solMatch = val.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+MODULE\s+(\d+)\s+([A-H])/i);
+                if (solMatch) {
+                  const book = solMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
+                  selectedUrl = `solution-${book}-${solMatch[2]}${solMatch[3].toLowerCase()}.html`;
+                } else {
+                  let solReviewTestMatch = val.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+REVIEW\s+(MIDTERM|FINAL)\s+([AB])/i);
+                  if (solReviewTestMatch) {
+                    const book = solReviewTestMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
+                    selectedUrl = `solution-${book}-${solReviewTestMatch[2].toLowerCase()} ${solReviewTestMatch[3].toLowerCase()}.html`;
+                  } else {
+                    let solRevModMatch = val.match(/SOLUTION\s+(PRE-INTERMEDIATE|INTERMEDIATE)\s+REVIEW\s+MODULE\s+(\d+)/i);
+                    if (solRevModMatch) {
+                      const book = solRevModMatch[1].toLowerCase().includes('pre') ? 'preinterm' : 'interm';
+                      selectedUrl = `solution-${book}-review ${solRevModMatch[2]}.html`;
+                    }
+                  }
                 }
               }
             }
           }
-        }
           // Kiểm tra link tồn tại và không bị broken
           const isBroken = selectedUrl && sessionStorage.getItem(`broken_link_${selectedUrl}`) === 'broken';
           if (selectedUrl && existingLinks.has(selectedUrl) && !isBroken) goBtn.classList.add('active');
