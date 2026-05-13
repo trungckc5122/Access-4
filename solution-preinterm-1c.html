@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 1C Listening: Problems, problems!</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Layout: Split Screen for Transcript */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .transcript-panel.active + .reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Standardized Elements */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .audio-player-container audio { flex: 1; height: 35px; }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            border-radius: 4px;
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Exercise 1: Click-to-select */
+        .word-choice {
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .word-choice:hover { background: var(--primary-light); }
+        .word-choice.selected { background: var(--primary); color: #fff; }
+        .word-choice.correct-select { background: var(--success); color: #fff; }
+        .word-choice.incorrect-select { background: var(--error); color: #fff; }
+
+        /* Exercise 4: Radio Cards */
+        .option-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .option-card {
+            border: 1px solid var(--glass-border);
+            padding: 12px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+        .option-card:hover { border-color: var(--primary); background: var(--primary-light); }
+        .option-card.selected { background: var(--primary-light); border-color: var(--primary); font-weight: bold; }
+        .option-card input { width: 18px; height: 18px; cursor: pointer; }
+
+        /* Exercise 5: Matching */
+        .matching-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .matching-row:hover { background: var(--primary-light); }
+
+        .matching-box {
+            width: 60px;
+            height: 38px;
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary);
+            background: white;
+            text-transform: uppercase;
+        }
+
+        /* Hint Box (Core Style) */
+        .hint-box {
+            display: none;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-left: 5px solid #ff9800;
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .hint-box strong { color: #d35400; }
+        .hint-box em { color: #2980b9; font-weight: 500; }
+
+        .speaker-line { margin-bottom: 12px; display: block; line-height: 1.8; }
+        .speaker-name { font-weight: bold; color: var(--primary-dark); }
+        
+        .script-section { display: none; }
+        .script-section.active { display: block; }
+        
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+<div class="container">
+    <div class="header" style="text-align: center; margin-bottom: 30px; margin-top: 20px;">
+        <h1 style="font-size: 2.5rem; color: var(--primary-dark);">1C Listening: Problems, problems!</h1>
+        <p class="subtitle" style="font-size: 1.1rem; color: var(--text-muted);">I can understand dialogues about personal problems.</p>
+    </div>
+
+    <div class="reading-split-container">
+        <!-- Left Panel: Transcript -->
+        <div class="transcript-panel" id="transcript-panel">
+            <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">Listening Scripts</h2>
+            
+            <div id="script-1-03" class="script-section">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.03 (Exercise 4)</h3>
+                <span class="speaker-line"><span class="speaker-name">Ben:</span> Hi, Ellie. How are you?</span>
+                <span class="speaker-line"><span class="speaker-name">Ellie:</span> Oh, I’m OK, thanks.</span>
+                <span class="speaker-line"><span class="speaker-name">Ben:</span> You don’t sound very happy.</span>
+                <span class="speaker-line"><span class="speaker-name">Ellie:</span> <span class="highlightable" id="text-ex4-1">Well, to be honest, I’m a bit upset about the school show. It doesn’t look like I can be in it this year. Because a relative of mine is getting married – and the wedding is on the same night as the first performance.</span></span>
+                <span class="speaker-line"><span class="speaker-name">Ben:</span> That’s bad luck!</span>
+                <span class="speaker-line"><span class="speaker-name">Ellie:</span> I know.</span>
+                <br>
+                <span class="speaker-line"><span class="speaker-name">Leo:</span> Hi, Daisy. What are you up to?</span>
+                <span class="speaker-line"><span class="speaker-name">Daisy:</span> I’m reading an email from my cousin in Canada. He’s planning to visit us next month! I can’t wait …</span>
+                <span class="speaker-line"><span class="speaker-name">Leo:</span> That’s good news. But I didn’t think you got on with him that well.</span>
+                <span class="speaker-line"><span class="speaker-name">Daisy:</span> I don’t. But he’s OK.</span>
+                <span class="speaker-line"><span class="speaker-name">Leo:</span> I don’t understand. You seem really excited …</span>
+                <span class="speaker-line"><span class="speaker-name">Daisy:</span> <span class="highlightable" id="text-ex4-2">I know – because he’s bringing me a DVD of the new Twilight film! It isn’t in the shops here, only in America.</span></span>
+                <br>
+                <span class="speaker-line"><span class="speaker-name">Molly:</span> Hi, James. What’s wrong?</span>
+                <span class="speaker-line"><span class="speaker-name">James:</span> Oh, nothing. I’m fine, really – just a bit worried.</span>
+                <span class="speaker-line"><span class="speaker-name">Molly:</span> Why’s that?</span>
+                <span class="speaker-line"><span class="speaker-name">James:</span> <span class="highlightable" id="text-ex4-3">I’ve got a piano exam this afternoon and I don’t think I’m ready for it. I need to practise more.</span></span>
+            </div>
+
+            <div id="script-1-04" class="script-section">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.04 (Exercises 5 & 6)</h3>
+                
+                <span class="speaker-line"><strong>Dialogue A:</strong></span>
+                <span class="speaker-line"><span class="speaker-name">Sophia:</span> Hi, Charlie. You don't look very happy. Is there a problem?</span>
+                <span class="speaker-line"><span class="speaker-name">Charlie:</span> <span class="highlightable" id="text-ex6-1">Well, yes. I just don’t know what to do.</span></span>
+                <span class="speaker-line"><span class="speaker-name">Sophia:</span> Tell me about it.</span>
+                <span class="speaker-line"><span class="speaker-name">Charlie:</span> ... I feel bad about leaving the team in the middle of the year.</span>
+                <span class="speaker-line"><span class="speaker-name">Sophia:</span> Why don't you talk to your teammates about it?</span>
+                <span class="speaker-line"><span class="speaker-name">Charlie:</span> I talked to them yesterday. They were really upset! They say they need me in the team.</span>
+                <span class="speaker-line"><span class="speaker-name">Sophia:</span> <span class="highlightable" id="text-ex5-5"><span class="highlightable" id="text-ex6-2">Oh dear – I see your problem.</span> What can I do? <span class="highlightable" id="text-ex5-5-2">I don't know. Sorry!</span></span></span>
+                <br>
+                <span class="speaker-line"><strong>Dialogue B:</strong></span>
+                <span class="speaker-line"><span class="speaker-name">Maisie:</span> Hi, Daniel.</span>
+                <span class="speaker-line"><span class="speaker-name">Daniel:</span> <span class="highlightable" id="text-ex6-3">Oh, hello Maisie. How are you? You don’t sound very happy!</span></span>
+                <span class="speaker-line"><span class="speaker-name">Maisie:</span> ... Do you think I should tell the truth?</span>
+                <span class="speaker-line"><span class="speaker-name">Daniel:</span> <span class="highlightable" id="text-ex5-1">Hmm. No, I don't. Just say you went to the concert and enjoyed it. I mean, you don't want your aunt to be upset, do you?</span></span>
+                <span class="speaker-line"><span class="speaker-name">Maisie:</span> <span class="highlightable" id="text-ex5-1-2"><span class="highlightable" id="text-ex6-4">No. I guess you’re right, Daniel.</span></span></span>
+                <br>
+                <span class="speaker-line"><strong>Dialogue C:</strong></span>
+                <span class="speaker-line"><span class="speaker-name">Emma:</span> <span class="highlightable" id="text-ex6-5">Hello, Luke. Can I ask you something?</span> It's about my science project.</span>
+                <span class="speaker-line"><span class="speaker-name">Luke:</span> Talk to Mr Woods, then. Ask for more time.</span>
+                <span class="speaker-line"><span class="speaker-name">Emma:</span> ... So I don't want to ask for more time.</span>
+                <span class="speaker-line"><span class="speaker-name">Luke:</span> <span class="highlightable" id="text-ex5-3">No, I don’t think you should do that. Just talk to him, <span class="highlightable" id="text-ex6-6">that’s my advice.</span></span></span>
+                <span class="speaker-line"><span class="speaker-name">Emma:</span> <span class="highlightable" id="text-ex5-3-2">I can't. You don't understand! I'm looking for science projects on the internet.</span></span>
+                <br>
+                <span class="speaker-line"><strong>Dialogue D:</strong></span>
+                <span class="speaker-line"><span class="speaker-name">George:</span> <span class="highlightable" id="text-ex6-7">I’ve got this problem with my Facebook page.</span> Some people made comments.</span>
+                <span class="speaker-line"><span class="speaker-name">Alice:</span> No, I <span class="highlightable" id="text-ex6-8">don’t think you should do that.</span> But you should delete the comments.</span>
+                <span class="speaker-line"><span class="speaker-name">George:</span> <span class="highlightable" id="text-ex5-2">OK. I can do that now. Thanks for the advice. <span class="highlightable" id="text-ex5-2-2">But I still feel bad.</span></span></span>
+            </div>
+        </div>
+
+        <div class="reading-resizer" id="reading-resizer"></div>
+
+        <!-- Right Panel: Main Exercise Stack -->
+        <div class="main-exercise-panel" id="main-exercise-panel">
+            
+            <!-- Exercise 1 -->
+            <div class="exercise-card">
+                <div class="exercise-title">1. Choose the correct verb.</div>
+                <div id="questions-ex1"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 2 -->
+            <div class="exercise-card">
+                <div class="exercise-title">2. Complete the advice with should or shouldn't and the verbs below.</div>
+                <div class="word-bank">
+                    <div class="word-item">feel</div><div class="word-item">go</div><div class="word-item">invite</div><div class="word-item">listen</div>
+                    <div class="word-item">look</div><div class="word-item">open</div><div class="word-item">spend</div><div class="word-item">tell</div>
+                </div>
+                <div id="questions-ex2"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 4 -->
+            <div class="exercise-card">
+                <div class="exercise-title">4. 🎧 1.03 Listen. Choose the best summary (a or b).</div>
+                <button class="transcript-toggle-btn" id="btn-toggle-1-03" onclick="toggleTranscript('1.03')">📜 Show Transcript 1.03</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track03.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex4"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 5 -->
+            <div class="exercise-card">
+                <div class="exercise-title">5. 🎧 1.04 Listen. Match dialogues (A-D) with sentences 1-5.</div>
+                <button class="transcript-toggle-btn" id="btn-toggle-1-04" onclick="toggleTranscript('1.04')">📜 Show Transcript 1.04</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track04.mp3" type="audio/mpeg"></audio>
+                </div>
+                <p style="font-weight: bold; margin-bottom: 15px;">The person with the problem:</p>
+                <div id="questions-ex5"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 6 -->
+            <div class="exercise-card">
+                <div class="exercise-title">6. 🎧 1.04 Listen again. Complete the missing words.</div>
+                <div id="questions-ex6"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+    const ex1Data = [
+        { q: "1 We should [CHOICE:do/make] a plan for the weekend.", ans: "make", hint: "<strong>Đáp án: make</strong><br><em>Make a plan</em>: Lập kế hoạch. Đây là cụm từ cố định (collocation)." },
+        { q: "2 Can you [CHOICE:have/tell] a word with your sister?", ans: "have", hint: "<strong>Đáp án: have</strong><br><em>Have a word with someone</em>: Nói chuyện riêng với ai đó." },
+        { q: "3 You should [CHOICE:give/make] her a call and apologise.", ans: "give", hint: "<strong>Đáp án: give</strong><br><em>Give someone a call</em>: Gọi điện thoại cho ai đó." },
+        { q: "4 Don't [CHOICE:keep/take] offence. It was only a joke!", ans: "take", hint: "<strong>Đáp án: take</strong><br><em>Take offence</em>: Cảm thấy bị xúc phạm." },
+        { q: "5 I [CHOICE:made/took] an excuse and left the party early.", ans: "made", hint: "<strong>Đáp án: made</strong><br><em>Make an excuse</em>: Viện cớ, tạo ra một lý do." },
+        { q: "6 Is it always wrong to [CHOICE:make/tell] a lie?", ans: "tell", hint: "<strong>Đáp án: tell</strong><br><em>Tell a lie</em>: Nói dối." },
+        { q: "7 I'm really tired. Can we [CHOICE:do/take] a break now?", ans: "take", hint: "<strong>Đáp án: take</strong><br><em>Take a break</em>: Nghỉ giải lao." },
+        { q: "8 I nearly always [CHOICE:give/tell] the truth.", ans: "tell", hint: "<strong>Đáp án: tell</strong><br><em>Tell the truth</em>: Nói thật." }
+    ];
+
+    const ex2Data = [
+        { q: "1 'It's really hot in here.' 'We <i>should open</i> a window.'", ans: "should open" },
+        { q: "2 'My ears are hurting.' 'You [INPUT] to loud music so often.'", ans: "shouldn't listen", hint: "<strong>Đáp án: shouldn't listen</strong><br>Lời khuyên không nên làm gì để tránh đau tai." },
+        { q: "3 'I think we're lost.' 'Yes. We [INPUT] at a map.'", ans: "should look", hint: "<strong>Đáp án: should look</strong><br>Lời khuyên nên xem bản đồ khi bị lạc." },
+        { q: "4 'I only got 68% in my exam.' 'You [INPUT] disappointed. That's a good mark!'", ans: "shouldn't feel", hint: "<strong>Đáp án: shouldn't feel</strong><br>Khuyên ai đó không nên cảm thấy thất vọng vì điểm số đó là khá tốt." },
+        { q: "5 'I really like the girl next door.' 'We [INPUT] her to our party.'", ans: "should invite", hint: "<strong>Đáp án: should invite</strong><br>Gợi ý nên mời cô ấy đến bữa tiệc." },
+        { q: "6 'Do you like Reece's new shirt?' 'No – but I don't think you [INPUT] him that.'", ans: "should tell", hint: "<strong>Đáp án: should tell</strong><br>Khuyên không nên nói thẳng ra nếu nó làm người khác buồn." },
+        { q: "7 'My science project isn't very good.' 'Maybe you [INPUT] more time on it.'", ans: "should spend", hint: "<strong>Đáp án: should spend</strong><br>Khuyên nên dành thêm thời gian cho dự án." },
+        { q: "8 'I don't feel well.' 'You [INPUT] to bed early.'", ans: "should go", hint: "<strong>Đáp án: should go</strong><br>Khuyên nên đi ngủ sớm khi thấy không khỏe." }
+    ];
+
+    const ex4Data = [
+        { q: "1 Ellie is upset because", ans: "a", optA: "she can't take part in the school show.", optB: "she can't go to a family wedding.", target: "text-ex4-1", hint: "<strong>Đáp án: a – she can't take part in the school show.</strong><br>Ellie nói: <em>'I’m a bit upset about the school show. It doesn’t look like I can be in it this year.'</em><br><br>✓ Ellie buồn vì không được tham gia buổi biểu diễn trường do trùng lịch đám cưới." },
+        { q: "2 Daisy is excited because", ans: "b", optA: "she likes seeing her cousin.", optB: "her cousin has got a present for her.", target: "text-ex4-2", hint: "<strong>Đáp án: b – her cousin has got a present for her.</strong><br>Daisy nói: <em>'I know – because he’s bringing me a DVD of the new Twilight film!'</em><br><br>✓ Daisy hào hứng không phải vì gặp anh họ mà vì món quà anh ấy mang về." },
+        { q: "3 James is worried because", ans: "a", optA: "he isn't ready for his music exam.", optB: "he can't finish his homework in time.", target: "text-ex4-3", hint: "<strong>Đáp án: a – he isn't ready for his music exam.</strong><br>James nói: <em>'I’ve got a piano exam this afternoon and I don’t think I’m ready for it.'</em><br><br>✓ James lo lắng vì cảm thấy mình chưa sẵn sàng cho kỳ thi piano." }
+    ];
+
+    const ex5Data = [
+        { q: "1 agrees that it is not necessary to tell the truth about it.", ans: "B", target: "text-ex5-1", hint: "<strong>Đáp án: B – Dialogue B</strong><br>Daniel khuyên: <em>'No, I don't. Just say you went to the concert and enjoyed it.'</em><br><br>✓ Daniel và Maisie đồng ý rằng không cần nói thật về việc ghét ban nhạc để không làm dì buồn." },
+        { q: "2 agrees to follow the advice, but feels upset.", ans: "D", target: "text-ex5-2", hint: "<strong>Đáp án: D – Dialogue D</strong><br>George nói: <em>'OK. I can do that now. Thanks for the advice. But I still feel bad.'</em><br><br>✓ George chấp nhận xoá bình luận nhưng vẫn cảm thấy tệ về sự việc." },
+        { q: "3 asks for advice, but decides not to follow it.", ans: "C", target: "text-ex5-3", hint: "<strong>Đáp án: C – Dialogue C</strong><br>Luke khuyên nói chuyện với giáo viên, nhưng Emma nói: <em>'I can't. You don't understand! I'm looking for science projects on the internet.'</em><br><br>✓ Emma quyết định tự tìm bài trên mạng thay vì làm theo lời khuyên của Luke." },
+        { q: "4 gets angry when their friend gives advice.", ans: "X", hint: "<strong>Câu này là phương án thừa.</strong>" },
+        { q: "5 does not get any advice from their friend.", ans: "A", target: "text-ex5-5", hint: "<strong>Đáp án: A – Dialogue A</strong><br>Sophia kết thúc bằng câu: <em>'I don't know. Sorry!'</em><br><br>✓ Sophia không đưa ra được lời khuyên nào cho vấn đề của Charlie." }
+    ];
+
+    const ex6Data = [
+        { q: "1 I [INPUT] what to do.", ans: "just don’t know", target: "text-ex6-1", hint: "Tìm thấy trong Dialogue A của kịch bản." },
+        { q: "2 Oh dear – I [INPUT] problem.", ans: "see your", target: "text-ex6-2", hint: "Tìm thấy trong Dialogue A của kịch bản." },
+        { q: "3 You [INPUT] very happy!", ans: "don’t sound", target: "text-ex6-3", hint: "Tìm thấy trong Dialogue B của kịch bản." },
+        { q: "4 I [INPUT] right, Daniel.", ans: "guess you’re", target: "text-ex6-4", hint: "Tìm thấy trong Dialogue B của kịch bản." },
+        { q: "5 Can I [INPUT] something?", ans: "ask you", target: "text-ex6-5", hint: "Tìm thấy trong Dialogue C của kịch bản." },
+        { q: "6 Just talk to him – [INPUT] advice.", ans: "that’s my", target: "text-ex6-6", hint: "Tìm thấy trong Dialogue C của kịch bản." },
+        { q: "7 I’ve got [INPUT] with my Facebook page.", ans: "this problem", target: "text-ex6-7", hint: "Tìm thấy trong Dialogue D của kịch bản." },
+        { q: "8 No, I [INPUT] you should do that.", ans: "don’t think", target: "text-ex6-8", hint: "Tìm thấy trong Dialogue D của kịch bản." }
+    ];
+
+    function toggleTranscript(track, forceOpen = false) {
+        const panel = document.getElementById('transcript-panel');
+        const sections = document.querySelectorAll('.script-section');
+        const currentActiveSection = document.querySelector('.script-section.active');
+        const targetId = `script-${track.replace('.', '-')}`;
+        
+        if (!forceOpen && panel.classList.contains('active') && currentActiveSection && currentActiveSection.id === targetId) {
+            panel.classList.remove('active');
+        } else {
+            sections.forEach(s => s.classList.remove('active'));
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+    }
+
+    function showReadingHint(targetId, hintBoxId, track) {
+        const h = document.getElementById(hintBoxId);
+        const isVisible = h.style.display === 'block';
+        
+        if (isVisible) {
+            h.style.display = 'none';
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            // Do not close the transcript panel here, per user request.
+            return;
+        }
+
+        // Use forceOpen = true to ensure script stays open
+        toggleTranscript(track, true);
+        
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+        h.style.display = 'block';
+        const textEl = document.getElementById(targetId);
+        if (textEl) {
+            textEl.classList.add('active-highlight');
+            setTimeout(() => {
+                textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+        }
+    }
+
+    function selectChoice(span) {
+        const row = span.closest('.question-row');
+        row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+        span.classList.add('selected');
+    }
+
+    function showSingleAns(id) {
+        const el = document.getElementById(id);
+        if (el.tagName === 'INPUT') {
+            if (el.value === el.dataset.ans) { el.value = ""; el.classList.remove('correct'); }
+            else { el.value = el.dataset.ans; el.classList.add('correct'); }
+            adjustWidth(el);
+        }
+    }
+
+    function toggleHint(id) {
+        const h = document.getElementById(id + '-hint');
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!isVisible) h.style.display = 'block';
+    }
+
+    function renderEx1() {
+        const container = document.getElementById('questions-ex1');
+        ex1Data.forEach((it, i) => {
+            const qid = `ex1-q${i}`;
+            const choices = it.q.match(/\[CHOICE:(.*)\]/)[1].split('/');
+            const html = it.q.replace(/\[CHOICE:.*\]/, 
+                `<span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[0]}</span> / <span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[1]}</span>`);
+            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="info-btn" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+    }
+
+    function renderEx2() {
+        const container = document.getElementById('questions-ex2');
+        ex2Data.forEach((it, i) => {
+            if (i===0) { container.innerHTML += `<div class="question-row">${it.q}</div>`; return; }
+            const qid = `ex2-q${i}`;
+            const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button><button class="info-btn" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+    }
+
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        ex4Data.forEach((it, i) => {
+            const qid = `ex4-q${i}`;
+            container.innerHTML += `<div class="question-row" style="margin-top:20px;">
+                <strong>${it.q}</strong>
+                <div class="option-group">
+                    <label class="option-card"><input type="radio" name="${qid}" value="a"> <span>a. ${it.optA}</span></label>
+                    <label class="option-card"><input type="radio" name="${qid}" value="b"> <span>b. ${it.optB}</span></label>
+                </div>
+                <div class="row-btns">
+                    <button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.03')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        });
+    }
+
+    function renderEx5() {
+        const container = document.getElementById('questions-ex5');
+        ex5Data.forEach((it, i) => {
+            const qid = `ex5-q${i}`;
+            container.innerHTML += `<div class="matching-row">
+                <span style="flex: 1;"><strong>${it.q}</strong></span>
+                <input type="text" id="${qid}" data-ans="${it.ans}" class="matching-box" oninput="adjustWidth(this)">
+                <div class="row-btns">
+                    <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
+                    ${it.target ? `<button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.04')">i</button>` : `<button class="info-btn" onclick="toggleHint('${qid}')">i</button>`}
+                </div>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        });
+    }
+
+    function renderEx6() {
+        const container = document.getElementById('questions-ex6');
+        ex6Data.forEach((it, i) => {
+            const qid = `ex6-q${i}`;
+            let title = "";
+            if (i===0) title = "<b>Dialogue A</b><br>";
+            if (i===2) title = "<br><b>Dialogue B</b><br>";
+            if (i===4) title = "<br><b>Dialogue C</b><br>";
+            if (i===6) title = "<br><b>Dialogue D</b><br>";
+            const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+            container.innerHTML += `${title}<div class="question-row">${html} <div class="row-btns"><button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button><button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.04')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+    }
+
+    function adjustWidth(el) { el.style.width = Math.max((el.value || el.placeholder || "").length * 11 + 30, 45) + "px"; }
+
+    function checkAll() {
+        document.querySelectorAll('input[type="text"]').forEach(el => {
+            if (!el.value) return;
+            const isCorrect = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+            el.classList.toggle('correct', isCorrect);
+            el.classList.toggle('incorrect-marked', !isCorrect);
+        });
+        document.querySelectorAll('.word-choice').forEach(span => {
+            if (span.classList.contains('selected')) {
+                const isCorrect = span.textContent.toLowerCase() === span.dataset.ans.toLowerCase();
+                span.classList.add(isCorrect ? 'correct-select' : 'incorrect-select');
+            }
+        });
+        ex4Data.forEach((it, i) => {
+            const qid = `ex4-q${i}`;
+            const selected = document.querySelector(`input[name="${qid}"]:checked`);
+            if (selected) {
+                const isCorrect = selected.value === it.ans;
+                const card = selected.closest('.option-card');
+                card.style.borderColor = isCorrect ? "var(--success)" : "var(--error)";
+            }
+        });
+    }
+
+    function showAnswers(prefix) {
+        if (prefix === 'ex4') {
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                if (radio) { radio.checked = true; radio.closest('.option-card').classList.add('selected'); }
+            });
+            return;
+        }
+        if (prefix === 'ex1') {
+            document.querySelectorAll('#questions-ex1 .question-row').forEach(row => {
+                const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
+                if (correct) { correct.classList.add('selected'); }
+            });
+            return;
+        }
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+    }
+
+    function resetSection(prefix) {
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+        if (prefix === 'ex4') { document.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; r.closest('.option-card').classList.remove('selected'); r.closest('.option-card').style = ""; }); }
+        if (prefix === 'ex1') { document.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select')); }
+        document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+    }
+
+    window.onload = () => {
+        renderEx1(); renderEx2(); renderEx4(); renderEx5(); renderEx6();
+        document.querySelectorAll('input').forEach(adjustWidth);
+        const toggle = document.getElementById('theme-toggle');
+        toggle.onclick = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            toggle.innerText = theme === 'dark' ? '☀️' : '🌙';
+        };
+        document.body.addEventListener('click', (e) => {
+            const card = e.target.closest('.option-card');
+            if (card) {
+                const r = card.querySelector('input');
+                r.checked = true;
+                const group = card.closest('.option-group');
+                group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+            }
+        });
+        document.addEventListener('keydown', (e) => { if(e.key === 'Enter') checkAll(); });
+    };
+
+    const resizer = document.getElementById('reading-resizer');
+    const panel = document.getElementById('transcript-panel');
+    let isResizing = false;
+    resizer.addEventListener('mousedown', () => isResizing = true);
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        panel.style.flex = `0 0 ${(e.clientX / window.innerWidth) * 100}%`;
+    });
+    document.addEventListener('mouseup', () => isResizing = false);
+</script>
+<script src="access-core.js"></script>
+</body>
+</html>
