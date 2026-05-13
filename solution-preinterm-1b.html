@@ -201,20 +201,40 @@
 
         .bilingual-container {
             display: none;
-            gap: 30px;
             margin-top: 15px;
             border-top: 2px solid #eee;
             padding-top: 25px;
         }
 
+        .bilingual-mode .bilingual-container {
+            display: flex;
+            align-items: stretch;
+        }
+
         .bilingual-column {
-            flex: 1;
+            flex: 1 1 0;
             padding: 25px;
             background: #fff;
             border-radius: 12px;
             border: 1px solid #ddd;
             font-size: 1.15rem;
             line-height: 1.8;
+            overflow: visible;
+            min-width: 20%;
+        }
+
+        .resizer {
+            width: 8px;
+            background: #cbd5e1;
+            cursor: col-resize;
+            border-radius: 4px;
+            margin: 0 15px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .resizer:hover, .resizer.active {
+            background: #94a3b8;
         }
 
         [data-theme="dark"] .bilingual-column {
@@ -389,11 +409,12 @@
 
             <!-- Bilingual Split View -->
             <div class="bilingual-container" id="bilingual-ex3">
-                <div class="bilingual-column">
+                <div class="bilingual-column" id="bilingual-left-ex3">
                     <div class="column-header">BẢN GỐC</div>
                     <div id="split-original-target"></div>
                 </div>
-                <div class="bilingual-column">
+                <div class="resizer" id="resizer-ex3"></div>
+                <div class="bilingual-column" id="bilingual-right-ex3">
                     <div class="column-header">BẢN DỊCH</div>
                     <div class="narrative-text" id="split-trans-ex3"></div>
                 </div>
@@ -488,7 +509,7 @@
 
         function adjustWidth(el) {
             const text = el.value || el.placeholder || "";
-            el.style.width = Math.max(text.length * 10 + 25, 80) + "px";
+            el.style.width = Math.max(text.length * 11 + 30, 80) + "px";
         }
 
         function toggleHint(id) {
@@ -597,6 +618,46 @@
             document.querySelectorAll('input').forEach(adjustWidth); 
         };
 
+        let resizerInitialized = false;
+
+        function initResizer(resizerId, leftColId, rightColId, containerId) {
+            if (resizerInitialized) return;
+            const resizer = document.getElementById(resizerId);
+            const leftCol = document.getElementById(leftColId);
+            const rightCol = document.getElementById(rightColId);
+            const container = document.getElementById(containerId);
+            if (!resizer) return;
+
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const containerRect = container.getBoundingClientRect();
+                let newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                
+                leftCol.style.flex = `0 0 calc(${newWidth}% - 14px)`;
+                rightCol.style.flex = `1 1 0`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = 'default';
+                }
+            });
+            resizerInitialized = true;
+        }
+
         function toggleBilingualView() {
             const isChecked = document.getElementById('toggle-bilingual').checked;
             const content = document.getElementById('questions-ex3');
@@ -614,6 +675,7 @@
                     <p><strong>Callie Rogers:</strong> Callie Rogers chỉ mới 16 tuổi khi cô ấy trúng số vào năm 2003. Cô ấy đã bỏ công việc trợ lý cửa hàng và bắt đầu tiêu tiền. Cô đưa gia đình đi những kỳ nghỉ đắt đỏ, mời tất cả bạn bè đến các bữa tiệc lớn mỗi cuối tuần và phẫu thuật thẩm mỹ. Mười năm sau, cô chỉ còn lại đúng 2.000 bảng Anh. Nhưng giờ cô ấy thấy hạnh phúc. "Tôi đã quá trẻ để trúng số," cô nói.</p>
                     <p style="margin-top:25px;"><strong>Tom Crist:</strong> Tom Crist đã nhận được một bất ngờ lớn khi anh trả lời điện thoại vào ngày 16 tháng 12 năm 2013. Anh là người trúng số, và giải thưởng thật khổng lồ – 40 triệu đô la! Anh quyết định không nói với bất kỳ ai về việc trúng giải. Anh lập tức quyên góp toàn bộ số tiền cho các tổ chức từ thiện. "Tôi thực sự không cần số tiền đó," anh nói. "Vợ tôi đã qua đời vào đầu năm đó nên tôi đã chọn các tổ chức từ thiện ung thư đã từng giúp đỡ bà ấy."</p>
                 `;
+                initResizer('resizer-ex3', 'bilingual-left-ex3', 'bilingual-right-ex3', 'bilingual-ex3');
             } else {
                 wrapper.appendChild(content); // Move content back to standard wrapper
                 bilingual.style.display = 'none';
@@ -628,6 +690,7 @@
             document.getElementById('theme-toggle').querySelector('.icon-moon').style.display = theme === 'dark' ? 'block' : 'none';
         };
     </script>
+<script src="access-core.js"></script>
 </body>
 
 </html>
