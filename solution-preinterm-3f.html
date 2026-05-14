@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 3F Reading: Disaster alert!</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            transition: max-width 0.3s;
+        }
+
+        .exercise-card {
+            width: 100%;
+            margin-bottom: 30px;
+            background: var(--card-bg, #fff);
+            border-radius: 12px;
+            border: 1px solid var(--border, #eee);
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .exercise-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        [data-theme="dark"] .exercise-title {
+            color: #ecf0f1;
+        }
+
+        .question-row {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--border, #ccc);
+            padding: 2px 8px;
+            font-size: 1rem;
+            color: var(--secondary, #27ae60);
+            font-weight: bold;
+            background: transparent;
+            min-width: 80px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--secondary, #27ae60);
+            background: var(--primary-light, #f0f0f0);
+        }
+
+        .task5-input.correct {
+            color: var(--secondary, #27ae60);
+            border-bottom-color: var(--secondary, #27ae60);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #e74c3c;
+            border-bottom-color: #e74c3c;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .hint-box .key-word {
+            font-weight: bold;
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .hint-detail {
+            margin-top: 5px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-show-all { background: #16a085; color: white; }
+        .btn-show-all:hover { background: #1abc9c; }
+        .btn-reset { background: #34495e; color: white; }
+        .btn-reset:hover { background: #2c3e50; }
+        .controls-row { margin-top: 20px; display: flex; gap: 10px; }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: var(--primary-light, #f9f9f9);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border, #eee);
+        }
+
+        .word-item {
+            background: var(--card-bg, #fff);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border, #ddd);
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        /* Split Screen Reading */
+        .reading-split-container {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-top: 20px;
+            height: 700px;
+            border: 1px solid var(--border, #ccc);
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg, #f8f9fa);
+        }
+
+        .reading-text-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+            font-size: 1.1rem;
+            line-height: 2.2;
+            text-align: justify;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: #cbd5e1;
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover, .reading-resizer.active {
+            background: #94a3b8;
+        }
+
+        .reading-questions-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        .highlightable {
+            transition: background-color 0.4s, box-shadow 0.4s;
+            border-radius: 3px;
+        }
+
+        .active-highlight {
+            background-color: rgba(250, 204, 21, 0.5); /* yellow */
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+        }
+
+        .par-num {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--text, #333);
+            font-weight: bold;
+            margin-right: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: var(--card-bg);
+            color: var(--text, #333);
+        }
+
+        .highlight-yellow { background-color: #fef08a; border-radius: 3px; color: #333; }
+        .highlight-green { background-color: #bbf7d0; border-radius: 3px; color: #333; }
+        .highlight-pink { background-color: #fbcfe8; border-radius: 3px; color: #333; }
+
+        /* Context Menu for manual highlight */
+        .context-menu {
+            display: none;
+            position: absolute;
+            background: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            z-index: 1000;
+            padding: 5px 0;
+            min-width: 150px;
+        }
+        .context-menu div {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu div:hover { background: #f0f0f0; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
+
+        /* Bilingual Toggle */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: var(--text, #333);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border, #eee);
+        }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #27ae60; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .bilingual-block { margin-top: 10px; font-style: italic; color: #2980b9; display: none; }
+        .bilingual-mode .bilingual-block { display: block; }
+        
+        .mc-options label {
+            display: block;
+            margin: 8px 0 8px 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+        .mc-options input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">3F</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Reading</div>
+                <h1>Disaster alert!</h1>
+                <p class="subtitle">I can understand a text about a smartphone app.</p>
+            </div>
+        </div>
+
+        <!-- Exercise 1 -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the sentences with the correct form of the verbs below.</div>
+            <div class="word-bank">
+                <div class="word-item">cause</div>
+                <div class="word-item">do</div>
+                <div class="word-item">express</div>
+                <div class="word-item">get</div>
+                <div class="word-item">have</div>
+                <div class="word-item">make</div>
+                <div class="word-item">provide</div>
+                <div class="word-item">take part in</div>
+                <div class="word-item">use</div>
+            </div>
+            <div id="questions-ex1">
+                <!-- Populated by JS -->
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Split Screen for Reading -->
+        <div class="reading-split-container">
+            <!-- Left Panel: Text -->
+            <div class="reading-text-panel" id="text-panel">
+                <div class="switch-container">
+                    <span>Dịch Song Ngữ</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bilingual" onchange="document.getElementById('text-panel').classList.toggle('bilingual-mode')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <h2 style="font-size: 2rem; margin-bottom: 20px; font-family: Georgia, serif; text-transform: uppercase;">Staying Safe</h2>
+                
+                <p>
+                    <span class="par-num">1</span> 
+                    <span id="text-ex3-1" class="highlightable">When you ask most people about the benefits of apps on their smartphone, they say they use them to play games, surf the net, keep in touch with people and organise social events.</span> 
+                    But <span id="text-ex2-1" class="highlightable">Jenny Harlow, a scientist from London</span>, has got an app that does something much more important: it warns her when she is in danger. 
+                    The app is called Safety Tips and it gives users real-time earthquake and tsunami warnings. 
+                    <span id="text-ex3-2" class="highlightable">The Japan Tourist Agency had the idea for the app after the 2011 earthquake in Japan, when many foreign tourists in the country were confused about what was happening and what they should do.</span> 
+                    <span id="text-ex2-2" class="highlightable">Jenny was on a business trip to Japan</span> <span id="text-ex2-3" class="highlightable">when the earthquake struck.</span> 'Although there are a lot of earthquakes in Japan, it was the first time I experienced one. 
+                    <span id="text-ex3-3" class="highlightable">All the warnings and information on the internet, radio and TV were in Japanese, and I couldn't understand.</span> It was really confusing and I didn't know what to do.' 
+                    She had to rely on Japanese colleagues to help her.
+                </p>
+                <div class="bilingual-block">
+                    Khi bạn hỏi hầu hết mọi người về lợi ích của các ứng dụng trên điện thoại thông minh, họ nói rằng họ sử dụng chúng để chơi trò chơi, lướt web, giữ liên lạc với mọi người và tổ chức các sự kiện xã hội. Nhưng Jenny Harlow, một nhà khoa học đến từ London, có một ứng dụng làm một việc quan trọng hơn nhiều: nó cảnh báo cô khi cô gặp nguy hiểm. Ứng dụng này có tên là Safety Tips và nó cung cấp cho người dùng các cảnh báo động đất và sóng thần theo thời gian thực. Cơ quan Du lịch Nhật Bản đã có ý tưởng về ứng dụng này sau trận động đất năm 2011 tại Nhật Bản, khi nhiều khách du lịch nước ngoài trong nước bối rối về những gì đang xảy ra và những gì họ nên làm. Jenny đang đi công tác ở Nhật Bản khi trận động đất xảy ra. 'Mặc dù có rất nhiều trận động đất ở Nhật Bản, đây là lần đầu tiên tôi trải qua một trận động đất. Tất cả các cảnh báo và thông tin trên internet, đài phát thanh và truyền hình đều bằng tiếng Nhật, và tôi không thể hiểu. Nó thực sự khó hiểu và tôi không biết phải làm gì.' Cô đã phải dựa vào các đồng nghiệp người Nhật để giúp đỡ cô.
+                </div>
+
+                <p>
+                    <span class="par-num">2</span> 
+                    The Safety Tips app sends an alert to users when a major earthquake happens, and also tells them if a tsunami is likely to arrive at the coast. 
+                    <span id="text-ex3-4" class="highlightable">The app gives lots of tips about what to do, where to go and how to stay safe, as well as a list of useful Japanese phrases such as 'Is this an earthquake?' and 'Is it safe here?' Importantly, all the information is in English</span>, and there are plans to add other languages. 
+                    The Japan Tourist Agency plans to advertise the app at airports and tourist information centres in Japan. In order to get the app, people visit a website and download it. 'I'm coming to Japan again next year and I will definitely watch out for alerts from the app,' says Jenny.
+                </p>
+                <div class="bilingual-block">
+                    Ứng dụng Safety Tips gửi cảnh báo đến người dùng khi có một trận động đất lớn xảy ra, và cũng cho họ biết liệu một cơn sóng thần có khả năng ập đến bờ biển hay không. Ứng dụng cung cấp nhiều mẹo về những việc cần làm, đi đâu và làm thế nào để giữ an toàn, cũng như danh sách các cụm từ tiếng Nhật hữu ích như 'Đây có phải là một trận động đất không?' và 'Ở đây có an toàn không?' Điều quan trọng là tất cả thông tin đều bằng tiếng Anh và có kế hoạch thêm các ngôn ngữ khác. Cơ quan Du lịch Nhật Bản có kế hoạch quảng cáo ứng dụng tại các sân bay và trung tâm thông tin du lịch tại Nhật Bản. Để có được ứng dụng, mọi người truy cập vào một trang web và tải xuống. 'Tôi sẽ lại đến Nhật Bản vào năm tới và tôi chắc chắn sẽ chú ý theo dõi các cảnh báo từ ứng dụng,' Jenny nói.
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Questions -->
+            <div class="reading-questions-panel" id="questions-panel">
+                
+                <!-- Exercise 2 -->
+                <div style="margin-bottom: 40px;">
+                    <div class="exercise-title" style="font-size: 1.1rem;">2. Read the text and answer the questions.</div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div>
+                    <div class="exercise-title" style="font-size: 1.1rem; line-height: 1.5;">3. Read the Reading Strategy. Then read the text again and choose the correct answers.</div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showMCAll()">Show All</button>
+                        <button class="btn btn-reset" onclick="resetMC()">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu for manual highlight -->
+    <div class="context-menu" id="contextMenu">
+        <div onmousedown="applyManualHighlight('yellow', event)"><div class="color-dot" style="background:#fef08a"></div>Highlight vàng</div>
+        <div onmousedown="applyManualHighlight('green', event)"><div class="color-dot" style="background:#bbf7d0"></div>Highlight xanh lá</div>
+        <div onmousedown="applyManualHighlight('pink', event)"><div class="color-dot" style="background:#fbcfe8"></div>Highlight hồng</div>
+        <div onmousedown="removeManualHighlight(event)"><div class="color-dot" style="background:#fff; border:1px solid #ccc;"></div>Xóa highlight</div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAllEx()" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 30px; background: #27ae60; color: white; border: none; border-radius: 30px; font-weight: bold; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100;">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        const ex1Data = [
+            { q: "I often [INPUT] online games like <em>Minecraft</em> with my friends.", ans: "take part in", hint: "<strong>Đáp án: take part in</strong><br>Giải thích: <span class='key-word'>take part in</span> nghĩa là tham gia vào." },
+            { q: "Video games can [INPUT] many benefits, such as improving memory and creativity.", ans: "provide", hint: "<strong>Đáp án: provide</strong><br>Giải thích: <span class='key-word'>provide</span> nghĩa là cung cấp." },
+            { q: "The scientists [INPUT] a lot of research on the topic and published the results yesterday.", ans: "did", hint: "<strong>Đáp án: did</strong><br>Giải thích: Cụm từ <span class='key-word'>do research</span> (làm nghiên cứu). Ở thì quá khứ dùng <strong>did</strong>." },
+            { q: "I prefer to [INPUT] a smartphone rather than a computer.", ans: "use", hint: "<strong>Đáp án: use</strong><br>Giải thích: <span class='key-word'>use</span> nghĩa là sử dụng." },
+            { q: "Video games can sometimes [INPUT] a positive effect on teenagers.", ans: "have", hint: "<strong>Đáp án: have</strong><br>Giải thích: Cụm từ <span class='key-word'>have an effect on</span> nghĩa là có ảnh hưởng tới." },
+            { q: "The amount of violence in video games can [INPUT] concern for a lot of parents.", ans: "cause", hint: "<strong>Đáp án: cause</strong><br>Giải thích: Cụm từ <span class='key-word'>cause concern</span> nghĩa là gây ra sự lo lắng." },
+            { q: "Newspapers sometimes claim that video games are bad for children, and parents often [INPUT] the same opinion.", ans: "express", hint: "<strong>Đáp án: express</strong><br>Giải thích: Cụm từ <span class='key-word'>express an opinion</span> nghĩa là bày tỏ quan điểm." },
+            { q: "Playing computer games in groups can help you to work together with other people and to [INPUT] decisions more quickly.", ans: "make", hint: "<strong>Đáp án: make</strong><br>Giải thích: Cụm từ <span class='key-word'>make decisions</span> nghĩa là đưa ra quyết định." },
+            { q: "Do you think playing computer games helps you to [INPUT] better grades?", ans: "get", hint: "<strong>Đáp án: get</strong><br>Giải thích: Cụm từ <span class='key-word'>get better grades</span> nghĩa là đạt điểm số tốt hơn." }
+        ];
+
+        const ex2Data = [
+            { q: "What does Jenny do?", ans: "She's a scientist.", target: "text-ex2-1", hint: "<strong>Đáp án: She's a scientist.</strong><br>Đoạn 1: But Jenny Harlow, a <span class='key-word'>scientist</span> from London..." },
+            { q: "Which country did she visit?", ans: "Japan", target: "text-ex2-2", hint: "<strong>Đáp án: Japan</strong><br>Đoạn 1: Jenny was on a business trip to <span class='key-word'>Japan</span>..." },
+            { q: "What kind of natural disaster did Jenny experience in 2011?", ans: "earthquake", target: "text-ex2-3", hint: "<strong>Đáp án: earthquake</strong><br>Đoạn 1: ...when the <span class='key-word'>earthquake</span> struck." }
+        ];
+
+        const ex3Data = [
+            { 
+                q: "According to the text, most people",
+                options: [
+                    "don't value apps very highly.",
+                    "don't know what the main benefits of apps are.",
+                    "use apps mainly for fun and social situations.",
+                    "think apps are useless in dangerous situations."
+                ],
+                ans: "c",
+                target: "text-ex3-1",
+                hint: "<strong>Đáp án: c</strong><br>Đoạn 1: When you ask most people... they use them to <span class='key-word'>play games, surf the net, keep in touch with people and organise social events.</span>"
+            },
+            { 
+                q: "The main purpose of the Safety Tips app is to",
+                options: [
+                    "prevent an earthquake like the one in 2011.",
+                    "warn people who are visiting Japan about earthquakes.",
+                    "warn Japanese people about earthquakes.",
+                    "warn business people about earthquakes."
+                ],
+                ans: "b",
+                target: "text-ex3-2",
+                hint: "<strong>Đáp án: b</strong><br>Đoạn 1: The app gives users real-time earthquake and tsunami warnings. The Japan Tourist Agency had the idea... when many <span class='key-word'>foreign tourists</span> in the country were confused..."
+            },
+            { 
+                q: "Jenny had problems",
+                options: [
+                    "because no one told her what to do after an earthquake.",
+                    "because she couldn't understand the advice on Japanese media.",
+                    "because there was no information for tourists about what to do in an earthquake.",
+                    "because her Japanese colleagues didn't know what to do."
+                ],
+                ans: "b",
+                target: "text-ex3-3",
+                hint: "<strong>Đáp án: b</strong><br>Đoạn 1: All the warnings and information on the internet, radio and TV were in Japanese, and <span class='key-word'>I couldn't understand</span>. It was really confusing..."
+            },
+            { 
+                q: "At the moment, the app",
+                options: [
+                    "is available in a number of languages.",
+                    "is available at airports and tourist information centres.",
+                    "warns about earthquakes but not about tsunamis.",
+                    "is in English, with Japanese phrases."
+                ],
+                ans: "d",
+                target: "text-ex3-4",
+                hint: "<strong>Đáp án: d</strong><br>Đoạn 2: The app gives lots of tips... as well as <span class='key-word'>a list of useful Japanese phrases</span>... Importantly, <span class='key-word'>all the information is in English</span>..."
+            }
+        ];
+
+        function adjustWidth(el) {
+            const text = el.value || el.placeholder || "";
+            el.style.width = Math.max(text.length * 11 + 30, 80) + "px";
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
+                el.value = "";
+                el.classList.remove('correct');
+            } else {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+            }
+            adjustWidth(el);
+        }
+
+        function toggleSimpleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) h.style.display = 'block';
+        }
+
+        function showReadingHint(targetTextId, hintBoxId) {
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const isShowing = h.style.display === 'block';
+            
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            if (!isShowing) {
+                h.style.display = 'block';
+                const textEl = document.getElementById(targetTextId);
+                if (textEl) {
+                    textEl.classList.add('active-highlight');
+                    textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            ex1Data.forEach((it, i) => {
+                const qid = `ex1-q${i}`;
+                let html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+                container.innerHTML += `<div class="question-row">${i+1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div></div>`;
+            });
+        }
+
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                container.innerHTML += `<div class="question-row">
+                    ${i+1}. ${it.q} <br><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:200px; text-align:left; padding-left:10px; margin-top:8px;" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">
+                        <div class="hint-detail">${it.hint}</div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            ex3Data.forEach((it, i) => {
+                const qid = `ex3-q${i}`;
+                let optionsHtml = '';
+                it.options.forEach((opt, idx) => {
+                    const letter = String.fromCharCode(97 + idx); // a, b, c, d
+                    optionsHtml += `<label>
+                        <input type="radio" name="${qid}" value="${letter}" data-ans="${it.ans}"> 
+                        <strong>${letter}</strong> ${opt}
+                    </label>`;
+                });
+                
+                container.innerHTML += `<div class="question-row">
+                    ${i+1}. ${it.q}
+                    <div class="mc-options">
+                        ${optionsHtml}
+                    </div>
+                    <div class="row-btns" style="margin-left: 25px;">
+                        <button class="eye-btn" onclick="showMCAns('${qid}', '${it.ans}')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint" style="margin-left: 25px;">
+                        <div class="hint-detail">${it.hint}</div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        function showMCAns(name, ans) {
+            document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                const label = radio.parentElement;
+                if (radio.value === ans) {
+                    radio.checked = true;
+                    label.style.color = 'var(--secondary)';
+                    label.style.fontWeight = 'bold';
+                } else {
+                    label.style.color = '';
+                    label.style.fontWeight = 'normal';
+                }
+            });
+        }
+
+        function checkMCAnswers() {
+            document.querySelectorAll('.mc-options input[type="radio"]:checked').forEach(radio => {
+                const label = radio.parentElement;
+                if (radio.value === radio.dataset.ans) {
+                    label.style.color = 'var(--secondary)';
+                    label.style.fontWeight = 'bold';
+                } else {
+                    label.style.color = '#e74c3c';
+                    label.style.fontWeight = 'normal';
+                }
+            });
+        }
+
+        function showMCAll() {
+            ex3Data.forEach((it, i) => {
+                showMCAns(`ex3-q${i}`, it.ans);
+            });
+        }
+
+        function resetMC() {
+            document.querySelectorAll('.mc-options input[type="radio"]').forEach(radio => {
+                radio.checked = false;
+                radio.parentElement.style.color = '';
+                radio.parentElement.style.fontWeight = 'normal';
+            });
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        function checkAllEx() {
+            // Check text inputs
+            if (typeof window.checkAll === 'function') {
+                window.checkAll();
+            } else {
+                document.querySelectorAll('input[data-ans]:not([type="radio"])').forEach(el => {
+                    if (!el.value) return;
+                    const userVal = el.value.toLowerCase().trim().replace(/[.,!]/g, '');
+                    const correctVal = el.dataset.ans.toLowerCase().trim().replace(/[.,!]/g, '');
+                    if (userVal === correctVal) {
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    } else {
+                        el.classList.add('incorrect-marked');
+                        el.classList.remove('correct');
+                    }
+                });
+            }
+            // Check radio buttons
+            checkMCAnswers();
+        }
+
+        function showAnswers(prefix) {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                el.value = el.dataset.ans; 
+                el.classList.add('correct'); 
+                adjustWidth(el); 
+            });
+        }
+
+        function resetSection(prefix) {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                el.value = ""; 
+                el.classList.remove('correct', 'incorrect-marked'); 
+                adjustWidth(el); 
+            });
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        // Resizer Logic
+        function initSplitScreenResizer() {
+            const resizer = document.getElementById('reading-resizer');
+            const leftPanel = document.getElementById('text-panel');
+            const rightPanel = document.getElementById('questions-panel');
+            const container = document.querySelector('.reading-split-container');
+            
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                resizer.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const containerRect = container.getBoundingClientRect();
+                let newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                
+                if (newLeftWidth < 20) newLeftWidth = 20;
+                if (newLeftWidth > 80) newLeftWidth = 80;
+                
+                leftPanel.style.flex = `0 0 calc(${newLeftWidth}% - 4px)`;
+                rightPanel.style.flex = `1 1 0`;
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('active');
+                    document.body.style.cursor = 'default';
+                }
+            });
+        }
+
+        // Manual Highlight Logic (100% Core Reading Clone)
+        let selectedRange = null;
+
+        document.addEventListener('contextmenu', (e) => {
+            const highlightArea = e.target.closest('#text-panel');
+            if (!highlightArea) return;
+            const selection = window.getSelection();
+            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
+            e.preventDefault();
+            selectedRange = selection.getRangeAt(0);
+            
+            const contextMenu = document.getElementById('contextMenu');
+            contextMenu.style.display = 'block';
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+        });
+
+        document.addEventListener('click', (e) => {
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && !contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+            }
+        });
+
+        function getTextNodesInRange(range) {
+            const textNodes = [];
+            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+            });
+            let node;
+            while (node = walker.nextNode()) textNodes.push(node);
+            return textNodes;
+        }
+
+        function isSimpleRange(range) {
+            const startContainer = range.startContainer;
+            const endContainer = range.endContainer;
+            if (startContainer === endContainer && startContainer.nodeType === Node.TEXT_NODE) return true;
+            if (startContainer.parentNode === endContainer.parentNode) {
+                const textNodes = getTextNodesInRange(range);
+                return textNodes.length <= 1;
+            }
+            return false;
+        }
+
+        function removeExistingHighlightsInRange(range) {
+            try {
+                const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+                    acceptNode: (node) => {
+                        if (node.classList && (node.classList.contains('highlight-yellow') || 
+                            node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')))
+                            return NodeFilter.FILTER_ACCEPT;
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                });
+                const toUnwrap = [];
+                let node;
+                while (node = walker.nextNode()) if (range.intersectsNode(node)) toUnwrap.push(node);
+                toUnwrap.forEach(span => {
+                    const parent = span.parentNode;
+                    while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                    parent.removeChild(span);
+                });
+            } catch (e) { }
+        }
+
+        function applyHighlightSimple(range, color) {
+            try {
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                range.surroundContents(span);
+            } catch (e) {
+                const fragment = range.extractContents();
+                const span = document.createElement('span');
+                span.className = `highlight-${color}`;
+                span.appendChild(fragment);
+                range.insertNode(span);
+            }
+        }
+
+        function applyHighlightComplex(range, color) {
+            const textNodes = getTextNodesInRange(range);
+            textNodes.forEach(textNode => {
+                const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
+                const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
+                if (startOffset === endOffset) return;
+                const subRange = document.createRange();
+                subRange.setStart(textNode, startOffset);
+                subRange.setEnd(textNode, endOffset);
+                try {
+                    const span = document.createElement('span');
+                    span.className = `highlight-${color}`;
+                    subRange.surroundContents(span);
+                } catch (e) {
+                    const fragment = subRange.extractContents();
+                    const span = document.createElement('span');
+                    span.className = `highlight-${color}`;
+                    span.appendChild(fragment);
+                    subRange.insertNode(span);
+                }
+            });
+        }
+
+        function applyManualHighlight(color, e) {
+            e.preventDefault();
+            if (!selectedRange) {
+                document.getElementById('contextMenu').style.display = 'none';
+                return;
+            }
+            try {
+                const range = selectedRange.cloneRange();
+                removeExistingHighlightsInRange(range);
+                const isSimple = isSimpleRange(range);
+                if (isSimple) applyHighlightSimple(range, color);
+                else applyHighlightComplex(range, color);
+            } catch (e) { }
+            window.getSelection().removeAllRanges();
+            document.getElementById('contextMenu').style.display = 'none';
+            selectedRange = null;
+        }
+
+        function removeManualHighlight(e) {
+            e.preventDefault();
+            if (!selectedRange) {
+                document.getElementById('contextMenu').style.display = 'none';
+                return;
+            }
+            try {
+                const range = selectedRange.cloneRange();
+                removeExistingHighlightsInRange(range);
+            } catch (e) { }
+            window.getSelection().removeAllRanges();
+            document.getElementById('contextMenu').style.display = 'none';
+            selectedRange = null;
+        }
+
+        window.onload = () => {
+            renderEx1(); renderEx2(); renderEx3();
+            document.querySelectorAll('input:not([type="radio"])').forEach(adjustWidth);
+            initSplitScreenResizer();
+            
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') checkAllEx();
+            });
+        };
+    </script>
+<script src="access-core.js"></script>
+</body>
+</html>
