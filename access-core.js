@@ -61,14 +61,59 @@
         }
     };
 
-    // Initialize on load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            injectFavicon();
-            injectHomeBtn();
+    // 3. Global Enter Key Listener for checkAll
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            if (typeof window.checkAll === 'function') {
+                window.checkAll();
+            }
+        }
+    });
+
+    // 4. Auto-bold Question Numbers
+    const boldNumbers = () => {
+        const targets = document.querySelectorAll('.question-row, .ex4-question, .par-num, .dialogue-line');
+        targets.forEach(el => {
+            if (el.dataset.numbered === "true" || el.querySelector('.q-number')) return;
+            
+            let first = el.firstChild;
+            if (first && first.nodeType === 3) {
+                const m = first.nodeValue.match(/^(\d+[\.\)]?\s*)/);
+                if (m) {
+                    const numText = m[1];
+                    first.nodeValue = first.nodeValue.slice(numText.length);
+                    const span = document.createElement('span');
+                    span.className = 'q-number';
+                    span.textContent = numText;
+                    el.insertBefore(span, first);
+                    el.dataset.numbered = "true";
+                }
+            } else if (first && first.nodeType === 1 && (first.tagName === 'SPAN' || first.tagName === 'STRONG')) {
+                const text = first.textContent.trim();
+                if (/^\d+[\.\)]?$/.test(text)) {
+                    first.classList.add('q-number');
+                    el.dataset.numbered = "true";
+                }
+            }
         });
-    } else {
+    };
+
+    // Initialize on load
+    const init = () => {
         injectFavicon();
         injectHomeBtn();
+        boldNumbers();
+        
+        // Watch for dynamic content (exercises rendered via JS)
+        const observer = new MutationObserver(() => {
+            boldNumbers();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();
