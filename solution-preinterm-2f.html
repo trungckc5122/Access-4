@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 2F Reading: Staying alive</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Custom styles that extend the theme */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--input-border);
+            padding: 2px 8px;
+            font-size: 1rem;
+            color: var(--primary-dark);
+            font-weight: bold;
+            background: var(--input-bg);
+            min-width: 60px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .task5-input.correct {
+            color: var(--success);
+            border-bottom-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .task5-input.incorrect-marked {
+            color: var(--error);
+            border-bottom-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        /* Vocabulary Table */
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .vocab-table th, .vocab-table td {
+            border: 1px solid var(--table-border);
+            padding: 12px;
+            text-align: left;
+        }
+        .vocab-table th {
+            background: var(--table-header-bg);
+            color: var(--primary-dark);
+            text-align: center;
+            font-weight: 700;
+        }
+
+        /* ===== SPLIT SCREEN ===== */
+        .reading-split-container {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-top: 20px;
+            height: 700px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .reading-text-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg);
+            font-size: 1.1rem;
+            line-height: 2.2;
+            text-align: justify;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover, .reading-resizer.active {
+            background: var(--resizer-hover);
+        }
+
+        .reading-questions-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg);
+        }
+
+        /* Highlight */
+        .highlightable {
+            transition: background-color 0.4s, box-shadow 0.4s;
+            border-radius: 3px;
+        }
+
+        .active-highlight {
+            background-color: var(--highlight-yellow);
+            box-shadow: 0 0 0 2px var(--highlight-yellow);
+        }
+
+        .highlight-yellow { background-color: #fef08a; border-radius: 3px; }
+        .highlight-green  { background-color: #bbf7d0; border-radius: 3px; }
+        .highlight-pink   { background-color: #fbcfe8; border-radius: 3px; }
+
+        /* Paragraph numbers */
+        .par-num {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--text);
+            font-weight: bold;
+            margin-right: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* Clickable Words for Ex 2 */
+        .clickable-word {
+            cursor: pointer;
+            border-bottom: 1px dashed var(--text-muted);
+            transition: all 0.2s;
+            padding: 0 2px;
+        }
+        .clickable-word:hover { background-color: var(--grammar-bg); }
+        .clickable-word.selected-word {
+            background-color: #fef08a;
+            border-bottom: 2px solid var(--warning);
+            font-weight: bold;
+        }
+
+        /* Bilingual Toggle */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: var(--text);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--text-muted); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .bilingual-block { margin-top: 10px; font-style: italic; color: var(--primary-dark); display: none; line-height: 1.8; }
+        .bilingual-mode .bilingual-block { display: block; margin-bottom: 20px; }
+
+        /* Context Menu */
+        .context-menu {
+            display: none;
+            position: absolute;
+            background: var(--context-menu-bg);
+            border: 1px solid var(--border-medium);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            z-index: 1000;
+            padding: 5px 0;
+            min-width: 155px;
+        }
+        .context-menu div {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .context-menu div:hover { background: var(--grammar-bg); }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+
+        /* ===== DRAG & DROP SENTENCE BANK ===== */
+        .sentence-bank {
+            background: var(--grammar-bg);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .sentence-bank-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .sentence-items {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sentence-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: grab;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .sentence-item:hover { border-color: var(--primary); background: var(--grammar-bg); }
+        .sentence-item.dragging { opacity: 0.4; cursor: grabbing; }
+        .sentence-item.used {
+            opacity: 0.45;
+            background: var(--grammar-bg);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .sentence-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 26px;
+            background: var(--primary);
+            color: white;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .sentence-text { flex: 1; line-height: 1.5; }
+
+        /* Drop rows in questions panel */
+        .drop-row-container { margin-bottom: 16px; }
+
+        .drop-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drop-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel {
+            flex: 1;
+            min-height: 40px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            background: var(--bg);
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .drop-slot-panel.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .drop-slot-panel.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .drop-slot-panel.filled-wrong {
+            border-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        .drop-slot-panel .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+        .drop-slot-panel.filled .slot-content { color: var(--text); }
+        [data-theme="dark"] .drop-slot-panel.filled .slot-content { color: var(--text); }
+
+        .remove-chip {
+            display: none;
+            cursor: pointer;
+            color: var(--error);
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel.filled .remove-chip { display: inline; }
+
+        /* Inline drop slots inside reading text */
+        .inline-drop-zone {
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 3px;
+        }
+
+        .inline-drop-slot {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 6px;
+            padding: 2px 8px;
+            background: var(--bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .inline-drop-slot.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .inline-drop-slot.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .inline-drop-slot .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .inline-drop-slot.filled .slot-content { color: var(--success); }
+        .inline-drop-slot .remove-chip { display: none; }
+        .inline-drop-slot.filled .remove-chip { display: inline; font-size: 0.8rem; }
+
+        /* Ex 4 – T/F + Paragraph inputs */
+        .ex4-row {
+            margin-bottom: 22px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .ex4-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .ex4-answer-pair {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .ex4-answer-pair .task5-input {
+            margin-right: 0 !important;
+        }
+
+        .ex4-hint-btn {
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">2F</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Reading</div>
+                <h1>Staying alive</h1>
+                <p class="subtitle">I can understand a survival story.</p>
+            </div>
+        </div>
+
+        <!-- Exercise 1 -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Match the pairs of adjectives with similar meanings. Put them in the correct columns.</div>
+            
+            <!-- Word Bank -->
+            <div class="word-bank">
+                <div class="word-item" draggable="true" data-word="astonishing">astonishing</div>
+                <div class="word-item" draggable="true" data-word="bad">bad</div>
+                <div class="word-item" draggable="true" data-word="big">big</div>
+                <div class="word-item" draggable="true" data-word="disgusting">disgusting</div>
+                <div class="word-item" draggable="true" data-word="exhausted">exhausted</div>
+                <div class="word-item" draggable="true" data-word="filthy">filthy</div>
+                <div class="word-item" draggable="true" data-word="good">good</div>
+                <div class="word-item" draggable="true" data-word="hungry">hungry</div>
+                <div class="word-item" draggable="true" data-word="sad">sad</div>
+                <div class="word-item" draggable="true" data-word="stunning">stunning</div>
+                <div class="word-item" draggable="true" data-word="tasty">tasty</div>
+                <div class="word-item" draggable="true" data-word="terrifying">terrifying</div>
+                <div class="word-item" draggable="true" data-word="tiny">tiny</div>
+            </div>
+            
+            <table class="vocab-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50%">Simple adjective</th>
+                        <th style="width: 50%">Extreme adjective</th>
+                    </tr>
+                </thead>
+                <tbody id="questions-ex1"><!-- JS generated --></tbody>
+            </table>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Exercise 2 -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Read the text. Underline five extreme adjectives from exercise 1.</div>
+            <p style="font-size: 1.05rem; margin-bottom: 10px;"><em>Click on the words in the text below to underline them.</em></p>
+            <div class="controls-row">
+                <button class="btn btn-show-all" id="ex2-btn" onclick="checkOrShowEx2()">Check Answers</button>
+                <button class="btn btn-reset" onclick="resetEx2()">Reset</button>
+                <span id="ex2-feedback" style="margin-left: 15px; font-weight: bold; line-height: 38px;"></span>
+            </div>
+        </div>
+
+        <!-- Split Screen -->
+        <div class="reading-split-container">
+
+            <!-- Left Panel: Text -->
+            <div class="reading-text-panel" id="text-panel">
+                <div class="switch-container">
+                    <span>Dịch Song Ngữ</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bilingual" onchange="document.getElementById('text-panel').classList.toggle('bilingual-mode')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <h2 style="font-size: 2rem; margin-bottom: 20px; font-family: Georgia, serif;">Alone at sea</h2>
+
+                <div id="readingContent">
+
+                    <p>
+                        <span class="par-num">A</span>
+                        On 29 January 1982, Steven Callahan left the Canary Islands in a <span class="clickable-word ex2-word" data-ans="false">small</span> yacht.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot1" data-q="1">
+                                <span class="slot-content">[ 1 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        But a week later, during an <span class="clickable-word ex2-word" data-ans="true">awful</span> storm, something (probably a whale) hit the yacht and made a <span class="clickable-word ex2-word" data-ans="true">huge</span> hole in it.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot2" data-q="2">
+                                <span class="slot-content">[ 2 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        He had to act quickly!
+                    </p>
+                    <div class="bilingual-block">Vào ngày 29 tháng 1 năm 1982, Steven Callahan rời quần đảo Canary trên một chiếc du thuyền nhỏ. Anh dự định chèo thuyền đến Caribe. Nhưng một tuần sau, trong một cơn bão tồi tệ, một thứ gì đó (có thể là một con cá voi) đã đâm vào du thuyền và tạo ra một lỗ hổng lớn trên đó. Nước tràn vào và thuyền chìm rất nhanh. Anh phải hành động nhanh chóng!</div>
+
+                    <p>
+                        <span class="par-num">B</span>
+                        Steven got into an inflatable life raft and just had time to get a sleeping bag, a first-aid kit, some food, maps, and a torch from the yacht before it sank. He also managed to get a copy of a book called <em>Sea Survival</em>.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot3" data-q="3">
+                                <span class="slot-content">[ 3 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        But he couldn't rescue the radio from the yacht.
+                    </p>
+                    <div class="bilingual-block">Steven lên một chiếc bè cứu sinh bơm hơi và chỉ có chút thời gian để lấy túi ngủ, bộ sơ cứu, một ít thức ăn, bản đồ và đèn pin từ du thuyền trước khi nó chìm. Anh cũng cố gắng lấy được một cuốn sách có tên là <em>Sea Survival</em> (Sinh tồn trên biển). Nó chứa nhiều thông tin hữu ích về cách sống sót trên biển. Nhưng anh không thể cứu được chiếc đài radio từ du thuyền.</div>
+
+                    <p>
+                        <span class="par-num">C</span>
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot4" data-q="4">
+                                <span class="slot-content">[ 4 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        His food ran out after a few days so he had to survive by catching sea-birds, fish and flying fish. He drank rain water which he caught in the raft.
+                    </p>
+                    <div class="bilingual-block">Một mình trên bè cứu sinh, Steven di chuyển chậm chạp băng qua Đại Tây Dương. Thức ăn của anh hết sau vài ngày nên anh phải sinh tồn bằng cách bắt chim biển, cá và cá chuồn. Anh uống nước mưa hứng được trong bè.</div>
+
+                    <p>
+                        <span class="par-num">D</span>
+                        After about two months at sea, the raft was 3,300 km from the place where the yacht sank.
+                        <span class="inline-drop-zone">
+                            <span class="inline-drop-slot" id="readingSlot5" data-q="5">
+                                <span class="slot-content">[ 5 ]</span>
+                                <span class="remove-chip">✕</span>
+                            </span>
+                        </span>
+                        But unfortunately they didn't see him. He was beginning to think that he might not survive. He was <span id="text-starving" class="highlightable clickable-word ex2-word" data-ans="true">starving</span>, <span id="text-exhausted" class="highlightable clickable-word ex2-word" data-ans="true">exhausted</span>, weak and very <span class="clickable-word ex2-word" data-ans="false">thin</span>.
+                    </p>
+                    <div class="bilingual-block">Sau khoảng hai tháng trên biển, chiếc bè cách nơi du thuyền chìm 3.300 km. Một số người đàn ông đang đánh cá gần bè của Steven. Nhưng thật không may họ không nhìn thấy anh. Anh bắt đầu nghĩ rằng mình có thể không sống sót. Anh đang chết đói, kiệt sức, yếu ớt và rất gầy.</div>
+
+                    <p>
+                        <span class="par-num">E</span>
+                        Finally, after 76 days, some fishermen saw the sea-birds that were flying around the raft and took Steven to the island of Guadeloupe. After his <span id="text-terrifying" class="highlightable clickable-word ex2-word" data-ans="true">terrifying</span> experience, he was finally in the Caribbean!
+                    </p>
+                    <div class="bilingual-block">Cuối cùng, sau 76 ngày, một số ngư dân nhìn thấy những con chim biển đang bay quanh bè và đưa Steven đến đảo Guadeloupe. Sau trải nghiệm kinh hoàng của mình, cuối cùng anh cũng đã ở Caribe!</div>
+
+                </div><!-- #readingContent -->
+            </div><!-- .reading-text-panel -->
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Questions -->
+            <div class="reading-questions-panel" id="questions-panel">
+
+                <!-- Exercise 3 – Drag & Drop -->
+                <div style="margin-bottom: 40px;">
+                    <div class="exercise-title" style="font-size: 1.1rem; border-bottom: none;">3. Match sentences A–G with gaps 1–5 in the text. There are two extra sentences.</div>
+
+                    <!-- Sentence Bank -->
+                    <div class="sentence-bank">
+                        <div class="sentence-bank-label">Sentence Bank — kéo câu vào ô tương ứng</div>
+                        <div class="sentence-items" id="sentenceItems">
+                            <div class="sentence-item" draggable="true" data-value="A" id="sent-A">
+                                <span class="sentence-letter">A</span>
+                                <span class="sentence-text">During this time, Steven saw nine ships.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="B" id="sent-B">
+                                <span class="sentence-letter">B</span>
+                                <span class="sentence-text">Water was coming in and the boat was sinking fast.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="C" id="sent-C">
+                                <span class="sentence-letter">C</span>
+                                <span class="sentence-text">But he couldn't swim back to the yacht.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="D" id="sent-D">
+                                <span class="sentence-letter">D</span>
+                                <span class="sentence-text">It contained lots of useful information about surviving at sea.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="E" id="sent-E">
+                                <span class="sentence-letter">E</span>
+                                <span class="sentence-text">He was planning to sail to the Caribbean.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="F" id="sent-F">
+                                <span class="sentence-letter">F</span>
+                                <span class="sentence-text">Some men were fishing near Steven's raft.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="G" id="sent-G">
+                                <span class="sentence-letter">G</span>
+                                <span class="sentence-text">Alone in the life raft, Steven travelled slowly across the Atlantic Ocean.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drop rows -->
+                    <div id="dropRows">
+
+                        <div class="drop-row-container">
+                            <div class="drop-row" id="drop-row-1">
+                                <span class="drop-label">1</span>
+                                <div class="drop-slot-panel" id="panelSlot1" data-q="1">
+                                    <span class="slot-content"></span>
+                                    <span class="remove-chip" onclick="removeSlot(1)">✕</span>
+                                </div>
+                                <span class="eye-btn" title="Xem đáp án" onclick="revealSlot(1)">👁️</span>
+                                <button class="hint-btn" onclick="showDragHint(event, 1)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q1-hint">
+                                <div class="hint-detail"><strong>Đáp án: E</strong> – <em>"He was planning to sail to the Caribbean."</em><br><br><strong>Trước ô trống [1]:</strong> Steven <span class="key-word">left the Canary Islands in a small yacht</span>.<br><br><strong>Tại sao E đúng:</strong> Câu E cho biết mục đích chuyến đi của Steven: anh định đi thuyền đến vùng Caribbean. Câu này nối tự nhiên sau thông tin anh rời Canary Islands và trước khi tai nạn xảy ra.<br><br><strong>Sau ô trống [1]:</strong> Cụm <em>"But a week later..."</em> chuyển sang biến cố bất ngờ, nên trước đó cần một câu giới thiệu kế hoạch ban đầu của chuyến đi.</div>
+                            </div>
+                        </div>
+
+                        <div class="drop-row-container">
+                            <div class="drop-row" id="drop-row-2">
+                                <span class="drop-label">2</span>
+                                <div class="drop-slot-panel" id="panelSlot2" data-q="2">
+                                    <span class="slot-content"></span>
+                                    <span class="remove-chip" onclick="removeSlot(2)">✕</span>
+                                </div>
+                                <span class="eye-btn" title="Xem đáp án" onclick="revealSlot(2)">👁️</span>
+                                <button class="hint-btn" onclick="showDragHint(event, 2)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q2-hint">
+                                <div class="hint-detail"><strong>Đáp án: B</strong> – <em>"Water was coming in and the boat was sinking fast."</em><br><br><strong>Trước ô trống [2]:</strong> Một thứ gì đó, có thể là cá voi, đâm vào du thuyền và tạo ra <span class="key-word">a huge hole</span>.<br><br><strong>Tại sao B đúng:</strong> Khi thuyền có một lỗ thủng lớn, kết quả hợp lý là nước tràn vào và thuyền chìm nhanh. Câu B diễn tả trực tiếp hậu quả của cú va chạm.<br><br><strong>Sau ô trống [2]:</strong> Câu <em>"He had to act quickly!"</em> hợp lý vì tình huống đã trở nên khẩn cấp: thuyền đang chìm.</div>
+                            </div>
+                        </div>
+
+                        <div class="drop-row-container">
+                            <div class="drop-row" id="drop-row-3">
+                                <span class="drop-label">3</span>
+                                <div class="drop-slot-panel" id="panelSlot3" data-q="3">
+                                    <span class="slot-content"></span>
+                                    <span class="remove-chip" onclick="removeSlot(3)">✕</span>
+                                </div>
+                                <span class="eye-btn" title="Xem đáp án" onclick="revealSlot(3)">👁️</span>
+                                <button class="hint-btn" onclick="showDragHint(event, 3)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q3-hint">
+                                <div class="hint-detail"><strong>Đáp án: D</strong> – <em>"It contained lots of useful information about surviving at sea."</em><br><br><strong>Trước ô trống [3]:</strong> Steven lấy được một cuốn sách tên là <em>Sea Survival</em>.<br><br><strong>Tại sao D đúng:</strong> Đại từ <span class="key-word">"It"</span> trong câu D chỉ cuốn sách <em>Sea Survival</em>. Nội dung "useful information about surviving at sea" giải thích vì sao cuốn sách này quan trọng trong hoàn cảnh Steven đang ở trên bè cứu sinh.<br><br><strong>Sau ô trống [3]:</strong> Câu sau nói rằng anh không cứu được radio. Như vậy đoạn này đang liệt kê những thứ anh lấy được và không lấy được từ du thuyền.</div>
+                            </div>
+                        </div>
+
+                        <div class="drop-row-container">
+                            <div class="drop-row" id="drop-row-4">
+                                <span class="drop-label">4</span>
+                                <div class="drop-slot-panel" id="panelSlot4" data-q="4">
+                                    <span class="slot-content"></span>
+                                    <span class="remove-chip" onclick="removeSlot(4)">✕</span>
+                                </div>
+                                <span class="eye-btn" title="Xem đáp án" onclick="revealSlot(4)">👁️</span>
+                                <button class="hint-btn" onclick="showDragHint(event, 4)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q4-hint">
+                                <div class="hint-detail"><strong>Đáp án: G</strong> – <em>"Alone in the life raft, Steven travelled slowly across the Atlantic Ocean."</em><br><br><strong>Trước ô trống [4]:</strong> Đoạn trước kết thúc bằng việc Steven không cứu được radio, tức là anh bị cô lập và không thể liên lạc.<br><br><strong>Tại sao G đúng:</strong> Câu G mở đầu đoạn C bằng bối cảnh tổng quát: Steven ở một mình trên bè cứu sinh và trôi chậm qua Đại Tây Dương. Đây là câu nền phù hợp trước khi đoạn văn kể chi tiết anh sống sót bằng cách tìm thức ăn và nước uống.<br><br><strong>Sau ô trống [4]:</strong> Câu sau nói thức ăn của anh hết sau vài ngày, nên mạch văn chuyển tự nhiên từ hành trình cô độc sang cách anh sinh tồn.</div>
+                            </div>
+                        </div>
+
+                        <div class="drop-row-container">
+                            <div class="drop-row" id="drop-row-5">
+                                <span class="drop-label">5</span>
+                                <div class="drop-slot-panel" id="panelSlot5" data-q="5">
+                                    <span class="slot-content"></span>
+                                    <span class="remove-chip" onclick="removeSlot(5)">✕</span>
+                                </div>
+                                <span class="eye-btn" title="Xem đáp án" onclick="revealSlot(5)">👁️</span>
+                                <button class="hint-btn" onclick="showDragHint(event, 5)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q5-hint">
+                                <div class="hint-detail"><strong>Đáp án: F</strong> – <em>"Some men were fishing near Steven's raft."</em><br><br><strong>Trước ô trống [5]:</strong> Sau khoảng hai tháng trên biển, bè của Steven đã cách nơi du thuyền chìm 3.300 km.<br><br><strong>Tại sao F đúng:</strong> Câu F giới thiệu <span class="key-word">some men</span>, những người đang câu cá gần bè của Steven. Câu sau dùng đại từ <span class="key-word">"they"</span>, nên cần một danh từ số nhiều đứng trước để người đọc biết "they" là ai.<br><br><strong>Sau ô trống [5]:</strong> Câu <em>"But unfortunately they didn't see him"</em> nối trực tiếp với câu F: những người đàn ông ở gần đó nhưng không nhìn thấy Steven.</div>
+                            </div>
+                        </div>
+
+                    </div><!-- #dropRows -->
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAllDragAnswers()">Show All</button>
+                        <button class="btn btn-reset" onclick="resetAllSlots()">Reset</button>
+                        <button class="btn" style="background:#3498db;color:white;" onclick="checkDragAnswers()">Check</button>
+                        <span id="ex3-feedback" style="margin-left:8px; font-weight:bold; line-height:38px;"></span>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 – T/F + Paragraph -->
+                <div>
+                    <div class="exercise-title" style="font-size: 1.1rem; line-height: 1.5;">4. Read the text again. Are the sentences true (T) or false (F)? Write the paragraph (A–E) which contains the answer.</div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+
+            </div><!-- .reading-questions-panel -->
+        </div><!-- .reading-split-container -->
+    </div><!-- .container -->
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div onmousedown="applyManualHighlight('yellow', event)"><div class="color-dot" style="background:#fef08a"></div>Highlight vàng</div>
+        <div onmousedown="applyManualHighlight('green', event)"><div class="color-dot" style="background:#bbf7d0"></div>Highlight xanh lá</div>
+        <div onmousedown="applyManualHighlight('pink', event)"><div class="color-dot" style="background:#fbcfe8"></div>Highlight hồng</div>
+        <div onmousedown="removeManualHighlight(event)"><div class="color-dot" style="background:#fff; border:1px solid #ccc;"></div>Xóa highlight</div>
+    </div>
+
+    <button onclick="checkAll()" style="position:fixed;bottom:20px;right:20px;padding:15px 30px;background:#27ae60;color:white;border:none;border-radius:30px;font-weight:bold;font-size:1rem;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.2);z-index:100;">CHECK ALL (ENTER)</button>
+
+    <script>
+    // ============================================================
+    // DATA
+    // ============================================================
+    const ex1Data = [
+        { n: "surprising", v: "1 [INPUT]", ans: "astonishing", mean: "đáng kinh ngạc" },
+        { n: "2 [INPUT]",  v: "delicious",  ans: "tasty",       mean: "ngon miệng" },
+        { n: "beautiful",  v: "3 [INPUT]",  ans: "stunning",    mean: "đẹp lộng lẫy" },
+        { n: "4 [INPUT]",  v: "awful",      ans: "bad",         mean: "tệ hại" },
+        { n: "unpleasant", v: "5 [INPUT]",  ans: "disgusting",  mean: "kinh tởm" },
+        { n: "6 [INPUT]",  v: "starving",   ans: "hungry",      mean: "đói bụng" },
+        { n: "small",      v: "7 [INPUT]",  ans: "tiny",        mean: "bé tí" },
+        { n: "8 [INPUT]",  v: "brilliant",  ans: "good",        mean: "tốt" },
+        { n: "frightening",v: "9 [INPUT]",  ans: "terrifying",  mean: "đáng sợ" },
+        { n: "10 [INPUT]", v: "tragic",     ans: "sad",         mean: "buồn" },
+        { n: "dirty",      v: "11 [INPUT]", ans: "filthy",      mean: "bẩn thỉu" },
+        { n: "12 [INPUT]", v: "huge",       ans: "big",         mean: "to lớn" },
+        { n: "tired",      v: "13 [INPUT]", ans: "exhausted",   mean: "kiệt sức" }
+    ];
+
+    const ex3AnswerKey = { 1:'E', 2:'B', 3:'D', 4:'G', 5:'F' };
+
+    // highlightMap: khi click hint bài 3, highlight vùng text nào trong bài đọc và scroll đến đó
+    const ex3HighlightMap = {
+        1: 'slot1-context',
+        2: 'slot2-context',
+        3: 'slot3-context',
+        4: 'slot4-context',
+        5: 'slot5-context'
+    };
+
+    const ex4Data = [
+        {
+            q: "<b>1</b> Steven wanted to sail to the Canary Islands.",
+            ans1: "F", ans2: "A",
+            textTarget: "text-ex4-1",
+            hint: "<strong>F, Đoạn A</strong><br>Đoạn A nói: Steven <span class='key-word'>left</span> the Canary Islands và <span class='key-word'>planning to sail to the Caribbean</span>. (Anh rời Canary để đến Caribe, không phải muốn giong buồm đến Canary)."
+        },
+        {
+            q: "<b>2</b> Steven's nightmare started four days into the trip.",
+            ans1: "F", ans2: "A",
+            textTarget: "text-ex4-2",
+            hint: "<strong>F, Đoạn A</strong><br>Đoạn A nói: But <span class='key-word'>a week later</span>... (Một tuần sau, không phải 4 ngày)."
+        },
+        {
+            q: "<b>3</b> Steven managed to get some useful things from the sinking yacht.",
+            ans1: "T", ans2: "B",
+            textTarget: "text-ex4-3",
+            hint: "<strong>T, Đoạn B</strong><br>Đoạn B nói: he just had time to get <span class='key-word'>a sleeping bag, a first-aid kit, some food, maps, and a torch</span>... (Anh kịp lấy nhiều đồ hữu ích)."
+        },
+        {
+            q: "<b>4</b> Steven ate birds and fish in order to survive.",
+            ans1: "T", ans2: "C",
+            textTarget: "text-ex4-4",
+            hint: "<strong>T, Đoạn C</strong><br>Đoạn C nói: he had to survive by <span class='key-word'>catching sea-birds, fish and flying fish</span>. (Sinh tồn bằng cách bắt chim biển và cá)."
+        },
+        {
+            q: "<b>5</b> Steven didn't reach the Caribbean.",
+            ans1: "F", ans2: "E",
+            textTarget: "text-ex4-5",
+            hint: "<strong>F, Đoạn E</strong><br>Đoạn E nói: After his terrifying experience, he was <span class='key-word'>finally in the Caribbean</span>! (Cuối cùng anh đã đến được Caribe)."
+        }
+    ];
+
+    // ============================================================
+    // DRAG & DROP ENGINE
+    // ============================================================
+    let dragValue = null;
+    let dragSourceSlot = null; // if dragging from a slot back
+
+    // Panel slots (right panel) data
+    const panelState = { 1: null, 2: null, 3: null, 4: null, 5: null };
+
+    function initDragDrop() {
+        // Sentence items → drag source
+        document.querySelectorAll('.sentence-item').forEach(item => {
+            item.addEventListener('dragstart', e => {
+                dragValue = item.dataset.value;
+                dragSourceSlot = null;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            item.addEventListener('dragend', () => item.classList.remove('dragging'));
+        });
+
+        // Panel slots (right panel) → drop target
+        document.querySelectorAll('.drop-slot-panel').forEach(slot => {
+            const q = parseInt(slot.dataset.q);
+
+            slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+            slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                if (dragValue) placeSentence(q, dragValue);
+            });
+
+            // Also allow dragging from panel slot back to bank
+            slot.addEventListener('dragstart', e => {
+                if (!panelState[q]) { e.preventDefault(); return; }
+                dragValue = panelState[q];
+                dragSourceSlot = q;
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            slot.draggable = true;
+        });
+
+        // Inline slots (reading text) → drop target
+        document.querySelectorAll('.inline-drop-slot').forEach(slot => {
+            const q = parseInt(slot.dataset.q);
+
+            slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+            slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                slot.classList.remove('drag-over');
+                if (dragValue) placeSentence(q, dragValue);
+            });
+        });
+
+        // Sentence bank → receive returned items
+        const bank = document.getElementById('sentenceItems');
+        bank.addEventListener('dragover', e => { e.preventDefault(); });
+        bank.addEventListener('drop', e => {
+            e.preventDefault();
+            if (dragSourceSlot !== null) {
+                removeSlot(dragSourceSlot);
+                dragSourceSlot = null;
+                dragValue = null;
+            }
+        });
+    }
+
+    function placeSentence(q, value) {
+        // If another slot has this value, clear it first
+        for (let k in panelState) {
+            if (panelState[k] === value && parseInt(k) !== q) {
+                removeSlot(parseInt(k));
+            }
+        }
+        // If this slot already has something, return it to bank
+        if (panelState[q]) {
+            returnToBankFromSlot(q);
+        }
+
+        panelState[q] = value;
+
+        // Update panel slot (right panel)
+        const panelSlot = document.getElementById(`panelSlot${q}`);
+        if (panelSlot) {
+            const sentEl = document.getElementById(`sent-${value}`);
+            const text = sentEl ? sentEl.querySelector('.sentence-text').textContent : value;
+            panelSlot.querySelector('.slot-content').textContent = `${value} – ${text}`;
+            panelSlot.classList.add('filled');
+            panelSlot.classList.remove('filled-wrong');
+        }
+
+        // Update inline slot in reading text - show full sentence text
+        const inlineSlot = document.getElementById(`readingSlot${q}`);
+        if (inlineSlot) {
+            const sentEl = document.getElementById(`sent-${value}`);
+            const text = sentEl ? sentEl.querySelector('.sentence-text').textContent : value;
+            inlineSlot.querySelector('.slot-content').textContent = text;
+            inlineSlot.classList.add('filled');
+        }
+
+        // Grey out sentence item in bank
+        const sentEl = document.getElementById(`sent-${value}`);
+        if (sentEl) sentEl.classList.add('used');
+
+        // Clear feedback
+        document.getElementById('ex3-feedback').innerHTML = '';
+    }
+
+    function returnToBankFromSlot(q) {
+        const oldVal = panelState[q];
+        if (!oldVal) return;
+        const sentEl = document.getElementById(`sent-${oldVal}`);
+        if (sentEl) sentEl.classList.remove('used');
+    }
+
+    function removeSlot(q) {
+        if (!panelState[q]) return;
+        returnToBankFromSlot(q);
+        panelState[q] = null;
+
+        const panelSlot = document.getElementById(`panelSlot${q}`);
+        if (panelSlot) {
+            panelSlot.querySelector('.slot-content').textContent = '';
+            panelSlot.classList.remove('filled', 'filled-wrong');
+        }
+
+        const inlineSlot = document.getElementById(`readingSlot${q}`);
+        if (inlineSlot) {
+            inlineSlot.querySelector('.slot-content').textContent = `[ ${q} ]`;
+            inlineSlot.classList.remove('filled');
+        }
+
+        document.getElementById('ex3-feedback').innerHTML = '';
+    }
+
+    function resetAllSlots() {
+        [1,2,3,4,5].forEach(q => removeSlot(q));
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+    }
+
+    function checkDragAnswers() {
+        let correct = 0;
+        [1,2,3,4,5].forEach(q => {
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (!panelState[q]) return;
+            if (panelState[q] === ex3AnswerKey[q]) {
+                correct++;
+                panelSlot.classList.add('filled');
+                panelSlot.classList.remove('filled-wrong');
+            } else {
+                panelSlot.classList.add('filled-wrong');
+                panelSlot.classList.remove('filled');
+            }
+        });
+        const done = Object.values(panelState).filter(v => v !== null).length;
+        const fb = document.getElementById('ex3-feedback');
+        if (correct === 5) {
+            fb.innerHTML = `<span style="color:#27ae60">✓ Perfect! 5/5 correct.</span>`;
+        } else {
+            fb.innerHTML = `<span style="color:#e74c3c">${correct}/${done} correct (of ${done} answered)</span>`;
+        }
+    }
+
+    function showAllDragAnswers() {
+        resetAllSlots();
+        Object.entries(ex3AnswerKey).forEach(([q, val]) => placeSentence(parseInt(q), val));
+        [1,2,3,4,5].forEach(q => {
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (panelSlot) { panelSlot.classList.add('filled'); panelSlot.classList.remove('filled-wrong'); }
+        });
+        document.getElementById('ex3-feedback').innerHTML = `<span style="color:#27ae60">✓ All answers shown.</span>`;
+    }
+
+    // ============================================================
+    // HINT WITH SCROLL + HIGHLIGHT (like part4 eye-icon)
+    // ============================================================
+    function showDragHint(event, q) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(`ex3-q${q}-hint`);
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+
+        // Hide all hints & clear highlights
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+        if (!isVisible) {
+            h.style.display = 'block';
+            scrollAndHighlightForQ(q);
+        }
+    }
+
+    // Mapping: which elements to highlight+scroll per question
+    const ex3ScrollTargets = {
+        1: ['slot1-anchor'],
+        2: ['slot2-anchor'],
+        3: ['slot3-anchor'],
+        4: ['slot4-anchor'],
+        5: ['slot5-anchor']
+    };
+
+    function scrollAndHighlightForQ(q) {
+        // Highlight all inline slots related to this question
+        const inlineSlot = document.getElementById(`readingSlot${q}`);
+        if (inlineSlot) {
+            // Add pulsing highlight class to the parent paragraph
+            const para = inlineSlot.closest('p');
+            if (para) {
+                para.classList.add('active-highlight');
+                // Scroll text panel to show this paragraph
+                const textPanel = document.getElementById('text-panel');
+                if (textPanel) {
+                    const panelRect = textPanel.getBoundingClientRect();
+                    const paraRect = para.getBoundingClientRect();
+                    const scrollOffset = para.offsetTop - 80;
+                    textPanel.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+                }
+            }
+        }
+    }
+
+    function showReadingHint(targetId, hintId) {
+        const h = document.getElementById(hintId);
+        if (!h) return;
+        const isShowing = h.style.display === 'block';
+
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        document.querySelectorAll('p.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+
+        if (!isShowing) {
+            h.style.display = 'block';
+            const textEl = document.getElementById(targetId);
+            if (textEl) {
+                textEl.classList.add('active-highlight');
+                const textPanel = document.getElementById('text-panel');
+                if (textPanel) {
+                    const scrollTop = textEl.offsetTop - 80;
+                    textPanel.scrollTo({ top: scrollTop, behavior: 'smooth' });
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // EX 1 RENDER
+    // ============================================================
+    function adjustWidth(el) {
+        const text = el.value || el.placeholder || "";
+        el.style.width = Math.max(text.length * 11 + 30, 60) + "px";
+    }
+
+    function showSingleAns(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
+            el.value = "";
+            el.classList.remove('correct');
+        } else {
+            el.value = el.dataset.ans;
+            el.classList.add('correct');
+        }
+        adjustWidth(el);
+    }
+
+    function toggleSimpleHint(event, id) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(id + '-hint');
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!isVisible) h.style.display = 'block';
+    }
+
+    function renderEx1() {
+        const tbody = document.getElementById('questions-ex1');
+        ex1Data.forEach((it, i) => {
+            const qid = `ex1-q${i}`;
+            let nHtml = it.n, vHtml = it.v;
+            const inputHtml = `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`;
+            if (nHtml.includes('[INPUT]')) nHtml = nHtml.replace('[INPUT]', inputHtml);
+            else vHtml = vHtml.replace('[INPUT]', inputHtml);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${nHtml}</td>
+                    <td>
+                        ${vHtml}
+                        <div class="row-btns" style="float:right;">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleSimpleHint(event,'${qid}')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint" style="clear:both;display:none;background:#e8f4f8;border-left-color:#3498db;margin-top:35px;">
+                            <div class="hint-detail"><span class="key-word" style="color:#2980b9;">${it.ans}</span>: ${it.mean}</div>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    // ============================================================
+    // EX 2 – CLICKABLE WORDS
+    // ============================================================
+    document.addEventListener('click', e => {
+        if (e.target.classList.contains('clickable-word')) {
+            e.target.classList.toggle('selected-word');
+            e.target.style.color = '';
+        }
+    });
+
+    let ex2Checked = false;
+
+    function checkOrShowEx2() {
+        const words = document.querySelectorAll('.clickable-word');
+        const fb = document.getElementById('ex2-feedback');
+        const btn = document.getElementById('ex2-btn');
+
+        if (!ex2Checked) {
+            let correct = 0, wrong = 0;
+            words.forEach(w => {
+                if (w.classList.contains('selected-word')) {
+                    if (w.dataset.ans === 'true') { correct++; w.style.color = '#27ae60'; }
+                    else { wrong++; w.style.color = '#e74c3c'; }
+                }
+            });
+            if (correct === 5 && wrong === 0) {
+                fb.innerHTML = `<span style="color:#27ae60">✓ Perfect! You found all 5 words.</span>`;
+            } else {
+                fb.innerHTML = `<span style="color:#e74c3c">${correct}/5 found. ${wrong > 0 ? wrong + ' incorrect.' : ''} Click "Show All" to reveal.</span>`;
+            }
+            btn.textContent = 'Show All';
+            ex2Checked = true;
+        } else {
+            words.forEach(w => {
+                if (w.dataset.ans === 'true') { w.classList.add('selected-word'); w.style.color = '#27ae60'; }
+                else { w.classList.remove('selected-word'); w.style.color = ''; }
+            });
+            fb.innerHTML = `<span style="color:#27ae60">✓ All answers shown.</span>`;
+        }
+    }
+
+    function resetEx2() {
+        document.querySelectorAll('.clickable-word').forEach(w => {
+            w.classList.remove('selected-word'); w.style.color = '';
+        });
+        document.getElementById('ex2-feedback').innerHTML = '';
+        document.getElementById('ex2-btn').textContent = 'Check Answers';
+        ex2Checked = false;
+    }
+
+    // ============================================================
+    // EX 4 RENDER — with scroll+highlight
+    // ============================================================
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        ex4Data.forEach((it, i) => {
+            const qid1 = `ex4-q${i}-1`;
+            const qid2 = `ex4-q${i}-2`;
+            const tid  = it.textTarget;
+            container.innerHTML += `
+            <div class="ex4-row">
+                ${it.q}
+                <span class="ex4-answer-pair">
+                    <input type="text" id="${qid1}" data-ans="${it.ans1}" class="task5-input" oninput="adjustWidth(this)" style="min-width:40px;" placeholder="T/F">
+                    <button class="eye-btn" title="Xem đáp án True/False" onclick="showSingleAns('${qid1}')">👁️</button>
+                </span>
+                <span class="ex4-label">Paragraph?</span>
+                <span class="ex4-answer-pair">
+                    <input type="text" id="${qid2}" data-ans="${it.ans2}" class="task5-input" oninput="adjustWidth(this)" style="min-width:40px;" placeholder="A-E">
+                    <button class="eye-btn" title="Xem đáp án Paragraph" onclick="showSingleAns('${qid2}')">👁️</button>
+                </span>
+                <button class="hint-btn ex4-hint-btn" onclick="showReadingHint('${tid}','ex4-q${i}-hint')">i</button>
+                <div class="hint-box" id="ex4-q${i}-hint" style="background:#e3f2fd;border-left-color:#42a5f5;">
+                    <div class="hint-detail">${it.hint}</div>
+                </div>
+            </div>`;
+        });
+    }
+
+    // We need to add id anchors to the reading text for Ex4 scroll targets.
+    // These are injected after render via JS so we don't clutter the HTML.
+    function addEx4Anchors() {
+        // Map paragraph letters to par-num elements
+        const parNums = document.querySelectorAll('.par-num');
+        const letterMap = {};
+        parNums.forEach(pn => {
+            const letter = pn.textContent.trim();
+            letterMap[letter] = pn.closest('p');
+        });
+
+        const targets = {
+            'text-ex4-1': letterMap['A'],
+            'text-ex4-2': letterMap['A'],
+            'text-ex4-3': letterMap['B'],
+            'text-ex4-4': letterMap['C'],
+            'text-ex4-5': letterMap['E']
+        };
+
+        Object.entries(targets).forEach(([id, el]) => {
+            if (el && !document.getElementById(id)) {
+                el.id = el.id || id;
+                if (!el.id.startsWith('text-ex4')) {
+                    // Create a hidden anchor span inside the paragraph
+                    const anchor = document.createElement('span');
+                    anchor.id = id;
+                    anchor.className = 'highlightable';
+                    anchor.style.cssText = 'display:inline;';
+                    el.prepend(anchor);
+                } else {
+                    el.classList.add('highlightable');
+                }
+            }
+        });
+
+        // Make sure paragraphs themselves are highlightable
+        document.querySelectorAll('#readingContent p').forEach(p => p.classList.add('highlightable'));
+    }
+
+    // Override showReadingHint to highlight whole paragraph if target is a p
+    const _origShowReadingHint = showReadingHint;
+    window.showReadingHint = function(targetId, hintId) {
+        const h = document.getElementById(hintId);
+        if (!h) return;
+        const isShowing = h.style.display === 'block';
+
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+        if (!isShowing) {
+            h.style.display = 'block';
+            // Find target element or its closest paragraph
+            let el = document.getElementById(targetId);
+            if (!el) return;
+            // Highlight the paragraph
+            const para = el.tagName === 'P' ? el : (el.closest('p') || el);
+            para.classList.add('active-highlight');
+            // Scroll
+            const textPanel = document.getElementById('text-panel');
+            if (textPanel) {
+                textPanel.scrollTo({ top: para.offsetTop - 80, behavior: 'smooth' });
+            }
+        }
+    };
+
+    // ============================================================
+    // GLOBAL CHECK / SHOW / RESET
+    // ============================================================
+    function showAnswers(prefix) {
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+            el.value = el.dataset.ans;
+            el.classList.add('correct');
+            adjustWidth(el);
+        });
+    }
+
+    function resetSection(prefix) {
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+            el.value = "";
+            el.classList.remove('correct','incorrect-marked');
+            adjustWidth(el);
+        });
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+    }
+
+    function checkAll() {
+        document.querySelectorAll('input[data-ans]').forEach(el => {
+            if (!el.value) return;
+            const u = el.value.toLowerCase().trim().replace(/[.,!]/g, '');
+            const c = el.dataset.ans.toLowerCase().trim().replace(/[.,!]/g, '');
+            el.classList.toggle('correct', u === c);
+            el.classList.toggle('incorrect-marked', u !== c);
+        });
+        checkOrShowEx2();
+        checkDragAnswers();
+    }
+
+    // ============================================================
+    // RESIZER — identical to 1F
+    // ============================================================
+    function initSplitScreenResizer() {
+        const resizer  = document.getElementById('reading-resizer');
+        const leftP    = document.getElementById('text-panel');
+        const rightP   = document.getElementById('questions-panel');
+        const container = document.querySelector('.reading-split-container');
+        if (!resizer || !leftP || !rightP || !container) return;
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', e => {
+            isResizing = true;
+            resizer.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!isResizing) return;
+            const rect = container.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            pct = Math.min(80, Math.max(20, pct));
+            leftP.style.flex  = `0 0 calc(${pct}% - 4px)`;
+            rightP.style.flex = `1 1 0`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizer.classList.remove('active');
+                document.body.style.cursor = 'default';
+            }
+        });
+    }
+
+    // ============================================================
+    // MANUAL HIGHLIGHT (right-click) — identical to 1F
+    // ============================================================
+    let selectedRange = null;
+
+    document.addEventListener('contextmenu', e => {
+        const area = e.target.closest('#text-panel');
+        if (!area) return;
+        const sel = window.getSelection();
+        if (!sel || sel.toString().trim() === '' || sel.rangeCount === 0) return;
+        e.preventDefault();
+        selectedRange = sel.getRangeAt(0);
+        const menu = document.getElementById('contextMenu');
+        menu.style.display = 'block';
+        menu.style.left = e.pageX + 'px';
+        menu.style.top  = e.pageY + 'px';
+    });
+
+    document.addEventListener('click', e => {
+        const menu = document.getElementById('contextMenu');
+        if (menu && !menu.contains(e.target)) menu.style.display = 'none';
+    });
+
+    function getTextNodesInRange(range) {
+        const nodes = [];
+        const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, {
+            acceptNode: n => range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+        });
+        let n; while (n = walker.nextNode()) nodes.push(n);
+        return nodes;
+    }
+
+    function isSimpleRange(range) {
+        if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) return true;
+        if (range.startContainer.parentNode === range.endContainer.parentNode) return getTextNodesInRange(range).length <= 1;
+        return false;
+    }
+
+    function removeExistingHighlightsInRange(range) {
+        try {
+            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+                acceptNode: n => (n.classList && ['highlight-yellow','highlight-green','highlight-pink'].some(c => n.classList.contains(c)))
+                    ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+            });
+            const toUnwrap = []; let n;
+            while (n = walker.nextNode()) if (range.intersectsNode(n)) toUnwrap.push(n);
+            toUnwrap.forEach(span => { const p = span.parentNode; while (span.firstChild) p.insertBefore(span.firstChild, span); p.removeChild(span); });
+        } catch(e) {}
+    }
+
+    function applyHighlightSimple(range, color) {
+        try { const s = document.createElement('span'); s.className = `highlight-${color}`; range.surroundContents(s); }
+        catch(e) { const f = range.extractContents(); const s = document.createElement('span'); s.className = `highlight-${color}`; s.appendChild(f); range.insertNode(s); }
+    }
+
+    function applyHighlightComplex(range, color) {
+        getTextNodesInRange(range).forEach(tn => {
+            const s0 = (range.startContainer === tn) ? range.startOffset : 0;
+            const e0 = (range.endContainer   === tn) ? range.endOffset   : tn.length;
+            if (s0 === e0) return;
+            const r = document.createRange(); r.setStart(tn, s0); r.setEnd(tn, e0);
+            try { const sp = document.createElement('span'); sp.className = `highlight-${color}`; r.surroundContents(sp); }
+            catch(e) { const f = r.extractContents(); const sp = document.createElement('span'); sp.className = `highlight-${color}`; sp.appendChild(f); r.insertNode(sp); }
+        });
+    }
+
+    function applyManualHighlight(color, e) {
+        e.preventDefault();
+        if (!selectedRange) { document.getElementById('contextMenu').style.display = 'none'; return; }
+        try {
+            const r = selectedRange.cloneRange();
+            removeExistingHighlightsInRange(r);
+            if (isSimpleRange(r)) applyHighlightSimple(r, color); else applyHighlightComplex(r, color);
+        } catch(e) {}
+        window.getSelection().removeAllRanges();
+        document.getElementById('contextMenu').style.display = 'none';
+        selectedRange = null;
+    }
+
+    function removeManualHighlight(e) {
+        e.preventDefault();
+        if (!selectedRange) { document.getElementById('contextMenu').style.display = 'none'; return; }
+        try { removeExistingHighlightsInRange(selectedRange.cloneRange()); } catch(e) {}
+        window.getSelection().removeAllRanges();
+        document.getElementById('contextMenu').style.display = 'none';
+        selectedRange = null;
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    window.addEventListener('DOMContentLoaded', () => {
+        renderEx1();
+        renderEx4();
+        addEx4Anchors();
+        document.querySelectorAll('input').forEach(adjustWidth);
+        initDragDrop();
+        initSplitScreenResizer();
+
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+    });
+    </script>
+
+    <script src="access-core.js"></script>
+</body>
+</html>
