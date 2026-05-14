@@ -156,19 +156,19 @@
         /* Hint Box (Core Style) */
         .hint-box {
             display: none;
-            background: #fffbe6;
-            border: 1px solid #ffe58f;
-            border-left: 5px solid #ff9800;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
             padding: 18px;
             margin-top: 15px;
             border-radius: 8px;
             font-size: 0.95rem;
             line-height: 1.7;
-            color: #333;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        .hint-box strong { color: #d35400; }
-        .hint-box em { color: #2980b9; font-weight: 500; }
+        .hint-box strong { color: var(--primary); }
+        .hint-box em { color: var(--accent); font-weight: 500; }
 
         .speaker-line { margin-bottom: 12px; display: block; line-height: 1.8; }
         .speaker-name { font-weight: bold; color: var(--primary-dark); }
@@ -392,8 +392,10 @@
         }
     }
 
-    function showReadingHint(targetId, hintBoxId, track) {
+    function showReadingHint(event, targetId, hintBoxId, track) {
+        if (event) event.stopPropagation();
         const h = document.getElementById(hintBoxId);
+        if (!h) return;
         const isVisible = h.style.display === 'block';
         
         if (isVisible) {
@@ -427,6 +429,7 @@
 
     function showSingleAns(id) {
         const el = document.getElementById(id);
+        if (!el) return;
         if (el.tagName === 'INPUT') {
             if (el.value === el.dataset.ans) { el.value = ""; el.classList.remove('correct'); }
             else { el.value = el.dataset.ans; el.classList.add('correct'); }
@@ -434,8 +437,29 @@
         }
     }
 
-    function toggleHint(id) {
+    function showSingleAnsRadio(qid, ans) {
+        const radio = document.querySelector(`input[name="${qid}"][value="${ans}"]`);
+        if (radio) {
+            radio.checked = true;
+            const group = radio.closest('.option-group');
+            group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            radio.closest('.option-card').classList.add('selected');
+        }
+    }
+
+    function showSingleAnsSelect(rowId) {
+        const row = document.getElementById(rowId).closest('.question-row');
+        const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
+        if (correct) {
+            row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            correct.classList.add('selected');
+        }
+    }
+
+    function toggleHint(event, id) {
+        if (event) event.stopPropagation();
         const h = document.getElementById(id + '-hint');
+        if (!h) return;
         const isVisible = h.style.display === 'block';
         document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
         if (!isVisible) h.style.display = 'block';
@@ -447,8 +471,8 @@
             const qid = `ex1-q${i}`;
             const choices = it.q.match(/\[CHOICE:(.*)\]/)[1].split('/');
             const html = it.q.replace(/\[CHOICE:.*\]/, 
-                `<span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[0]}</span> / <span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[1]}</span>`);
-            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="info-btn" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                `<span id="${qid}-select" class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[0]}</span> / <span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${choices[1]}</span>`);
+            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAnsSelect('${qid}-select')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
         });
     }
 
@@ -458,7 +482,7 @@
             if (i===0) { container.innerHTML += `<div class="question-row">${it.q}</div>`; return; }
             const qid = `ex2-q${i}`;
             const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
-            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button><button class="info-btn" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+            container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
         });
     }
 
@@ -473,7 +497,8 @@
                     <label class="option-card"><input type="radio" name="${qid}" value="b"> <span>b. ${it.optB}</span></label>
                 </div>
                 <div class="row-btns">
-                    <button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.03')">i</button>
+                    <button class="eye-btn" onclick="showSingleAnsRadio('${qid}', '${it.ans}')">👁️</button>
+                    <button class="hint-btn" onclick="showReadingHint(event, '${it.target}', '${qid}-hint', '1.03')">i</button>
                 </div>
                 <div class="hint-box" id="${qid}-hint">${it.hint}</div>
             </div>`;
@@ -488,8 +513,8 @@
                 <span style="flex: 1;"><strong>${it.q}</strong></span>
                 <input type="text" id="${qid}" data-ans="${it.ans}" class="matching-box" oninput="adjustWidth(this)">
                 <div class="row-btns">
-                    <button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button>
-                    ${it.target ? `<button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.04')">i</button>` : `<button class="info-btn" onclick="toggleHint('${qid}')">i</button>`}
+                    <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                    ${it.target ? `<button class="hint-btn" onclick="showReadingHint(event, '${it.target}', '${qid}-hint', '1.04')">i</button>` : `<button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>`}
                 </div>
                 <div class="hint-box" id="${qid}-hint">${it.hint}</div>
             </div>`;
@@ -506,7 +531,7 @@
             if (i===4) title = "<br><b>Dialogue C</b><br>";
             if (i===6) title = "<br><b>Dialogue D</b><br>";
             const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
-            container.innerHTML += `${title}<div class="question-row">${html} <div class="row-btns"><button class="btn-small" onclick="showSingleAns('${qid}')">👁️</button><button class="info-btn" onclick="showReadingHint('${it.target}', '${qid}-hint', '1.04')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+            container.innerHTML += `${title}<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="showReadingHint(event, '${it.target}', '${qid}-hint', '1.04')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
         });
     }
 

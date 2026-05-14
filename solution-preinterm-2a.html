@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 2A Landscapes</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Layout: Split Screen for Transcript (Sticky) */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 40%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .transcript-panel.active + .reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Exercise 1 Layout: Image Left, Labels Right */
+        .ex1-sub-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 40px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .ex1-image-box {
+            flex: 1;
+            min-width: 300px;
+        }
+        .ex1-image-box img {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .ex1-labels-box {
+            flex: 0 0 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Standardized Components */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .audio-player-container audio { flex: 1; height: 35px; }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        .word-choice {
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .word-choice:hover { background: var(--primary-light); }
+        .word-choice.selected { background: var(--primary); color: #fff; }
+        .word-choice.correct-select { background: var(--success); color: #fff; }
+        .word-choice.incorrect-select { background: var(--error); color: #fff; }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            border-radius: 4px;
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .ex1-sub-container { flex-direction: column; }
+            .ex1-labels-box { flex: 1; width: 100%; }
+            .transcript-panel.active { flex: 0 0 100%; position: relative; max-height: none; }
+            .reading-split-container { flex-direction: column; }
+        }
+
+    /* Custom Vocabulary Reference - Complete Bypass */
+    .custom-landscape-container {
+        margin-bottom: 40px;
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        position: relative;
+        display: block;
+    }
+    .custom-landscape-header {
+        background: var(--primary-light);
+        padding: 18px 25px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--glass-border);
+    }
+    .custom-landscape-header h3 {
+        margin: 0;
+        color: var(--primary-dark);
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    .custom-landscape-content {
+        display: none;
+        padding: 25px;
+        position: relative;
+        background: var(--bg);
+    }
+    .vocab-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .vocab-item {
+        flex: 1 1 calc(33.33% - 12px);
+        min-width: 200px;
+        padding: 12px 15px;
+        background: var(--card-bg);
+        border-radius: 10px;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+    }
+    .vocab-item strong { color: var(--primary); font-size: 1.05rem; }
+    
+    [data-theme="dark"] .vocab-item {
+        background: var(--card-bg);
+        border-color: var(--glass-border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    [data-theme="dark"] .custom-landscape-container {
+        background: var(--card-bg);
+    }
+
+    /* Exercise 4 Split Layout */
+    .ex4-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 15px;
+        border-bottom: 1px solid var(--glass-border);
+        transition: background 0.2s;
+    }
+    .ex4-row:hover { background: var(--primary-light); }
+    .ex4-question { flex: 1; font-weight: 500; font-size: 1rem; color: var(--text); }
+    .ex4-answer { flex: 0 0 280px; display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+
+    @media (max-width: 768px) {
+        .vocab-item { flex: 1 1 100%; }
+        .ex4-row { flex-direction: column; align-items: flex-start; }
+        .ex4-answer { width: 100%; justify-content: flex-start; margin-top: 10px; }
+    }
+</style>
+<script>
+    function toggleCustomVocab() {
+        const content = document.getElementById('vocabContent');
+        const icon = document.getElementById('vocabIcon');
+        if (content.style.display === 'block') {
+            content.style.display = 'none';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'block';
+            icon.textContent = '▲';
+        }
+    }
+</script>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+<div class="container">
+    <div class="header" style="text-align: center; margin-bottom: 40px; margin-top: 20px;">
+        <h1 style="font-size: 2.5rem; color: var(--primary-dark);">2A Landscapes</h1>
+        <p class="subtitle" style="font-size: 1.2rem; color: var(--text-muted);">I can describe landscapes.</p>
+    </div>
+
+    <!-- Custom Vocabulary Reference -->
+    <div class="custom-landscape-container">
+        <div class="custom-landscape-header" onclick="toggleCustomVocab()">
+            <h3>Vocabulary Reference: Landscape Features</h3>
+            <span id="vocabIcon" style="font-size: 1.2rem;">▼</span>
+        </div>
+        <div class="custom-landscape-content" id="vocabContent">
+            <ul class="vocab-grid">
+                <li class="vocab-item"><strong>Cliff</strong> /klɪf/: Vách đá.</li>
+                <li class="vocab-item"><strong>Stream</strong> /striːm/: Suối.</li>
+                <li class="vocab-item"><strong>Cave</strong> /keɪv/: Hang động.</li>
+                <li class="vocab-item"><strong>Waterfall</strong> /ˈwɔːtəfɔːl/: Thác nước.</li>
+                <li class="vocab-item"><strong>Ocean</strong> /ˈəʊʃn/: Đại dương.</li>
+                <li class="vocab-item"><strong>Forest</strong> /ˈfɒrɪst/: Rừng.</li>
+                <li class="vocab-item"><strong>Mountain</strong> /ˈmaʊntɪn/: Núi.</li>
+                <li class="vocab-item"><strong>Lake</strong> /leɪk/: Hồ.</li>
+                <li class="vocab-item"><strong>Hill</strong> /hɪl/: Đồi.</li>
+                <li class="vocab-item"><strong>River</strong> /ˈrɪvə/: Sông.</li>
+                <li class="vocab-item"><strong>Shore</strong> /ʃɔː/: Bờ biển.</li>
+                <li class="vocab-item"><strong>Volcano</strong> /vɒlˈkeɪnəʊ/: Núi lửa.</li>
+                <li class="vocab-item"><strong>Desert</strong> /ˈdezət/: Sa mạc.</li>
+                <li class="vocab-item"><strong>Valley</strong> /ˈvæli/: Thung lũng.</li>
+                <li class="vocab-item"><strong>Rocks</strong> /rɒks/: Đá.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Exercise 1 -->
+    <div class="exercise-card">
+        <div class="exercise-title">1. Complete the labels.</div>
+        
+        <!-- Part 1: Labels 1-5 -->
+        <div class="ex1-sub-container">
+            <div class="ex1-image-box">
+                <img src="img-pre/module 2a-ex1-1.png" alt="Landscapes 1">
+            </div>
+            <div class="ex1-labels-box">
+                <div class="question-row">
+                    1. c<input type="text" id="ex1-1" data-ans="liff" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-1')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-1')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-1-hint"><strong>Cliff</strong> /klɪf/: Vách đá cao, dựng đứng thường nằm ở ven biển.</div>
+                </div>
+                <div class="question-row">
+                    2. s<input type="text" id="ex1-2" data-ans="tream" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-2')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-2')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-2-hint"><strong>Stream</strong> /striːm/: Con suối, dòng nước tự nhiên nhỏ hơn sông.</div>
+                </div>
+                <div class="question-row">
+                    3. c<input type="text" id="ex1-3" data-ans="ave" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-3')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-3')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-3-hint"><strong>Cave</strong> /keɪv/: Hang động, một khoảng trống lớn trong lòng đất hoặc sườn núi.</div>
+                </div>
+                <div class="question-row">
+                    4. w<input type="text" id="ex1-4" data-ans="aterfall" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-4')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-4')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-4-hint"><strong>Waterfall</strong> /ˈwɔːtəfɔːl/: Thác nước, nơi dòng nước chảy từ trên cao xuống.</div>
+                </div>
+                <div class="question-row">
+                    5. o<input type="text" id="ex1-5" data-ans="cean" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-5')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-5')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-5-hint"><strong>Ocean</strong> /ˈəʊʃn/: Đại dương, vùng nước mặn bao quanh các lục địa.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 2: Labels 6-11 -->
+        <div class="ex1-sub-container">
+            <div class="ex1-image-box">
+                <img src="img-pre/module 2a-ex1-2.png" alt="Landscapes 2">
+            </div>
+            <div class="ex1-labels-box">
+                <div class="question-row">
+                    6. f<input type="text" id="ex1-6" data-ans="orest" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-6')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-6')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-6-hint"><strong>Forest</strong> /ˈfɒrɪst/: Khu rừng, vùng đất rộng lớn có nhiều cây cối.</div>
+                </div>
+                <div class="question-row">
+                    7. m<input type="text" id="ex1-7" data-ans="ountain" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-7')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-7')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-7-hint"><strong>Mountain</strong> /ˈmaʊntən/: Ngọn núi, vùng đất nhô cao hơn hẳn đồi.</div>
+                </div>
+                <div class="question-row">
+                    8. l<input type="text" id="ex1-8" data-ans="ake" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-8')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-8')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-8-hint"><strong>Lake</strong> /leɪk/: Hồ nước, vùng nước rộng lớn được bao quanh bởi đất liền.</div>
+                </div>
+                <div class="question-row">
+                    9. h<input type="text" id="ex1-9" data-ans="ill" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-9')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-9')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-9-hint"><strong>Hill</strong> /hɪl/: Đồi, vùng đất nhô cao nhưng thấp hơn núi.</div>
+                </div>
+                <div class="question-row">
+                    10. r<input type="text" id="ex1-10" data-ans="iver" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-10')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-10')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-10-hint"><strong>River</strong> /ˈrɪvə/: Con sông, dòng nước tự nhiên chảy ra biển hoặc hồ.</div>
+                </div>
+                <div class="question-row">
+                    11. s<input type="text" id="ex1-11" data-ans="hore" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-11')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-11')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-11-hint"><strong>Shore</strong> /ʃɔː/: Bờ biển hoặc bờ hồ.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 3: Labels 12-15 -->
+        <div class="ex1-sub-container">
+            <div class="ex1-image-box">
+                <img src="img-pre/module 2a-ex1-3.png" alt="Landscapes 3">
+            </div>
+            <div class="ex1-labels-box">
+                <div class="question-row">
+                    12. v<input type="text" id="ex1-12" data-ans="olcano" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-12')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-12')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-12-hint"><strong>Volcano</strong> /vɒlˈkeɪnəʊ/: Núi lửa, ngọn núi có thể phun trào nham thạch.</div>
+                </div>
+                <div class="question-row">
+                    13. d<input type="text" id="ex1-13" data-ans="esert" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-13')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-13')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-13-hint"><strong>Desert</strong> /ˈdezət/: Sa mạc, vùng đất khô cằn có rất ít mưa.</div>
+                </div>
+                <div class="question-row">
+                    14. v<input type="text" id="ex1-14" data-ans="alley" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-14')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-14')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-14-hint"><strong>Valley</strong> /ˈvæli/: Thung lũng, vùng đất thấp nằm giữa các ngọn núi hoặc đồi.</div>
+                </div>
+                <div class="question-row">
+                    15. r<input type="text" id="ex1-15" data-ans="ocks" class="task5-input" oninput="adjustWidth(this)">
+                    <div class="row-btns">
+                        <button class="btn-small" onclick="showSingleAns('ex1-15')">👁️</button>
+                        <button class="info-btn" onclick="toggleHint('ex1-15')">i</button>
+                    </div>
+                    <div class="hint-box" id="ex1-15-hint"><strong>Rocks</strong> /rɒks/: Những tảng đá lớn.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- Exercise 2 -->
+    <div class="exercise-card">
+        <div class="exercise-title">2. Put the letters in order to make adjectives that describe landscapes. Then circle the landscape feature that can go with each adjective. Sometimes both are possible.</div>
+        
+        <div id="questions-ex2">
+            <!-- Rendered by JS -->
+        </div>
+
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+        </div>
+    </div>
+
+    <div class="reading-split-container">
+        <!-- Left Panel: Transcript -->
+        <div class="transcript-panel" id="transcript-panel">
+            <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">Listening Transcript</h2>
+            <div id="script-1-06" class="script-section">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">Track 1.06 (Exercise 3)</h3>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-1">1. In which country is the highest <strong>waterfall</strong> in the world?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-2">2. What’s the name of the <strong>ocean</strong> to the east of Africa?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-3">3. What’s the name of the <strong>river</strong> that flows through London?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-4">4. In which country is <strong>Lake</strong> Baikal?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-5">5. What’s the name of the <strong>mountains</strong> that run along the west coast of South America?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-6">6. In which country is the <strong>volcano</strong> Vesuvius?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-7">7. What’s the name of the <strong>desert</strong> in southern Africa?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-8">8. In which two continents is the Great Rift <strong>Valley</strong>?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-9">9. Which famous American city is on the <strong>shore</strong> of Lake Michigan?</span></p>
+                <p class="speaker-line"><span class="highlightable" id="text-ex3-10">10. In which European country is the Black <strong>Forest</strong>?</span></p>
+            </div>
+        </div>
+
+        <div class="reading-resizer" id="reading-resizer"></div>
+
+        <!-- Right Panel: Ex 3 & 4 -->
+        <div class="main-exercise-panel">
+            
+            <!-- Exercise 3 -->
+            <div class="exercise-card">
+                <div class="exercise-title">3. 🎧 1.06 Listen and complete the quiz questions.</div>
+                <button class="transcript-toggle-btn" onclick="toggleTranscript('1.06')">📜 Show Transcript 1.06</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track06.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex3">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 4 -->
+            <div class="exercise-card">
+                <div class="exercise-title">4. Answer the questions in exercise 3. Use the internet to help you.</div>
+                <div id="questions-ex4">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+    const ex2Data = [
+        { scrambled: "lalt", adj: "tall", optA: "river", optB: "mountain", ansAdj: "tall", ansOpt: "mountain", hint: "<strong>Đáp án: tall – mountain</strong><br><em>Giải thích:</em> <strong>Tall</strong> (cao) thường dùng cho vật có chiều dọc lớn như ngọn núi. Sông (river) thường dùng <strong>long</strong> (dài) hoặc <strong>wide</strong> (rộng)." },
+        { scrambled: "ciy", adj: "icy", optA: "stream", optB: "desert", ansAdj: "icy", ansOpt: "stream", hint: "<strong>Đáp án: icy – stream</strong><br><em>Giải thích:</em> <strong>Icy</strong> (băng giá/lạnh giá) phù hợp với dòng suối (stream) ở vùng cao hoặc mùa đông. Sa mạc (desert) thường nóng và khô." },
+        { scrambled: "rowran", adj: "narrow", optA: "ocean", optB: "river", ansAdj: "narrow", ansOpt: "river", hint: "<strong>Đáp án: narrow – river</strong><br><em>Giải thích:</em> <strong>Narrow</strong> (hẹp) dùng cho con sông có khoảng cách giữa hai bờ nhỏ. Đại dương (ocean) luôn cực kỳ rộng lớn." },
+        { scrambled: "kadr", adj: "dark", optA: "cave", optB: "shore", ansAdj: "dark", ansOpt: "cave", hint: "<strong>Đáp án: dark – cave</strong><br><em>Giải thích:</em> <strong>Dark</strong> (tối tăm) là đặc điểm điển hình của hang động (cave) vì thiếu ánh sáng mặt trời." },
+        { scrambled: "wholsal", adj: "shallow", optA: "lake", optB: "valley", ansAdj: "shallow", ansOpt: "lake", hint: "<strong>Đáp án: shallow – lake</strong><br><em>Giải thích:</em> <strong>Shallow</strong> (nông/không sâu) dùng để mô tả độ sâu của nước trong hồ. Thung lũng là vùng đất, không dùng shallow." },
+        { scrambled: "owl", adj: "low", optA: "ocean", optB: "waterfall", ansAdj: "low", ansOpt: "waterfall", hint: "<strong>Đáp án: low – waterfall</strong><br><em>Giải thích:</em> <strong>Low</strong> (thấp) mô tả chiều cao của thác nước. Đại dương không được mô tả là 'thấp' theo cách này." },
+        { scrambled: "cykor", adj: "rocky", optA: "shore", optB: "forest", ansAdj: "rocky", ansOpt: "shore", hint: "<strong>Đáp án: rocky – shore</strong><br><em>Giải thích:</em> <strong>Rocky</strong> (nhiều đá) thường dùng cho bờ biển (shore) có nhiều đá sỏi thay vì cát." },
+        { scrambled: "edpe", adj: "deep", optA: "ocean", optB: "waterfall", ansAdj: "deep", ansOpt: "ocean", hint: "<strong>Đáp án: deep – ocean</strong><br><em>Giải thích:</em> <strong>Deep</strong> (sâu) là tính từ hoàn hảo để mô tả độ sâu hàng ngàn mét của đại dương." },
+        { scrambled: "diwe", adj: "wide", optA: "river", optB: "hill", ansAdj: "wide", ansOpt: "river", hint: "<strong>Đáp án: wide – river</strong><br><em>Giải thích:</em> <strong>Wide</strong> (rộng) dùng cho con sông lớn có hai bờ cách xa nhau." },
+        { scrambled: "peste", adj: "steep", optA: "volcano", optB: "waterfall", ansAdj: "steep", ansOpt: "both", hint: "<strong>Đáp án: steep – cả hai đều đúng</strong><br><em>Giải thích:</em> <strong>Steep</strong> (dốc đứng) có thể dùng cho cả sườn núi lửa và vách đá của thác nước." }
+    ];
+
+    const ex3Data = [
+        { q: "1 In which country is the highest [INPUT] in the world?", ans: "waterfall", target: "text-ex3-1", hint: "<strong>Đáp án: waterfall</strong><br><em>Dẫn chứng: 'In which country is the highest waterfall in the world?'</em><br>✓ Giải thích: Cần điền danh từ chỉ địa hình tự nhiên 'thác nước'." },
+        { q: "2 What’s the name of the [INPUT] to the east of Africa?", ans: "ocean", target: "text-ex3-2", hint: "<strong>Đáp án: ocean</strong><br><em>Dẫn chứng: 'What’s the name of the ocean to the east of Africa?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'đại dương'." },
+        { q: "3 What’s the name of the [INPUT] that flows through London?", ans: "river", target: "text-ex3-3", hint: "<strong>Đáp án: river</strong><br><em>Dẫn chứng: 'What’s the name of the river that flows through London?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'con sông'." },
+        { q: "4 In which country is [INPUT] Baikal?", ans: "Lake", target: "text-ex3-4", hint: "<strong>Đáp án: Lake</strong><br><em>Dẫn chứng: 'In which country is Lake Baikal?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'hồ nước'." },
+        { q: "5 What’s the name of the [INPUT] that run along the west coast of South America?", ans: "mountains", target: "text-ex3-5", hint: "<strong>Đáp án: mountains</strong><br><em>Dẫn chứng: 'What’s the name of the mountains that run along the west coast of South America?'</em><br>✓ Giải thích: Cần điền danh từ số nhiều chỉ 'dãy núi'." },
+        { q: "6 In which country is the [INPUT] Vesuvius?", ans: "volcano", target: "text-ex3-6", hint: "<strong>Đáp án: volcano</strong><br><em>Dẫn chứng: 'In which country is the volcano Vesuvius?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'núi lửa'." },
+        { q: "7 What’s the name of the [INPUT] in southern Africa?", ans: "desert", target: "text-ex3-7", hint: "<strong>Đáp án: desert</strong><br><em>Dẫn chứng: 'What’s the name of the desert in southern Africa?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'sa mạc'." },
+        { q: "8 In which two continents is the Great Rift [INPUT]?", ans: "Valley", target: "text-ex3-8", hint: "<strong>Đáp án: Valley</strong><br><em>Dẫn chứng: 'In which two continents is the Great Rift Valley?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'thung lũng'." },
+        { q: "9 Which famous American city is on the [INPUT] of Lake Michigan?", ans: "shore", target: "text-ex3-9", hint: "<strong>Đáp án: shore</strong><br><em>Dẫn chứng: 'Which famous American city is on the shore of Lake Michigan?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'bờ hồ'." },
+        { q: "10 In which European country is the Black [INPUT]?", ans: "Forest", target: "text-ex3-10", hint: "<strong>Đáp án: Forest</strong><br><em>Dẫn chứng: 'In which European country is the Black Forest?'</em><br>✓ Giải thích: Cần điền danh từ chỉ 'khu rừng'." }
+    ];
+
+    const ex4Data = [
+        { q: "In which country is the highest waterfall in the world?", ans: "Venezuela" },
+        { q: "What’s the name of the ocean to the east of Africa?", ans: "Indian Ocean" },
+        { q: "What’s the name of the river that flows through London?", ans: "the Thames" },
+        { q: "In which country is Lake Baikal?", ans: "Russia" },
+        { q: "What’s the name of the mountains that run along the west coast of South America?", ans: "the Andes" },
+        { q: "In which country is the volcano Vesuvius?", ans: "Italy" },
+        { q: "What’s the name of the desert in southern Africa?", ans: "Kalahari" },
+        { q: "In which two continents is the Great Rift Valley?", ans: "Africa and Asia" },
+        { q: "Which famous American city is on the shore of Lake Michigan?", ans: "Chicago" },
+        { q: "In which European country is the Black Forest?", ans: "Germany" }
+    ];
+
+    function renderEx2() {
+        const container = document.getElementById('questions-ex2');
+        ex2Data.forEach((it, i) => {
+            const qid = `ex2-q${i}`;
+            container.innerHTML += `
+                <div class="question-row" style="margin-bottom: 15px;">
+                    <span style="width: 25px; display: inline-block;">${i+1}</span>
+                    <span style="color: var(--text-muted); font-family: monospace; width: 80px; display: inline-block;">${it.scrambled}</span> 
+                    <input type="text" id="${qid}-adj" data-ans="${it.ansAdj}" class="task5-input" oninput="adjustWidth(this)" style="margin-right: 20px;">
+                    <span class="word-choice" data-ans-group="${qid}" data-ans-val="${it.optA}" onclick="selectChoice(this, '${it.ansOpt}')">${it.optA}</span> / 
+                    <span class="word-choice" data-ans-group="${qid}" data-ans-val="${it.optB}" onclick="selectChoice(this, '${it.ansOpt}')">${it.optB}</span>
+                    <div class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}-adj')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx3() {
+        const container = document.getElementById('questions-ex3');
+        ex3Data.forEach((it, i) => {
+            const qid = `ex3-q${i}`;
+            const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+            container.innerHTML += `
+                <div class="question-row">
+                    ${html}
+                    <div class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint(event, '${it.target}', '${qid}-hint', '1.06')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
+        });
+    }
+
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        ex4Data.forEach((it, i) => {
+            const qid = `ex4-q${i}`;
+            container.innerHTML += `
+                <div class="ex4-row">
+                    <div class="ex4-question">${i+1}. ${it.q}</div>
+                    <div class="ex4-answer">
+                        <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function selectChoice(span, correctVal) {
+        const group = span.dataset.ansGroup;
+        document.querySelectorAll(`.word-choice[data-ans-group="${group}"]`).forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+        span.classList.add('selected');
+        span.dataset.selectedVal = span.dataset.ansVal;
+    }
+
+    function toggleGrammarSection(section) {
+        const content = document.getElementById('content' + section.charAt(0).toUpperCase() + section.slice(1));
+        const icon = document.getElementById('icon' + section.charAt(0).toUpperCase() + section.slice(1));
+        if (content.style.display === 'none' || content.style.display === '') {
+            content.style.display = 'block';
+            icon.textContent = '▲';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '▼';
+        }
+    }
+
+    function toggleTranscript(track, forceOpen = false) {
+        const panel = document.getElementById('transcript-panel');
+        if (forceOpen) { panel.classList.add('active'); return; }
+        panel.classList.toggle('active');
+    }
+
+    function showReadingHint(event, targetId, hintBoxId, track) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(hintBoxId);
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+        if (!isVisible) {
+            h.style.display = 'block';
+            toggleTranscript(track, true);
+            const textEl = document.getElementById(targetId);
+            if (textEl) {
+                textEl.classList.add('active-highlight');
+                setTimeout(() => textEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+            }
+        }
+    }
+
+    function toggleHint(event, id) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(id + '-hint');
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!isVisible) h.style.display = 'block';
+    }
+
+    function adjustWidth(el) { el.style.width = Math.max((el.value || el.placeholder || "").length * 10 + 25, 60) + "px"; }
+
+    function showSingleAns(id) {
+        const el = document.getElementById(id);
+        if (el.value === el.dataset.ans) { el.value = ""; el.classList.remove('correct'); }
+        else { el.value = el.dataset.ans; el.classList.add('correct'); }
+        adjustWidth(el);
+    }
+
+    function checkAll() {
+        document.querySelectorAll('input[type="text"]').forEach(el => {
+            if (!el.value) return;
+            const isCorrect = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+            el.classList.toggle('correct', isCorrect);
+            el.classList.toggle('incorrect-marked', !isCorrect);
+        });
+
+        ex2Data.forEach((it, i) => {
+            const qid = `ex2-q${i}`;
+            const choices = document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`);
+            choices.forEach(span => {
+                if (span.classList.contains('selected')) {
+                    const isCorrect = (it.ansOpt === "both") || (span.dataset.ansVal === it.ansOpt);
+                    span.classList.add(isCorrect ? 'correct-select' : 'incorrect-select');
+                }
+            });
+        });
+    }
+
+    function showAnswers(prefix) {
+        if (prefix === 'ex2') {
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                const adjInput = document.getElementById(`${qid}-adj`);
+                adjInput.value = it.ansAdj; adjInput.classList.add('correct'); adjustWidth(adjInput);
+                const correctChoice = Array.from(document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`))
+                    .find(s => s.dataset.ansVal === it.ansOpt || it.ansOpt === "both");
+                if (correctChoice) correctChoice.classList.add('selected');
+            });
+            return;
+        }
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+    }
+
+    function resetSection(prefix) {
+        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+        if (prefix === 'ex2') {
+            document.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+        }
+        document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+    }
+
+    window.onload = () => {
+        renderEx2(); renderEx3(); renderEx4();
+        document.querySelectorAll('input').forEach(adjustWidth);
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.onclick = () => {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggle.innerText = theme === 'dark' ? '☀️' : '🌙';
+        };
+
+        document.addEventListener('keydown', (e) => { if(e.key === 'Enter') checkAll(); });
+        
+        // Resizer logic
+        const resizer = document.getElementById('reading-resizer');
+        const panel = document.getElementById('transcript-panel');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => isResizing = true);
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            panel.style.flex = `0 0 ${(e.clientX / window.innerWidth) * 100}%`;
+        });
+        document.addEventListener('mouseup', () => isResizing = false);
+    };
+</script>
+</body>
+</html>
