@@ -72,16 +72,16 @@
 
     // 4. Auto-bold Question Numbers
     const boldNumbers = () => {
-        const targets = document.querySelectorAll('.question-row, .ex4-question, .par-num, .dialogue-line');
+        const targets = document.querySelectorAll('.question-row, .ex4-question, .par-num, .dialogue-line, .syn-opp-label, .row-number');
         targets.forEach(el => {
             if (el.dataset.numbered === "true" || el.querySelector('.q-number')) return;
             
             let first = el.firstChild;
             if (first && first.nodeType === 3) {
-                const m = first.nodeValue.match(/^(\d+[\.\)]?\s*)/);
+                const m = first.nodeValue.match(/^\s*(\d+[\.\)]?\s*)/);
                 if (m) {
                     const numText = m[1];
-                    first.nodeValue = first.nodeValue.slice(numText.length);
+                    first.nodeValue = first.nodeValue.replace(numText, "");
                     const span = document.createElement('span');
                     span.className = 'q-number';
                     span.textContent = numText;
