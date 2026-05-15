@@ -775,9 +775,6 @@ class ListeningCore {
         this.setupBeforeUnload();
         this.createNavigation();
 
-        // Khởi tạo Cloud Support
-        await this.initCloudSupport();
-
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
         const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
         if (submittedState && submittedState.submitted) {
@@ -799,6 +796,9 @@ class ListeningCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
         this.isLoadingDraft = false; // Mở khóa cho phép lưu bài
         console.log('Listening test initialized:', testData.title);
+
+        // Khởi tạo Cloud Support SAU khi UI đã render xong
+        await this.initCloudSupport();
     }
 
     async initCloudSupport() {

@@ -721,9 +721,7 @@ class ReadingCore {
         this.currentSplit = false;
         this.flagsVisible = true;
 
-        // Khởi tạo Cloud Support
-        await this.initCloudSupport();
-
+        // Render UI TRƯỚC — cloud failure không được chặn render
         this.setupUI();
 
         if (this.currentTestData.type === 'split-layout') {
@@ -768,6 +766,9 @@ class ReadingCore {
 
         this.isLoadingDraft = false;
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
+
+        // Khởi tạo Cloud Support SAU khi UI đã render xong
+        await this.initCloudSupport();
     }
 
     async initCloudSupport() {
