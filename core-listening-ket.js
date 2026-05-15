@@ -770,13 +770,16 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
+        // Khởi tạo Cloud Support SỚM để syncCloudToLocal() chạy trước khi đọc state
+        await this.initCloudSupport();
+
         await this.loadHighlightDraft();
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
 
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
-        const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+        const submittedState = await this.storageManager.loadSubmittedState(this.currentTestData);
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
@@ -796,9 +799,6 @@ class ListeningCore {
         if (typeof TestTourManager !== 'undefined') new TestTourManager().init();
         this.isLoadingDraft = false; // Mở khóa cho phép lưu bài
         console.log('Listening test initialized:', testData.title);
-
-        // Khởi tạo Cloud Support SAU khi UI đã render xong
-        await this.initCloudSupport();
     }
 
     async initCloudSupport() {
@@ -2477,7 +2477,7 @@ class StorageManager {
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `ket_listening_book${book}_test${test}_part${part}`;
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud (loadSubmittedState tự đọc cloud khi cần)
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
             localStorage.setItem(key, JSON.stringify(partData));
         }
@@ -2534,7 +2534,7 @@ class StorageManager {
             correctCount,
             totalQuestions
         };
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud (loadSubmittedState tự đọc cloud khi cần)
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
             localStorage.setItem(key, JSON.stringify(submittedData));
         }
@@ -2544,19 +2544,32 @@ class StorageManager {
         console.log('[Storage] Saved submitted state:', key);
     }
 
-    loadSubmittedState(testData) {
+    async loadSubmittedState(testData) {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+        // 1. Thử local trước (hybrid mode hoặc sau sync)
         const stored = localStorage.getItem(key);
         if (stored) {
             try {
                 const data = JSON.parse(stored);
-                console.log('[Storage] Loaded submitted state:', key);
+                console.log('[Storage] Loaded submitted state (local):', key);
                 return data;
             } catch (e) {
                 console.error('[Storage] Error parsing submitted state:', e);
+            }
+        }
+        // 2. Fallback: đọc thẳng từ cloud (cloud-only mode hoặc máy mới chưa sync)
+        if (window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData && cloudData.submitted) {
+                    console.log('[Storage] Loaded submitted state (cloud):', key);
+                    return cloudData;
+                }
+            } catch (e) {
+                console.error('[Storage] Cloud load failed:', e);
             }
         }
         return null;

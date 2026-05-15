@@ -717,13 +717,16 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
+        // Khởi tạo Cloud Support SỚM để syncCloudToLocal() chạy trước khi đọc state
+        await this.initCloudSupport();
+
         await this.loadHighlightDraft();
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
 
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
-        const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+        const submittedState = await this.storageManager.loadSubmittedState(this.currentTestData);
         if (submittedState && submittedState.submitted) {
             console.log('[Init] Restoring submitted state...');
             this.restoreSubmittedState(submittedState);
@@ -748,9 +751,6 @@ class ListeningCore {
 
         this.isLoadingDraft = false;
         console.log('Listening test initialized:', testData.title);
-
-        // Khởi tạo Cloud Support SAU khi UI đã render xong
-        await this.initCloudSupport();
     }
 
     async initCloudSupport() {
@@ -869,7 +869,7 @@ class ListeningCore {
         // Kiểm tra Cloud
         if (window.CloudStorage) {
             const cloudData = await window.CloudStorage.load(key);
-            if (cloudData && (cloudData.status === 'completed' || cloudData.correctCount !== undefined)) return true;
+            if (cloudData && (cloudData.status === 'completed' || cloudData.correct !== undefined)) return true;
         }
         return false;
     }
@@ -2296,7 +2296,7 @@ class StorageManager {
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}`;
         
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
             localStorage.setItem(key, JSON.stringify(partData));
         }
@@ -2334,8 +2334,10 @@ class StorageManager {
             totalQuestions
         };
         
-        // Luôn ghi localStorage để loadSubmittedState() đọc được sync (không cần đợi cloud init)
-        localStorage.setItem(key, JSON.stringify(submittedData));
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud (loadSubmittedState tự đọc cloud khi cần)
+        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
+            localStorage.setItem(key, JSON.stringify(submittedData));
+        }
 
         // Sync to Cloud
         if (window.CloudStorage) {
@@ -2346,19 +2348,32 @@ class StorageManager {
         console.log('[Storage] Saved submitted state:', key);
     }
 
-    loadSubmittedState(testData) {
+    async loadSubmittedState(testData) {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
         const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        // 1. Thử local trước (hybrid mode hoặc sau sync)
         const stored = localStorage.getItem(key);
         if (stored) {
             try {
                 const data = JSON.parse(stored);
-                console.log('[Storage] Loaded submitted state:', key);
+                console.log('[Storage] Loaded submitted state (local):', key);
                 return data;
             } catch (e) {
                 console.error('[Storage] Error parsing submitted state:', e);
+            }
+        }
+        // 2. Fallback: đọc thẳng từ cloud (cloud-only mode hoặc máy mới chưa sync)
+        if (window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData && cloudData.submitted) {
+                    console.log('[Storage] Loaded submitted state (cloud):', key);
+                    return cloudData;
+                }
+            } catch (e) {
+                console.error('[Storage] Cloud load failed:', e);
             }
         }
         return null;

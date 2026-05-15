@@ -1431,6 +1431,9 @@ class ReadingCore {
 
 
 
+        // Khởi tạo Cloud Support SỚM để syncCloudToLocal() chạy trước khi đọc state
+        await this.initCloudSupport();
+
         await this.loadHighlightDraft();
 
         this.setupEventListeners();
@@ -1443,7 +1446,7 @@ class ReadingCore {
 
         // KIỂM TRA VÀ KHÔI PHỤC TRẠNG THÁI SUBMITTED
 
-        const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+        const submittedState = await this.storageManager.loadSubmittedState(this.currentTestData);
 
         if (submittedState && submittedState.submitted) {
 
@@ -1489,9 +1492,6 @@ class ReadingCore {
         this.isLoadingDraft = false;
 
         console.log('Reading test initialized:', testData.title || `Part ${testData.part}`);
-
-        // Khởi tạo Cloud Support SAU khi UI đã render xong
-        await this.initCloudSupport();
 
     }
 
@@ -5593,7 +5593,7 @@ class ReadingStorageManager {
 
         const key = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
 
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud (loadSubmittedState tự đọc cloud khi cần)
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
             localStorage.setItem(key, JSON.stringify(partData));
         }
@@ -5672,7 +5672,7 @@ class ReadingStorageManager {
 
         };
 
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+        // Hybrid: ghi local; Cloud-only: chỉ ghi cloud (loadSubmittedState tự đọc cloud khi cần)
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
             localStorage.setItem(key, JSON.stringify(submittedData));
         }
@@ -5689,7 +5689,7 @@ class ReadingStorageManager {
 
 
 
-    loadSubmittedState(testData) {
+    async loadSubmittedState(testData) {
 
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
 
@@ -5701,6 +5701,7 @@ class ReadingStorageManager {
 
         const key = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
 
+        // 1. Thử local trước (hybrid mode hoặc sau sync)
         const stored = localStorage.getItem(key);
 
         if (stored) {
@@ -5709,7 +5710,7 @@ class ReadingStorageManager {
 
                 const data = JSON.parse(stored);
 
-                console.log('[Storage] Loaded submitted state:', key);
+                console.log('[Storage] Loaded submitted state (local):', key);
 
                 return data;
 
@@ -5719,6 +5720,19 @@ class ReadingStorageManager {
 
             }
 
+        }
+
+        // 2. Fallback: đọc thẳng từ cloud (cloud-only mode hoặc máy mới chưa sync)
+        if (window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData && cloudData.submitted) {
+                    console.log('[Storage] Loaded submitted state (cloud):', key);
+                    return cloudData;
+                }
+            } catch (e) {
+                console.error('[Storage] Cloud load failed:', e);
+            }
         }
 
         return null;
