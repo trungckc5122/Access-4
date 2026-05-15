@@ -869,7 +869,7 @@ class ListeningCore {
         // Kiểm tra Cloud
         if (window.CloudStorage) {
             const cloudData = await window.CloudStorage.load(key);
-            if (cloudData && (cloudData.status === 'completed' || cloudData.correct !== undefined)) return true;
+            if (cloudData && (cloudData.status === 'completed' || cloudData.correctCount !== undefined)) return true;
         }
         return false;
     }
@@ -2334,10 +2334,8 @@ class StorageManager {
             totalQuestions
         };
         
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
-        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-            localStorage.setItem(key, JSON.stringify(submittedData));
-        }
+        // Luôn ghi localStorage để loadSubmittedState() đọc được sync (không cần đợi cloud init)
+        localStorage.setItem(key, JSON.stringify(submittedData));
 
         // Sync to Cloud
         if (window.CloudStorage) {
