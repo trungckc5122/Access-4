@@ -1511,6 +1511,21 @@ class ListeningCore {
                 parent.appendChild(eyeIcon);
             }
         });
+
+        // Bảo vệ thêm: Chrome/Edge autofill chạy SAU khi JS set attribute.
+        this._clearBrowserAutofill(container);
+    }
+
+    _clearBrowserAutofill(container) {
+        const clearAll = () => {
+            (container || document).querySelectorAll('.fill-input').forEach(input => {
+                if (this.isLoadingDraft) {
+                    input.value = '';
+                }
+            });
+        };
+        setTimeout(clearAll, 100);
+        setTimeout(clearAll, 500);
     }
 
     renderMatchPairsQuestions(container) {

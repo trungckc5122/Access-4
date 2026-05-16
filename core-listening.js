@@ -1414,6 +1414,25 @@ class ListeningCore {
                 parent.appendChild(eyeIcon);
             }
         });
+
+        // Bảo vệ thêm: Chrome/Edge autofill chạy SAU khi JS set attribute.
+        // Dùng setTimeout để xóa bất kỳ giá trị nào browser tự điền vào,
+        // rồi để loadDraft() khôi phục đúng đáp án đã lưu.
+        this._clearBrowserAutofill(container);
+    }
+
+    _clearBrowserAutofill(container) {
+        // Chạy sau 100ms và 500ms để bắt cả slow autofill của Edge
+        const clearAll = () => {
+            (container || document).querySelectorAll('.fill-input').forEach(input => {
+                // Chỉ xóa nếu chưa có draft hợp lệ từ loadDraft (isLoadingDraft = true lúc này)
+                if (this.isLoadingDraft) {
+                    input.value = '';
+                }
+            });
+        };
+        setTimeout(clearAll, 100);
+        setTimeout(clearAll, 500);
     }
 
     setupBeforeUnload() {
