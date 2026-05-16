@@ -1403,7 +1403,17 @@ class ReadingCore {
 
         this.flagsVisible = true;
 
-
+        // Inject dummy inputs để browser đổ autofill vào đây thay vì ô câu hỏi
+        if (!document.getElementById('_autofill_trap')) {
+            const trap = document.createElement('div');
+            trap.id = '_autofill_trap';
+            trap.style.cssText = 'position:absolute;opacity:0;pointer-events:none;z-index:-9999;left:-9999px;';
+            trap.innerHTML = `
+                <input type="email" autocomplete="username" tabindex="-1">
+                <input type="password" autocomplete="current-password" tabindex="-1">
+            `;
+            document.body.insertBefore(trap, document.body.firstChild);
+        }
 
         // Render UI & questions TRƯỚC — cloud failure không được chặn render
 
