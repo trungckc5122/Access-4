@@ -1397,6 +1397,12 @@ class ListeningCore {
         container.innerHTML = template;
 
         container.querySelectorAll('.fill-input').forEach(input => {
+            // Tắt browser autocomplete để tránh trình duyệt tự điền email/thông tin cá nhân vào ô trả lời
+            input.setAttribute('autocomplete', 'new-password');
+            input.setAttribute('autocorrect', 'off');
+            input.setAttribute('autocapitalize', 'off');
+            input.setAttribute('spellcheck', 'false');
+
             const questionNum = input.id.replace('q', '');
             const parent = input.parentNode;
 
