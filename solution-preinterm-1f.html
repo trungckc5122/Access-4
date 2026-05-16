@@ -275,6 +275,93 @@
 
         .bilingual-block { margin-top: 10px; font-style: italic; color: #2980b9; display: none; }
         .bilingual-mode .bilingual-block { display: block; }
+
+        /* Drag and Drop Styles */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary-light);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .word-item {
+            padding: 8px 18px;
+            background: white;
+            border: 2px solid var(--primary-light);
+            border-radius: 10px;
+            cursor: grab;
+            user-select: none;
+            font-weight: bold;
+            color: var(--primary);
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .word-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            height: 32px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        .sticky-bank {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            background: var(--bg);
+            padding: 10px 0;
+        }
     </style>
 </head>
 
@@ -530,20 +617,33 @@
 
         function renderEx2() {
             const container = document.getElementById('questions-ex2');
+            const bank = container.parentElement.querySelector('.word-bank');
+            if (!bank) return;
+            bank.className = "word-bank sticky-bank";
+            const words = ["bruise", "fell over", "hurt", "hurts", "pain", "slipped"];
+            
+            bank.innerHTML = "";
+            words.forEach(w => {
+                const safeId = w.replace(' ', '-');
+                bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="handleDragStart(event)" id="word-${safeId}">${w}</div>`;
+            });
+
+            container.innerHTML = "";
             ex2Data.forEach((it, i) => {
                 const qid = `ex2-q${i}`;
-                let html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+                let qid2 = null;
+                let html = it.q.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div>`);
                 if(it.ans2) {
-                    const qid2 = `ex2-q${i}-2`;
-                    html = html.replace('[INPUT2]', `<input type="text" id="${qid2}" data-ans="${it.ans2}" class="task5-input" oninput="adjustWidth(this)"> <button class="btn-small" onclick="showSingleAns('${qid2}')" style="vertical-align:middle; margin-left:5px;">👁️</button>`);
+                    qid2 = `ex2-q${i}-2`;
+                    html = html.replace('[INPUT2]', `<div class="drop-slot" id="${qid2}" data-ans="${it.ans2}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid2}')"></div>`);
                 }
                 
-                let hintHtml = `<div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>`;
+                let hintHtml = `<div class="hint-detail"><strong>Đáp án:</strong> <span class="key-word">${it.ans}</span>: ${it.mean}</div>`;
                 if(it.ans2) {
-                    hintHtml += `<div class="hint-detail"><span class="key-word">${it.ans2}</span>: ${it.mean2}</div>`;
+                    hintHtml += `<div class="hint-detail"><strong>Đáp án 2:</strong> <span class="key-word">${it.ans2}</span>: ${it.mean2}</div>`;
                 }
 
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${hintHtml}</div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="revealEx2Ans('${qid}', ${qid2 ? `'${qid2}'` : 'null'})">👁️</button><button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${hintHtml}</div></div>`;
             });
         }
 
@@ -581,30 +681,140 @@
             });
         }
 
+        let dragWord = null;
+
+        function handleDragStart(e) {
+            dragWord = e.target.innerText.toLowerCase();
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord);
+        }
+
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.target.classList.add('over'); }
+        function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+            placeWord(slot.id, word);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+        }
+
+        function placeWord(slotId, word) {
+            const slot = document.getElementById(slotId);
+            const currentText = slot.innerText.toLowerCase();
+            
+            // Xóa từ này nếu đang ở ô khác
+            document.querySelectorAll('.drop-slot').forEach(s => {
+                if (s.innerText.toLowerCase() === word && s.id !== slotId) {
+                    s.innerText = "";
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+
+            // Hiện lại từ cũ trong bank nếu có
+            if (currentText) {
+                const oldSafeId = currentText.replace(' ', '-');
+                const oldWordEl = document.getElementById(`word-${oldSafeId}`);
+                if (oldWordEl) oldWordEl.classList.remove('used');
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            // Ẩn từ mới trong bank
+            const safeId = word.replace(' ', '-');
+            const wordEl = document.getElementById(`word-${safeId}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId) {
+            const slot = document.getElementById(slotId);
+            const word = slot.innerText.toLowerCase();
+            if (!word) return;
+
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+
+            const safeId = word.replace(' ', '-');
+            const wordEl = document.getElementById(`word-${safeId}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function revealEx2Ans(qid1, qid2) {
+            const slot1 = document.getElementById(qid1);
+            const ans1 = slot1.dataset.ans;
+            if (slot1.innerText.toLowerCase() === ans1.toLowerCase()) {
+                removeWord(qid1);
+            } else {
+                placeWord(qid1, ans1);
+                slot1.classList.add('correct');
+            }
+
+            if (qid2) {
+                const slot2 = document.getElementById(qid2);
+                const ans2 = slot2.dataset.ans;
+                if (slot2.innerText.toLowerCase() === ans2.toLowerCase()) {
+                    removeWord(qid2);
+                } else {
+                    placeWord(qid2, ans2);
+                    slot2.classList.add('correct');
+                }
+            }
+        }
+
         function checkAll() {
+            // Check inputs
             document.querySelectorAll('input[data-ans]').forEach(el => {
                 if (!el.value) return;
                 const userVal = el.value.toLowerCase().trim().replace(/[.,!]/g, '');
                 const correctVal = el.dataset.ans.toLowerCase().trim().replace(/[.,!]/g, '');
                 
-                if (userVal === correctVal) {
-                    el.classList.add('correct');
-                    el.classList.remove('incorrect-marked');
-                } else {
-                    el.classList.add('incorrect-marked');
-                    el.classList.remove('correct');
-                }
+                const isCorrect = userVal === correctVal;
+                el.classList.toggle('correct', isCorrect);
+                el.classList.toggle('incorrect-marked', !isCorrect);
+            });
+
+            // Check drop slots
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                if (!slot.innerText) return;
+                const isCorrect = slot.innerText.toLowerCase().trim() === slot.dataset.ans.toLowerCase().trim();
+                slot.classList.toggle('correct', isCorrect);
+                slot.classList.toggle('incorrect-marked', !isCorrect);
             });
         }
 
         function showAnswers(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+            if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 .drop-slot').forEach(slot => {
+                    placeWord(slot.id, slot.dataset.ans);
+                    slot.classList.add('correct');
+                });
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                    el.value = el.dataset.ans; 
+                    el.classList.add('correct'); 
+                    adjustWidth(el); 
+                });
+            }
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
-            // Hide hints and clear highlights
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 .drop-slot').forEach(slot => removeWord(slot.id));
+                document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                    el.value = ""; 
+                    el.classList.remove('correct', 'incorrect-marked'); 
+                    adjustWidth(el); 
+                });
+            }
+            // Clear highlights for reading
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
         }
 

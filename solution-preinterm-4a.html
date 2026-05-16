@@ -130,6 +130,7 @@
             padding: 2px 5px;
             font-size: 1.05rem;
             min-width: 80px;
+            field-sizing: content; /* Modern browser support */
         }
 
         .hint-box {
@@ -271,6 +272,78 @@
             position: relative;
         }
 
+        /* Drag and Drop Styles (Shared with 4C pattern) */
+        .exercise-card { position: relative; }
+        
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .drag-item {
+            background: var(--card-bg);
+            padding: 6px 15px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-size: 0.95rem;
+        }
+        .drag-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .drag-item.dragging { opacity: 0.5; cursor: grabbing; }
+        .drag-item.used { display: none; }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 120px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+        .drop-slot.over { background: var(--primary-light); border-bottom-style: dashed; }
+        .drop-slot.filled { background: var(--primary-light); }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
         @media (max-width: 768px) {
             .ex1-sub-container {
                 flex-direction: column;
@@ -290,12 +363,23 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
     </style>
 </head>
 
 <body data-theme="light">
-
-    <button class="theme-toggle-btn" id="theme-toggle">🌙</button>
 
     <div class="container">
         <div class="solution-title-row">
@@ -451,7 +535,7 @@
         <div class="exercise-card">
             <div class="exercise-title">2. Write the nouns for the adjectives in exercise 1.</div>
             <div id="questions-ex2"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;"></div>
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px 40px;"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
                 <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
@@ -461,14 +545,14 @@
         <!-- Exercise 3 -->
         <div class="exercise-card">
             <div class="exercise-title">3. Complete the text with the words below.</div>
-            <div class="word-bank">
-                <div class="word-item">blow</div>
-                <div class="word-item">claps</div>
-                <div class="word-item">flashes</div>
-                <div class="word-item">raindrops</div>
-                <div class="word-item">storm clouds</div>
-                <div class="word-item">sunshine</div>
-                <div class="word-item">thunderstorm</div>
+            <div class="word-bank" id="ex3-word-bank">
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">blow</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">claps</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">flashes</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">raindrops</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">storm clouds</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">sunshine</div>
+                <div class="drag-item" draggable="true" ondragstart="handleDragStart(event)">thunderstorm</div>
             </div>
             <div id="questions-ex3" style="line-height: 2.5;"></div>
             <div class="controls-row">
@@ -627,8 +711,8 @@
                 const disabled = i === 0 ? 'readonly' : '';
                 const val = i === 0 ? 'thunder' : '';
                 container.innerHTML += `<div class="question-row" style="margin-bottom:12px; display: flex; align-items: center; gap: 10px;">
-                <span style="min-width: 100px;"><strong>${i + 1}</strong> ${label}:</span>
-                <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" value="${val}" ${disabled} oninput="adjustWidth(this)">
+                <span style="min-width: 120px;"><strong>${i + 1}</strong> ${label}:</span>
+                <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" value="${val}" ${disabled} oninput="adjustWidth(this)" style="flex-shrink: 0;">
                 <span class="row-btns" style="display: flex; gap: 5px;">
                     <button class="btn-small eye-btn" onclick="showRowAns('${qid}')">👁️</button>
                     <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
@@ -644,15 +728,62 @@
 
             ex3Data.forEach(it => {
                 const qid = `ex3-${it.id}`;
-                const inputHtml = `<span class="ex3-inline-container">
-                <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
+                const slotHtml = `<span class="ex3-inline-container">
+                <span class="drop-slot" id="${qid}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)"></span>
                 <button class="btn-small eye-btn" onclick="showRowAns('${qid}')" style="transform: scale(0.8);">👁️</button>
                 <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')" style="transform: scale(0.8);">i</button>
                 <div class="hint-box" id="${qid}-hint" style="position: absolute; z-index: 100; left: 0; top: 100%; width: 250px;"><strong>Đáp án:</strong> ${it.ans}<br><strong>Giải thích:</strong> ${it.explain}</div>
             </span>`;
-                text = text.replace(` ${it.id}. [INPUT]`, ` <strong>${it.id}.</strong> ${inputHtml}`);
+                text = text.replace(` ${it.id}. [INPUT]`, ` <strong>${it.id}.</strong> ${slotHtml}`);
             });
             container.innerHTML = text;
+        }
+
+        // Drag and Drop Logic
+        let draggedWord = null;
+
+        function handleDragStart(e) {
+            draggedWord = e.target;
+            e.dataTransfer.setData('text/plain', e.target.innerText);
+            e.target.classList.add('dragging');
+        }
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWord) draggedWord.classList.remove('dragging');
+        });
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+            
+            if (slot.classList.contains('filled')) {
+                const oldWord = slot.innerText;
+                const bankItems = document.querySelectorAll('#ex3-word-bank .drag-item');
+                bankItems.forEach(item => { if (item.innerText === oldWord) item.classList.remove('used'); });
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            
+            if (draggedWord) draggedWord.classList.add('used');
+            draggedWord = null;
+        }
+
+        function handleSlotClick(slot) {
+            if (!slot.classList.contains('filled')) return;
+            const word = slot.innerText;
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const bankItems = document.querySelectorAll('#ex3-word-bank .drag-item');
+            bankItems.forEach(item => { if (item.innerText === word) item.classList.remove('used'); });
         }
 
         function renderEx4() {
@@ -762,15 +893,38 @@
             if (!isVisible) h.style.display = 'block';
         }
 
-        function adjustWidth(el) { el.style.width = Math.max((el.value || el.placeholder || "").length * 10 + 25, 60) + "px"; }
+        function adjustWidth(el) { el.style.width = Math.max((el.value || el.placeholder || "").length * 12 + 40, 80) + "px"; }
 
         function showRowAns(...ids) {
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                if (el.value.toLowerCase() === el.dataset.ans.toLowerCase()) { el.value = ""; el.classList.remove('correct'); }
-                else { el.value = el.dataset.ans; el.classList.add('correct'); }
-                adjustWidth(el);
+                const isSlot = el.classList.contains('drop-slot');
+                const ans = el.dataset.ans;
+
+                if (isSlot) {
+                    if (el.innerText.toLowerCase() === ans.toLowerCase()) {
+                        const word = el.innerText;
+                        el.innerText = "";
+                        el.classList.remove('filled', 'correct');
+                        const bankItems = document.querySelectorAll('#ex3-word-bank .drag-item');
+                        bankItems.forEach(item => { if (item.innerText === word) item.classList.remove('used'); });
+                    } else {
+                        if (el.classList.contains('filled')) {
+                            const oldWord = el.innerText;
+                            const bankItems = document.querySelectorAll('#ex3-word-bank .drag-item');
+                            bankItems.forEach(item => { if (item.innerText === oldWord) item.classList.remove('used'); });
+                        }
+                        el.innerText = ans;
+                        el.classList.add('filled', 'correct');
+                        const bankItems = document.querySelectorAll('#ex3-word-bank .drag-item');
+                        bankItems.forEach(item => { if (item.innerText === ans) item.classList.add('used'); });
+                    }
+                } else {
+                    if (el.value.toLowerCase() === ans.toLowerCase()) { el.value = ""; el.classList.remove('correct'); }
+                    else { el.value = ans; el.classList.add('correct'); }
+                    adjustWidth(el);
+                }
             });
         }
 
@@ -790,23 +944,47 @@
                 el.classList.toggle('correct', ok);
                 el.classList.toggle('incorrect-marked', !ok);
             });
+            document.querySelectorAll('.drop-slot').forEach(el => {
+                if (!el.classList.contains('filled')) return;
+                const ok = el.innerText.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
         }
 
         function showAnswers(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
-                el.value = el.dataset.ans;
-                el.classList.add('correct');
-                adjustWidth(el);
-            });
+            if (prefix === 'ex3') {
+                document.querySelectorAll('.drop-slot').forEach(el => {
+                    const ans = el.dataset.ans;
+                    el.innerText = ans;
+                    el.classList.add('filled', 'correct');
+                    el.classList.remove('incorrect-marked');
+                });
+                document.querySelectorAll('#ex3-word-bank .drag-item').forEach(item => item.classList.add('used'));
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    adjustWidth(el);
+                });
+            }
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
-                if (el.readOnly) return;
-                el.value = "";
-                el.classList.remove('correct', 'incorrect-marked');
-                adjustWidth(el);
-            });
+            if (prefix === 'ex3') {
+                document.querySelectorAll('.drop-slot').forEach(el => {
+                    el.innerText = "";
+                    el.classList.remove('filled', 'correct', 'incorrect-marked');
+                });
+                document.querySelectorAll('#ex3-word-bank .drag-item').forEach(item => item.classList.remove('used'));
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                    if (el.readOnly) return;
+                    el.value = "";
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            }
             document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
         }
 
@@ -814,13 +992,6 @@
             renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6();
             document.querySelectorAll('input').forEach(adjustWidth);
             const t = document.getElementById('theme-toggle');
-            if (t) {
-                t.onclick = () => {
-                    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-                    document.documentElement.setAttribute('data-theme', theme);
-                    t.innerText = theme === 'dark' ? '☀️' : '🌙';
-                };
-            }
             document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
             const resizer = document.getElementById('reading-resizer');
             const panel = document.getElementById('transcript-panel');

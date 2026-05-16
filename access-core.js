@@ -61,7 +61,32 @@
         }
     };
 
-    // 3. Global Enter Key Listener for checkAll
+    // 3. Theme Toggle Injection & Logic
+    const injectThemeToggle = () => {
+        if (!document.getElementById('theme-toggle')) {
+            const btn = document.createElement('button');
+            btn.id = 'theme-toggle';
+            btn.className = 'theme-toggle-btn';
+            btn.title = 'Chế độ Sáng/Tối';
+            
+            // Set initial theme from localStorage or default
+            const savedTheme = localStorage.getItem('access-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            btn.innerHTML = savedTheme === 'dark' ? '☀️' : '🌙';
+
+            btn.onclick = () => {
+                const current = document.documentElement.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+            
+            document.body.prepend(btn);
+        }
+    };
+
+    // 4. Global Enter Key Listener for checkAll
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             if (typeof window.checkAll === 'function') {
@@ -102,6 +127,7 @@
     const init = () => {
         injectFavicon();
         injectHomeBtn();
+        injectThemeToggle();
         boldNumbers();
         
         // Watch for dynamic content (exercises rendered via JS)

@@ -162,6 +162,93 @@
             width: 100%;
             margin-bottom: 30px;
         }
+
+        /* Drag and Drop Styles */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary-light);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .word-item {
+            padding: 8px 18px;
+            background: white;
+            border: 2px solid var(--primary-light);
+            border-radius: 10px;
+            cursor: grab;
+            user-select: none;
+            font-weight: bold;
+            color: var(--primary);
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .word-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            height: 32px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        .sticky-bank {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            background: var(--bg);
+            padding: 10px 0;
+        }
     </style>
 </head>
 
@@ -427,18 +514,110 @@
 
         function renderEx4() {
             const container = document.getElementById('questions-ex4');
+            const bank = container.parentElement.querySelector('.word-bank');
+            if (!bank) return;
+            bank.className = "word-bank sticky-bank";
+            const words = ["how often", "what", "when", "where", "which", "who", "why"];
+            
+            bank.innerHTML = "";
+            words.forEach(w => {
+                const safeId = w.replace(' ', '-');
+                bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="handleDragStart(event)" id="word-${safeId}">${w}</div>`;
+            });
+
             let fullHtml = "";
             let count = 0;
             ex4Parts.forEach(line => {
                 let processedLine = line.t;
                 if (line.t.includes('[INPUT]')) {
                     const qid = `ex4-q${count}`;
-                    processedLine = line.t.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${line.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder=""> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail">${line.hint}</div></div>`);
+                    processedLine = line.t.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${line.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div> <div class="row-btns"><button class="eye-btn" onclick="revealEx4Ans('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><strong>Đáp án:</strong> ${line.ans}<br><strong>Giải thích:</strong> ${line.hint}</div></div>`);
                     count++;
                 }
                 fullHtml += `<div>${processedLine}</div>`;
             });
             container.innerHTML = fullHtml;
+        }
+
+        let dragWord = null;
+
+        function handleDragStart(e) {
+            dragWord = e.target.innerText.toLowerCase();
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord);
+        }
+
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.target.classList.add('over'); }
+        function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+            placeWord(slot.id, word);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+        }
+
+        function placeWord(slotId, word) {
+            const slot = document.getElementById(slotId);
+            const currentText = slot.innerText.toLowerCase();
+            
+            // Logic: Viết hoa nếu KHÔNG PHẢI câu 7 (index q6)
+            let displayWord = word;
+            if (slotId !== 'ex4-q6') {
+                displayWord = word.charAt(0).toUpperCase() + word.slice(1);
+            }
+            
+            // Xóa từ này nếu đang ở ô khác
+            document.querySelectorAll('.drop-slot').forEach(s => {
+                if (s.innerText.toLowerCase() === word && s.id !== slotId) {
+                    s.innerText = "";
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+
+            // Hiện lại từ cũ trong bank nếu có
+            if (currentText) {
+                const oldSafeId = currentText.replace(' ', '-');
+                const oldWordEl = document.getElementById(`word-${oldSafeId}`);
+                if (oldWordEl) oldWordEl.classList.remove('used');
+            }
+
+            slot.innerText = displayWord;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            // Ẩn từ mới trong bank
+            const safeId = word.replace(' ', '-');
+            const wordEl = document.getElementById(`word-${safeId}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId) {
+            const slot = document.getElementById(slotId);
+            const word = slot.innerText.toLowerCase();
+            if (!word) return;
+
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+
+            const safeId = word.replace(' ', '-');
+            const wordEl = document.getElementById(`word-${safeId}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function revealEx4Ans(qid) {
+            const slot = document.getElementById(qid);
+            const ans = slot.dataset.ans.toLowerCase();
+            if (slot.innerText.toLowerCase() === ans) {
+                removeWord(qid);
+            } else {
+                placeWord(qid, ans);
+                slot.classList.add('correct');
+            }
         }
 
         function renderEx5() {
@@ -473,38 +652,58 @@
         }
 
         function checkAll() {
+            // Check inputs (Ex 1, 2, 3, 5, 6)
             document.querySelectorAll('input[data-ans]').forEach(el => {
                 if (!el.value) return;
                 const userVal = el.value.toLowerCase().trim().replace(/[?]/g, '');
                 const correctVal = el.dataset.ans.toLowerCase().trim().replace(/[?]/g, '');
 
+                let isCorrect = false;
                 if (correctVal.includes('/')) {
                     const options = correctVal.split('/').map(s => s.trim());
-                    if (options.includes(userVal)) {
-                        el.classList.add('correct');
-                        el.classList.remove('incorrect-marked');
-                    } else {
-                        el.classList.add('incorrect-marked');
-                        el.classList.remove('correct');
-                    }
+                    isCorrect = options.includes(userVal);
                 } else {
-                    if (userVal === correctVal) {
-                        el.classList.add('correct');
-                        el.classList.remove('incorrect-marked');
-                    } else {
-                        el.classList.add('incorrect-marked');
-                        el.classList.remove('correct');
-                    }
+                    isCorrect = (userVal === correctVal);
                 }
+                el.classList.toggle('correct', isCorrect);
+                el.classList.toggle('incorrect-marked', !isCorrect);
+            });
+
+            // Check drop slots (Ex 4)
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                if (!slot.innerText) return;
+                const isCorrect = slot.innerText.toLowerCase().trim() === slot.dataset.ans.toLowerCase().trim();
+                slot.classList.toggle('correct', isCorrect);
+                slot.classList.toggle('incorrect-marked', !isCorrect);
             });
         }
 
         function showAnswers(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+            if (prefix === 'ex4') {
+                document.querySelectorAll('.drop-slot').forEach(slot => {
+                    placeWord(slot.id, slot.dataset.ans.toLowerCase());
+                    slot.classList.add('correct');
+                });
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                    el.value = el.dataset.ans; 
+                    el.classList.add('correct'); 
+                    adjustWidth(el); 
+                });
+            }
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+            if (prefix === 'ex4') {
+                document.querySelectorAll('.drop-slot').forEach(slot => removeWord(slot.id));
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            } else {
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { 
+                    el.value = ""; 
+                    el.classList.remove('correct', 'incorrect-marked'); 
+                    adjustWidth(el); 
+                });
+            }
         }
 
         window.onload = () => {

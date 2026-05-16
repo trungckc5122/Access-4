@@ -291,6 +291,94 @@
                 padding-bottom: 20px;
             }
         }
+
+        /* Drag and Drop Styles */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary-light);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .word-item {
+            padding: 8px 18px;
+            background: white;
+            border: 2px solid var(--primary-light);
+            border-radius: 10px;
+            cursor: grab;
+            user-select: none;
+            font-weight: bold;
+            color: var(--primary);
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .word-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+            height: 36px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        .sticky-bank {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            background: var(--bg);
+            padding: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -769,9 +857,12 @@
     function renderEx3() {
         const container = document.getElementById('questions-ex3');
         const bank = document.getElementById('bank-ex3');
+        bank.className = "word-bank sticky-bank";
         const words = ["anxious", "delighted", "embarrassed", "frightened", "proud", "relieved", "shocked", "upset"];
+        
+        bank.innerHTML = "";
         words.forEach(w => {
-            bank.innerHTML += `<div class="word-item" onclick="clickSelect(this)">${w}</div>`;
+            bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="handleDragStart(event)" id="word-${w}">${w}</div>`;
         });
         
         const ex3Hints = [
@@ -785,22 +876,96 @@
             { word: "relieved", mean: "nhẹ nhõm", trans: "Tôi đã để quên điện thoại trên xe buýt, nhưng có ai đó đã tìm thấy nó. Tôi đã cực kỳ nhẹ nhõm." }
         ];
 
+        container.innerHTML = "";
         ex3Data.forEach((it, i) => {
             const qid = `ex3-q${i}`;
-            let html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">`);
+            let html = it.q.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div>`);
             container.innerHTML += `
                 <div class="question-row">
-                    ${i+1}. ${html} 
+                    <strong>${i+1}.</strong> ${html} 
                     <div class="row-btns">
-                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="eye-btn" onclick="revealEx3Ans('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
                     <div class="hint-box" id="${qid}-hint">
-                        <div class="hint-detail"><span class="key-word">${ex3Hints[i].word}</span>: ${ex3Hints[i].mean}</div>
-                        <div class="hint-detail" style="font-style: italic; color: #666;">${ex3Hints[i].trans}</div>
+                        <div class="hint-detail"><strong>Đáp án:</strong> <span class="key-word">${ex3Hints[i].word}</span>: ${ex3Hints[i].mean}</div>
+                        <div class="hint-detail" style="font-style: italic; color: #666;"><strong>Giải thích:</strong> ${ex3Hints[i].trans}</div>
                     </div>
                 </div>`;
         });
+    }
+
+    let dragWord = null;
+
+    function handleDragStart(e) {
+        dragWord = e.target.innerText;
+        e.target.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', dragWord);
+    }
+
+    function handleDragOver(e) { e.preventDefault(); }
+    function handleDragEnter(e) { e.target.classList.add('over'); }
+    function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const slot = e.target.closest('.drop-slot');
+        if (!slot) return;
+        slot.classList.remove('over');
+        const word = e.dataTransfer.getData('text/plain');
+        placeWord(slot.id, word);
+        document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+    }
+
+    function placeWord(slotId, word) {
+        const slot = document.getElementById(slotId);
+        const oldWord = slot.innerText;
+        
+        // If the same word is already in another slot, remove it from there
+        document.querySelectorAll('.drop-slot').forEach(s => {
+            if (s.innerText === word && s.id !== slotId) {
+                s.innerText = "";
+                s.classList.remove('filled', 'correct', 'incorrect-marked');
+            }
+        });
+
+        // If slot had a word, make it visible in bank again
+        if (oldWord) {
+            const oldWordEl = document.getElementById(`word-${oldWord}`);
+            if (oldWordEl) oldWordEl.classList.remove('used');
+        }
+
+        slot.innerText = word;
+        slot.classList.add('filled');
+        slot.classList.remove('correct', 'incorrect-marked');
+
+        // Hide new word in bank
+        const wordEl = document.getElementById(`word-${word}`);
+        if (wordEl) wordEl.classList.add('used');
+    }
+
+    function removeWord(slotId) {
+        const slot = document.getElementById(slotId);
+        const word = slot.innerText;
+        if (!word) return;
+
+        slot.innerText = "";
+        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+
+        const wordEl = document.getElementById(`word-${word}`);
+        if (wordEl) wordEl.classList.remove('used');
+    }
+
+    function revealEx3Ans(qid) {
+        const slot = document.getElementById(qid);
+        const correctAns = slot.dataset.ans;
+        
+        if (slot.innerText === correctAns) {
+            removeWord(qid);
+        } else {
+            placeWord(qid, correctAns);
+            slot.classList.add('correct');
+        }
     }
 
     function toggleGrammarSection(section) {
@@ -829,44 +994,45 @@
     }
 
     function showAnswers(prefix) {
-        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => showSingleAns(el.id));
+        if (prefix === 'ex3') {
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                placeWord(slot.id, slot.dataset.ans);
+                slot.classList.add('correct');
+            });
+        } else {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => showSingleAns(el.id));
+        }
     }
 
     function resetSection(prefix) {
-        document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
-            el.value = "";
-            el.classList.remove('correct', 'incorrect-marked');
-        });
+        if (prefix === 'ex3') {
+            document.querySelectorAll('.drop-slot').forEach(slot => removeWord(slot.id));
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+        } else {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = "";
+                el.classList.remove('correct', 'incorrect-marked');
+            });
+        }
     }
 
     function checkAll() {
+        // Check inputs
         document.querySelectorAll('input[data-ans]').forEach(el => {
             if(!el.value) return;
-            if(el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
-                el.classList.add('correct');
-                el.classList.remove('incorrect-marked');
-            } else {
-                el.classList.add('incorrect-marked');
-                el.classList.remove('correct');
-            }
+            const isCorrect = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+            el.classList.toggle('correct', isCorrect);
+            el.classList.toggle('incorrect-marked', !isCorrect);
+        });
+
+        // Check drop slots
+        document.querySelectorAll('.drop-slot').forEach(slot => {
+            if (!slot.innerText) return;
+            const isCorrect = slot.innerText.toLowerCase().trim() === slot.dataset.ans.toLowerCase().trim();
+            slot.classList.toggle('correct', isCorrect);
+            slot.classList.toggle('incorrect-marked', !isCorrect);
         });
     }
-
-    let selectedWordEl = null;
-    function clickSelect(el) {
-        if(selectedWordEl) selectedWordEl.style.background = "";
-        selectedWordEl = el;
-        el.style.background = "#ffeaa7";
-    }
-
-    document.addEventListener('click', (e) => {
-        if(e.target.tagName === 'INPUT' && selectedWordEl && e.target.dataset.type === "input") {
-            e.target.value = selectedWordEl.innerText;
-            adjustWidth(e.target);
-            selectedWordEl.style.background = "";
-            selectedWordEl = null;
-        }
-    });
 
     window.onload = () => {
         initPuzzle();

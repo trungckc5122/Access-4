@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 4C Listening: Eyewitness</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Layout: Split Screen for Transcript (Standardized) */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #fefcf7);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-right: 0px solid var(--glass-border);
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .transcript-panel.active + .reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border-left: 6px solid var(--primary);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        .strategy-box h2 {
+            color: var(--primary-dark);
+            font-size: 1.15rem;
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Audio & Controls */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .audio-player-container audio { flex: 1; height: 35px; }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        /* Highlights */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Option Group/Card */
+        .option-group { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        .option-card:hover { border-color: var(--primary); background: var(--primary-light); }
+        .option-card.selected { background: var(--primary); border-color: var(--primary); color: white; }
+        .option-card input { display: none; }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 100px;
+            field-sizing: content;
+        }
+        .task5-input:focus { outline: none; border-bottom-color: var(--primary-dark); }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .hint-box strong { color: var(--primary-dark); }
+        .hint-box em { color: var(--accent); font-weight: 600; font-style: italic; }
+
+        .speaker-line { margin-bottom: 12px; display: block; line-height: 1.8; }
+        .script-section { display: none; }
+        .script-section.active { display: block; }
+        
+        .matching-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .ex-img {
+            max-width: 100%;
+            margin: 15px auto;
+            display: block;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .check-all-btn { position: fixed; bottom: 25px; right: 25px; z-index: 1000; }
+        
+        /* Check icons from theme */
+        .correct { border-bottom-color: var(--success) !important; color: var(--success) !important; background: rgba(var(--success-rgb), 0.1) !important; }
+        .incorrect-marked { border-bottom-color: var(--error) !important; color: var(--error) !important; background: rgba(var(--error-rgb), 0.1) !important; }
+
+        /* Option card check visibility */
+        .option-card.correct-card { 
+            border-color: var(--success) !important; 
+            background: rgba(var(--success-rgb), 0.1) !important; 
+            color: var(--success) !important; 
+            font-weight: bold;
+        }
+        .option-card.incorrect-card { 
+            border-color: var(--error) !important; 
+            background: rgba(var(--error-rgb), 0.1) !important; 
+            color: var(--error) !important; 
+            font-weight: bold;
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+        .word-item {
+            background: var(--card-bg);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .dialogue-subheader {
+            color: var(--primary-dark);
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            border-left: 4px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        .question-block {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--glass-border);
+        }
+        .input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .input-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-label {
+            min-width: 60px;
+            font-weight: 500;
+        }
+
+        /* Ex 2 Side by side */
+        .ex2-layout {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+            margin-top: 15px;
+        }
+        .ex2-img-container { flex: 1.2; }
+        .ex2-questions-container { flex: 1; }
+        @media (max-width: 768px) {
+            .ex2-layout { flex-direction: column; }
+        }
+
+        /* Drag and Drop Styles */
+        .exercise-card {
+            position: relative; /* Container for sticky bank */
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .word-item.dragging { opacity: 0.5; cursor: grabbing; }
+        .word-item.used { display: none; }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 130px;
+            height: 32px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+        .drop-slot.over { background: var(--primary-light); border-bottom-style: dashed; }
+        .drop-slot.filled { background: var(--primary-light); }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="container">
+    <div class="solution-title-row">
+        <div class="solution-unit-badge">4C</div>
+        <div class="solution-title-content">
+            <div class="solution-skill-tag">Listening</div>
+            <h1>Eyewitness</h1>
+            <p class="subtitle">I can identify the context of a dialogue or monologue.</p>
+        </div>
+    </div>
+
+    <div class="strategy-box">
+        <h2>💡 Listening Strategy</h2>
+        <p>Việc xác định được bối cảnh của bài nghe là rất quan trọng, ví dụ: ai đang nói, họ đang nói ở đâu và khi nào, và tình huống đó là gì. Điều này không phải lúc nào cũng rõ ràng, vì vậy hãy lắng nghe cẩn thận các manh mối để giúp bạn.</p>
+    </div>
+
+    <div class="reading-split-container">
+        <!-- Left Panel: Transcript -->
+        <div class="transcript-panel" id="transcript-panel">
+            <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">Listening Scripts</h2>
+            
+            <div id="script-1-15" class="script-section">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.15</h3>
+                <div class="speaker-line">
+                    <strong>Dialogue 1</strong><br>
+                    Man: Hi. Mrs Dennington?<br>
+                    Woman: Yes, that's me. Are you Mr Jones?<br>
+                    M: <span class="highlightable" id="text-ex3-1a">Yes.</span><br>
+                    W: <span class="highlightable" id="text-ex3-1b">Come in, come in.</span><br>
+                    M: Hmm. I can see straight away there's a lot of damage here!<br>
+                    W: <span class="highlightable" id="text-ex3-2">Yes. It was about <strong>twenty centimetres deep</strong> in my living room!</span><br>
+                    M: So, what would you like me to look at?<br>
+                    W: Well, this wall by the kitchen. <span class="highlightable" id="text-ex3-2b">The water made a few holes near the bottom.</span><br>
+                    M: Oh yes, I see.<br>
+                    W: Is it safe?<br>
+                    M: Safe? Yes, perfectly safe. You don't need to worry about that. But it doesn't look very good!<br>
+                    W: So can you fix it?<br>
+                    M: Yes, of course. I suppose it's about two days' work, so ... let's say £300.<br>
+                    W: That's fine. When can you do it?
+                </div>
+                <div class="speaker-line">
+                    <strong>Dialogue 2</strong><br>
+                    Man: Did you read this article?<br>
+                    Woman: Which one?<br>
+                    M: About California. <span class="highlightable" id="text-ex3-3a"><strong>They need rain!</strong></span><br>
+                    W: Really?<br>
+                    M: Yes. It says here that <span class="highlightable" id="text-ex3-3b">in some places it <strong>didn't rain at all</strong> during the whole winter!</span> <span class="highlightable" id="text-ex3-3c">The ground is so <strong>dry</strong>.</span> Look at this photo.<br>
+                    W: That's amazing.<br>
+                    M: <span class="highlightable" id="text-ex3-4a">What are you having for <strong>breakfast</strong>?</span><br>
+                    W: <span class="highlightable" id="text-ex3-4b">Just <strong>toast and jam</strong>.</span> Do you want a piece?<br>
+                    M: Hmm. No, I fancy eggs.<br>
+                    W: We haven't got any eggs.<br>
+                    M: I can buy some at the shop next door.<br>
+                    W: <span class="highlightable" id="text-ex3-4c">It <strong>isn't open yet</strong>.</span> You need to wait about twenty minutes.<br>
+                    M: Forget that, toast and jam is fine.
+                </div>
+            </div>
+
+            <div id="script-1-16" class="script-section">
+                <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.16</h3>
+                <div class="speaker-line">
+                    <strong>1.</strong><br>
+                    Woman: Hello.<br>
+                    Man: Hi.<br>
+                    W: I'm collecting for emergency relief. Can you spare a few coins?<br>
+                    M: <span class="highlightable" id="text-ex5-1a">Actually, I'm in a bit of a hurry. I need to get to the supermarket before it closes.</span><br>
+                    W: Which supermarket? The one in the shopping centre?<br>
+                    M: Yes ...<br>
+                    W: Oh, you're fine. <span class="highlightable" id="text-ex5-1b">That's just <strong>round the corner</strong>.</span> And it doesn't close until 8 o'clock. You've got ages!<br>
+                    M: Right ... OK. So, what's this charity?<br>
+                    W: <span class="highlightable" id="text-ex4-1">We're collecting money for food packages to send to Somalia. The situation there is terrible: more than a <strong>million people have got nothing to eat</strong>.</span> These photos show what's happening there and how food packages are helping. Maybe if you can spare a minute ...<br>
+                    M: Yes, yes. It looks terrible. I've got some money in my pocket ... hold on.<br>
+                    W: Anything you can spare ...<br>
+                    M: Here.<br>
+                    W: Thank you!
+                </div>
+                <div class="speaker-line">
+                    <strong>2.</strong><br>
+                    <span class="highlightable" id="text-ex5-2">I was in Japan when it happened, but not near that part of the coast. In fact, I was in Tokyo. I was working there for a few days. <strong>While we were having a meeting</strong>, somebody heard the news or saw it online.</span> And then everyone was talking about it - in Japanese, of course. I didn't know what was happening because my Japanese isn't very good. I had lessons for a while but I found it really difficult! Anyway, I knew something was wrong. I could tell that from their faces and from their voices when they talked. After a few minutes, somebody explained to me in English what was happening. <span class="highlightable" id="text-ex4-2">Later I saw it all on TV, how that <strong>enormous wave</strong> came in and destroyed everything on the coast.</span> It was shocking.
+                </div>
+                <div class="speaker-line">
+                    <strong>3.</strong><br>
+                    I took a gap year at the end of my university course. I studied medicine, but I didn't want to be a doctor - my interest was in research. I wanted to be a scientist. Anyway, for my gap year, I went to Cameroon in Central Africa. I got a job helping a medical charity and stayed for the whole year. Basically, I worked as a doctor's assistant in one of their medical centres. We were really busy because <span class="highlightable" id="text-ex4-3">that year, there were a lot of cases of <strong>Yellow Fever</strong>. It was spreading fast, and people were coming to the medical centre every day with the disease.</span> It took ten months to get it under control. After that, I changed my plan - I didn't want to be a scientist after all. So I went back to the UK and finished my training to become a hospital doctor. <span class="highlightable" id="text-ex5-3">That took <strong>two years</strong>. Now I'm looking for a job</span> - and I'd love to go back to Africa.
+                </div>
+                <div class="speaker-line">
+                    <strong>4.</strong><br>
+                    Woman: Look out of the window. What a great view!<br>
+                    Man: Yes, it is. Amazing. Look at those trees - and that mountain in the background.<br>
+                    W: <span class="highlightable" id="text-ex4-4">It's a <strong>volcano</strong>, I think.</span><br>
+                    M: Is it? Yes, maybe. I'm not sure.<br>
+                    W: We can ask.<br>
+                    <span class="highlightable" id="text-ex5-4"><strong>Bell boy</strong>: Here are your suitcases, madam.</span><br>
+                    M: Thanks very much! Can I ask you something?<br>
+                    BB: Yes, of course.<br>
+                    W: Is that a volcano or just a mountain?<br>
+                    BB: It's a volcano: Mount Bagana. But don't worry - the last time we all had to leave the hotel was five years ago.<br>
+                    M: Only five years? So, it's an active volcano?<br>
+                    BB: Yes, active. But it's quiet now.<br>
+                    W: For the moment ...<br>
+                    BB: Yes, for the moment.
+                </div>
+            </div>
+        </div>
+
+        <div class="reading-resizer" id="reading-resizer"></div>
+
+        <!-- Right Panel: Main Exercise Panel -->
+        <div class="main-exercise-panel" id="main-exercise-panel">
+            
+            <!-- Exercise 1 -->
+            <div class="exercise-card">
+                <div class="exercise-title">1. Match the words below with definitions 1–10.</div>
+                <div class="word-bank" id="ex1-word-bank">
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">avalanche</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">drought</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">earthquake</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">epidemic</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">famine</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">flood</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">forest fire</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">mudslide</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">tsunami</div>
+                    <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">volcanic eruption</div>
+                </div>
+                <div id="questions-ex1"></div>
+                <div class="controls-row" style="justify-content: flex-start;">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                </div>
+            </div>
+
+            <div class="exercise-card">
+                <div class="exercise-title">2. Label photos A and B with the natural disaster words from exercise 1.</div>
+                <div class="ex2-layout">
+                    <div class="ex2-img-container">
+                        <img src="img-pre/module 4c-ex2.png" alt="Natural Disasters" class="ex-img" style="margin:0;">
+                    </div>
+                    <div id="questions-ex2" class="ex2-questions-container"></div>
+                </div>
+            </div>
+
+            <!-- Exercise 3 -->
+            <div class="exercise-card">
+                <div class="exercise-title">3. 🎧 1.15 Read the Listening Strategy. Then listen to two dialogues and answer the questions. Write the clues which gave you the answers.</div>
+                <button class="transcript-toggle-btn" onclick="toggleTranscript('1.15')">📜 Transcript 1.15</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track15.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex3"></div>
+                <div class="controls-row" style="justify-content: flex-start;">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 4 -->
+            <div class="exercise-card">
+                <div class="exercise-title">4. 🎧 1.16 Listen to four extracts. Match each extract with a natural disaster from exercise 1.</div>
+                <button class="transcript-toggle-btn" onclick="toggleTranscript('1.16')">📜 Transcript 1.16</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track16.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex4"></div>
+                <div class="controls-row" style="justify-content: flex-start;">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 5 -->
+            <div class="exercise-card">
+                <div class="exercise-title">5. 🎧 1.16 Listen again and choose the correct answers.</div>
+                <button class="transcript-toggle-btn" onclick="toggleTranscript('1.16')">📜 Transcript 1.16</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/1_Track16.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex5"></div>
+                <div class="controls-row" style="justify-content: flex-start;">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+    const ex1Data = [
+        { q: "A(n) ________ is when the ground shakes and buildings collapse.", ans: "earthquake", hint: "<strong>Đáp án: earthquake</strong><br><em>Giải thích:</em> Earthquake là động đất, xảy ra khi mặt đất rung chuyển." },
+        { q: "A(n) ________ is when hot rocks, fire and steam suddenly come out of the ground.", ans: "volcanic eruption", hint: "<strong>Đáp án: volcanic eruption</strong><br><em>Giải thích:</em> Volcanic eruption là núi lửa phun trào." },
+        { q: "A(n) ________ is when water covers the ground in places which are usually dry.", ans: "flood", hint: "<strong>Đáp án: flood</strong><br><em>Giải thích:</em> Flood là lũ lụt, khi nước bao phủ mặt đất." },
+        { q: "A(n) ________ is when snow and ice fall quickly down a mountain.", ans: "avalanche", hint: "<strong>Đáp án: avalanche</strong><br><em>Giải thích:</em> Avalanche là tuyết lở." },
+        { q: "A(n) ________ is a long period of time without enough food in a region.", ans: "famine", hint: "<strong>Đáp án: famine</strong><br><em>Giải thích:</em> Famine là nạn đói, thiếu thức ăn trong thời gian dài." },
+        { q: "A(n) ________ is a very large and long wave following an earthquake under the ocean.", ans: "tsunami", hint: "<strong>Đáp án: tsunami</strong><br><em>Giải thích:</em> Tsunami là sóng thần." },
+        { q: "A(n) ________ is when there is no rain for a long time.", ans: "drought", hint: "<strong>Đáp án: drought</strong><br><em>Giải thích:</em> Drought là hạn hán, không có mưa lâu ngày." },
+        { q: "A(n) ________ is a fire that spreads quickly through a large area of trees.", ans: "forest fire", hint: "<strong>Đáp án: forest fire</strong><br><em>Giải thích:</em> Forest fire là cháy rừng." },
+        { q: "A(n) ________ is when a serious disease spreads to lots of people.", ans: "epidemic", hint: "<strong>Đáp án: epidemic</strong><br><em>Giải thích:</em> Epidemic là bệnh dịch." },
+        { q: "A(n) ________ is when a large quantity of wet earth suddenly falls down the side of a hill.", ans: "mudslide", hint: "<strong>Đáp án: mudslide</strong><br><em>Giải thích:</em> Mudslide là bùn lở." }
+    ];
+
+    const ex2Data = [
+        { q: "Photo A:", ans: "volcanic eruption", hint: "<strong>Đáp án: volcanic eruption</strong><br><em>Giải thích:</em> Hình A mô tả núi lửa đang phun trào." },
+        { q: "Photo B:", ans: "drought", hint: "<strong>Đáp án: drought</strong><br><em>Giải thích:</em> Hình B mô tả đất đai nứt nẻ do thiếu nước (hạn hán)." }
+    ];
+
+    const ex3Data = [
+        { 
+            type: "header", text: "Dialogue 1" 
+        },
+        { 
+            q: "Where are they?", ans: "Mrs Dennington's home", target: "text-ex3-1b",
+            clue: "Come in", clueAns: "She says 'Come in.'", clueTarget: "text-ex3-1b",
+            hint: "<strong>Đáp án: Mrs Dennington's home</strong><br><em>Bằng chứng:</em> 'Come in, come in.'<br><em>Giải thích:</em> Lời mời 'vào đi' cho thấy họ đang ở nhà của người phụ nữ." 
+        },
+        { 
+            q: "What natural disaster caused the damage?", ans: "flood", target: "text-ex3-2",
+            clue: "Clues", clueAns: "twenty centimetres deep in my living room", clueTarget: "text-ex3-2",
+            hint: "<strong>Đáp án: flood</strong><br><em>Bằng chứng:</em> 'twenty centimetres deep in my living room!'<br><em>Giải thích:</em> Nước ngập sâu 20cm là dấu hiệu của lũ lụt." 
+        },
+        { 
+            type: "header", text: "Dialogue 2" 
+        },
+        { 
+            q: "What kind of natural disaster are they discussing?", ans: "drought", target: "text-ex3-3a",
+            clue: "Clues", clueAns: "They need rain", clueTarget: "text-ex3-3a",
+            hint: "<strong>Đáp án: drought</strong><br><em>Bằng chứng:</em> 'They need rain!'; 'it didn't rain at all'; 'The ground is so dry.'<br><em>Giải thích:</em> Hạn hán là khi cần mưa và đất khô cằn." 
+        },
+        { 
+            q: "What time of day is it?", ans: "early morning", target: "text-ex3-4a",
+            clue: "Clues", clueAns: "having breakfast", clueTarget: "text-ex3-4a",
+            hint: "<strong>Đáp án: early morning</strong><br><em>Bằng chứng:</em> 'What are you having for breakfast?'; 'isn't open yet'<br><em>Giải thích:</em> Ăn sáng và cửa hàng chưa mở cho thấy đây là buổi sáng sớm." 
+        }
+    ];
+
+    const ex4Data = [
+        { q: "Natural disaster:", ans: "famine", target: "text-ex4-1", hint: "<strong>Đáp án: famine</strong><br><em>Bằng chứng:</em> 'collecting money for food packages... a million people have got nothing to eat.'<br><em>Giải thích:</em> Thiếu đồ ăn cho hàng triệu người là nạn đói." },
+        { q: "Natural disaster:", ans: "tsunami", target: "text-ex4-2", hint: "<strong>Đáp án: tsunami</strong><br><em>Bằng chứng:</em> 'enormous wave came in and destroyed everything on the coast.'<br><em>Giải thích:</em> Con sóng khổng lồ phá hủy bờ biển là sóng thần." },
+        { q: "Natural disaster:", ans: "epidemic", target: "text-ex4-3", hint: "<strong>Đáp án: epidemic</strong><br><em>Bằng chứng:</em> 'a lot of cases of Yellow Fever. It was spreading fast'.<br><em>Giải thích:</em> Dịch bệnh sốt vàng da lan nhanh là bệnh dịch." },
+        { q: "Natural disaster:", ans: "volcanic eruption", target: "text-ex4-4", hint: "<strong>Đáp án: volcanic eruption</strong><br><em>Bằng chứng:</em> 'It's a volcano... Mount Bagana... an active volcano'.<br><em>Giải thích:</em> Núi lửa đang hoạt động." }
+    ];
+
+    const ex5Data = [
+        { 
+            q: "The dialogue takes place", ans: "b", 
+            opts: ["a in a shopping centre", "b in the street", "c in a supermarket"], 
+            target: "text-ex5-1b",
+            hint: "<strong>Đáp án: b</strong><br><em>Bằng chứng:</em> 'That's just round the corner.'<br><em>Giải thích:</em> Họ đang đứng bên ngoài (trên đường) để quyên góp." 
+        },
+        { 
+            q: "The disaster happened while the speaker", ans: "b", 
+            opts: ["a was on holiday in Japan", "b was in a business meeting", "c was in a Japanese lesson"], 
+            target: "text-ex5-2",
+            hint: "<strong>Đáp án: b</strong><br><em>Bằng chứng:</em> 'While we were having a meeting'.<br><em>Giải thích:</em> Sự việc xảy ra khi họ đang họp." 
+        },
+        { 
+            q: "The speaker first went to Africa", ans: "a", 
+            opts: ["a about three years ago", "b about two years ago", "c before university"], 
+            target: "text-ex5-3",
+            hint: "<strong>Đáp án: a</strong><br><em>Bằng chứng:</em> 'That took two years. Now I'm looking for a job' (sau 1 năm gap year).<br><em>Giải thích:</em> 1 năm ở Cameroon + 2 năm thực tập = 3 năm trước." 
+        },
+        { 
+            q: "The man who is giving information about Mount Bagana is", ans: "c", 
+            opts: ["a a guest at the hotel", "b an employee at a tourist information office", "c an employee of the hotel"], 
+            target: "text-ex5-4",
+            hint: "<strong>Đáp án: c</strong><br><em>Bằng chứng:</em> 'Bell boy: Here are your suitcases, madam.'<br><em>Giải thích:</em> Bell boy là nhân viên khách sạn." 
+        }
+    ];
+
+    function renderEx1() {
+        const container = document.getElementById('questions-ex1');
+        ex1Data.forEach((it, i) => {
+            const qid = `ex1-q${i+1}`;
+            const qText = it.q.replace('________', `<span class="drop-slot" id="${qid}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)"></span>`);
+            container.innerHTML += `<div class="matching-row"><span><strong>${i+1}.</strong> ${qText}</span><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+    }
+
+    // Drag and Drop Handlers
+    let draggedWord = null;
+
+    function handleDragStart(e) {
+        draggedWord = e.target;
+        e.dataTransfer.setData('text/plain', e.target.innerText);
+        e.target.classList.add('dragging');
+    }
+
+    document.addEventListener('dragend', (e) => {
+        if (draggedWord) draggedWord.classList.remove('dragging');
+    });
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('over');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const slot = e.currentTarget;
+        slot.classList.remove('over');
+        const word = e.dataTransfer.getData('text/plain');
+        
+        if (slot.classList.contains('filled')) {
+            const oldWord = slot.innerText;
+            const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+            bankItems.forEach(item => {
+                if (item.innerText === oldWord) item.classList.remove('used');
+            });
+        }
+
+        slot.innerText = word;
+        slot.classList.add('filled');
+        slot.classList.remove('correct', 'incorrect-marked');
+        
+        if (draggedWord) draggedWord.classList.add('used');
+        draggedWord = null;
+    }
+
+    function handleSlotClick(slot) {
+        if (!slot.classList.contains('filled')) return;
+        const word = slot.innerText;
+        slot.innerText = "";
+        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+        bankItems.forEach(item => {
+            if (item.innerText === word) item.classList.remove('used');
+        });
+    }
+
+    function renderEx2() {
+        const container = document.getElementById('questions-ex2');
+        let html = "";
+        ex2Data.forEach((it, i) => {
+            const qid = `ex2-q${i+1}`;
+            html += `<div class="matching-row"><span><strong>${String.fromCharCode(65 + i)}.</strong></span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+        html += `
+        <div class="controls-row" style="margin-top:15px; justify-content: flex-start;">
+            <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+        </div>`;
+        container.innerHTML = html;
+    }
+
+    function renderEx3() {
+        const container = document.getElementById('questions-ex3');
+        let html = "";
+        let inputIdx = 0;
+        ex3Data.forEach((it) => {
+            if (it.type === "header") {
+                html += `<div class="dialogue-subheader">${it.text}</div>`;
+            } else {
+                inputIdx++;
+                const qid = `ex3-q${inputIdx}`;
+                const cid = `ex3-c${inputIdx}`;
+                html += `
+                <div class="question-block">
+                    <div style="font-weight: 600;">${inputIdx}. ${it.q}</div>
+                    <div class="input-row">
+                        <div class="input-item">
+                            <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input">
+                            <button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        </div>
+                        <div class="input-item">
+                            <span class="input-label">Clues:</span>
+                            <input type="text" id="${cid}" data-ans="${it.clueAns}" class="task5-input">
+                            <button class="btn-small eye-btn" onclick="showSingleAns('${cid}')">👁️</button>
+                            <button class="btn-small info-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','1.15')">i</button>
+                        </div>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
+            }
+        });
+        container.innerHTML = html;
+    }
+
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        ex4Data.forEach((it, i) => {
+            const qid = `ex4-q${i+1}`;
+            container.innerHTML += `<div class="matching-row"><span><strong>${i+1}.</strong> ${it.q}</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','1.16')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+        });
+    }
+
+    function renderEx5() {
+        const container = document.getElementById('questions-ex5');
+        ex5Data.forEach((it, i) => {
+            const qid = `ex5-q${i+1}`;
+            let optsHtml = it.opts.map(o => {
+                const val = o.split(' ')[0];
+                return `<label class="option-card"><input type="radio" name="${qid}" value="${val}"> ${o}</label>`;
+            }).join('');
+            container.innerHTML += `
+            <div class="question-block">
+                <div style="font-weight: 600;">${i+1}. ${it.q}</div>
+                <div class="option-group">${optsHtml}</div>
+                <div class="row-btns" style="margin-top:10px;">
+                    <button class="btn-small eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                    <button class="btn-small info-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','1.16')">i</button>
+                </div>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        });
+    }
+
+    function toggleTranscript(track, forceOpen = false) {
+        const panel = document.getElementById('transcript-panel');
+        const sections = document.querySelectorAll('.script-section');
+        const targetId = `script-${track.replace('.', '-')}`;
+        const targetSection = document.getElementById(targetId);
+        
+        if (!forceOpen && panel.classList.contains('active') && targetSection.classList.contains('active')) {
+            panel.classList.remove('active');
+        } else {
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+    }
+
+    function showReadingHint(event, targetId, hintBoxId, track) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(hintBoxId);
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        if (isVisible) {
+            h.style.display = 'none';
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            return;
+        }
+        toggleTranscript(track, true);
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        h.style.display = 'block';
+        const txt = document.getElementById(targetId);
+        if (txt) {
+            txt.classList.add('active-highlight');
+            setTimeout(() => { txt.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+        }
+    }
+
+    function toggleHint(event, id) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(id + '-hint');
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!isVisible) h.style.display = 'block';
+    }
+
+    function showSingleAns(id) {
+        const el = document.getElementById(id);
+        const isSlot = el.classList.contains('drop-slot');
+        const ans = el.dataset.ans;
+
+        if (isSlot) {
+            if (el.innerText.toLowerCase() === ans.toLowerCase()) {
+                // Remove if already correct
+                const word = el.innerText;
+                el.innerText = "";
+                el.classList.remove('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => { if (item.innerText === word) item.classList.remove('used'); });
+            } else {
+                // If filled with wrong word, return it to bank first
+                if (el.classList.contains('filled')) {
+                    const oldWord = el.innerText;
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => { if (item.innerText === oldWord) item.classList.remove('used'); });
+                }
+                el.innerText = ans;
+                el.classList.add('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => { if (item.innerText === ans) item.classList.add('used'); });
+            }
+        } else {
+            if (el.value.toLowerCase() === ans.toLowerCase()) { el.value = ""; el.classList.remove('correct'); }
+            else { el.value = ans; el.classList.add('correct'); adjustWidth(el); }
+        }
+    }
+
+    function showSingleAnsRadio(qid, ans) {
+        const radio = document.querySelector(`input[name="${qid}"][value="${ans}"]`);
+        if (radio) {
+            const card = radio.closest('.option-card');
+            const isAlreadySelected = radio.checked;
+            const group = card.closest('.option-group');
+            group.querySelectorAll('.option-card').forEach(c => {
+                c.classList.remove('selected');
+                c.querySelector('input').checked = false;
+            });
+            if (!isAlreadySelected) {
+                radio.checked = true;
+                card.classList.add('selected');
+            }
+        }
+    }
+
+    function checkAll() {
+        document.querySelectorAll('input[type="text"]').forEach(el => {
+            if (!el.value) return;
+            const ok = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+            el.classList.toggle('correct', ok);
+            el.classList.toggle('incorrect-marked', !ok);
+        });
+        document.querySelectorAll('.drop-slot').forEach(el => {
+            if (!el.classList.contains('filled')) return;
+            const ok = el.innerText.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+            el.classList.toggle('correct', ok);
+            el.classList.toggle('incorrect-marked', !ok);
+        });
+        document.querySelectorAll('.option-group').forEach(grp => {
+            const checked = grp.querySelector('input:checked');
+            if (checked) {
+                const qname = checked.name;
+                const prefix = qname.split('-')[0];
+                const index = parseInt(qname.split('-q')[1]) - 1;
+                const dataMap = { ex5: ex5Data };
+                const correctAns = dataMap[prefix][index].ans;
+                const card = checked.closest('.option-card');
+                const ok = checked.value === correctAns;
+                
+                card.classList.remove('selected');
+                card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+            }
+        });
+    }
+
+    function showAnswers(prefix) {
+        if (prefix === 'ex5') {
+            ex5Data.forEach((it, i) => {
+                showSingleAnsRadio(`ex5-q${i+1}`, it.ans);
+            });
+        } else if (prefix === 'ex1') {
+            document.querySelectorAll('.drop-slot').forEach(el => {
+                const ans = el.dataset.ans;
+                el.innerText = ans;
+                el.classList.add('filled', 'correct');
+                el.classList.remove('incorrect-marked');
+            });
+            document.querySelectorAll('#ex1-word-bank .word-item').forEach(item => item.classList.add('used'));
+        } else {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                adjustWidth(el);
+            });
+        }
+    }
+
+    function resetSection(prefix) {
+        if (prefix === 'ex5') {
+            ex5Data.forEach((it, i) => {
+                const qname = `ex5-q${i+1}`;
+                document.querySelectorAll(`input[name="${qname}"]`).forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    card.classList.remove('selected');
+                    card.style = "";
+                });
+            });
+        } else if (prefix === 'ex1') {
+            document.querySelectorAll('.drop-slot').forEach(el => {
+                el.innerText = "";
+                el.classList.remove('filled', 'correct', 'incorrect-marked');
+            });
+            document.querySelectorAll('#ex1-word-bank .word-item').forEach(item => item.classList.remove('used'));
+        } else {
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = "";
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+        }
+        document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+    }
+
+    function adjustWidth(el) {
+        if (!el) return;
+        const text = el.value || el.placeholder || "";
+        el.style.width = Math.max(text.length * 12 + 40, 100) + "px";
+    }
+
+    window.onload = () => {
+        renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5();
+        document.body.addEventListener('click', e => {
+            const card = e.target.closest('.option-card');
+            if (card) {
+                const r = card.querySelector('input');
+                if (r) {
+                    r.checked = true;
+                    card.closest('.option-group').querySelectorAll('.option-card').forEach(c => {
+                        c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                        c.style = "";
+                    });
+                    card.classList.add('selected');
+                }
+            }
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+        document.querySelectorAll('input[type="text"]').forEach(el => {
+            el.addEventListener('input', () => adjustWidth(el));
+            adjustWidth(el);
+        });
+    };
+
+    const resizer = document.getElementById('reading-resizer');
+    const panel = document.getElementById('transcript-panel');
+    let isResizing = false;
+    resizer.addEventListener('mousedown', () => isResizing = true);
+    document.addEventListener('mousemove', e => {
+        if (!isResizing) return;
+        panel.style.flex = `0 0 ${(e.clientX / window.innerWidth) * 100}%`;
+    });
+    document.addEventListener('mouseup', () => isResizing = false);
+</script>
+<script src="access-core.js"></script>
+</body>
+</html>
