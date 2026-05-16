@@ -713,6 +713,19 @@ class ListeningCore {
         this.examSubmitted = false;
         this.explanationMode = false;
 
+        // Inject dummy inputs để browser đổ autofill vào đây thay vì ô câu hỏi
+        // (kỹ thuật từ index.html: dùng autocomplete="username" + "current-password")
+        if (!document.getElementById('_autofill_trap')) {
+            const trap = document.createElement('div');
+            trap.id = '_autofill_trap';
+            trap.style.cssText = 'position:absolute;opacity:0;pointer-events:none;z-index:-9999;left:-9999px;';
+            trap.innerHTML = `
+                <input type="email" autocomplete="username" tabindex="-1">
+                <input type="password" autocomplete="current-password" tabindex="-1">
+            `;
+            document.body.insertBefore(trap, document.body.firstChild);
+        }
+
         this.setupAudioControls();
         this.setupUI();
         this.renderQuestions();
@@ -1415,24 +1428,6 @@ class ListeningCore {
             }
         });
 
-        // Bảo vệ thêm: Chrome/Edge autofill chạy SAU khi JS set attribute.
-        // Dùng setTimeout để xóa bất kỳ giá trị nào browser tự điền vào,
-        // rồi để loadDraft() khôi phục đúng đáp án đã lưu.
-        this._clearBrowserAutofill(container);
-    }
-
-    _clearBrowserAutofill(container) {
-        // Chạy sau 100ms và 500ms để bắt cả slow autofill của Edge
-        const clearAll = () => {
-            (container || document).querySelectorAll('.fill-input').forEach(input => {
-                // Chỉ xóa nếu chưa có draft hợp lệ từ loadDraft (isLoadingDraft = true lúc này)
-                if (this.isLoadingDraft) {
-                    input.value = '';
-                }
-            });
-        };
-        setTimeout(clearAll, 100);
-        setTimeout(clearAll, 500);
     }
 
     setupBeforeUnload() {

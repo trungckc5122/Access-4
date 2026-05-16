@@ -766,6 +766,18 @@ class ListeningCore {
         this.examSubmitted = false;
         this.explanationMode = false;
 
+        // Inject dummy inputs để browser đổ autofill vào đây thay vì ô câu hỏi
+        if (!document.getElementById('_autofill_trap')) {
+            const trap = document.createElement('div');
+            trap.id = '_autofill_trap';
+            trap.style.cssText = 'position:absolute;opacity:0;pointer-events:none;z-index:-9999;left:-9999px;';
+            trap.innerHTML = `
+                <input type="email" autocomplete="username" tabindex="-1">
+                <input type="password" autocomplete="current-password" tabindex="-1">
+            `;
+            document.body.insertBefore(trap, document.body.firstChild);
+        }
+
         this.setupAudioControls();
         this.setupUI();
         this.renderQuestions();
@@ -1512,20 +1524,6 @@ class ListeningCore {
             }
         });
 
-        // Bảo vệ thêm: Chrome/Edge autofill chạy SAU khi JS set attribute.
-        this._clearBrowserAutofill(container);
-    }
-
-    _clearBrowserAutofill(container) {
-        const clearAll = () => {
-            (container || document).querySelectorAll('.fill-input').forEach(input => {
-                if (this.isLoadingDraft) {
-                    input.value = '';
-                }
-            });
-        };
-        setTimeout(clearAll, 100);
-        setTimeout(clearAll, 500);
     }
 
     renderMatchPairsQuestions(container) {
