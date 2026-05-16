@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 4F Reading: Survival story</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Standard Header Override (Parity with 4A) */
+        .solution-title-row h1 {
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Split-screen layout */
+        .reading-split-container {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-top: 20px;
+            height: 750px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            background: var(--bg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .reading-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+            line-height: 2.2;
+            font-size: 1.1rem;
+            text-align: justify;
+        }
+
+        .exercise-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+        }
+
+        /* Reading Resizer */
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover, .reading-resizer.active {
+            background: var(--primary);
+        }
+
+        /* Bilingual Toggle */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            justify-content: flex-end;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 45px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-medium);
+            transition: .4s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(23px);
+        }
+
+        .bilingual-block {
+            display: none;
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.95rem;
+            margin-top: -10px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            background: var(--grammar-bg);
+            padding: 10px 15px;
+            border-left: 3px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+        }
+
+        [data-bilingual="true"] .bilingual-block {
+            display: block;
+        }
+
+        /* ====== DRAG AND DROP (2F Style) ====== */
+        .sentence-bank {
+            background: var(--grammar-bg);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .sentence-bank-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .sentence-items {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sentence-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: grab;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .sentence-item:hover {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .sentence-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .sentence-item.used {
+            opacity: 0.45;
+            background: var(--grammar-bg);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .sentence-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 26px;
+            background: var(--primary);
+            color: white;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .sentence-text {
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        /* Drop rows in questions panel */
+        .drop-row-container {
+            margin-bottom: 16px;
+        }
+
+        .drop-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drop-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel {
+            flex: 1;
+            min-height: 40px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            background: var(--bg);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .drop-slot-panel.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .drop-slot-panel.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .drop-slot-panel .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+        .drop-slot-panel.filled .slot-content {
+            color: var(--text);
+        }
+
+        .remove-chip {
+            display: none;
+            cursor: pointer;
+            color: var(--error);
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel.filled .remove-chip {
+            display: inline;
+        }
+
+        /* Inline drop slots inside reading text */
+        .inline-drop-zone {
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 3px;
+        }
+
+        .inline-drop-slot {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 6px;
+            padding: 2px 8px;
+            background: var(--bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .inline-drop-slot.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .inline-drop-slot.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .inline-drop-slot .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .inline-drop-slot.filled .slot-content {
+            color: var(--success);
+        }
+
+        .inline-drop-slot .remove-chip {
+            display: none;
+        }
+
+        .inline-drop-slot.filled .remove-chip {
+            display: inline;
+            font-size: 0.8rem;
+        }
+
+        /* Task Inputs for Ex 1, 2 */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            color: var(--primary);
+            font-weight: bold;
+            background: transparent;
+            min-width: 80px;
+            text-align: center;
+            field-sizing: content;
+        }
+
+        .task5-input.correct {
+            color: var(--success);
+            border-bottom-color: var(--success);
+        }
+
+        .task5-input.incorrect-marked {
+            color: var(--error, #e74c3c);
+            border-bottom-color: var(--error, #e74c3c);
+        }
+
+        /* Utilities */
+        .exercise-title {
+            margin-bottom: 20px;
+        }
+
+        .q-row {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        .reading-strategy {
+            background: #fffbeb;
+            border: 1px dashed #d97706;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            color: #92400e;
+        }
+
+        .reading-strategy h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .word-bank-simple {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: var(--primary-light);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .word-bank-simple .word-item {
+            background: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* Highlight classes */
+        .active-highlight {
+            background-color: #fef08a; /* highlight-yellow */
+            box-shadow: 0 0 0 2px #fef08a;
+            border-radius: 3px;
+            transition: background-color 0.4s, box-shadow 0.4s;
+        }
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+            border: none;
+        }
+        .btn-reset:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Standard Header (4A Style) -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4F</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Reading</div>
+                <h1>Survival story</h1>
+                <p class="subtitle">I can understand a survival story.</p>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle Dark/Light Mode" style="position:absolute; top:25px; right:30px; font-size:1.5rem; background:none; border:none; cursor:pointer;">🌙</button>
+        </div>
+
+        <!-- Exercise 1 (Full Width) -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete the sentences with the correct form of the verbs below.</div>
+            <div class="word-bank-simple">
+                <span class="word-item">approach</span> <span class="word-item">head</span> <span class="word-item">land</span> <span class="word-item">reach</span> <span class="word-item">spin</span> <span class="word-item">take off</span>
+            </div>
+            <div id="questions-ex1"></div>
+        </div>
+
+        <!-- Split-screen layout starts here (for Text and Ex 2, 3) -->
+        <div class="reading-split-container">
+            <!-- Left Panel: Exercises -->
+            <div class="exercise-panel" id="exercisePanel" style="flex: 1; padding: 25px; background: var(--card-bg, #fff);">
+                
+                <!-- Exercise 2 -->
+                <div class="exercise-title" style="margin-top: 0;"><strong>2.</strong> Read the text below, ignoring the gaps. Answer the questions.</div>
+                <div id="questions-ex2" style="margin-bottom: 40px;"></div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-title"><strong>3.</strong> Read the text again. Match gaps 1-8 in the text with sentences A-I below. There is one extra sentence.</div>
+                <div id="sentenceItems" class="word-bank" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Sentences will be rendered here -->
+                </div>
+                <div id="dropRows" style="margin-top:20px;">
+                    <!-- Drop rows generated here -->
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer" style="width: 8px; background: var(--resizer-bg, #cbd5e1); cursor: col-resize; flex-shrink: 0; z-index: 10;"></div>
+
+            <!-- Right Panel: Reading Text -->
+            <div class="reading-panel transcript-panel active" id="readingPanel" style="flex: 0 0 45%; padding: 25px; border-left: 1px solid var(--glass-border); border-right: none; position: sticky; top: 20px; max-height: 90vh; overflow-y: auto;">
+                <h2 style="color: var(--primary-dark); text-align: center; margin-bottom: 20px; font-size: 2.5rem;">LUCKY ESCAPE</h2>
+
+                <div class="reading-content">
+                    <p class="en-text"><span id="slot1-context" class="highlightable">One Monday afternoon in May 2013, Diana Palmore was at home with her husband, Pete, when they heard loud sirens 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot1" data-q="1"><span class="slot-content">[ 1 ]</span><span class="remove-chip" onclick="removeSlot(1)">✕</span></span></span> 
+                        a tornado was approaching the town.</span> <span id="slot2-context" class="highlightable">Diana’s daughter Monica was at the local school and Diana decided to go and 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot2" data-q="2"><span class="slot-content">[ 2 ]</span><span class="remove-chip" onclick="removeSlot(2)">✕</span></span></span> 
+                        before the tornado reached the town.</span> She ran as fast as she could to the school. <span id="slot3-context" class="highlightable">In her classroom, Monica and her classmates were sitting under their desks, 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot3" data-q="3"><span class="slot-content">[ 3 ]</span><span class="remove-chip" onclick="removeSlot(3)">✕</span></span></span> 
+                        on their heads.</span> Diana ran in and took Monica. <span id="slot4-context" class="highlightable">But the tornado was much closer now and it was too dangerous 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot4" data-q="4"><span class="slot-content">[ 4 ]</span><span class="remove-chip" onclick="removeSlot(4)">✕</span></span></span>. 
+                        So they hid in a bathroom.</span> When the tornado hit, it ripped the roof from the school. <span id="slot5-context" class="highlightable">Monica and Diana looked up and saw cars and trees 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot5" data-q="5"><span class="slot-content">[ 5 ]</span><span class="remove-chip" onclick="removeSlot(5)">✕</span></span></span> 
+                        above the school.</span> ‘It was very scary. The whole school was shaking,’ said Monica.
+                    </p>
+
+                    <p class="en-text"><span id="slot6-context" class="highlightable">When the storm passed, Monica and her mum 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot6" data-q="6"><span class="slot-content">[ 6 ]</span><span class="remove-chip" onclick="removeSlot(6)">✕</span></span></span>, 
+                        but it was in ruins.</span> They couldn't find Pete. But they could hear him shouting for help. <span id="slot7-context" class="highlightable">Then they saw his hand and 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot7" data-q="7"><span class="slot-content">[ 7 ]</span><span class="remove-chip" onclick="removeSlot(7)">✕</span></span></span> 
+                        – in a cupboard under the stairs.</span> He couldn't breathe, so they had to get him out quickly. Moments after they pulled him out, the whole house collapsed. The family survived a terrifying experience with only small injuries. <span id="slot8-context" class="highlightable">But other people in the town 
+                        <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot8" data-q="8"><span class="slot-content">[ 8 ]</span><span class="remove-chip" onclick="removeSlot(8)">✕</span></span></span> 
+                        as the Palmores.</span> Twenty-four people died in the tornado.
+                    </p>
+                </div>
+            </div>
+        </div>
+    <!-- Global Check All -->
+    <button onclick="checkAll()" style="position:fixed;bottom:20px;right:20px;padding:15px 30px;background:#27ae60;color:white;border:none;border-radius:30px;font-weight:bold;font-size:1rem;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.2);z-index:100;">CHECK ALL (ENTER)</button>
+
+    <!-- Scripts -->
+    <script>
+        // --- Data ---
+        const ex1Data = [
+            { q: "A snow storm was [INPUT], so we went inside.", ans: "approaching", hint: "<strong>Đáp án:</strong> approaching<br><strong>Giải thích:</strong> Cơn bão đang tiến đến (thì quá khứ tiếp diễn)." },
+            { q: "The plane [INPUT] from London at 9 a.m. yesterday and [INPUT] in Paris an hour later.", ans: ["took off", "landed"], hint: "<strong>Đáp án:</strong> took off / landed<br><strong>Giải thích:</strong> Máy bay cất cánh (took off) và hạ cánh (landed)." },
+            { q: "It was very late when we [INPUT] Oxford.", ans: "reached", hint: "<strong>Đáp án:</strong> reached<br><strong>Giải thích:</strong> reached (đã đến nơi)." },
+            { q: "The plane was [INPUT] towards Australia when it disappeared.", ans: "heading", hint: "<strong>Đáp án:</strong> heading<br><strong>Giải thích:</strong> heading towards (đang hướng về phía)." },
+            { q: "The helicopter began to [INPUT] out of control.", ans: "spin", hint: "<strong>Đáp án:</strong> spin<br><strong>Giải thích:</strong> spin out of control (xoay tròn mất kiểm soát)." }
+        ];
+
+        const ex2Data = [
+            { q: "What kind of natural disaster did Diana and Pete experience?", ans: "a tornado", hint: "<strong>Đáp án:</strong> a tornado<br><strong>Giải thích:</strong> Một cơn lốc xoáy (Diana and Pete heard loud sirens... a tornado was approaching)." },
+            { q: "Where were they when they realised there was a problem?", ans: "at home", hint: "<strong>Đáp án:</strong> at home<br><strong>Giải thích:</strong> Tại nhà (Diana Palmore was at home with her husband, Pete, when they heard...)." },
+            { q: "Where was Monica?", ans: "at school", hint: "<strong>Đáp án:</strong> at school<br><strong>Giải thích:</strong> Ở trường (Diana’s daughter Monica was at the local school)." },
+            { q: "In which room did Monica and Diana hide?", ans: "a bathroom", hint: "<strong>Đáp án:</strong> a bathroom<br><strong>Giải thích:</strong> Trong phòng tắm (So they hid in a bathroom)." },
+            { q: "Where did Pete hide?", ans: "in a cupboard under the stairs", hint: "<strong>Đáp án:</strong> in a cupboard under the stairs<br><strong>Giải thích:</strong> Trong hốc tủ dưới gầm cầu thang (Then they saw his hand... in a cupboard under the stairs)." },
+            { q: "How many people died in the disaster?", ans: "twenty-four", hint: "<strong>Đáp án:</strong> twenty-four<br><strong>Giải thích:</strong> 24 người (Twenty-four people died in the tornado)." }
+        ];
+
+        const ex3Phrases = [
+            { id: "A", text: "spinning around in the air" },
+            { id: "B", text: "bring her home" },
+            { id: "C", text: "ran back to their house" },
+            { id: "D", text: "which warned them that" },
+            { id: "E", text: "were not as lucky" },
+            { id: "F", text: "without looking back" },
+            { id: "G", text: "holding their maths books" },
+            { id: "H", text: "realised where he was" },
+            { id: "I", text: "to leave the school" }
+        ];
+
+        const ex3AnswerKey = { 1: 'D', 2: 'B', 3: 'G', 4: 'I', 5: 'A', 6: 'C', 7: 'H', 8: 'E' };
+
+        // --- Render Ex 1 & 2 ---
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            ex1Data.forEach((it, i) => {
+                const qid = `ex1-q${i}`;
+                let html = it.q;
+                let count = 0;
+                html = html.replace(/\[INPUT\]/g, () => {
+                    const id = count === 0 ? qid : `${qid}_${count}`;
+                    const ans = Array.isArray(it.ans) ? it.ans[count] : it.ans;
+                    count++;
+                    return `<input type="text" id="${id}" data-ans="${ans}" class="task5-input" oninput="adjustWidth(this)">`;
+                });
+
+                container.innerHTML += `<div class="q-row">
+                    <strong>${i + 1}.</strong> ${html}
+                    <div class="row-btns" style="display: inline-flex; gap: 5px; margin-left: 10px; vertical-align: middle;">
+                        <button class="btn-small eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
+                        <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
+            });
+        }
+
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                container.innerHTML += `<div class="q-row" style="margin-bottom: 15px;">
+                    <strong>${i + 1}.</strong> ${it.q}
+                    <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="width: auto; min-width: 150px; text-align: left; padding: 2px 5px; margin-left: 10px;">
+                    <div class="row-btns" style="display: inline-flex; gap: 5px; margin-left: 10px;">
+                        <button class="btn-small eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
+                        <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
+            });
+        }
+
+        function toggleInputAns(id) {
+            const inputs = document.querySelectorAll(`input[id^="${id}"]`);
+            let allCorrect = true;
+            inputs.forEach(input => {
+                if (input.value.toLowerCase().trim() !== input.dataset.ans.toLowerCase().trim()) allCorrect = false;
+            });
+
+            if (allCorrect) {
+                inputs.forEach(input => {
+                    input.value = "";
+                    input.classList.remove('correct');
+                    adjustWidth(input);
+                });
+            } else {
+                inputs.forEach(input => {
+                    input.value = input.dataset.ans;
+                    input.classList.add('correct');
+                    adjustWidth(input);
+                });
+            }
+        }
+
+        function toggleHint(ev, id) {
+            ev.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            const isVisible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) h.style.display = 'block';
+        }
+
+        function toggleBilingual(cb) {
+            document.getElementById('readingPanel').setAttribute('data-bilingual', cb.checked);
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            el.style.width = Math.max(el.value.length * 10 + 30, 80) + 'px';
+        }
+
+        // --- Drag & Drop (Ex 3) ---
+        let dragValue = null;
+        let dragSourceSlot = null; 
+        const panelState = { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null, 7: null, 8: null };
+
+        function renderEx3() {
+            const bank = document.getElementById('sentenceItems');
+            ex3Phrases.forEach(p => {
+                bank.innerHTML += `
+                    <div class="sentence-item" draggable="true" data-value="${p.id}" id="sent-${p.id}">
+                        <span class="sentence-letter">${p.id}</span>
+                        <span class="sentence-text">${p.text}</span>
+                    </div>`;
+            });
+
+            const rowsContainer = document.getElementById('dropRows');
+            for (let i = 1; i <= 8; i++) {
+                rowsContainer.innerHTML += `
+                    <div class="drop-row-container">
+                        <div class="drop-row" id="drop-row-${i}">
+                            <span class="drop-label">${i}</span>
+                            <div class="drop-slot-panel" id="panelSlot${i}" data-q="${i}">
+                                <span class="slot-content"></span>
+                                <span class="remove-chip" onclick="removeSlot(${i})">✕</span>
+                            </div>
+                            <button class="btn-small eye-btn" title="Xem đáp án" onclick="revealSlot(${i})">👁️</button>
+                            <button class="btn-small info-btn" onclick="showDragHint(event, ${i})">i</button>
+                        </div>
+                        <div class="hint-box" id="ex3-q${i}-hint">
+                            <div class="hint-detail" id="ex3-q${i}-hint-content"></div>
+                        </div>
+                    </div>`;
+            }
+
+            // Fill hint contents
+            document.getElementById('ex3-q1-hint-content').innerHTML = `<strong>Đáp án: D</strong> – <em>"which warned them that"</em><br><br><strong>Trước ô trống [1]:</strong> Diana và chồng nghe thấy còi báo động lớn (<span class="key-word">loud sirens</span>).<br><br><strong>Tại sao D đúng:</strong> Mệnh đề quan hệ bắt đầu bằng "which" thay thế cho "sirens". Còi báo động hú lớn để cảnh báo (warned) họ về cơn lốc xoáy.<br><br><strong>Sau ô trống [1]:</strong> Một cơn lốc xoáy đang tiến đến thị trấn (<span class="key-word">a tornado was approaching</span>), đây chính là nội dung của lời cảnh báo.`;
+            document.getElementById('ex3-q2-hint-content').innerHTML = `<strong>Đáp án: B</strong> – <em>"bring her home"</em><br><br><strong>Trước ô trống [2]:</strong> Con gái Diana là Monica đang ở trường và Diana quyết định đi tới đó (<span class="key-word">decided to go and...</span>).<br><br><strong>Tại sao B đúng:</strong> Khi có lốc xoáy và con gái đang ở trường, hành động hợp lý nhất của người mẹ là đi đón con về nhà (<span class="key-word">bring her home</span>).<br><br><strong>Sau ô trống [2]:</strong> Diana muốn đón con trước khi lốc xoáy ập đến thị trấn. Câu tiếp theo nói bà chạy nhanh nhất có thể đến trường.`;
+            document.getElementById('ex3-q3-hint-content').innerHTML = `<strong>Đáp án: G</strong> – <em>"holding their maths books"</em><br><br><strong>Trước ô trống [3]:</strong> Monica và các bạn cùng lớp đang ngồi dưới gầm bàn (<span class="key-word">sitting under their desks</span>).<br><br><strong>Tại sao G đúng:</strong> Câu G diễn tả hành động đang cầm/đội sách toán lên đầu (<span class="key-word">holding their maths books</span>) để tự bảo vệ mình khỏi các mảnh vỡ rơi xuống. Cấu trúc V-ing miêu tả hành động xảy ra đồng thời.<br><br><strong>Sau ô trống [3]:</strong> Giới từ "on their heads" (trên đầu) hoàn thiện ý nghĩa cho cụm từ đội sách lên đầu.`;
+            document.getElementById('ex3-q4-hint-content').innerHTML = `<strong>Đáp án: I</strong> – <em>"to leave the school"</em><br><br><strong>Trước ô trống [4]:</strong> Cơn lốc xoáy giờ đã đến rất gần và quá nguy hiểm (<span class="key-word">too dangerous</span>).<br><br><strong>Tại sao I đúng:</strong> Cấu trúc "too + adj + to V" (quá ... để làm gì). Tình huống quá nguy hiểm để có thể rời khỏi trường (<span class="key-word">to leave the school</span>).<br><br><strong>Sau ô trống [4]:</strong> Vì không thể rời đi nên họ đã phải trốn trong phòng tắm.`;
+            document.getElementById('ex3-q5-hint-content').innerHTML = `<strong>Đáp án: A</strong> – <em>"spinning around in the air"</em><br><br><strong>Trước ô trống [5]:</strong> Mái trường bị thổi bay. Monica và Diana nhìn lên và thấy ô tô cùng cây cối (<span class="key-word">saw cars and trees</span>).<br><br><strong>Tại sao A đúng:</strong> Động từ giác quan + O + V-ing diễn tả hành động đang diễn ra. Cơn lốc xoáy cuốn các đồ vật bay lên và xoay tròn trên không trung (<span class="key-word">spinning around in the air</span>).<br><br><strong>Sau ô trống [5]:</strong> Các vật thể này bay "above the school" (phía trên trường học) rất đáng sợ.`;
+            document.getElementById('ex3-q6-hint-content').innerHTML = `<strong>Đáp án: C</strong> – <em>"ran back to their house"</em><br><br><strong>Trước ô trống [6]:</strong> Khi cơn bão đi qua, Monica và mẹ...<br><br><strong>Tại sao C đúng:</strong> Hành động hợp lý sau khi bão tan là chạy nhanh về nhà (<span class="key-word">ran back to their house</span>) để tìm người chồng đang ở nhà.<br><br><strong>Sau ô trống [6]:</strong> "but it was in ruins" (nhưng nó đã trở thành đống đổ nát). Đại từ "it" ám chỉ ngôi nhà.`;
+            document.getElementById('ex3-q7-hint-content').innerHTML = `<strong>Đáp án: H</strong> – <em>"realised where he was"</em><br><br><strong>Trước ô trống [7]:</strong> Họ nghe thấy tiếng anh ấy kêu cứu. Sau đó họ nhìn thấy tay anh ấy...<br><br><strong>Tại sao H đúng:</strong> Nhìn thấy tay của Pete, họ nhận ra anh ấy đang ở đâu (<span class="key-word">realised where he was</span>).<br><br><strong>Sau ô trống [7]:</strong> Cụm "in a cupboard under the stairs" giải thích cụ thể vị trí mà họ vừa nhận ra.`;
+            document.getElementById('ex3-q8-hint-content').innerHTML = `<strong>Đáp án: E</strong> – <em>"were not as lucky"</em><br><br><strong>Trước ô trống [8]:</strong> Gia đình Palmore sống sót chỉ với những vết thương nhẹ. Nhưng những người khác trong thị trấn... (<span class="key-word">But other people...</span>).<br><br><strong>Tại sao E đúng:</strong> Từ "But" thể hiện sự tương phản. Cần một cụm từ diễn tả sự kém may mắn hơn (<span class="key-word">were not as lucky</span>).<br><br><strong>Sau ô trống [8]:</strong> Cấu trúc so sánh bằng "not as ... as" (không may mắn như gia đình Palmore). Câu tiếp theo xác nhận sự thật bi thảm: 24 người đã chết.`;
+
+            // Add controls row at the end of dropRows
+            rowsContainer.innerHTML += `
+                <div class="controls-row" style="margin-top:20px; display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-show-all" onclick="showAllDragAnswers()" style="padding:8px 15px; border-radius:5px; border:1px solid var(--primary); background:var(--primary-light); color:var(--primary-dark); cursor:pointer; font-weight:bold;">Show All</button>
+                    <button class="btn btn-reset" onclick="resetAllSlots()" style="padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Reset</button>
+                    <span id="ex3-feedback" style="margin-left:8px; font-weight:bold;"></span>
+                </div>
+            `;
+
+            initDragDrop();
+        }
+
+        function showDragHint(event, q) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(`ex3-q${q}-hint`);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+
+            // Hide all hints & clear highlights
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+
+            if (!isVisible) {
+                h.style.display = 'block';
+                scrollAndHighlightForQ(q);
+            }
+        }
+
+        function scrollAndHighlightForQ(q) {
+            const contextSpan = document.getElementById(`slot${q}-context`);
+            if (contextSpan) {
+                contextSpan.classList.add('active-highlight');
+                const textPanel = document.getElementById('readingPanel');
+                if (textPanel) {
+                    const scrollOffset = contextSpan.offsetTop - 80;
+                    textPanel.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+                }
+            }
+        }
+
+        function resetAllSlots() {
+            [1, 2, 3, 4, 5, 6, 7, 8].forEach(q => removeSlot(q));
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+            document.getElementById('ex3-feedback').innerHTML = '';
+        }
+
+        function checkDragAnswers() {
+            let correct = 0;
+            [1, 2, 3, 4, 5, 6, 7, 8].forEach(q => {
+                const panelSlot = document.getElementById(`panelSlot${q}`);
+                if (!panelState[q]) {
+                    panelSlot.classList.remove('filled-wrong', 'filled');
+                    return;
+                }
+                if (panelState[q] === ex3AnswerKey[q]) {
+                    correct++;
+                    panelSlot.classList.add('filled');
+                    panelSlot.classList.remove('filled-wrong');
+                } else {
+                    panelSlot.classList.add('filled-wrong');
+                    panelSlot.classList.remove('filled');
+                    panelSlot.style.borderColor = 'var(--error)';
+                    panelSlot.style.background = 'var(--error-bg, #fde8e8)';
+                }
+            });
+            const done = Object.values(panelState).filter(v => v !== null).length;
+            const fb = document.getElementById('ex3-feedback');
+            if (correct === 8) {
+                fb.innerHTML = `<span style="color:#27ae60">✓ Perfect! 8/8 correct.</span>`;
+            } else {
+                fb.innerHTML = `<span style="color:#e74c3c">${correct}/${done} correct (of ${done} answered)</span>`;
+            }
+        }
+
+        function showAllDragAnswers() {
+            resetAllSlots();
+            Object.entries(ex3AnswerKey).forEach(([q, val]) => placeSentence(parseInt(q), val));
+            document.getElementById('ex3-feedback').innerHTML = `<span style="color:#27ae60">✓ All answers shown.</span>`;
+        }
+
+        function initDragDrop() {
+            document.querySelectorAll('.sentence-item').forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    dragValue = item.dataset.value;
+                    dragSourceSlot = null;
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                item.addEventListener('dragend', () => item.classList.remove('dragging'));
+            });
+
+            document.querySelectorAll('.drop-slot-panel, .inline-drop-slot').forEach(slot => {
+                const q = parseInt(slot.dataset.q);
+
+                slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+                slot.addEventListener('drop', e => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    if (dragValue) placeSentence(q, dragValue);
+                });
+
+                if (slot.classList.contains('drop-slot-panel')) {
+                    slot.addEventListener('dragstart', e => {
+                        if (!panelState[q]) { e.preventDefault(); return; }
+                        dragValue = panelState[q];
+                        dragSourceSlot = q;
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+                    slot.draggable = true;
+                }
+            });
+
+            const bank = document.getElementById('sentenceItems');
+            bank.addEventListener('dragover', e => { e.preventDefault(); });
+            bank.addEventListener('drop', e => {
+                e.preventDefault();
+                if (dragSourceSlot !== null) {
+                    removeSlot(dragSourceSlot);
+                    dragSourceSlot = null;
+                    dragValue = null;
+                }
+            });
+        }
+
+        function placeSentence(q, value) {
+            for (let k in panelState) {
+                if (panelState[k] === value && parseInt(k) !== q) removeSlot(parseInt(k));
+            }
+            if (panelState[q]) returnToBankFromSlot(q);
+
+            panelState[q] = value;
+            
+            const sentEl = document.getElementById(`sent-${value}`);
+            const text = sentEl ? sentEl.querySelector('.sentence-text').textContent : value;
+
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (panelSlot) {
+                panelSlot.querySelector('.slot-content').textContent = `${value} – ${text}`;
+                panelSlot.classList.add('filled');
+            }
+
+            const inlineSlot = document.getElementById(`readingSlot${q}`);
+            if (inlineSlot) {
+                inlineSlot.querySelector('.slot-content').textContent = text;
+                inlineSlot.classList.add('filled');
+            }
+
+            document.getElementById(`sent-${value}`).classList.add('used');
+        }
+
+        function removeSlot(q) {
+            if (!panelState[q]) return;
+            returnToBankFromSlot(q);
+        }
+
+        function returnToBankFromSlot(q) {
+            const val = panelState[q];
+            if (val) {
+                document.getElementById(`sent-${val}`).classList.remove('used');
+            }
+            panelState[q] = null;
+
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (panelSlot) {
+                panelSlot.querySelector('.slot-content').textContent = '';
+                panelSlot.classList.remove('filled');
+            }
+
+            const inlineSlot = document.getElementById(`readingSlot${q}`);
+            if (inlineSlot) {
+                inlineSlot.querySelector('.slot-content').textContent = `[ ${q} ]`;
+                inlineSlot.classList.remove('filled');
+            }
+        }
+
+        function revealSlot(q) {
+            const correctAns = ex3AnswerKey[q];
+            if (panelState[q] === correctAns) {
+                // If it's already correct, toggle off (clear)
+                removeSlot(q);
+            } else {
+                // Show correct
+                placeSentence(q, correctAns);
+            }
+        }
+
+        // --- Split Resizer Logic ---
+        const resizer = document.getElementById('reading-resizer');
+        const readingPanel = document.getElementById('readingPanel');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', () => { isResizing = true; resizer.classList.add('active'); });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const container = document.querySelector('.reading-split-container');
+            const containerWidth = container.offsetWidth;
+            const newWidth = (e.clientX - container.offsetLeft) / containerWidth * 100;
+            if (newWidth > 20 && newWidth < 80) {
+                document.getElementById('exercisePanel').style.flex = `0 0 ${newWidth}%`;
+                readingPanel.style.flex = `1`;
+            }
+        });
+        document.addEventListener('mouseup', () => { isResizing = false; resizer.classList.remove('active'); });
+
+        window.onload = () => {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+        };
+
+        function checkAll() {
+            // Check Ex 1 & 2 inputs
+            document.querySelectorAll('input.task5-input').forEach(el => {
+                if (!el.value) {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ok = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Check Ex 3 (Drag & Drop)
+            if (typeof checkDragAnswers === 'function') {
+                checkDragAnswers();
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.info-btn') && !e.target.closest('.hint-box')) {
+                document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            }
+        });
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
