@@ -123,6 +123,14 @@
         });
     };
 
+    // 5. Global Input Listener to clear feedback styling on user correction
+    document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (target && target.tagName === 'INPUT') {
+            target.classList.remove('correct', 'incorrect-marked');
+        }
+    });
+
     // Initialize on load
     const init = () => {
         injectFavicon();
