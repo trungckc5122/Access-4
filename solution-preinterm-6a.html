@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 6A Worth a Visit</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ── Split-screen transcript layout ── */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: hidden;
+        }
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #fefcf7);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-right: 0px solid var(--glass-border);
+        }
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* ── Word Bank & Drag-Drop (5E pattern) ── */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-medium);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            justify-content: center;
+        }
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 80px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* ── Exercise 1: 2-row image grid ── */
+        .ex1-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .ex1-image-card {
+            position: relative;
+            height: 110px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            background: #ddd;
+        }
+        .ex1-image-card img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .ex1-image-card .ex1-num {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 2px 8px;
+            border-radius: 12px;
+            z-index: 2;
+            line-height: 1.4;
+        }
+
+        /* ── Exercise 1: label rows ── */
+        .ex1-labels {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px 40px;
+            margin-bottom: 10px;
+        }
+        .ex1-label-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+        }
+        .ex1-label-row .q-num {
+            font-weight: 700;
+            min-width: 26px;
+        }
+        .ex1-prefix {
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* ── Text inputs (Ex3) ── */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            text-align: center;
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 80px;
+            field-sizing: content;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* ── Hint boxes ── */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            margin-top: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .hint-box strong {
+            color: var(--primary-dark);
+        }
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 600;
+            font-style: italic;
+        }
+        .key-word {
+            color: var(--primary);
+            font-weight: bold;
+            background: var(--primary-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── Row buttons ── */
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        /* ── Highlight in transcript ── */
+        .highlightable {
+            transition: background-color 0.3s;
+            border-radius: 4px;
+        }
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ── Ex2 / Ex4 description bar ── */
+        .desc-bar {
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 18px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        /* ── Ex2 question rows ── */
+        .question-row {
+            margin-bottom: 12px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .question-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .answer-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .question-row .q-label {
+            min-width: 26px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .question-row .q-text {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        /* ── Audio player ── */
+        .audio-player-container {
+            margin: 10px 0 20px;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        /* ── Transcript toggle button ── */
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ── Speaker lines in transcript ── */
+        .speaker-line {
+            margin-bottom: 22px;
+            display: block;
+            line-height: 1.85;
+        }
+
+        /* ── Ex3 tourist rows ── */
+        .tourist-row {
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .tourist-label {
+            min-width: 90px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* ── Ex4 sentence rows ── */
+        .ex4-row {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+        }
+        .ex4-label {
+            font-weight: bold;
+            min-width: 36px;
+            color: var(--primary-dark);
+            flex-shrink: 0;
+        }
+
+        /* ── Vocab reference ── */
+        .custom-vocab-container {
+            margin-bottom: 32px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+        .custom-vocab-header {
+            background: var(--primary-light);
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .custom-vocab-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .custom-vocab-content {
+            display: none;
+            padding: 18px 20px;
+        }
+        .vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 9px;
+        }
+        .vocab-item {
+            padding: 9px 13px;
+            background: var(--card-bg);
+            border-radius: 9px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.93rem;
+            color: var(--text);
+        }
+        .vocab-item strong {
+            color: var(--primary);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .ex1-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .ex1-labels {
+                grid-template-columns: 1fr;
+            }
+            .reading-split-container {
+                flex-direction: column;
+            }
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">6A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary &amp; Listening</div>
+                <h1>Worth a visit</h1>
+                <p class="subtitle">I can describe visitor attractions.</p>
+            </div>
+        </div>
+
+        <!-- Vocabulary Reference -->
+        <div class="custom-vocab-container">
+            <div class="custom-vocab-header" onclick="toggleCustomVocab()">
+                <h3>Vocabulary Reference: Visitor Attractions</h3>
+                <span id="vocabIcon" style="font-size:1.1rem;">▼</span>
+            </div>
+            <div class="custom-vocab-content" id="vocabContent">
+                <!-- Danh từ địa điểm -->
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>fountain</strong> /ˈfaʊn.tən/: đài phun nước.</div>
+                    <div class="vocab-item"><strong>aquarium</strong> /əˈkweə.ri.əm/: thủy cung.</div>
+                    <div class="vocab-item"><strong>market</strong> /ˈmɑː.kɪt/: chợ.</div>
+                    <div class="vocab-item"><strong>water park</strong> /ˈwɔː.tə pɑːk/: công viên nước.</div>
+                    <div class="vocab-item"><strong>harbour</strong> /ˈhɑː.bər/: bến cảng.</div>
+                    <div class="vocab-item"><strong>castle</strong> /ˈkɑː.səl/: lâu đài.</div>
+                    <div class="vocab-item"><strong>cathedral</strong> /kəˈθiː.drəl/: nhà thờ lớn.</div>
+                    <div class="vocab-item"><strong>statue</strong> /ˈstætʃ.uː/: tượng đài.</div>
+                    <div class="vocab-item"><strong>ruins</strong> /ˈruː.ɪnz/: phế tích.</div>
+                    <div class="vocab-item"><strong>temple</strong> /ˈtem.pəl/: ngôi đền.</div>
+                    <div class="vocab-item"><strong>museum</strong> /mjuːˈziː.əm/: bảo tàng.</div>
+                    <div class="vocab-item"><strong>palace</strong> /ˈpæl.ɪs/: cung điện.</div>
+                    <div class="vocab-item"><strong>theme park</strong> /ˈθiːm pɑːk/: công viên giải trí.</div>
+                    <div class="vocab-item"><strong>tower</strong> /ˈtaʊər/: tháp.</div>
+                    <div class="vocab-item"><strong>national park</strong> /ˌnæʃ.ən.əl ˈpɑːk/: vườn quốc gia.</div>
+                    <div class="vocab-item"><strong>botanical gardens</strong> /bəˈtæn.ɪ.kəl ˈɡɑː.dənz/: vườn thực vật.</div>
+                </div>
+
+                <!-- Tính từ miêu tả -->
+                <h4 style="margin: 20px 0 10px; color: var(--primary-dark);">Adjectives</h4>
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>atmospheric</strong> /ˌæt.məsˈfer.ɪk/: giàu không khí, đậm chất (tạo cảm giác, bầu không khí đặc biệt).</div>
+                    <div class="vocab-item"><strong>beautiful</strong> /ˈbjuː.tɪ.fəl/: đẹp.</div>
+                    <div class="vocab-item"><strong>busy</strong> /ˈbɪz.i/: nhộn nhịp, bận rộn.</div>
+                    <div class="vocab-item"><strong>crowded</strong> /ˈkraʊ.dɪd/: đông đúc.</div>
+                    <div class="vocab-item"><strong>disappointing</strong> /ˌdɪs.əˈpɔɪn.tɪŋ/: gây thất vọng.</div>
+                    <div class="vocab-item"><strong>expensive</strong> /ɪkˈspen.sɪv/: đắt đỏ.</div>
+                    <div class="vocab-item"><strong>impressive</strong> /ɪmˈpres.ɪv/: ấn tượng.</div>
+                    <div class="vocab-item"><strong>peaceful</strong> /ˈpiːs.fəl/: yên bình.</div>
+                    <div class="vocab-item"><strong>remote</strong> /rɪˈməʊt/: hẻo lánh, xa xôi.</div>
+                    <div class="vocab-item"><strong>romantic</strong> /rəʊˈmæn.tɪk/: lãng mạn.</div>
+                    <div class="vocab-item"><strong>spectacular</strong> /spekˈtæk.jə.lər/: ngoạn mục, hùng vĩ.</div>
+                    <div class="vocab-item"><strong>touristy</strong> /ˈtʊə.rɪ.sti/: mang tính chất du lịch (thường có nghĩa tiêu cực: nhiều khách du lịch, kém chân thực).</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 1
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the visitor attractions.</div>
+
+            <div class="word-bank" id="bank-ex1"></div>
+
+            <div class="ex1-grid">
+                <div class="ex1-image-card"><img src="img-pre/module 6a-1.png" alt="1"><div class="ex1-num">1</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-2.png" alt="2"><div class="ex1-num">2</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-3.png" alt="3"><div class="ex1-num">3</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-4.png" alt="4"><div class="ex1-num">4</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-5.png" alt="5"><div class="ex1-num">5</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-6.png" alt="6"><div class="ex1-num">6</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-7.png" alt="7"><div class="ex1-num">7</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-8.png" alt="8"><div class="ex1-num">8</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-9.png" alt="9"><div class="ex1-num">9</div></div>
+                <div class="ex1-image-card"><img src="img-pre/module 6a-10.png" alt="10"><div class="ex1-num">10</div></div>
+            </div>
+
+            <div class="ex1-labels">
+                <div class="ex1-label-row">
+                    <span class="q-num">1.</span><span class="ex1-prefix">f</span>
+                    <span class="drop-slot" id="ex1-q1" data-section="ex1" data-ans="ountain" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q1','ex1')" style="min-width:95px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q1','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h1')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">2.</span><span class="ex1-prefix">a</span>
+                    <span class="drop-slot" id="ex1-q2" data-section="ex1" data-ans="quarium" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q2','ex1')" style="min-width:90px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q2','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h2')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">3.</span><span class="ex1-prefix">m</span>
+                    <span class="drop-slot" id="ex1-q3" data-section="ex1" data-ans="arket" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q3','ex1')" style="min-width:80px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q3','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h3')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">4.</span><span class="ex1-prefix">w</span>
+                    <span class="drop-slot" id="ex1-q4" data-section="ex1" data-ans="ater park" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q4','ex1')" style="min-width:105px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q4','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h4')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">5.</span><span class="ex1-prefix">h</span>
+                    <span class="drop-slot" id="ex1-q5" data-section="ex1" data-ans="arbour" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q5','ex1')" style="min-width:88px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q5','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h5')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">6.</span><span class="ex1-prefix">c</span>
+                    <span class="drop-slot" id="ex1-q6" data-section="ex1" data-ans="astle" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q6','ex1')" style="min-width:80px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q6','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h6')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">7.</span><span class="ex1-prefix">c</span>
+                    <span class="drop-slot" id="ex1-q7" data-section="ex1" data-ans="athedral" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q7','ex1')" style="min-width:100px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q7','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h7')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">8.</span><span class="ex1-prefix">s</span>
+                    <span class="drop-slot" id="ex1-q8" data-section="ex1" data-ans="tatue" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q8','ex1')" style="min-width:80px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q8','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h8')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">9.</span><span class="ex1-prefix">r</span>
+                    <span class="drop-slot" id="ex1-q9" data-section="ex1" data-ans="uins" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q9','ex1')" style="min-width:72px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q9','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h9')">i</button>
+                    </span>
+                </div>
+                <div class="ex1-label-row">
+                    <span class="q-num">10.</span><span class="ex1-prefix">t</span>
+                    <span class="drop-slot" id="ex1-q10" data-section="ex1" data-ans="emple" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex1')" onclick="handleSlotClick('ex1-q10','ex1')" style="min-width:82px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex1-q10','ex1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex1-h10')">i</button>
+                    </span>
+                </div>
+            </div>
+
+            <div class="hint-box" id="ex1-h1-hint"><strong>Đáp án:</strong> <span class="key-word">fountain</span><br><strong>Giải thích:</strong> Hình 1 là đài phun nước — cấu trúc phun nước lên cao, thường ở quảng trường hoặc công viên.</div>
+            <div class="hint-box" id="ex1-h2-hint"><strong>Đáp án:</strong> <span class="key-word">aquarium</span><br><strong>Giải thích:</strong> Hình 2 là thủy cung — nơi trưng bày cá mập và sinh vật biển trong bể kính khổng lồ.</div>
+            <div class="hint-box" id="ex1-h3-hint"><strong>Đáp án:</strong> <span class="key-word">market</span><br><strong>Giải thích:</strong> Hình 3 là chợ — khu mua bán ngoài trời với nhiều hàng hóa và ô che.</div>
+            <div class="hint-box" id="ex1-h4-hint"><strong>Đáp án:</strong> <span class="key-word">water park</span><br><strong>Giải thích:</strong> Hình 4 là công viên nước — có cầu trượt nước và bể bơi vui chơi.</div>
+            <div class="hint-box" id="ex1-h5-hint"><strong>Đáp án:</strong> <span class="key-word">harbour</span><br><strong>Giải thích:</strong> Hình 5 là bến cảng — vùng nước được bảo vệ nơi thuyền bè neo đậu.</div>
+            <div class="hint-box" id="ex1-h6-hint"><strong>Đáp án:</strong> <span class="key-word">castle</span><br><strong>Giải thích:</strong> Hình 6 là lâu đài — tòa nhà cổ kiên cố thời Trung cổ.</div>
+            <div class="hint-box" id="ex1-h7-hint"><strong>Đáp án:</strong> <span class="key-word">cathedral</span><br><strong>Giải thích:</strong> Hình 7 là nhà thờ lớn — công trình tôn giáo nguy nga với tháp nhọn Gothic.</div>
+            <div class="hint-box" id="ex1-h8-hint"><strong>Đáp án:</strong> <span class="key-word">statue</span><br><strong>Giải thích:</strong> Hình 8 là tượng đài — hình tượng người tạc bằng đá hoặc kim loại để kỷ niệm.</div>
+            <div class="hint-box" id="ex1-h9-hint"><strong>Đáp án:</strong> <span class="key-word">ruins</span><br><strong>Giải thích:</strong> Hình 9 là phế tích — tàn tích còn lại của công trình cổ xưa, thường là cổng vòm đá.</div>
+            <div class="hint-box" id="ex1-h10-hint"><strong>Đáp án:</strong> <span class="key-word">temple</span><br><strong>Giải thích:</strong> Hình 10 là ngôi đền — công trình tôn giáo Á Đông với nhiều tầng mái cong.</div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 2
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Answer the questions with the words below.</div>
+
+            <div class="word-bank" id="bank-ex2"></div>
+
+            <div class="desc-bar">Where can you …</div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">1.</span>
+                    <span class="q-text">enjoy nature and see exotic plants?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q1" data-section="ex2" data-ans="national park" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q1','ex2')" style="min-width:130px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q1','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h1')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h1-hint"><strong>Đáp án:</strong> <span class="key-word">national park</span><br><strong>Giải thích:</strong> Vườn quốc gia là nơi bảo tồn thiên nhiên — bạn có thể ngắm cảnh quan và các loài thực vật ngoại lai.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">2.</span>
+                    <span class="q-text">learn about interesting old objects?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q2" data-section="ex2" data-ans="museum" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q2','ex2')" style="min-width:100px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q2','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h2')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h2-hint"><strong>Đáp án:</strong> <span class="key-word">museum</span><br><strong>Giải thích:</strong> Bảo tàng là nơi trưng bày các hiện vật lịch sử và văn hóa quý giá.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">3.</span>
+                    <span class="q-text">see where members of the royal family live?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q3" data-section="ex2" data-ans="palace" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q3','ex2')" style="min-width:90px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q3','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h3')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h3-hint"><strong>Đáp án:</strong> <span class="key-word">palace</span><br><strong>Giải thích:</strong> Cung điện là nơi ở chính thức của hoàng gia — vua, hoàng hậu và gia đình hoàng tộc.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">4.</span>
+                    <span class="q-text">go on exciting rides?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q4" data-section="ex2" data-ans="theme park" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q4','ex2')" style="min-width:112px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q4','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h4')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h4-hint"><strong>Đáp án:</strong> <span class="key-word">theme park</span><br><strong>Giải thích:</strong> Công viên giải trí theo chủ đề có các trò chơi cảm giác mạnh như tàu lượn siêu tốc.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">5.</span>
+                    <span class="q-text">get a great view of a city?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q5" data-section="ex2" data-ans="tower" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q5','ex2')" style="min-width:80px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q5','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h5')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h5-hint"><strong>Đáp án:</strong> <span class="key-word">tower</span><br><strong>Giải thích:</strong> Tháp thường có đài quan sát trên cao, cho phép ngắm toàn cảnh thành phố.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">6.</span>
+                    <span class="q-text">see fish and sharks?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q6" data-section="ex2" data-ans="aquarium" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q6','ex2')" style="min-width:100px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q6','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h6')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h6-hint"><strong>Đáp án:</strong> <span class="key-word">aquarium</span><br><strong>Giải thích:</strong> Thủy cung là nơi nuôi cá mập và sinh vật biển trong các bể kính khổng lồ.</div>
+            </div>
+
+            <div class="question-row">
+                <div class="question-line">
+                    <span class="q-label">7.</span>
+                    <span class="q-text">see unusual trees, plants and flowers?</span>
+                </div>
+                <div class="answer-line">
+                    <span class="drop-slot" id="ex2-q7" data-section="ex2" data-ans="botanical gardens" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')" onclick="handleSlotClick('ex2-q7','ex2')" style="min-width:155px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex2-q7','ex2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex2-h7')">i</button>
+                    </span>
+                </div>
+                <div class="hint-box" id="ex2-h7-hint"><strong>Đáp án:</strong> <span class="key-word">botanical gardens</span><br><strong>Giải thích:</strong> Vườn thực vật là nơi trồng và trưng bày các loài cây, hoa và thực vật hiếm gặp từ khắp nơi trên thế giới.</div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         LISTENING — SPLIT SCREEN for EX3
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex3">
+
+            <div class="transcript-panel" id="transcript-panel-ex3">
+                <h2 style="margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">Listening Script 1.21</h2>
+
+                <div class="speaker-line">
+                    <strong>1.</strong><br>
+                    Woman: I'd like to book an excursion.<br>
+                    Tourist information officer: Of course. Do you know which one you're interested in?<br>
+                    W: Well, my husband and I both like history, so we thought maybe the castle … <span class="highlightable" id="t1-atmospheric">I imagine it's quite atmospheric?</span><br>
+                    TIO: Yes, it is. There's also a night-time excursion to the Roman ruins.<br>
+                    W: A night-time excursion? At night?<br>
+                    TIO: Yes. <span class="highlightable" id="t1-spectacular">The ruins are far more spectacular at night.</span><br>
+                    W: No, no. I like to be in bed by 9 o'clock. <span class="highlightable" id="t1-castle-decision">The castle sounds much better.</span>
+                </div>
+
+                <div class="speaker-line">
+                    <strong>2.</strong><br>
+                    Man: Hi. I'm interested in booking an excursion for tomorrow.<br>
+                    TIO: Certainly. What did you have in mind?<br>
+                    M: Well, <span class="highlightable" id="t2-beautiful">the market looks beautiful.</span> And I want to see the harbour too.<br>
+                    TIO: Well, I suggest going to the market tomorrow.<br>
+                    M: Really? Why's that?<br>
+                    TIO: Tomorrow is Friday. <span class="highlightable" id="t2-crowded">The market isn't as crowded on Fridays.</span> At weekends, it's really busy – too busy, in my opinion.<br>
+                    M: <span class="highlightable" id="t2-market-decision">OK. Thanks for the advice. I'll go to the market.</span>
+                </div>
+
+                <div class="speaker-line">
+                    <strong>3.</strong><br>
+                    Woman: Can I book an excursion, please?<br>
+                    TIO: Yes, certainly. Which one are you thinking of?<br>
+                    W: Well, I went to this temple twenty years ago. I'd really like to see it again.<br>
+                    TIO: No problem. Twenty years ago, eh? It's probably a bit different now.<br>
+                    W: Really? In what way?<br>
+                    TIO: <span class="highlightable" id="t3-touristy">All the temples are more touristy these days.</span><br>
+                    W: Yes, yes. I suppose so.<br>
+                    TIO: <span class="highlightable" id="t3-expensive">And the excursion is quite expensive, I'm afraid: £30.</span><br>
+                    W: <span class="highlightable" id="t3-temple-decision">But I'd like to go there anyway.</span>
+                </div>
+
+                <div class="speaker-line">
+                    <strong>4.</strong><br>
+                    Man: Oh, hello. Can I ask about your excursion to the harbour?<br>
+                    TIO: Yes, of course. What would you like to know?<br>
+                    M: Well, there's a morning excursion and one in the evening. Which do you recommend?<br>
+                    TIO: They're both great. <span class="highlightable" id="t4-busy">The evening excursion is much less busy.</span><br>
+                    M: I see.<br>
+                    TIO: <span class="highlightable" id="t4-romantic">And it's more romantic, in my opinion.</span><br>
+                    M: <span class="highlightable" id="t4-harbour-decision">OK. I'll go for the evening excursion.</span>
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="resizer-ex3"></div>
+
+            <div class="main-exercise-panel">
+                <div class="exercise-card">
+                    <div class="exercise-title">3. 🎧 1.21 Listen to four tourists booking excursions. Which type of attraction from exercises 1 and 2 does each tourist decide to visit?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex3')">📜 Transcript</button>
+                    <div class="audio-player-container">
+                        <audio controls><source src="audio-pre/1_Track21.mp3" type="audio/mpeg"></audio>
+                    </div>
+
+                    <div class="tourist-row">
+                        <span class="tourist-label">Tourist 1</span>
+                        <input type="text" id="ex3-1" data-ans="castle" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex3-1')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event,'t1-castle-decision','ex3-1-hint','transcript-panel-ex3')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex3-1-hint" style="width:100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">castle</span><br><br>
+                            <strong>Bằng chứng:</strong> <em>"The castle sounds much better."</em><br><br>
+                            <strong>Giải thích:</strong> Người phụ nữ và chồng đều thích lịch sử. Dù TIO giới thiệu thêm chuyến ban đêm tới phế tích La Mã, cô từ chối vì muốn ngủ sớm. Cuối cùng cô chọn <strong>lâu đài</strong>.
+                        </div>
+                    </div>
+
+                    <div class="tourist-row">
+                        <span class="tourist-label">Tourist 2</span>
+                        <input type="text" id="ex3-2" data-ans="market" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex3-2')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event,'t2-market-decision','ex3-2-hint','transcript-panel-ex3')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex3-2-hint" style="width:100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">market</span><br><br>
+                            <strong>Bằng chứng:</strong> <em>"OK. Thanks for the advice. I'll go to the market."</em><br><br>
+                            <strong>Giải thích:</strong> Người đàn ông muốn thăm chợ và bến cảng, nhưng TIO khuyên đi <strong>chợ</strong> vào thứ Sáu vì ít đông hơn cuối tuần.
+                        </div>
+                    </div>
+
+                    <div class="tourist-row">
+                        <span class="tourist-label">Tourist 3</span>
+                        <input type="text" id="ex3-3" data-ans="temple" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex3-3')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event,'t3-temple-decision','ex3-3-hint','transcript-panel-ex3')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex3-3-hint" style="width:100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">temple</span><br><br>
+                            <strong>Bằng chứng:</strong> <em>"But I'd like to go there anyway."</em><br><br>
+                            <strong>Giải thích:</strong> Người phụ nữ từng đến <strong>ngôi đền</strong> này 20 năm trước. Dù TIO cảnh báo nay touristy hơn và đắt (£30), cô vẫn quyết định đi.
+                        </div>
+                    </div>
+
+                    <div class="tourist-row">
+                        <span class="tourist-label">Tourist 4</span>
+                        <input type="text" id="ex3-4" data-ans="harbour" class="task5-input" oninput="adjustWidth(this)">
+                        <button class="eye-btn" onclick="showInputAns('ex3-4')">👁️</button>
+                        <span style="font-weight:bold;margin:0 4px;">Time:</span>
+                        <input type="text" id="ex3-4-time" data-ans="evening" class="task5-input" oninput="adjustWidth(this)">
+                        <button class="eye-btn" onclick="showInputAns('ex3-4-time')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint(event,'t4-harbour-decision','ex3-4-hint','transcript-panel-ex3')">i</button>
+                        <div class="hint-box" id="ex3-4-hint" style="width:100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">harbour</span> — Time: <span class="key-word">evening</span><br><br>
+                            <strong>Bằng chứng:</strong> <em>"OK. I'll go for the evening excursion."</em><br><br>
+                            <strong>Giải thích:</strong> Người đàn ông hỏi về <strong>bến cảng</strong>. TIO khuyên chọn buổi tối vì ít đông (much less busy) và lãng mạn hơn (more romantic).
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         LISTENING — SPLIT SCREEN for EX4
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex4" style="margin-top:30px;">
+
+            <div class="transcript-panel" id="transcript-panel-ex4">
+                <h2 style="margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">Listening Script 1.21</h2>
+
+                <div class="speaker-line">
+                    <strong>1.</strong><br>
+                    Woman: I'd like to book an excursion.<br>
+                    Tourist information officer: Of course. Do you know which one you're interested in?<br>
+                    W: Well, my husband and I both like history, so we thought maybe the castle … <span class="highlightable" id="t1-atmospheric-ex4">I imagine it's quite atmospheric?</span><br>
+                    TIO: Yes, it is. There's also a night-time excursion to the Roman ruins.<br>
+                    W: A night-time excursion? At night?<br>
+                    TIO: Yes. <span class="highlightable" id="t1-spectacular-ex4">The ruins are far more spectacular at night.</span><br>
+                    W: No, no. I like to be in bed by 9 o'clock. The castle sounds much better.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>2.</strong><br>
+                    Man: Hi. I'm interested in booking an excursion for tomorrow.<br>
+                    TIO: Certainly. What did you have in mind?<br>
+                    M: Well, <span class="highlightable" id="t2-beautiful-ex4">the market looks beautiful.</span> And I want to see the harbour too.<br>
+                    TIO: Well, I suggest going to the market tomorrow.<br>
+                    M: Really? Why's that?<br>
+                    TIO: Tomorrow is Friday. <span class="highlightable" id="t2-crowded-ex4">The market isn't as crowded on Fridays.</span> At weekends, it's really busy – too busy, in my opinion.<br>
+                    M: OK. Thanks for the advice. I'll go to the market.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>3.</strong><br>
+                    Woman: Can I book an excursion, please?<br>
+                    TIO: Yes, certainly. Which one are you thinking of?<br>
+                    W: Well, I went to this temple twenty years ago. I'd really like to see it again.<br>
+                    TIO: No problem. Twenty years ago, eh? It's probably a bit different now.<br>
+                    W: Really? In what way?<br>
+                    TIO: <span class="highlightable" id="t3-touristy-ex4">All the temples are more touristy these days.</span><br>
+                    W: Yes, yes. I suppose so.<br>
+                    TIO: <span class="highlightable" id="t3-expensive-ex4">And the excursion is quite expensive, I'm afraid: £30.</span><br>
+                    W: But I'd like to go there anyway.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>4.</strong><br>
+                    Man: Oh, hello. Can I ask about your excursion to the harbour?<br>
+                    TIO: Yes, of course. What would you like to know?<br>
+                    M: Well, there's a morning excursion and one in the evening. Which do you recommend?<br>
+                    TIO: They're both great. <span class="highlightable" id="t4-busy-ex4">The evening excursion is much less busy.</span><br>
+                    M: I see.<br>
+                    TIO: <span class="highlightable" id="t4-romantic-ex4">And it's more romantic, in my opinion.</span><br>
+                    M: OK. I'll go for the evening excursion.
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="resizer-ex4"></div>
+
+            <div class="main-exercise-panel">
+                <div class="exercise-card" id="exercise-4-card">
+                    <div class="exercise-title">4. 🎧 1.21 Listen again. Complete the sentences with the adjectives below. There are four extra adjectives.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex4')">📜 Transcript</button>
+                    <div class="audio-player-container">
+                        <audio controls><source src="audio-pre/1_Track21.mp3" type="audio/mpeg"></audio>
+                    </div>
+                    <div class="word-bank" id="bank-ex4"></div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="access-core.js"></script>
+    <script>
+        const ex1Words = ["ountain", "quarium", "arket", "ater park", "arbour", "astle", "athedral", "tatue", "uins", "emple"];
+        const ex2Words = ["aquarium", "botanical gardens", "museum", "national park", "palace", "theme park", "tower"];
+        const ex4Words = ["atmospheric", "beautiful", "busy", "crowded", "disappointing", "expensive", "impressive", "peaceful", "remote", "romantic", "spectacular", "touristy"];
+        const ex4Data = [
+            { label: "1 a", ans: "atmospheric", target: "t1-atmospheric-ex4", sentence: "I imagine it's quite [INPUT].", hint: "<strong>Đáp án:</strong> <span class='key-word'>atmospheric</span><br><br><strong>Bằng chứng:</strong> <em>\"I imagine it's quite atmospheric?\"</em><br><br><strong>Giải thích:</strong> <em>Atmospheric</em> (có không khí đặc biệt) — người phụ nữ dùng để mô tả cảm giác huyền bí của lâu đài.<br><strong>Cấu trúc:</strong> <em>quite + adj</em> = khá, tương đối." },
+            { label: "1 b", ans: "spectacular", target: "t1-spectacular-ex4", sentence: "The ruins are far more [INPUT] at night.", hint: "<strong>Đáp án:</strong> <span class='key-word'>spectacular</span><br><br><strong>Bằng chứng:</strong> <em>\"The ruins are far more spectacular at night.\"</em><br><br><strong>Giải thích:</strong> <em>Spectacular</em> (ngoạn mục) — TIO nhấn mạnh phế tích đẹp hơn nhiều khi được chiếu sáng ban đêm.<br><strong>Cấu trúc:</strong> <em>far more + adj</em> = nhấn mạnh mức so sánh hơn." },
+            { label: "2 a", ans: "beautiful", target: "t2-beautiful-ex4", sentence: "The market looks [INPUT].", hint: "<strong>Đáp án:</strong> <span class='key-word'>beautiful</span><br><br><strong>Bằng chứng:</strong> <em>\"the market looks beautiful\"</em><br><br><strong>Giải thích:</strong> <em>Beautiful</em> (đẹp) — người đàn ông dùng để mô tả vẻ hấp dẫn của khu chợ.<br><strong>Cấu trúc:</strong> <em>look + adj</em> = trông có vẻ…" },
+            { label: "2 b", ans: "crowded", target: "t2-crowded-ex4", sentence: "The market isn't as [INPUT] on Fridays.", hint: "<strong>Đáp án:</strong> <span class='key-word'>crowded</span><br><br><strong>Bằng chứng:</strong> <em>\"The market isn't as crowded on Fridays.\"</em><br><br><strong>Giải thích:</strong> <em>Crowded</em> (đông đúc) — TIO giải thích chợ ít đông hơn vào thứ Sáu.<br><strong>Cấu trúc:</strong> <em>not as + adj + as</em> = không … bằng." },
+            { label: "3 a", ans: "touristy", target: "t3-touristy-ex4", sentence: "All the temples are more [INPUT] these days.", hint: "<strong>Đáp án:</strong> <span class='key-word'>touristy</span><br><br><strong>Bằng chứng:</strong> <em>\"All the temples are more touristy these days.\"</em><br><br><strong>Giải thích:</strong> <em>Touristy</em> (nhiều khách du lịch, thương mại hóa) — TIO nói đền đã thay đổi nhiều so với 20 năm trước. Từ này thường mang nghĩa hơi tiêu cực." },
+            { label: "3 b", ans: "expensive", target: "t3-expensive-ex4", sentence: "The excursion is quite [INPUT], I'm afraid: £30.", hint: "<strong>Đáp án:</strong> <span class='key-word'>expensive</span><br><br><strong>Bằng chứng:</strong> <em>\"the excursion is quite expensive, I'm afraid: £30\"</em><br><br><strong>Giải thích:</strong> <em>Expensive</em> (đắt tiền) — TIO cảnh báo lịch thiệp bằng cụm <em>I'm afraid</em> trước khi thông báo giá £30." },
+            { label: "4 a", ans: "busy", target: "t4-busy-ex4", sentence: "The evening excursion is much less [INPUT].", hint: "<strong>Đáp án:</strong> <span class='key-word'>busy</span><br><br><strong>Bằng chứng:</strong> <em>\"The evening excursion is much less busy.\"</em><br><br><strong>Giải thích:</strong> <em>Busy</em> (đông đúc) — TIO so sánh: chuyến buổi tối ít đông hơn nhiều so với buổi sáng.<br><strong>Cấu trúc:</strong> <em>much less + adj</em> = ít hơn nhiều." },
+            { label: "4 b", ans: "romantic", target: "t4-romantic-ex4", sentence: "It's more [INPUT], in my opinion.", hint: "<strong>Đáp án:</strong> <span class='key-word'>romantic</span><br><br><strong>Bằng chứng:</strong> <em>\"it's more romantic, in my opinion\"</em><br><br><strong>Giải thích:</strong> <em>Romantic</em> (lãng mạn) — TIO chia sẻ ý kiến cá nhân bằng cụm <em>in my opinion</em>: chuyến buổi tối ra cảng lãng mạn hơn." }
+        ];
+
+        let activeWord = null, activeSection = null;
+        let dragWord = null, dragSection = null;
+
+        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+        function initWordBank(bankId, words, section) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = words.map(w =>
+                `<div class="word-item" draggable="true" id="word-${section}-${safeId(w)}" ondragstart="handleDragStart(event,'${section}')" onclick="handleWordClick(this,'${section}')">${w}</div>`
+            ).join('');
+        }
+
+        function handleDragStart(e, section) {
+            dragWord = e.target.innerText.trim();
+            dragSection = section;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord);
+        }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.target.classList.add('over'); }
+        function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+        function handleDrop(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            if (section !== dragSection) return;
+            placeWord(slot.id, e.dataTransfer.getData('text/plain'), section);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord = null; dragSection = null;
+        }
+
+        function handleWordClick(el, section) {
+            if (section !== activeSection) document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+            if (el.classList.contains('used')) return;
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord = null; activeSection = null;
+            } else {
+                document.querySelectorAll(`.word-item[id^="word-${section}-"]`).forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord = el.innerText.trim();
+                activeSection = section;
+            }
+        }
+
+        function handleSlotClick(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            if (activeWord && activeSection === section) {
+                placeWord(slotId, activeWord, section);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord = null; activeSection = null;
+            } else if (slot.innerText.trim()) {
+                removeWord(slotId, section);
+            }
+        }
+
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const oldWord = slot.innerText.trim();
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.innerText.trim() === word && s.id !== slotId) {
+                    s.innerText = '';
+                    s.classList.remove('filled','correct','incorrect-marked');
+                }
+            });
+            if (oldWord) {
+                const oldEl = document.getElementById(`word-${section}-${safeId(oldWord)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct','incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.innerText.trim();
+            if (!word) return;
+            slot.innerText = '';
+            slot.classList.remove('filled','correct','incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function showSingleAns(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans.split('|')[0];
+            if (slot.innerText.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, section);
+            } else {
+                placeWord(slotId, ans, section);
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
+            }
+        }
+
+        function showInputAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans;
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = ''; el.classList.remove('correct');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const visible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!visible) h.style.display = 'block';
+        }
+
+        function showReadingHint(event, targetId, hintBoxId, panelId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const visible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!visible) {
+                h.style.display = 'block';
+                toggleTranscript(panelId, true);
+                const txt = document.getElementById(targetId);
+                if (txt) {
+                    txt.classList.add('active-highlight');
+                    setTimeout(() => txt.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                }
+            }
+        }
+
+        function toggleTranscript(panelId, forceOpen = false) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (forceOpen) { panel.classList.add('active'); return; }
+            panel.classList.toggle('active');
+        }
+
+        function toggleCustomVocab() {
+            const c = document.getElementById('vocabContent');
+            const i = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') { c.style.display = 'none'; i.textContent = '▼'; }
+            else { c.style.display = 'block'; i.textContent = '▲'; }
+        }
+
+        function renderEx4() {
+            const container = document.getElementById('questions-ex4');
+            ex4Data.forEach((it, idx) => {
+                const qid = `ex4-${idx + 1}`;
+                const slotHtml = `<span class="drop-slot" id="${qid}" data-section="ex4" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex4')" onclick="handleSlotClick('${qid}','ex4')" style="min-width:110px;"></span>`;
+                const sentenceHtml = it.sentence.replace('[INPUT]', slotHtml);
+                container.innerHTML += `
+                <div class="ex4-row">
+                    <span class="ex4-label">${it.label}.</span>
+                    <span style="flex:1;line-height:2.5;">${sentenceHtml}</span>
+                    <span class="row-btns" style="flex-shrink:0;">
+                        <button class="eye-btn"  onclick="showSingleAns('${qid}','ex4')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','transcript-panel-ex4')">i</button>
+                    </span>
+                    <div class="hint-box" id="${qid}-hint" style="width:100%;">${it.hint}</div>
+                </div>`;
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1' || prefix === 'ex2' || prefix === 'ex4') {
+                document.querySelectorAll(`.drop-slot[data-section="${prefix}"]`).forEach(slot => {
+                    const ans = slot.dataset.ans.split('|')[0];
+                    placeWord(slot.id, ans, prefix);
+                    slot.classList.add('correct');
+                });
+            } else if (prefix === 'ex3') {
+                ['ex3-1','ex3-2','ex3-3','ex3-4','ex3-4-time'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    adjustWidth(el);
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1' || prefix === 'ex2' || prefix === 'ex4') {
+                document.querySelectorAll(`.drop-slot[data-section="${prefix}"]`).forEach(slot => removeWord(slot.id, prefix));
+            } else if (prefix === 'ex3') {
+                ['ex3-1','ex3-2','ex3-3','ex3-4','ex3-4-time'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.value = ''; el.classList.remove('correct','incorrect-marked'); adjustWidth(el);
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            el.style.width = Math.max((el.value || '').length * 12 + 40, 80) + 'px';
+        }
+
+        function checkAll() {
+            document.querySelectorAll('input[type="text"]').forEach(el => {
+                if (!el.value.trim()) return;
+                const ok = el.value.trim().toLowerCase() === el.dataset.ans.toLowerCase();
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+            document.querySelectorAll('.drop-slot[data-section="ex1"],.drop-slot[data-section="ex2"],.drop-slot[data-section="ex4"]').forEach(slot => {
+                if (!slot.innerText.trim()) return;
+                const ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initWordBank('bank-ex1', ex1Words, 'ex1');
+            initWordBank('bank-ex2', ex2Words, 'ex2');
+            renderEx4();
+            initWordBank('bank-ex4', ex4Words, 'ex4');
+            setTimeout(() => document.querySelectorAll('input.task5-input').forEach(adjustWidth), 50);
+            document.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); checkAll(); } });
+
+            const resizerEx3 = document.getElementById('resizer-ex3');
+            const panelEx3 = document.getElementById('transcript-panel-ex3');
+            let resizingEx3 = false;
+            if (resizerEx3 && panelEx3) {
+                resizerEx3.addEventListener('mousedown', () => resizingEx3 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx3) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx3.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx3 = false);
+            }
+
+            const resizerEx4 = document.getElementById('resizer-ex4');
+            const panelEx4 = document.getElementById('transcript-panel-ex4');
+            let resizingEx4 = false;
+            if (resizerEx4 && panelEx4) {
+                resizerEx4.addEventListener('mousedown', () => resizingEx4 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx4) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx4.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx4 = false);
+            }
+        });
+    </script>
+</body>
+</html>
