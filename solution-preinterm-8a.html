@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 8A Crimes and criminals</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ── Split-screen transcript layout ── */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: visible;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #fefcf7);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-right: 0px solid var(--glass-border);
+            border-top-left-radius: 11px;
+            border-bottom-left-radius: 11px;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+            border-radius: 11px;
+        }
+
+        /* ── Word Bank & Drag-Drop ── */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-medium);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            justify-content: center;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* ── Image grid for Ex 2 ── */
+        .ex2-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .ex2-card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ex2-image-card {
+            position: relative;
+            height: 200px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: #fff;
+            margin-bottom: 15px;
+        }
+
+        .ex2-image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .ex2-num {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(13, 148, 136, 0.85);
+            padding: 2px 10px;
+            border-radius: 12px;
+            z-index: 2;
+        }
+
+        /* ── Ex 1 Table completion ── */
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .vocab-table th,
+        .vocab-table td {
+            padding: 12px 15px;
+            border: 1px solid var(--glass-border);
+            text-align: left;
+            font-size: 1.05rem;
+        }
+
+        .vocab-table th {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 700;
+            width: 50%;
+        }
+
+        /* ── Text inputs ── */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            text-align: center;
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 80px;
+            field-sizing: content;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* ── Hint boxes ── */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            margin-top: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .inline-hint {
+            display: none;
+            position: absolute;
+            top: 105%;
+            left: 0;
+            z-index: 1000;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            width: 280px;
+            white-space: normal;
+        }
+
+        .hint-box strong,
+        .inline-hint strong {
+            color: var(--primary-dark);
+        }
+
+        .hint-box em,
+        .inline-hint em {
+            color: var(--accent);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .key-word {
+            color: var(--primary);
+            font-weight: bold;
+            background: var(--primary-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── Row buttons ── */
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        /* ── Inline input group ── */
+        .inline-input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        /* ── Highlight in transcript ── */
+        .highlightable {
+            transition: background-color 0.3s;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ── Audio player ── */
+        .audio-player-container {
+            margin: 10px 0 20px;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        /* ── Transcript toggle button ── */
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ── Speaker lines in transcript ── */
+        .speaker-line {
+            margin-bottom: 22px;
+            display: block;
+            line-height: 1.85;
+        }
+
+        /* ── Vocab reference ── */
+        .custom-vocab-container {
+            margin-bottom: 32px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+
+        .custom-vocab-header {
+            background: var(--primary-light);
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-vocab-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .custom-vocab-content {
+            display: none;
+            padding: 18px 20px;
+        }
+
+        .vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 9px;
+        }
+
+        .vocab-item {
+            padding: 9px 13px;
+            background: var(--card-bg);
+            border-radius: 9px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.93rem;
+            color: var(--text);
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+        }
+
+        /* ── Dialogue lines for Ex 5 ── */
+        .dialogue-box {
+            background: var(--bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 20px;
+            line-height: 2.3;
+            font-size: 1.05rem;
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* ── Ex 3 list layout ── */
+        .ex3-row {
+            margin-bottom: 12px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .ex2-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reading-split-container {
+                flex-direction: column;
+            }
+
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">8A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary</div>
+                <h1>Crimes and criminals</h1>
+                <p class="subtitle">I can describe different crimes.</p>
+            </div>
+        </div>
+
+        <!-- Vocabulary Reference -->
+        <div class="custom-vocab-container">
+            <div class="custom-vocab-header" onclick="toggleCustomVocab()">
+                <h3>Vocabulary Reference: Crimes and criminals</h3>
+                <span id="vocabIcon" style="font-size:1.1rem;">▼</span>
+            </div>
+            <div class="custom-vocab-content" id="vocabContent">
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>arson</strong>: sự phóng hỏa (crime)</div>
+                    <div class="vocab-item"><strong>arsonist</strong>: kẻ phóng hỏa (criminal)</div>
+                    <div class="vocab-item"><strong>burglary</strong>: vụ trộm bẻ khóa đột nhập (crime)</div>
+                    <div class="vocab-item"><strong>burglar</strong>: kẻ trộm bẻ khóa đột nhập (criminal)</div>
+                    <div class="vocab-item"><strong>drug-dealing</strong>: việc mua bán ma túy (crime)</div>
+                    <div class="vocab-item"><strong>drug dealer</strong>: kẻ bán ma túy (criminal)</div>
+                    <div class="vocab-item"><strong>murder</strong>: vụ giết người, án mạng (crime)</div>
+                    <div class="vocab-item"><strong>murderer</strong>: kẻ sát nhân, kẻ giết người (criminal)</div>
+                    <div class="vocab-item"><strong>mugging</strong>: vụ trấn lột, cướp giật trên đường phố (crime)</div>
+                    <div class="vocab-item"><strong>mugger</strong>: kẻ trấn lột, cướp giật (criminal)</div>
+                    <div class="vocab-item"><strong>robbery</strong>: vụ cướp (ngân hàng, cửa hàng...) (crime)</div>
+                    <div class="vocab-item"><strong>robber</strong>: kẻ cướp (criminal)</div>
+                    <div class="vocab-item"><strong>shoplifting</strong>: việc trộm cắp ở cửa hàng (crime)</div>
+                    <div class="vocab-item"><strong>shoplifter</strong>: kẻ trộm cắp ở cửa hàng (criminal)</div>
+                    <div class="vocab-item"><strong>smuggling</strong>: sự buôn lậu (crime)</div>
+                    <div class="vocab-item"><strong>smuggler</strong>: kẻ buôn lậu (criminal)</div>
+                    <div class="vocab-item"><strong>theft</strong>: vụ trộm cắp nói chung (crime)</div>
+                    <div class="vocab-item"><strong>thief</strong> (plural: <strong>thieves</strong>): kẻ trộm (criminal)</div>
+                    <div class="vocab-item"><strong>vandalism</strong>: hành vi phá hoại tài sản công (crime)</div>
+                    <div class="vocab-item"><strong>vandal</strong>: kẻ phá hoại tài sản công (criminal)</div>
+                </div>
+
+                <h4 style="margin: 20px 0 10px; color: var(--primary-dark);">Verbs of Crime</h4>
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>break into</strong>: đột nhập trái phép vào nhà/phòng</div>
+                    <div class="vocab-item"><strong>deal (drugs)</strong>: mua bán, giao dịch ma túy</div>
+                    <div class="vocab-item"><strong>kill</strong>: giết, sát hại ai đó</div>
+                    <div class="vocab-item"><strong>mug</strong>: trấn lột, cướp đồ của ai đó trên đường phố</div>
+                    <div class="vocab-item"><strong>rob</strong>: cướp tài sản từ một địa điểm hoặc một người</div>
+                    <div class="vocab-item"><strong>set fire to</strong>: phóng hỏa, cố ý đốt cháy một thứ gì đó</div>
+                    <div class="vocab-item"><strong>smuggle</strong>: buôn lậu hàng hóa qua biên giới trái phép</div>
+                    <div class="vocab-item"><strong>steal</strong>: lấy trộm tài sản của người khác</div>
+                    <div class="vocab-item"><strong>vandalise</strong>: cố ý đập phá hoặc làm hư hại tài sản công cộng</div>
+                </div>
+
+                <h4 style="margin: 20px 0 10px; color: var(--primary-dark);">Verb + Noun Collocations</h4>
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>launch an investigation</strong>: mở cuộc điều tra</div>
+                    <div class="vocab-item"><strong>study CCTV footage</strong>: nghiên cứu hình ảnh từ camera giám sát</div>
+                    <div class="vocab-item"><strong>identify the culprits</strong>: xác định danh tính thủ phạm</div>
+                    <div class="vocab-item"><strong>appeal for witnesses</strong>: kêu gọi nhân chứng cung cấp thông tin</div>
+                    <div class="vocab-item"><strong>patrol the area</strong>: tuần tra khu vực</div>
+                    <div class="vocab-item"><strong>interview suspects</strong>: phỏng vấn các nghi phạm</div>
+                    <div class="vocab-item"><strong>search a house</strong>: khám xét một ngôi nhà</div>
+                    <div class="vocab-item"><strong>make an arrest</strong>: thực hiện lệnh bắt giữ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 1 — TABLE COMPLETION
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete the table with the correct words.</div>
+
+            <table class="vocab-table">
+                <thead>
+                    <tr>
+                        <th>Crimes</th>
+                        <th>Criminals</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">1.</span>
+                            <input type="text" id="ex1-q1" data-ans="drug-dealing" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q1')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q1')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q1-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">drug-dealing</span><br><br>
+                                <strong>Giải thích:</strong> Danh từ chỉ hành vi tội phạm mua bán ma túy. Danh từ chỉ tội phạm tương ứng là <em>drug dealer</em>.
+                            </div>
+                        </td>
+                        <td>drug dealer</td>
+                    </tr>
+                    <tr>
+                        <td>murder</td>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">2.</span>
+                            <input type="text" id="ex1-q2" data-ans="murderer" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q2')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q2')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q2-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">murderer</span><br><br>
+                                <strong>Giải thích:</strong> Danh từ chỉ kẻ giết người/sát nhân. Tương ứng với tội danh giết người <em>murder</em>.
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">3.</span>
+                            <input type="text" id="ex1-q3" data-ans="robbery" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q3')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q3')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q3-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">robbery</span><br><br>
+                                <strong>Giải thích:</strong> Tội danh cướp tài sản (thường dùng cho các vụ cướp ngân hàng, cửa hàng). Tương ứng với kẻ cướp là <em>robber</em>.
+                            </div>
+                        </td>
+                        <td>robber</td>
+                    </tr>
+                    <tr>
+                        <td>shoplifting</td>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">4.</span>
+                            <input type="text" id="ex1-q4" data-ans="shoplifter" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q4')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q4')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q4-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">shoplifter</span><br><br>
+                                <strong>Giải thích:</strong> Kẻ trộm cắp vặt hàng hóa tại các cửa hàng hay siêu thị. Tương ứng với tội danh trộm cửa hàng là <em>shoplifting</em>.
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">5.</span>
+                            <input type="text" id="ex1-q5" data-ans="smuggling" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q5')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q5-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">smuggling</span><br><br>
+                                <strong>Giải thích:</strong> Tội danh buôn lậu (vận chuyển hàng hóa bất hợp pháp qua biên giới). Tương ứng với kẻ buôn lậu là <em>smuggler</em>.
+                            </div>
+                        </td>
+                        <td>smuggler</td>
+                    </tr>
+                    <tr>
+                        <td>theft</td>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">6.</span>
+                            <input type="text" id="ex1-q6" data-ans="thief" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q6')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q6')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q6-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">thief</span><br><br>
+                                <strong>Giải thích:</strong> Danh từ chỉ kẻ trộm nói chung (số ít). Tương ứng với tội danh trộm cắp là <em>theft</em>.
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <span style="font-weight: bold; margin-right: 5px;">plural: 7.</span>
+                            <input type="text" id="ex1-q7" data-ans="thieves" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex1-q7')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-q7')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex1-q7-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">thieves</span><br><br>
+                                <strong>Giải thích:</strong> Dạng danh từ số nhiều của <em>thief</em> (kẻ trộm). Do tận cùng bằng đuôi "-f", ta chuyển "-f" thành "-ves".
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 2 — LABEL PICTURES
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Label the pictures with the name of the crime and the type of criminal.</div>
+
+            <div class="ex2-grid">
+                <!-- Card 1 -->
+                <div class="ex2-card">
+                    <div class="ex2-image-card">
+                        <img src="img-pre/module 8a-1.png" alt="Burglary">
+                        <div class="ex2-num">1</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">1. b</span>
+                            <input type="text" id="ex2-q1-1" data-ans="urglary|burglary" class="task5-input" placeholder="crime" oninput="adjustWidth(this)">
+                            <span>,</span>
+                            <input type="text" id="ex2-q1-2" data-ans="burglar" class="task5-input" placeholder="criminal" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex2-q1-1'); showInputAns('ex2-q1-2');">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex2-h1')">i</button>
+                            </span>
+                        </div>
+                        <div class="hint-box" id="ex2-h1-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">burglary</span>, <span class="key-word">burglar</span><br><br>
+                            <strong>Giải thích:</strong> Hình ảnh mô tả một tên trộm đang lén đột nhập qua cửa sổ nhà dân. Đây là tội trộm bẻ khóa đột nhập (burglary) và tên tội phạm tương ứng là burglar.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="ex2-card">
+                    <div class="ex2-image-card">
+                        <img src="img-pre/module 8a-2.png" alt="Vandalism">
+                        <div class="ex2-num">2</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">2. v</span>
+                            <input type="text" id="ex2-q2-1" data-ans="andalism|vandalism" class="task5-input" placeholder="crime" oninput="adjustWidth(this)">
+                            <span>,</span>
+                            <input type="text" id="ex2-q2-2" data-ans="vandal" class="task5-input" placeholder="criminal" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex2-q2-1'); showInputAns('ex2-q2-2');">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex2-h2')">i</button>
+                            </span>
+                        </div>
+                        <div class="hint-box" id="ex2-h2-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">vandalism</span>, <span class="key-word">vandal</span><br><br>
+                            <strong>Giải thích:</strong> Hình vẽ những dòng chữ phun sơn (graffiti) vẽ bậy trái phép lên một bức tường gạch. Hành vi phá hoại tài sản công cộng này gọi là vandalism và kẻ thực hiện là vandal.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="ex2-card">
+                    <div class="ex2-image-card">
+                        <img src="img-pre/module 8a-3.png" alt="Arson">
+                        <div class="ex2-num">3</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">3. a</span>
+                            <input type="text" id="ex2-q3-1" data-ans="rson|arson" class="task5-input" placeholder="crime" oninput="adjustWidth(this)">
+                            <span>,</span>
+                            <input type="text" id="ex2-q3-2" data-ans="arsonist" class="task5-input" placeholder="criminal" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex2-q3-1'); showInputAns('ex2-q3-2');">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex2-h3')">i</button>
+                            </span>
+                        </div>
+                        <div class="hint-box" id="ex2-h3-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">arson</span>, <span class="key-word">arsonist</span><br><br>
+                            <strong>Giải thích:</strong> Hình ảnh mô tả một chiếc xe hơi đang bốc cháy ngùn ngụt do bị cố tình châm lửa đốt. Hành vi phóng hỏa là arson và tội phạm tương ứng là arsonist.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="ex2-card">
+                    <div class="ex2-image-card">
+                        <img src="img-pre/module 8a-4.png" alt="Mugging">
+                        <div class="ex2-num">4</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">4. m</span>
+                            <input type="text" id="ex2-q4-1" data-ans="ugging|mugging" class="task5-input" placeholder="crime" oninput="adjustWidth(this)">
+                            <span>,</span>
+                            <input type="text" id="ex2-q4-2" data-ans="mugger" class="task5-input" placeholder="criminal" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex2-q4-1'); showInputAns('ex2-q4-2');">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'ex2-h4')">i</button>
+                            </span>
+                        </div>
+                        <div class="hint-box" id="ex2-h4-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">mugging</span>, <span class="key-word">mugger</span><br><br>
+                            <strong>Giải thích:</strong> Hình ảnh một tên cướp giật túi xách đang bỏ chạy sau khi giật đồ từ một phụ nữ trên đường phố. Đây là tội trấn lột, giật đồ (mugging) và kẻ cướp là mugger.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 3 — VERB FORMS
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Complete the sentences with the correct form of the verbs below.</div>
+
+            <div style="background: var(--bg); border: 1px solid var(--border-medium); border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center; font-weight: bold; color: var(--primary-dark); display: flex; flex-wrap: wrap; justify-content: center; gap: 15px;">
+                <span>break</span> <span>deal</span> <span>kill</span> <span>mug</span> <span>rob</span> <span>set</span> <span>smuggle</span> <span>steal</span> <span>vandalise</span>
+            </div>
+
+            <div>
+                <!-- Q1 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">1.</span>
+                    Arsonists 
+                    <input type="text" id="ex3-q1" data-ans="set" class="task5-input" oninput="adjustWidth(this)"> 
+                    fire to a shop in the town centre last night.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q1')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q1-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q1-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">set</span><br><br>
+                        <strong>Giải thích:</strong> Cụm động từ <em>set fire to</em> nghĩa là châm lửa đốt/phóng hỏa. Trạng ngữ <em>last night</em> chỉ thì quá khứ đơn, quá khứ của <em>set</em> vẫn là <em>set</em>.
+                    </div>
+                </div>
+
+                <!-- Q2 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">2.</span>
+                    Two teenagers 
+                    <input type="text" id="ex3-q2" data-ans="broke" class="task5-input" oninput="adjustWidth(this)"> 
+                    into a house in Kings Road and stole a TV.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q2')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q2-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q2-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">broke</span><br><br>
+                        <strong>Giải thích:</strong> Cụm động từ <em>break into</em> nghĩa là đột nhập trái phép vào một địa điểm. Ở đây cần chia thì quá khứ đơn (song hành với động từ <em>stole</em>), dạng quá khứ của <em>break</em> là <em>broke</em>.
+                    </div>
+                </div>
+
+                <!-- Q3 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">3.</span>
+                    There's a man who 
+                    <input type="text" id="ex3-q3" data-ans="deals" class="task5-input" oninput="adjustWidth(this)"> 
+                    drugs on the street near our house.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q3')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q3-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q3-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">deals</span><br><br>
+                        <strong>Giải thích:</strong> Cụm động từ <em>deal drugs</em> nghĩa là bán ma túy. Câu này diễn tả một sự việc lặp đi lặp lại ở hiện tại với chủ ngữ số ít là đại từ quan hệ <em>who</em> thay thế cho <em>a man</em>, nên ta thêm đuôi "-s" thành <em>deals</em>.
+                    </div>
+                </div>
+
+                <!-- Q4 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">4.</span>
+                    Police arrested two men who tried to 
+                    <input type="text" id="ex3-q4" data-ans="smuggle" class="task5-input" oninput="adjustWidth(this)"> 
+                    a million cigarettes into the country.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q4')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q4-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q4-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">smuggle</span><br><br>
+                        <strong>Giải thích:</strong> Cấu trúc <em>try to + động từ nguyên thể</em> (cố gắng làm việc gì). Động từ phù hợp ngữ cảnh buôn lậu thuốc lá qua biên giới là <em>smuggle</em>.
+                    </div>
+                </div>
+
+                <!-- Q5 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">5.</span>
+                    An armed robber shot and 
+                    <input type="text" id="ex3-q5" data-ans="killed" class="task5-input" oninput="adjustWidth(this)"> 
+                    a security guard at a bank last Saturday.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q5')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q5-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q5-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">killed</span><br><br>
+                        <strong>Giải thích:</strong> Dựa vào trạng ngữ thời gian quá khứ <em>last Saturday</em>, động từ cần chia ở thì quá khứ đơn. Ngữ cảnh "bắn và sát hại nhân viên bảo vệ" yêu cầu động từ <em>killed</em> (quá khứ đơn của <em>kill</em>).
+                    </div>
+                </div>
+
+                <!-- Q6 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">6.</span>
+                    Three men tried to 
+                    <input type="text" id="ex3-q6" data-ans="rob" class="task5-input" oninput="adjustWidth(this)"> 
+                    a bank, but customers chased them away.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q6')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q6-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q6-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">rob</span><br><br>
+                        <strong>Giải thích:</strong> Sau cấu trúc <em>try to</em> cần động từ nguyên mẫu. Động từ phù hợp với tân ngữ <em>a bank</em> (địa điểm bị cướp) là <em>rob</em>. Tránh nhầm với <em>steal</em> (chỉ dùng với tân ngữ là món đồ bị lấy trộm).
+                    </div>
+                </div>
+
+                <!-- Q7 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">7.</span>
+                    My sister 
+                    <input type="text" id="ex3-q7" data-ans="stole" class="task5-input" oninput="adjustWidth(this)"> 
+                    some make-up from a cosmetics store when she was fifteen.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q7')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q7-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q7-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">stole</span><br><br>
+                        <strong>Giải thích:</strong> Mốc thời gian quá khứ <em>when she was fifteen</em> chỉ hành động xảy ra và kết thúc trong quá khứ. Động từ lấy trộm món đồ là <em>steal</em>, chia ở quá khứ đơn là <em>stole</em>.
+                    </div>
+                </div>
+
+                <!-- Q8 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">8.</span>
+                    Last night two boys 
+                    <input type="text" id="ex3-q8" data-ans="vandalised" class="task5-input" oninput="adjustWidth(this)"> 
+                    a drinks machine near the park. The drinks machine is now out of order.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q8')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q8-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q8-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">vandalised</span><br><br>
+                        <strong>Giải thích:</strong> <em>Last night</em> yêu cầu chia động từ ở thì quá khứ đơn. Ngữ cảnh đập phá máy bán nước công cộng cần động từ <em>vandalise</em> chia quá khứ thành <em>vandalised</em>.
+                    </div>
+                </div>
+
+                <!-- Q9 -->
+                <div class="ex3-row">
+                    <span style="font-weight: bold; margin-right: 5px;">9.</span>
+                    Two men 
+                    <input type="text" id="ex3-q9" data-ans="mugged" class="task5-input" oninput="adjustWidth(this)"> 
+                    my uncle in the street and took his phone and wallet. Luckily, they didn't hurt him.
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showInputAns('ex3-q9')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex3-q9-hint')">i</button>
+                    </span>
+                    <div class="hint-box" id="ex3-q9-hint">
+                        <strong>Đáp án:</strong> <span class="key-word">mugged</span><br><br>
+                        <strong>Giải thích:</strong> Hành vi cướp giật, trấn lột người ở ngoài đường phố là động từ <em>mug</em>. Thì quá khứ đơn (song hành với <em>took</em>) của <em>mug</em> là <em>mugged</em> (gấp đôi phụ âm cuối 'g' trước khi thêm đuôi "-ed").
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 4 — SPLIT SCREEN LISTENING
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex4">
+
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel-ex4">
+                <h2 style="margin-bottom:20px; border-bottom:2px solid var(--primary); padding-bottom:10px;">Listening Script 2.08</h2>
+                
+                <div class="speaker-line">
+                    <strong style="color: var(--primary-dark);">Report 1</strong><br>
+                    <span class="highlightable" id="t1-ex4-q1">
+                        A fire broke out in a department store in the town centre shortly after midnight. Police have <span class="highlightable" id="t1-ex5-a">launched an investigation</span> and suspect that somebody started the fire deliberately.
+                    </span> 
+                    Witnesses saw two men running from the store. The police are <span class="highlightable" id="t1-ex5-b">studying CCTV footage</span> of the area. They hope to <span class="highlightable" id="t1-ex5-c">identify the culprits and have appealed for more witnesses</span> to contact them.
+                </div>
+
+                <div class="speaker-line" style="margin-bottom: 0;">
+                    <strong style="color: var(--primary-dark);">Report 2</strong><br>
+                    <span class="highlightable" id="t1-ex4-q2">
+                        Police have discovered large quantities of cigarettes and alcohol in a garage in Brighton. They were <span class="highlightable" id="t1-ex5-d">patrolling the area</span> and became suspicious when they saw men carrying a large number of boxes into the garage. The police are <span class="highlightable" id="t1-ex5-e">interviewing two suspects</span> who they believe brought the goods from Spain and were planning to sell them illegally in pubs and bars. They have also <span class="highlightable" id="t1-ex5-f">searched a house nearby and made another arrest</span>.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Resizer -->
+            <div class="reading-resizer" id="resizer-ex4"></div>
+
+            <!-- Right Panel: Exercise -->
+            <div class="main-exercise-panel">
+                <div class="exercise-card">
+                    <div class="exercise-title"><strong>4.</strong> 🎧 2.08 Listen to two crime reports. What are the crimes?</div>
+                    
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex4')">📜 Transcript</button>
+
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-pre/2_Track08.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Report 1 -->
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; line-height: 2.2; font-size: 1.05rem;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">1.</span>
+                            <input type="text" id="ex4-q1" data-ans="arson" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex4-q1')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t1-ex4-q1','ex4-q1-hint','transcript-panel-ex4')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex4-q1-hint" style="width: 100%;">
+                                <strong>Đáp án:</strong> <span class="key-word">arson</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"A fire broke out in a department store... Police... suspect that somebody started the fire deliberately."</em><br><br>
+                                <strong>Giải thích:</strong> Đoạn tin tức nói về một vụ cháy xảy ra lúc nửa đêm và cảnh sát nghi ngờ có kẻ cố tình phóng hỏa ("started the fire deliberately"). Đây chính là định nghĩa của tội phóng hoỏa (arson).
+                            </div>
+                        </div>
+
+                        <!-- Report 2 -->
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; line-height: 2.2; font-size: 1.05rem;">
+                            <span style="font-weight: bold; color: var(--primary-dark);">2.</span>
+                            <input type="text" id="ex4-q2" data-ans="smuggling" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showInputAns('ex4-q2')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t1-ex4-q2','ex4-q2-hint','transcript-panel-ex4')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex4-q2-hint" style="width: 100%;">
+                                <strong>Đáp án:</strong> <span class="key-word">smuggling</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"Police have discovered large quantities of cigarettes and alcohol... believe brought the goods from Spain and were planning to sell them illegally..."</em><br><br>
+                                <strong>Giải thích:</strong> Bản tin đề cập đến việc cảnh sát phát hiện số lượng lớn thuốc lá và rượu được vận chuyển lậu từ Tây Ban Nha và định bán bất hợp pháp. Hành vi này gọi là buôn lậu (smuggling).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-row" style="margin-top: 20px;">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 5 — COLLOCATIONS (DRAG & DROP)
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex5" style="margin-top: 30px;">
+
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel-ex5">
+                <h2 style="margin-bottom:20px; border-bottom:2px solid var(--primary); padding-bottom:10px;">Listening Script 2.08</h2>
+                
+                <div class="speaker-line">
+                    <strong style="color: var(--primary-dark);">Report 1</strong><br>
+                    A fire broke out in a department store in the town centre shortly after midnight. <span class="highlightable" id="t2-ex5-a">Police have launched an investigation and suspect that somebody started the fire deliberately.</span> Witnesses saw two men running from the store. <span class="highlightable" id="t2-ex5-b">The police are studying CCTV footage of the area.</span> <span class="highlightable" id="t2-ex5-c">They hope to identify the culprits and have appealed for more witnesses to contact them.</span>
+                </div>
+
+                <div class="speaker-line" style="margin-bottom: 0;">
+                    <strong style="color: var(--primary-dark);">Report 2</strong><br>
+                    Police have discovered large quantities of cigarettes and alcohol in a garage in Brighton. <span class="highlightable" id="t2-ex5-d">They were patrolling the area and became suspicious when they saw men carrying a large number of boxes into the garage.</span> <span class="highlightable" id="t2-ex5-e">The police are interviewing two suspects who they believe brought the goods from Spain and were planning to sell them illegally in pubs and bars.</span> <span class="highlightable" id="t2-ex5-f">They have also searched a house nearby and made another arrest.</span>
+                </div>
+            </div>
+
+            <!-- Resizer -->
+            <div class="reading-resizer" id="resizer-ex5"></div>
+
+            <!-- Right Panel: Exercise -->
+            <div class="main-exercise-panel">
+                <div class="exercise-card" style="position: relative;">
+                    <div class="exercise-title"><strong>5.</strong> Complete the verb + noun collocations in the sentences using the nouns below.</div>
+                    
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex5')">📜 Transcript</button>
+
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-pre/2_Track08.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
+
+                    <!-- Scoped Sticky Word Bank -->
+                    <div class="word-bank" id="bank-ex5"></div>
+
+                    <div class="dialogue-box">
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>1.</strong><br>
+                            <strong>a</strong> Police have launched 
+                            <span class="drop-slot" id="ex5-q1" data-section="ex5" data-ans="an investigation" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q1','ex5')" style="min-width:140px;"></span>.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q1','ex5')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-a','ex5-q1-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q1-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">an investigation</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"Police have launched an investigation..."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm collocations <em>launch an investigation</em> nghĩa là tiến hành/mở một cuộc điều tra.
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>b</strong> The police are studying 
+                            <span class="drop-slot" id="ex5-q2" data-section="ex5" data-ans="CCTV footage" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q2','ex5')" style="min-width:125px;"></span> of the area.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q2','ex5')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-b','ex5-q2-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q2-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">CCTV footage</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"The police are studying CCTV footage of the area."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm collocations <em>study CCTV footage</em> nghĩa là xem kỹ/nghiên cứu hình ảnh trích xuất từ camera an ninh.
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>c</strong> They hope to identify 
+                            <span class="drop-slot" id="ex5-q3" data-section="ex5" data-ans="the culprits" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q3','ex5')" style="min-width:115px;"></span> 
+                            and have appealed for more 
+                            <span class="drop-slot" id="ex5-q4" data-section="ex5" data-ans="witnesses" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q4','ex5')" style="min-width:105px;"></span> to contact them.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q3','ex5'); showSingleAns('ex5-q4','ex5');">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-c','ex5-q3-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q3-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">the culprits</span>, <span class="key-word">witnesses</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"They hope to identify the culprits and have appealed for more witnesses to contact them."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm <em>identify the culprits</em> nghĩa là nhận diện/tìm ra thủ phạm; cụm <em>appeal for witnesses</em> nghĩa là kêu gọi nhân chứng cung cấp thông tin.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dialogue-box">
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>2.</strong><br>
+                            <strong>d</strong> They were patrolling 
+                            <span class="drop-slot" id="ex5-q5" data-section="ex5" data-ans="the area" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q5','ex5')" style="min-width:100px;"></span> and became suspicious.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q5','ex5')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-d','ex5-q5-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q5-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">the area</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"They were patrolling the area..."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm collocations <em>patrol the area</em> nghĩa là tuần tra khu vực để giữ gìn trật tự.
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>e</strong> The police are interviewing two 
+                            <span class="drop-slot" id="ex5-q6" data-section="ex5" data-ans="suspects" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q6','ex5')" style="min-width:95px;"></span>.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q6','ex5')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-e','ex5-q6-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q6-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">suspects</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"The police are interviewing two suspects..."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm collocations <em>interview suspects</em> nghĩa là phỏng vấn/thẩm vấn các nghi phạm.
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 15px; line-height: 2.2;">
+                            <strong>f</strong> They have also searched 
+                            <span class="drop-slot" id="ex5-q7" data-section="ex5" data-ans="a house" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q7','ex5')" style="min-width:90px;"></span> nearby 
+                            and made another 
+                            <span class="drop-slot" id="ex5-q8" data-section="ex5" data-ans="arrest" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5')" onclick="handleSlotClick('ex5-q8','ex5')" style="min-width:90px;"></span>.
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('ex5-q7','ex5'); showSingleAns('ex5-q8','ex5');">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event,'t2-ex5-f','ex5-q7-hint','transcript-panel-ex5')">i</button>
+                            </span>
+                            <div class="hint-box" id="ex5-q7-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">a house</span>, <span class="key-word">arrest</span><br><br>
+                                <strong>Bằng chứng:</strong> <em>"They have also searched a house nearby and made another arrest."</em><br><br>
+                                <strong>Giải thích:</strong> Cụm collocations <em>search a house</em> nghĩa là khám xét một căn nhà; <em>make an arrest</em> nghĩa là thực hiện lệnh bắt giữ ai đó.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Core Scripts -->
+    <script>
+        // Data for Drag-and-Drop Word Bank
+        const ex5Words = ["the area", "arrest", "CCTV footage", "the culprits", "a house", "an investigation", "suspects", "witnesses"];
+
+        let dragWord = null;
+        let dragSection = null;
+        let activeWord = null;
+        let activeSection = null;
+
+        function safeId(word) {
+            return word.toLowerCase().replace(/\s+/g, '-');
+        }
+
+        // Initialize Word Bank
+        function initWordBank(bankId, wordsArray, section) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = '';
+            
+            // Randomize/shuffle words array to prevent order hints
+            const shuffled = [...wordsArray].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(word => {
+                const id = `word-${section}-${safeId(word)}`;
+                const item = document.createElement('div');
+                item.className = 'word-item';
+                item.id = id;
+                item.innerText = word;
+                item.draggable = true;
+
+                item.addEventListener('dragstart', (e) => handleDragStart(e, word, section));
+                item.addEventListener('click', () => handleWordClick(item, section));
+
+                bank.appendChild(item);
+            });
+        }
+
+        function handleDragStart(e, word, section) {
+            dragWord = word;
+            dragSection = section;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', word);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            const slot = e.target.closest('.drop-slot');
+            if (slot) slot.classList.add('over');
+        }
+
+        function handleDragLeave(e) {
+            const slot = e.target.closest('.drop-slot');
+            if (slot) slot.classList.remove('over');
+        }
+
+        function handleDrop(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+
+            if (section !== dragSection) return;
+
+            placeWord(slot.id, e.dataTransfer.getData('text/plain'), section);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord = null;
+            dragSection = null;
+        }
+
+        function handleWordClick(el, section) {
+            if (section !== activeSection) {
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+            }
+            if (el.classList.contains('used')) return;
+
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord = null;
+                activeSection = null;
+            } else {
+                document.querySelectorAll(`.word-item[id^="word-${section}-"]`).forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord = el.innerText.trim();
+                activeSection = section;
+            }
+        }
+
+        function handleSlotClick(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+
+            if (activeWord && activeSection === section) {
+                placeWord(slotId, activeWord, section);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord = null;
+                activeSection = section;
+            } else if (slot.innerText.trim()) {
+                removeWord(slotId, section);
+            }
+        }
+
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+
+            const oldWord = slot.innerText.trim();
+
+            // Clear word if it was already in another slot in this section
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.innerText.trim() === word && s.id !== slotId) {
+                    s.innerText = '';
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+
+            // Return old word back to bank
+            if (oldWord) {
+                const oldEl = document.getElementById(`word-${section}-${safeId(oldWord)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+
+            const word = slot.innerText.trim();
+            if (!word) return;
+
+            slot.innerText = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function showSingleAns(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+
+            const ans = slot.dataset.ans.split('|')[0];
+            if (slot.innerText.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, section);
+            } else {
+                placeWord(slotId, ans, section);
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
+            }
+        }
+
+        function showInputAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const ans = el.dataset.ans.split('|')[0];
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            let h = document.getElementById(id);
+            if (!h) {
+                h = document.getElementById(id + '-hint');
+            }
+            if (!h) return;
+
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            
+            if (!isVisible) {
+                h.style.display = 'block';
+            }
+        }
+
+        function showReadingHint(event, targetId, hintBoxId, panelId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+
+            const visible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            if (!visible) {
+                h.style.display = 'block';
+                toggleTranscript(panelId, true);
+                const txt = document.getElementById(targetId);
+                if (txt) {
+                    txt.classList.add('active-highlight');
+                    setTimeout(() => txt.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                }
+            }
+        }
+
+        function toggleTranscript(panelId, forceOpen = false) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (forceOpen) {
+                panel.classList.add('active');
+                return;
+            }
+            panel.classList.toggle('active');
+        }
+
+        // Close hints on outside click
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+        });
+
+        function toggleCustomVocab() {
+            const c = document.getElementById('vocabContent');
+            const i = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') {
+                c.style.display = 'none';
+                i.textContent = '▼';
+            } else {
+                c.style.display = 'block';
+                i.textContent = '▲';
+            }
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                for (let i = 1; i <= 7; i++) {
+                    const el = document.getElementById(`ex1-q${i}`);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex2') {
+                for (let i = 1; i <= 4; i++) {
+                    const el1 = document.getElementById(`ex2-q${i}-1`);
+                    const el2 = document.getElementById(`ex2-q${i}-2`);
+                    if (el1) {
+                        el1.value = el1.dataset.ans.split('|')[0];
+                        el1.classList.add('correct');
+                        el1.classList.remove('incorrect-marked');
+                        adjustWidth(el1);
+                    }
+                    if (el2) {
+                        el2.value = el2.dataset.ans.split('|')[0];
+                        el2.classList.add('correct');
+                        el2.classList.remove('incorrect-marked');
+                        adjustWidth(el2);
+                    }
+                }
+            } else if (prefix === 'ex3') {
+                for (let i = 1; i <= 9; i++) {
+                    const el = document.getElementById(`ex3-q${i}`);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex4') {
+                for (let i = 1; i <= 2; i++) {
+                    const el = document.getElementById(`ex4-q${i}`);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex5') {
+                for (let i = 1; i <= 8; i++) {
+                    const slot = document.getElementById(`ex5-q${i}`);
+                    if (slot) {
+                        const ans = slot.dataset.ans.split('|')[0];
+                        placeWord(`ex5-q${i}`, ans, 'ex5');
+                        slot.classList.add('correct');
+                    }
+                }
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                for (let i = 1; i <= 7; i++) {
+                    const el = document.getElementById(`ex1-q${i}`);
+                    if (el) {
+                        el.value = '';
+                        el.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex2') {
+                for (let i = 1; i <= 4; i++) {
+                    const el1 = document.getElementById(`ex2-q${i}-1`);
+                    const el2 = document.getElementById(`ex2-q${i}-2`);
+                    if (el1) {
+                        el1.value = '';
+                        el1.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el1);
+                    }
+                    if (el2) {
+                        el2.value = '';
+                        el2.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el2);
+                    }
+                }
+            } else if (prefix === 'ex3') {
+                for (let i = 1; i <= 9; i++) {
+                    const el = document.getElementById(`ex3-q${i}`);
+                    if (el) {
+                        el.value = '';
+                        el.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex4') {
+                for (let i = 1; i <= 2; i++) {
+                    const el = document.getElementById(`ex4-q${i}`);
+                    if (el) {
+                        el.value = '';
+                        el.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex5') {
+                for (let i = 1; i <= 8; i++) {
+                    removeWord(`ex5-q${i}`, 'ex5');
+                }
+            }
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            el.style.width = Math.max((el.value || el.placeholder || '').length * 12 + 40, 80) + 'px';
+        }
+
+        function checkAll() {
+            document.querySelectorAll('input[type="text"]').forEach(el => {
+                if (!el.value.trim()) return;
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                const ok = allowed.includes(el.value.trim().toLowerCase());
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                if (!slot.innerText.trim()) return;
+                const allowed = slot.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                const ok = allowed.includes(slot.innerText.trim().toLowerCase());
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initWordBank('bank-ex5', ex5Words, 'ex5');
+
+            setTimeout(() => {
+                document.querySelectorAll('input.task5-input').forEach(adjustWidth);
+            }, 50);
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkAll();
+                }
+            });
+
+            // Resizer for Ex 4
+            const resizerEx4 = document.getElementById('resizer-ex4');
+            const panelEx4 = document.getElementById('transcript-panel-ex4');
+            let resizingEx4 = false;
+
+            if (resizerEx4 && panelEx4) {
+                resizerEx4.addEventListener('mousedown', () => resizingEx4 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx4) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx4.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx4 = false);
+            }
+
+            // Resizer for Ex 5
+            const resizerEx5 = document.getElementById('resizer-ex5');
+            const panelEx5 = document.getElementById('transcript-panel-ex5');
+            let resizingEx5 = false;
+
+            if (resizerEx5 && panelEx5) {
+                resizerEx5.addEventListener('mousedown', () => resizingEx5 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx5) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx5.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx5 = false);
+            }
+        });
+    </script>
+</body>
+
+</html>
