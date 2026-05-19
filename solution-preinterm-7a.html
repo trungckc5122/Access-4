@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 7A Spending power</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ── Split-screen transcript layout ── */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #fefcf7);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-right: 0px solid var(--glass-border);
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* ── Word Bank & Drag-Drop ── */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-medium);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            justify-content: center;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* ── Image grid for Ex 2 ── */
+        .ex2-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .ex2-image-card {
+            position: relative;
+            height: 140px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            background: #fff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .ex2-image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .ex2-image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .ex2-num {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(13, 148, 136, 0.85);
+            padding: 2px 9px;
+            border-radius: 12px;
+            z-index: 2;
+            line-height: 1.4;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ── Ex 1 and Ex 2 Grid Layouts ── */
+        .ex-layout-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px 40px;
+            margin-bottom: 20px;
+        }
+
+        .question-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .question-item .q-label {
+            font-weight: 700;
+            min-width: 26px;
+        }
+
+        /* ── Text inputs ── */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            text-align: center;
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 80px;
+            field-sizing: content;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* ── Hint boxes ── */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            margin-top: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 35px;
+            min-width: 280px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 1000;
+        }
+
+        .inline-hint {
+            display: none;
+            position: absolute;
+            top: 105%;
+            left: 0;
+            z-index: 1000;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            width: 280px;
+            white-space: normal;
+        }
+
+        .hint-box strong,
+        .inline-hint strong {
+            color: var(--primary-dark);
+        }
+
+        .hint-box em,
+        .inline-hint em {
+            color: var(--accent);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .key-word {
+            color: var(--primary);
+            font-weight: bold;
+            background: var(--primary-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── Row buttons ── */
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        /* ── Inline input group for narrative/dialogue ── */
+        .inline-input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        /* ── Highlight in transcript ── */
+        .highlightable {
+            transition: background-color 0.3s;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ── Audio player ── */
+        .audio-player-container {
+            margin: 10px 0 20px;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        /* ── Transcript toggle button ── */
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ── Speaker lines in transcript ── */
+        .speaker-line {
+            margin-bottom: 22px;
+            display: block;
+            line-height: 1.85;
+        }
+
+        /* ── Vocab reference ── */
+        .custom-vocab-container {
+            margin-bottom: 32px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+            overflow: hidden;
+        }
+
+        .custom-vocab-header {
+            background: var(--primary-light);
+            padding: 14px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-vocab-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .custom-vocab-content {
+            display: none;
+            padding: 18px 20px;
+        }
+
+        .vocab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 9px;
+        }
+
+        .vocab-item {
+            padding: 9px 13px;
+            background: var(--card-bg);
+            border-radius: 9px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.93rem;
+            color: var(--text);
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+        }
+
+        /* ── Dialogue lines for Ex 5 ── */
+        .dialogue-box {
+            background: var(--bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 20px;
+            line-height: 2.3;
+            font-size: 1.05rem;
+        }
+
+        .dialogue-speaker {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .ex2-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .ex-layout-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reading-split-container {
+                flex-direction: column;
+            }
+
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">7A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary &amp; Listening</div>
+                <h1>Spending power</h1>
+                <p class="subtitle">I can talk about different shops and services.</p>
+            </div>
+        </div>
+
+        <!-- Vocabulary Reference -->
+        <div class="custom-vocab-container">
+            <div class="custom-vocab-header" onclick="toggleCustomVocab()">
+                <h3>Vocabulary Reference: Shops and Services</h3>
+                <span id="vocabIcon" style="font-size:1.1rem;">▼</span>
+            </div>
+            <div class="custom-vocab-content" id="vocabContent">
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>DIY store</strong>: cửa hàng ngũ kim (dụng cụ, ốc vít tự làm).</div>
+                    <div class="vocab-item"><strong>baker's</strong>: tiệm bánh mì, bánh ngọt.</div>
+                    <div class="vocab-item"><strong>greengrocer's</strong>: cửa hàng rau quả tươi.</div>
+                    <div class="vocab-item"><strong>butcher's</strong>: cửa hàng bán thịt.</div>
+                    <div class="vocab-item"><strong>clothes shop</strong>: cửa hàng quần áo.</div>
+                    <div class="vocab-item"><strong>cosmetics store</strong>: cửa hàng mỹ phẩm.</div>
+                    <div class="vocab-item"><strong>garden centre</strong>: cửa hàng cây cảnh, đồ làm vườn.</div>
+                    <div class="vocab-item"><strong>post office</strong>: bưu điện.</div>
+                    <div class="vocab-item"><strong>shoe shop</strong>: cửa hàng giày dép.</div>
+                    <div class="vocab-item"><strong>stationer's</strong>: cửa hàng văn phòng phẩm.</div>
+                    <div class="vocab-item"><strong>deli (delicatessen)</strong>: cửa hàng thực phẩm chín, đặc sản.
+                    </div>
+                    <div class="vocab-item"><strong>takeaway</strong>: cửa hàng bán đồ ăn mang về.</div>
+                    <div class="vocab-item"><strong>bank</strong>: ngân hàng.</div>
+                    <div class="vocab-item"><strong>optician's</strong>: cửa hàng kính mắt.</div>
+                    <div class="vocab-item"><strong>charity shop</strong>: cửa hàng từ thiện (bán đồ cũ quyên góp).
+                    </div>
+                    <div class="vocab-item"><strong>estate agent's</strong>: văn phòng môi giới nhà đất.</div>
+                    <div class="vocab-item"><strong>launderette</strong>: tiệm giặt quần áo tự động.</div>
+                </div>
+
+                <h4 style="margin: 20px 0 10px; color: var(--primary-dark);">Shopping Terms</h4>
+                <div class="vocab-grid">
+                    <div class="vocab-item"><strong>bargain</strong>: món hời (mua rẻ).</div>
+                    <div class="vocab-item"><strong>discount</strong>: sự chiết khấu, giảm giá.</div>
+                    <div class="vocab-item"><strong>price tag</strong>: nhãn ghi giá tiền.</div>
+                    <div class="vocab-item"><strong>sale</strong>: đợt giảm giá.</div>
+                    <div class="vocab-item"><strong>coupon</strong>: phiếu giảm giá, mua hàng.</div>
+                    <div class="vocab-item"><strong>receipt</strong>: hóa đơn thanh toán.</div>
+                    <div class="vocab-item"><strong>refund</strong>: tiền hoàn trả lại.</div>
+                    <div class="vocab-item"><strong>special offer</strong>: ưu đãi đặc biệt.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 1 — SPLIT SCREEN
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex1">
+
+            <div class="transcript-panel" id="transcript-panel-ex1">
+                <h2 style="margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">Listening
+                    Script 2.02</h2>
+                <div class="speaker-line">
+                    <span class="highlightable" id="t1-ex1-a"><strong style="color: var(--primary);">a</strong> a
+                        million euros</span><br>
+                    <span class="highlightable" id="t1-ex1-b"><strong style="color: var(--primary);">b</strong> seven
+                        hundred and fifty thousand dollars</span><br>
+                    <span class="highlightable" id="t1-ex1-c"><strong style="color: var(--primary);">c</strong> one
+                        hundred pounds</span><br>
+                    <span class="highlightable" id="t1-ex1-d"><strong style="color: var(--primary);">d</strong> four
+                        point six million yen</span><br>
+                    <span class="highlightable" id="t1-ex1-e"><strong style="color: var(--primary);">e</strong> six
+                        thousand nine hundred yen</span><br>
+                    <span class="highlightable" id="t1-ex1-f"><strong style="color: var(--primary);">f</strong> two and
+                        a half billion pounds</span><br>
+                    <span class="highlightable" id="t1-ex1-g"><strong style="color: var(--primary);">g</strong> two and
+                        a half thousand dollars</span><br>
+                    <span class="highlightable" id="t1-ex1-h"><strong style="color: var(--primary);">h</strong> nine
+                        hundred and ninety-nine thousand euros</span>
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="resizer-ex1"></div>
+
+            <div class="main-exercise-panel">
+                <div class="exercise-card">
+                    <div class="exercise-title">1. 🎧 2.02 Listen and write the numbers. Use the correct symbols: £, €,
+                        $ and ¥.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex1')">📜
+                        Transcript</button>
+
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-pre/2_Track03.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
+
+                    <div class="ex-layout-grid">
+                        <!-- Column 1 -->
+                        <div>
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">a.</span>
+                                <span
+                                    style="font-weight: bold; font-size: 1.1rem; color: var(--text-muted);">€1,000,000</span>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">b.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">$</span>
+                                <input type="text" id="ex1-b" data-ans="750,000|750000|750.000" class="task5-input"
+                                    oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-b')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-b','ex1-b-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-b-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">750,000</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"seven hundred and fifty thousand
+                                        dollars"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy số "seven hundred and fifty thousand"
+                                    (750,000) đi kèm đơn vị dollar ($).
+                                </div>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">c.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">£</span>
+                                <input type="text" id="ex1-c" data-ans="100" class="task5-input"
+                                    oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-c')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-c','ex1-c-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-c-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">100</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"one hundred pounds"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy số "one hundred" (100) đi kèm đơn vị pound
+                                    (£).
+                                </div>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">d.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">¥</span>
+                                <input type="text" id="ex1-d" data-ans="4.6 million|4.6 triệu|4,6 million|4,6 triệu"
+                                    class="task5-input" oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-d')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-d','ex1-d-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-d-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">4.6 million</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"four point six million yen"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy số "four point six million" (4.6 triệu) đi
+                                    kèm đơn vị yen (¥).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column 2 -->
+                        <div>
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">e.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">¥</span>
+                                <input type="text" id="ex1-e" data-ans="6,900|6900|6.900" class="task5-input"
+                                    oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-e')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-e','ex1-e-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-e-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">6,900</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"six thousand nine hundred yen"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy số "six thousand nine hundred" (6,900) đi kèm
+                                    đơn vị yen (¥).
+                                </div>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">f.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">£</span>
+                                <input type="text" id="ex1-f" data-ans="2.5 billion|2.5 tỉ|2.5 tỷ|2,5 billion"
+                                    class="task5-input" oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-f')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-f','ex1-f-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-f-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">2.5 billion</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"two and a half billion pounds"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy cụm "two and a half billion" (2.5 tỷ) đi kèm
+                                    đơn vị pound (£).
+                                </div>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">g.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">$</span>
+                                <input type="text" id="ex1-g" data-ans="2,500|2500|2.500" class="task5-input"
+                                    oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-g')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-g','ex1-g-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-g-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">2,500</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"two and a half thousand dollars"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy cụm "two and a half thousand" (2,500) đi kèm
+                                    đơn vị dollar ($).
+                                </div>
+                            </div>
+
+                            <div class="question-item" style="margin-bottom: 12px;">
+                                <span class="q-label">h.</span>
+                                <span style="font-weight: bold; margin-right: 5px;">€</span>
+                                <input type="text" id="ex1-h" data-ans="999,000|999000|999.000" class="task5-input"
+                                    oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="showInputAns('ex1-h')">👁️</button>
+                                    <button class="hint-btn"
+                                        onclick="showReadingHint(event,'t1-ex1-h','ex1-h-hint','transcript-panel-ex1')">i</button>
+                                </span>
+                                <div class="hint-box" id="ex1-h-hint">
+                                    <strong>Đáp án:</strong> <span class="key-word">999,000</span><br><br>
+                                    <strong>Bằng chứng:</strong> <em>"nine hundred and ninety-nine thousand
+                                        euros"</em><br><br>
+                                    <strong>Giải thích:</strong> Nghe thấy số "nine hundred and ninety-nine thousand"
+                                    (999,000) đi kèm đơn vị euro (€).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 2
+        ══════════════════════════════════════ -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Where can you buy these things? Complete the names of the shops with the
+                correct words.</div>
+
+            <div class="ex2-grid">
+                <div class="ex2-image-card"><img src="img-pre/module 7a-1.png" alt="1">
+                    <div class="ex2-num">1</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-2.png" alt="2">
+                    <div class="ex2-num">2</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-3.png" alt="3">
+                    <div class="ex2-num">3</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-4.png" alt="4">
+                    <div class="ex2-num">4</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-5.png" alt="5">
+                    <div class="ex2-num">5</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-6.png" alt="6">
+                    <div class="ex2-num">6</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-7.png" alt="7">
+                    <div class="ex2-num">7</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-8.png" alt="8">
+                    <div class="ex2-num">8</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-9.png" alt="9">
+                    <div class="ex2-num">9</div>
+                </div>
+                <div class="ex2-image-card"><img src="img-pre/module 7a-10.png" alt="10">
+                    <div class="ex2-num">10</div>
+                </div>
+            </div>
+
+            <div class="ex-layout-grid">
+                <!-- Column 1 -->
+                <div>
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">1.</span>
+                        <input type="text" id="ex2-q1" data-ans="DIY store" placeholder="D_ _ s_ _ _ _"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q1')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q1')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q1-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">DIY store</span><br><br>
+                            <strong>Giải thích:</strong> Hình 1 chụp đinh ốc và vít kim loại. Những thứ này được bán ở
+                            <strong>DIY store</strong> (cửa hàng ngũ kim/vật liệu tự làm).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">2.</span>
+                        <input type="text" id="ex2-q2" data-ans="baker's|bakers" placeholder="b_ _ _ _'s"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q2')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q2')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q2-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">baker's</span><br><br>
+                            <strong>Giải thích:</strong> Hình 2 chụp một chiếc bánh ngọt cupcake xinh xắn. Nơi làm và
+                            bán bánh mì, bánh ngọt là <strong>baker's</strong> (tiệm bánh).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">3.</span>
+                        <input type="text" id="ex2-q3" data-ans="greengrocer's|greengrocers"
+                            placeholder="g_ _ _ _ _ _ _ _ _ _'s" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q3')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q3')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q3-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">greengrocer's</span><br><br>
+                            <strong>Giải thích:</strong> Hình 3 chụp hoa quả và rau tươi (táo, chuối, nho, hành tây...).
+                            Nơi chuyên bán rau quả tươi là <strong>greengrocer's</strong> (cửa hàng rau quả).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">4.</span>
+                        <input type="text" id="ex2-q4" data-ans="butcher's|butchers" placeholder="b_ _ _ _ _ _'s"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q4')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q4')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q4-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">butcher's</span><br><br>
+                            <strong>Giải thích:</strong> Hình 4 là các khoanh xúc xích tươi ngon. Nơi giết mổ và bán
+                            thịt gia súc, gia cầm, xúc xích là <strong>butcher's</strong> (cửa hàng thịt).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">5.</span>
+                        <input type="text" id="ex2-q5" data-ans="clothes shop" placeholder="c_ _ _ _ _ _ s_ _ _"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q5')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q5')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q5-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">clothes shop</span><br><br>
+                            <strong>Giải thích:</strong> Hình 5 là một chiếc áo thun T-shirt. Nơi bán các trang phục mặc
+                            thường ngày là <strong>clothes shop</strong> (cửa hàng quần áo).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2 -->
+                <div>
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">6.</span>
+                        <input type="text" id="ex2-q6" data-ans="cosmetics store"
+                            placeholder="c_ _ _ _ _ _ _ _ s_ _ _ _" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q6')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q6')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q6-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">cosmetics store</span><br><br>
+                            <strong>Giải thích:</strong> Hình 6 có son môi, hộp phấn và lọ sơn móng tay. Nơi bán các sản
+                            phẩm làm đẹp, trang điểm là <strong>cosmetics store</strong> (cửa hàng mỹ phẩm).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">7.</span>
+                        <input type="text" id="ex2-q7" data-ans="garden centre" placeholder="g_ _ _ _ _ c_ _ _ _ _"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q7')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q7')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q7-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">garden centre</span><br><br>
+                            <strong>Giải thích:</strong> Hình 7 có một chậu cây cảnh nhỏ và cái xẻng xúc đất làm vườn.
+                            Nơi bán các loại cây, hạt giống, phân bón và dụng cụ chăm sóc cây là <strong>garden
+                                centre</strong> (cửa hàng cây cảnh/làm vườn).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">8.</span>
+                        <input type="text" id="ex2-q8" data-ans="post office" placeholder="p_ _ _ o_ _ _ _ _"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q8')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q8')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q8-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">post office</span><br><br>
+                            <strong>Giải thích:</strong> Hình 8 có con tem thư in hình chim bói cá. Nơi nhận gửi thư
+                            tín, bưu phẩm, tài liệu và mua tem là <strong>post office</strong> (bưu điện).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">9.</span>
+                        <input type="text" id="ex2-q9" data-ans="shoe shop" placeholder="s_ _ _ s_ _ _"
+                            class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q9')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q9')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q9-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">shoe shop</span><br><br>
+                            <strong>Giải thích:</strong> Hình 9 chụp đôi giày cao gót nữ thanh lịch có tag giá £59.99.
+                            Nơi chuyên bán các loại giày, dép, boots là <strong>shoe shop</strong> (cửa hàng giày).
+                        </div>
+                    </div>
+
+                    <div class="question-item" style="margin-bottom: 12px;">
+                        <span class="q-label">10.</span>
+                        <input type="text" id="ex2-q10" data-ans="stationer's|stationers"
+                            placeholder="s_ _ _ _ _ _ _ _'s" class="task5-input" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex2-q10')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-q10')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-q10-hint">
+                            <strong>Đáp án:</strong> <span class="key-word">stationer's</span><br><br>
+                            <strong>Giải thích:</strong> Hình 10 là cuốn sổ viết gáy xoắn và chiếc bút bi đặt lên trên.
+                            Nơi bán các mặt hàng văn phòng phẩm, giấy, bút, sổ ghi chép là <strong>stationer's</strong>
+                            (cửa hàng văn phòng phẩm).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 3
+        ══════════════════════════════════════ -->
+        <div class="exercise-card" style="position: relative;">
+            <div class="exercise-title">3. Where can you do these things? Complete the answers with the words below.
+            </div>
+
+            <div class="word-bank" id="bank-ex3"></div>
+
+            <div style="margin-top: 15px; font-weight: bold; color: var(--primary-dark); margin-bottom: 15px;">Where can
+                you ...</div>
+
+            <!-- Q1 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">1.</span>
+                <span style="margin-right: 10px;">buy cold meat, cheese, olives, etc.?</span>
+                <span class="drop-slot" id="ex3-q1" data-section="ex3" data-ans="deli (delicatessen)"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q1','ex3')" style="min-width:150px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q1','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q1')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q1-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">deli (delicatessen)</span><br><br>
+                    <strong>Giải thích:</strong> Cửa hàng thực phẩm chín (deli/delicatessen) chuyên bán các loại thịt
+                    nguội cắt lát (cold meat), phô mai (cheese) và quả ô liu muối (olives).
+                </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">2.</span>
+                <span style="margin-right: 10px;">buy a hot meal to eat at home?</span>
+                <span class="drop-slot" id="ex3-q2" data-section="ex3" data-ans="takeaway"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q2','ex3')" style="min-width:130px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q2','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q2')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q2-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">takeaway</span><br><br>
+                    <strong>Giải thích:</strong> Cửa hàng mua mang về (takeaway) cung cấp các món ăn nóng sẵn sàng để
+                    mang về nhà thưởng thức.
+                </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">3.</span>
+                <span style="margin-right: 10px;">keep your money?</span>
+                <span class="drop-slot" id="ex3-q3" data-section="ex3" data-ans="bank"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q3','ex3')" style="min-width:100px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q3','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q3')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q3-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">bank</span><br><br>
+                    <strong>Giải thích:</strong> Ngân hàng (bank) là tổ chức tài chính an toàn nhất để gửi, giữ và quản
+                    lý tiền của bạn.
+                </div>
+            </div>
+
+            <!-- Q4 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">4.</span>
+                <span style="margin-right: 10px;">get glasses for your eyes?</span>
+                <span class="drop-slot" id="ex3-q4" data-section="ex3" data-ans="optician's"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q4','ex3')" style="min-width:130px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q4','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q4')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q4-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">optician's</span><br><br>
+                    <strong>Giải thích:</strong> Cửa hàng kính mắt (optician's) có các chuyên viên đo mắt và cung cấp
+                    các loại kính thuốc, kính râm.
+                </div>
+            </div>
+
+            <!-- Q5 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">5.</span>
+                <span style="margin-right: 10px;">buy cheap second-hand things?</span>
+                <span class="drop-slot" id="ex3-q5" data-section="ex3" data-ans="charity shop"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q5','ex3')" style="min-width:140px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q5','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q5')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q5-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">charity shop</span><br><br>
+                    <strong>Giải thích:</strong> Cửa hàng từ thiện (charity shop) bán quần áo, sách báo, đồ gia dụng cũ
+                    đã qua sử dụng (second-hand) với mức giá rất rẻ để quyên tiền cho các tổ chức từ thiện.
+                </div>
+            </div>
+
+            <!-- Q6 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">6.</span>
+                <span style="margin-right: 10px;">find houses and flats for sale?</span>
+                <span class="drop-slot" id="ex3-q6" data-section="ex3" data-ans="estate agent's"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q6','ex3')" style="min-width:140px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q6','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q6')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q6-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">estate agent's</span><br><br>
+                    <strong>Giải thích:</strong> Văn phòng môi giới nhà đất (estate agent's) là nơi kết nối giữa người
+                    bán và người mua các căn hộ (flats) và nhà ở (houses).
+                </div>
+            </div>
+
+            <!-- Q7 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">7.</span>
+                <span style="margin-right: 10px;">wash your clothes?</span>
+                <span class="drop-slot" id="ex3-q7" data-section="ex3" data-ans="launderette"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q7','ex3')" style="min-width:130px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q7','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q7')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q7-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">launderette</span><br><br>
+                    <strong>Giải thích:</strong> Tiệm giặt đồ tự động (launderette) cung cấp máy giặt và máy sấy chạy
+                    bằng xu/thẻ phục vụ nhu cầu giặt giũ công cộng.
+                </div>
+            </div>
+
+            <!-- Q8 -->
+            <div class="question-item"
+                style="margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center;">
+                <span class="q-label">8.</span>
+                <span style="margin-right: 10px;">buy things to decorate your house?</span>
+                <span class="drop-slot" id="ex3-q8" data-section="ex3" data-ans="DIY store"
+                    ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                    ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex3')"
+                    onclick="handleSlotClick('ex3-q8','ex3')" style="min-width:130px;"></span>
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('ex3-q8','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'ex3-q8')">i</button>
+                </span>
+                <div class="hint-box" id="ex3-q8-hint" style="width: 100%;">
+                    <strong>Đáp án:</strong> <span class="key-word">DIY store</span><br><br>
+                    <strong>Giải thích:</strong> Cửa hàng đồ tự làm (DIY store) bán sơn tường, giấy dán tường, gạch ốp
+                    và các dụng cụ trang trí, sửa sang nội ngoại thất.
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         LISTENING — SPLIT SCREEN for EX4
+        ══════════════════════════════════════ -->
+        <div class="reading-split-container" id="split-container-ex4">
+
+            <div class="transcript-panel" id="transcript-panel-ex4">
+                <h2 style="margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">Listening
+                    Script 2.03</h2>
+
+                <div class="speaker-line">
+                    <strong>Dialogue 1</strong><br>
+                    Customer: I'd like a large bar of chocolate, please.<br>
+                    Newsagent: Is this one big enough?<br>
+                    C: Yes! How much is it?<br>
+                    N: £2. It's on special offer.<br>
+                    C: OK. I'll take it.<br>
+                    N: Anything else?<br>
+                    C: <span class="highlightable" id="t1-newsagent">Yes, I'm looking for a copy of a magazine called
+                        <i>Stamp Collectors' Monthly</i>.</span> Have you got it?<br>
+                    N: I'm afraid we don't keep it in stock, no. I'll order it for you, if you like.<br>
+                    C: Thanks. When will it come in?<br>
+                    N: In about three days, maybe four.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>Dialogue 2</strong><br>
+                    Florist: Hi. Can I help you?<br>
+                    Customer: <span class="highlightable" id="t2-florist">Yes. I'd like to buy a bouquet for my wife.
+                        It's our anniversary.</span><br>
+                    F: Congratulations! How much are you hoping to spend?<br>
+                    C: I'm not sure ... £20?<br>
+                    F: OK. I'll see what I can do for that.<br>
+                    C: Actually, I'm in a hurry. Have you got anything that's ready to buy now?<br>
+                    F: We've got these two. They're both quite nice. <span class="highlightable" id="t2-roses">The
+                        larger one includes these beautiful red roses.</span><br>
+                    C: How much is it?<br>
+                    F: It's £28.<br>
+                    C: I'll take the smaller one, please.<br>
+                    F: Certainly.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>Dialogue 3</strong><br>
+                    Jeweller: Can I help you?<br>
+                    Customer: <span class="highlightable" id="t3-watch">Yes. I'm looking for a watch.</span><br>
+                    J: Is it a gift?<br>
+                    C: Yes, for my daughter. It's her 18th birthday.<br>
+                    J: Have you seen anything you like?<br>
+                    C: <span class="highlightable" id="t3-gold">There's one in the window. The gold one - it's on the
+                        left.</span><br>
+                    J: OK. I'll get it for you, so you can have a closer look.<br>
+                    C: Thanks. Yes, this is nice. I'll take it.<br>
+                    J: You can change it if she doesn't like it ... as long as you keep the receipt.<br>
+                    C: Oh, OK.<br>
+                    J: I'll put the receipt in the bag.<br>
+                    C: Thanks.
+                </div>
+
+                <div class="speaker-line">
+                    <strong>Dialogue 4</strong><br>
+                    Chemist: Can I help you?<br>
+                    Customer: <span class="highlightable" id="t4-headache">Yes, I've got a terrible headache and I need
+                        some painkillers.</span><br>
+                    C: Well, we've got ibuprofen or paracetamol.<br>
+                    C: I'll have the ibuprofen, please.<br>
+                    C: Sixteen tablets or thirty-two?<br>
+                    C: Sixteen is enough.<br>
+                    C: <span class="highlightable" id="t4-chemist">That's £1.99, please. Make sure you follow the
+                        instructions on the packet.</span><br>
+                    C: OK, thanks.
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="resizer-ex4"></div>
+
+            <div class="main-exercise-panel">
+                <div class="exercise-card">
+                    <div class="exercise-title">4. 🎧 2.03 Listen to four dialogues. Which shops are the people in?
+                    </div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('transcript-panel-ex4')">📜
+                        Transcript</button>
+
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-pre/2_Track02.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
+
+                    <!-- Q1 -->
+                    <div class="question-item" style="margin-bottom: 18px;">
+                        <span class="q-label">1.</span>
+                        <span style="min-width: 90px; font-weight: bold;">Dialogue 1:</span>
+                        <input type="text" id="ex4-q1" data-ans="newsagent's|newsagents|newsagent" class="task5-input"
+                            oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex4-q1')">👁️</button>
+                            <button class="hint-btn"
+                                onclick="showReadingHint(event,'t1-newsagent','ex4-q1-hint','transcript-panel-ex4')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex4-q1-hint" style="width: 100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">newsagent's</span><br><br>
+                            <strong>Bằng chứng:</strong> <i>"Yes, I'm looking for a copy of a magazine called Stamp
+                                Collectors' Monthly."</i><br><br>
+                            <strong>Giải thích:</strong> Khách hàng hỏi mua một phong sô-cô-la lớn và một cuốn tạp chí
+                            tem thư. Nơi chuyên bán tạp chí, báo giấy và bánh kẹo ngọt là quầy bán báo
+                            (**newsagent's**).
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="question-item" style="margin-bottom: 18px;">
+                        <span class="q-label">2.</span>
+                        <span style="min-width: 90px; font-weight: bold;">Dialogue 2:</span>
+                        <input type="text" id="ex4-q2" data-ans="florist's|florists|florist" class="task5-input"
+                            oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex4-q2')">👁️</button>
+                            <button class="hint-btn"
+                                onclick="showReadingHint(event,'t2-roses','ex4-q2-hint','transcript-panel-ex4')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex4-q2-hint" style="width: 100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">florist's</span><br><br>
+                            <strong>Bằng chứng:</strong> <i>"Yes. I'd like to buy a bouquet for my wife... The larger
+                                one includes these beautiful red roses."</i><br><br>
+                            <strong>Giải thích:</strong> Người đàn ông muốn mua bó hoa (**bouquet**) tặng vợ nhân ngày
+                            kỷ niệm và người bán giới thiệu bó có hoa hồng đỏ (**red roses**). Tiệm bán hoa tươi là
+                            **florist's**.
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="question-item" style="margin-bottom: 18px;">
+                        <span class="q-label">3.</span>
+                        <span style="min-width: 90px; font-weight: bold;">Dialogue 3:</span>
+                        <input type="text" id="ex4-q3" data-ans="jeweller's|jewellers|jeweller" class="task5-input"
+                            oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex4-q3')">👁️</button>
+                            <button class="hint-btn"
+                                onclick="showReadingHint(event,'t3-gold','ex4-q3-hint','transcript-panel-ex4')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex4-q3-hint" style="width: 100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">jeweller's</span><br><br>
+                            <strong>Bằng chứng:</strong> <i>"Yes. I'm looking for a watch... The gold one - it's on the
+                                left."</i><br><br>
+                            <strong>Giải thích:</strong> Khách muốn chọn một chiếc đồng hồ đeo tay (**watch**) bằng vàng
+                            (**gold**) làm quà sinh nhật con gái. Tiệm bán đồng hồ xa xỉ và đồ trang sức quý là
+                            **jeweller's**.
+                        </div>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div class="question-item" style="margin-bottom: 18px;">
+                        <span class="q-label">4.</span>
+                        <span style="min-width: 90px; font-weight: bold;">Dialogue 4:</span>
+                        <input type="text" id="ex4-q4" data-ans="chemist's|chemists|chemist" class="task5-input"
+                            oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showInputAns('ex4-q4')">👁️</button>
+                            <button class="hint-btn"
+                                onclick="showReadingHint(event,'t4-headache','ex4-q4-hint','transcript-panel-ex4')">i</button>
+                        </span>
+                        <div class="hint-box" id="ex4-q4-hint" style="width: 100%;">
+                            <strong>Đáp án:</strong> <span class="key-word">chemist's</span><br><br>
+                            <strong>Bằng chứng:</strong> <i>"Yes, I've got a terrible headache and I need some
+                                painkillers... ibuprofen or paracetamol."</i><br><br>
+                            <strong>Giải thích:</strong> Khách bị đau đầu dữ dội (**headache**) và mua thuốc giảm đau
+                            (**painkillers**: ibuprofen/paracetamol). Nhà thuốc là **chemist's**.
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+         EXERCISE 5
+        ══════════════════════════════════════ -->
+        <div class="exercise-card" style="margin-top: 30px; position: relative;">
+            <div class="exercise-title">5. Complete the dialogues with the words below.</div>
+
+            <!-- Dialogue 1 -->
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: var(--primary); margin-bottom: 10px;">Dialogue 1</h4>
+                <div class="word-bank" id="bank-ex5-d1"></div>
+                <div class="dialogue-box">
+                    <div>
+                        <span class="dialogue-speaker">Emma:</span> Are those jeans new?
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Kelly:</span> Yes, I bought them in a
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q1" data-section="ex5-d1" data-ans="sale"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d1')"
+                                onclick="handleSlotClick('ex5-q1','ex5-d1')" style="min-width: 90px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q1','ex5-d1')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q1')">i</button>
+                            <span class="inline-hint" id="ex5-q1-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">sale</span><br><br>
+                                <strong>Giải thích:</strong> Kelly giải thích cô mua chiếc quần trong đợt giảm giá
+                                (**sale**) giảm giá mạnh.
+                            </span>
+                        </span>.
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Emma:</span> How much were they?
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Kelly:</span> Well, I looked at the
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q2" data-section="ex5-d1" data-ans="price tag"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d1')"
+                                onclick="handleSlotClick('ex5-q2','ex5-d1')" style="min-width: 100px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q2','ex5-d1')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q2')">i</button>
+                            <span class="inline-hint" id="ex5-q2-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">price tag</span><br><br>
+                                <strong>Giải thích:</strong> Nhãn đính kèm trên quần áo ghi thông tin giá cả là nhãn giá
+                                (**price tag**). Giá ban đầu ghi là £45.
+                            </span>
+                        </span> and it said £45. But when I got to the till, the sales assistant gave me a £20
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q3" data-section="ex5-d1" data-ans="discount"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d1')"
+                                onclick="handleSlotClick('ex5-q3','ex5-d1')" style="min-width: 100px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q3','ex5-d1')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q3')">i</button>
+                            <span class="inline-hint" id="ex5-q3-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">discount</span><br><br>
+                                <strong>Giải thích:</strong> Số tiền được bớt đi, chiết khấu đi so với giá gốc khi thanh
+                                toán ở quầy thu ngân gọi là khoản giảm giá (**discount**).
+                            </span>
+                        </span>, so they were only £25.
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Emma:</span> That was a
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q4" data-section="ex5-d1" data-ans="bargain"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d1')"
+                                onclick="handleSlotClick('ex5-q4','ex5-d1')" style="min-width: 95px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q4','ex5-d1')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q4')">i</button>
+                            <span class="inline-hint" id="ex5-q4-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">bargain</span><br><br>
+                                <strong>Giải thích:</strong> Mua một mặt hàng tốt chất lượng cao với giá rẻ hơn bình
+                                thường rất nhiều được gọi là một món hời (**bargain**).
+                            </span>
+                        </span>!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dialogue 2 -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: var(--primary); margin-bottom: 10px;">Dialogue 2</h4>
+                <div class="word-bank" id="bank-ex5-d2"></div>
+                <div class="dialogue-box">
+                    <div>
+                        <span class="dialogue-speaker">Fred:</span> I'd like to buy this scarf, please. Can I use this
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q5" data-section="ex5-d2" data-ans="coupon"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d2')"
+                                onclick="handleSlotClick('ex5-q5','ex5-d2')" style="min-width: 90px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q5','ex5-d2')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q5')">i</button>
+                            <span class="inline-hint" id="ex5-q5-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">coupon</span><br><br>
+                                <strong>Giải thích:</strong> Mảnh giấy hoặc mã số giúp khách hàng được giảm giá khi mua
+                                sắm là phiếu mua hàng/phiếu giảm giá (**coupon**).
+                            </span>
+                        </span>? It says I can have a £5 discount.
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Sales assistant:</span> No, I'm afraid you can only use it on
+                        full-price items. This scarf is already on
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q6" data-section="ex5-d2" data-ans="special offer"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d2')"
+                                onclick="handleSlotClick('ex5-q6','ex5-d2')" style="min-width: 120px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q6','ex5-d2')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q6')">i</button>
+                            <span class="inline-hint" id="ex5-q6-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">special offer</span><br><br>
+                                <strong>Giải thích:</strong> Sản phẩm đang được áp dụng khuyến mãi giá rẻ đặc biệt,
+                                không áp dụng thêm phiếu coupon khác, gọi là ưu đãi đặc biệt (**special offer**).
+                            </span>
+                        </span>.
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Fred:</span> OK. I'll buy it anyway. Actually, it's a present. If
+                        my friend doesn't like it, can she bring it back and get a
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q7" data-section="ex5-d2" data-ans="refund"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d2')"
+                                onclick="handleSlotClick('ex5-q7','ex5-d2')" style="min-width: 90px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q7','ex5-d2')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q7')">i</button>
+                            <span class="inline-hint" id="ex5-q7-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">refund</span><br><br>
+                                <strong>Giải thích:</strong> Việc trả lại hàng để lấy lại đúng số tiền đã chi trả gọi là
+                                nhận hoàn tiền (**refund**).
+                            </span>
+                        </span>?
+                    </div>
+                    <div>
+                        <span class="dialogue-speaker">Sales assistant:</span> Yes, if you give her the
+                        <span class="inline-input-group">
+                            <span class="drop-slot" id="ex5-q8" data-section="ex5-d2" data-ans="receipt"
+                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5-d2')"
+                                onclick="handleSlotClick('ex5-q8','ex5-d2')" style="min-width: 90px;"></span>
+                            <button class="eye-btn" onclick="showSingleAns('ex5-q8','ex5-d2')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-q8')">i</button>
+                            <span class="inline-hint" id="ex5-q8-hint">
+                                <strong>Đáp án:</strong> <span class="key-word">receipt</span><br><br>
+                                <strong>Giải thích:</strong> Chứng từ chứng minh việc mua bán đã thanh toán thành công
+                                để làm căn cứ đổi trả hoặc hoàn tiền là hóa đơn (**receipt**).
+                            </span>
+                        </span>.
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Global Check Button -->
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script src="access-core.js"></script>
+    <script>
+        const ex3Words = ["bank", "charity shop", "deli (delicatessen)", "estate agent's", "launderette", "DIY store", "optician's", "takeaway"];
+        const ex5D1Words = ["bargain", "discount", "price tag", "sale"];
+        const ex5D2Words = ["coupon", "receipt", "refund", "special offer"];
+
+        let activeWord = null, activeSection = null;
+        let dragWord = null, dragSection = null;
+
+        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+        function initWordBank(bankId, words, section) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = words.map(w =>
+                `<div class="word-item" draggable="true" id="word-${section}-${safeId(w)}" ondragstart="handleDragStart(event,'${section}')" onclick="handleWordClick(this,'${section}')">${w}</div>`
+            ).join('');
+        }
+
+        function handleDragStart(e, section) {
+            dragWord = e.target.innerText.trim();
+            dragSection = section;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord);
+        }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.target.classList.add('over'); }
+        function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+        function handleDrop(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            if (section !== dragSection) return;
+            placeWord(slot.id, e.dataTransfer.getData('text/plain'), section);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord = null; dragSection = null;
+        }
+
+        function handleWordClick(el, section) {
+            if (section !== activeSection) {
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+            }
+            if (el.classList.contains('used')) return;
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord = null; activeSection = null;
+            } else {
+                document.querySelectorAll(`.word-item[id^="word-${section}-"]`).forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord = el.innerText.trim();
+                activeSection = section;
+            }
+        }
+
+        function handleSlotClick(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            if (activeWord && activeSection === section) {
+                placeWord(slotId, activeWord, section);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord = null; activeSection = null;
+            } else if (slot.innerText.trim()) {
+                removeWord(slotId, section);
+            }
+        }
+
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const oldWord = slot.innerText.trim();
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.innerText.trim() === word && s.id !== slotId) {
+                    s.innerText = '';
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+            if (oldWord) {
+                const oldEl = document.getElementById(`word-${section}-${safeId(oldWord)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.innerText.trim();
+            if (!word) return;
+            slot.innerText = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function showSingleAns(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans.split('|')[0];
+            if (slot.innerText.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, section);
+            } else {
+                placeWord(slotId, ans, section);
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
+            }
+        }
+
+        function showInputAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0];
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = ''; el.classList.remove('correct');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                if (h.classList.contains('inline-hint')) {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                    const rect = h.getBoundingClientRect();
+                    const container = h.closest('.dialogue-box') || h.closest('.exercise-card');
+                    if (container) {
+                        const containerRect = container.getBoundingClientRect();
+                        if (rect.right > containerRect.right - 10) {
+                            h.style.left = 'auto';
+                            h.style.right = '0';
+                        }
+                    }
+                }
+            }
+        }
+
+        function showReadingHint(event, targetId, hintBoxId, panelId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const visible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!visible) {
+                h.style.display = 'block';
+                toggleTranscript(panelId, true);
+                const txt = document.getElementById(targetId);
+                if (txt) {
+                    txt.classList.add('active-highlight');
+                    setTimeout(() => txt.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                }
+            }
+        }
+
+        function toggleTranscript(panelId, forceOpen = false) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (forceOpen) { panel.classList.add('active'); return; }
+            panel.classList.toggle('active');
+        }
+
+        function toggleCustomVocab() {
+            const c = document.getElementById('vocabContent');
+            const i = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') { c.style.display = 'none'; i.textContent = '▼'; }
+            else { c.style.display = 'block'; i.textContent = '▲'; }
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ['ex1-b', 'ex1-c', 'ex1-d', 'ex1-e', 'ex1-f', 'ex1-g', 'ex1-h'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                for (let i = 1; i <= 10; i++) {
+                    const el = document.getElementById(`ex2-q${i}`);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex3') {
+                for (let i = 1; i <= 8; i++) {
+                    const slot = document.getElementById(`ex3-q${i}`);
+                    if (slot) {
+                        const ans = slot.dataset.ans.split('|')[0];
+                        placeWord(`ex3-q${i}`, ans, 'ex3');
+                        slot.classList.add('correct');
+                    }
+                }
+            } else if (prefix === 'ex4') {
+                for (let i = 1; i <= 4; i++) {
+                    const el = document.getElementById(`ex4-q${i}`);
+                    if (el) {
+                        el.value = el.dataset.ans.split('|')[0];
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                }
+            } else if (prefix === 'ex5') {
+                // Dialogue 1
+                for (let i = 1; i <= 4; i++) {
+                    const slot = document.getElementById(`ex5-q${i}`);
+                    if (slot) {
+                        const ans = slot.dataset.ans.split('|')[0];
+                        placeWord(`ex5-q${i}`, ans, 'ex5-d1');
+                        slot.classList.add('correct');
+                    }
+                }
+                // Dialogue 2
+                for (let i = 5; i <= 8; i++) {
+                    const slot = document.getElementById(`ex5-q${i}`);
+                    if (slot) {
+                        const ans = slot.dataset.ans.split('|')[0];
+                        placeWord(`ex5-q${i}`, ans, 'ex5-d2');
+                        slot.classList.add('correct');
+                    }
+                }
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                ['ex1-b', 'ex1-c', 'ex1-d', 'ex1-e', 'ex1-f', 'ex1-g', 'ex1-h'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }
+                });
+            } else if (prefix === 'ex2') {
+                for (let i = 1; i <= 10; i++) {
+                    const el = document.getElementById(`ex2-q${i}`);
+                    if (el) { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }
+                }
+            } else if (prefix === 'ex3') {
+                for (let i = 1; i <= 8; i++) {
+                    removeWord(`ex3-q${i}`, 'ex3');
+                }
+            } else if (prefix === 'ex4') {
+                for (let i = 1; i <= 4; i++) {
+                    const el = document.getElementById(`ex4-q${i}`);
+                    if (el) { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }
+                }
+            } else if (prefix === 'ex5') {
+                for (let i = 1; i <= 4; i++) removeWord(`ex5-q${i}`, 'ex5-d1');
+                for (let i = 5; i <= 8; i++) removeWord(`ex5-q${i}`, 'ex5-d2');
+            }
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            el.style.width = Math.max((el.value || el.placeholder || '').length * 12 + 40, 80) + 'px';
+        }
+
+        function checkAll() {
+            document.querySelectorAll('input[type="text"]').forEach(el => {
+                if (!el.value.trim()) return;
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                const ok = allowed.includes(el.value.trim().toLowerCase());
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                if (!slot.innerText.trim()) return;
+                const allowed = slot.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                const ok = allowed.includes(slot.innerText.trim().toLowerCase());
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initWordBank('bank-ex3', ex3Words, 'ex3');
+            initWordBank('bank-ex5-d1', ex5D1Words, 'ex5-d1');
+            initWordBank('bank-ex5-d2', ex5D2Words, 'ex5-d2');
+
+            setTimeout(() => {
+                document.querySelectorAll('input.task5-input').forEach(adjustWidth);
+            }, 50);
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkAll();
+                }
+            });
+
+            // Resizer for Ex 1
+            const resizerEx1 = document.getElementById('resizer-ex1');
+            const panelEx1 = document.getElementById('transcript-panel-ex1');
+            let resizingEx1 = false;
+            if (resizerEx1 && panelEx1) {
+                resizerEx1.addEventListener('mousedown', () => resizingEx1 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx1) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx1.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx1 = false);
+            }
+
+            // Resizer for Ex 4
+            const resizerEx4 = document.getElementById('resizer-ex4');
+            const panelEx4 = document.getElementById('transcript-panel-ex4');
+            let resizingEx4 = false;
+            if (resizerEx4 && panelEx4) {
+                resizerEx4.addEventListener('mousedown', () => resizingEx4 = true);
+                document.addEventListener('mousemove', e => {
+                    if (!resizingEx4) return;
+                    let w = (e.clientX / window.innerWidth) * 100;
+                    w = Math.min(60, Math.max(15, w));
+                    panelEx4.style.flex = `0 0 ${w}%`;
+                });
+                document.addEventListener('mouseup', () => resizingEx4 = false);
+            }
+
+            // Close inline hints when clicking outside
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.inline-hint').forEach(el => el.style.display = 'none');
+            });
+        });
+    </script>
+</body>
+
+</html>
