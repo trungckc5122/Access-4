@@ -291,42 +291,62 @@
 
         .word-item {
             background: var(--card-bg);
-            padding: 6px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
             user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .word-item:hover {
-            background: var(--primary);
-            color: white;
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         .word-item.active-word {
+            border-color: var(--primary);
             background: var(--primary);
             color: white;
             box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
         }
 
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
         .drop-slot {
             display: inline-flex;
             min-width: 100px;
+            height: 30px;
             background: rgba(13, 148, 136, 0.05);
             border-bottom: 2px solid var(--primary);
-            margin: 0 4px;
+            margin: 0 3px;
             vertical-align: middle;
             border-radius: 4px 4px 0 0;
-            padding: 0 8px;
-            height: 32px;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
+            transition: all 0.2s;
             font-weight: bold;
             color: var(--primary);
-            transition: all 0.2s;
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
         }
 
         .drop-slot.filled {
@@ -1424,90 +1444,140 @@
             }
         }
 
-        // ========== DRAG & DROP ==========
-        let activeWord = null;
-        let activeSlot = null;
+        // ========== DRAG & DROP (7a algorithm) ==========
+        let activeWord3 = null, activeSection3 = null;
+        let dragWord3 = null, dragSection3 = null;
 
-        function setupDragDrop(bankSelector, slotSelector) {
-            document.querySelectorAll(bankSelector + ' .word-item').forEach(word => {
-                word.addEventListener('dragstart', (e) => {
-                    activeWord = word;
-                    word.classList.add('active-word');
-                    e.dataTransfer.effectAllowed = 'move';
-                });
-                word.addEventListener('dragend', () => {
-                    word.classList.remove('active-word');
-                    activeWord = null;
-                });
-                word.addEventListener('click', () => {
-                    if (activeSlot && !activeSlot.innerText) {
-                        activeSlot.innerText = word.dataset.value;
-                        activeSlot.classList.add('filled');
-                        activeSlot.style.minWidth = Math.max(word.dataset.value.length * 10 + 20, 100) + 'px';
-                        if (bankSelector !== '#ex5-bank') {
-                            word.style.display = 'none';
-                        }
-                        activeSlot.classList.remove('selected-slot');
-                        activeSlot = null;
-                    }
-                });
-            });
+        function safeId3(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
 
-            document.querySelectorAll(slotSelector).forEach(slot => {
-                slot.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                });
-                slot.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    if (activeWord && !slot.innerText) {
-                        slot.innerText = activeWord.dataset.value;
-                        slot.classList.add('filled');
-                        slot.style.minWidth = Math.max(activeWord.dataset.value.length * 10 + 20, 100) + 'px';
-                        if (bankSelector !== '#ex5-bank') {
-                            activeWord.style.display = 'none';
-                        }
-                    }
-                });
-                slot.addEventListener('click', () => {
-                    if (slot.innerText) {
-                        const wordValue = slot.innerText;
-                        const bank = slot.closest('.exercise-card').querySelector('.word-bank');
-                        if (bankSelector !== '#ex5-bank') {
-                            const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === wordValue);
-                            if (wordItem) wordItem.style.display = '';
-                        }
-                        slot.innerText = '';
-                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
-                        slot.style.minWidth = '100px';
-                    } else {
-                        document.querySelectorAll('.drop-slot').forEach(s => s.classList.remove('selected-slot'));
-                        slot.classList.add('selected-slot');
-                        activeSlot = slot;
-                    }
-                });
+        function initWordBank3(bankId, words, section) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = words.map(w =>
+                `<div class="word-item" draggable="true" id="word3-${section}-${safeId3(w)}" data-value="${w}" ondragstart="handleDragStart3(event,'${section}')" onclick="handleWordClick3(this,'${section}')">${w}</div>`
+            ).join('');
+        }
+
+        function handleDragStart3(e, section) {
+            dragWord3 = e.target.innerText.trim();
+            dragSection3 = section;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord3);
+        }
+        function handleDragOver3(e) { e.preventDefault(); }
+        function handleDragEnter3(e) { e.target.classList.add('over'); }
+        function handleDragLeave3(e) { e.target.classList.remove('over'); }
+
+        function handleDrop3(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            if (section !== dragSection3) return;
+            placeWord3(slot.dataset.id || slot.id, e.dataTransfer.getData('text/plain'), section);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord3 = null; dragSection3 = null;
+        }
+
+        function handleWordClick3(el, section) {
+            if (section !== activeSection3) {
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+            }
+            if (el.classList.contains('used')) return;
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord3 = null; activeSection3 = null;
+            } else {
+                document.querySelectorAll(`.word-item[id^="word3-${section}-"]`).forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord3 = el.innerText.trim();
+                activeSection3 = section;
+            }
+        }
+
+        function handleSlotClick3(slotId, section) {
+            const slot = document.getElementById(slotId) || document.querySelector(`.drop-slot[data-id="${slotId}"]`);
+            if (!slot) return;
+            if (activeWord3 && activeSection3 === section) {
+                placeWord3(slotId, activeWord3, section);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord3 = null; activeSection3 = null;
+            } else if (slot.innerText.trim()) {
+                removeWord3(slotId, section);
+            }
+        }
+
+        function placeWord3(slotId, word, section) {
+            const slot = document.getElementById(slotId) || document.querySelector(`.drop-slot[data-id="${slotId}"]`);
+            if (!slot) return;
+            const oldWord = slot.innerText.trim();
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.innerText.trim() === word && (s.id !== slotId && s.dataset.id !== slotId)) {
+                    s.innerText = ''; s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
             });
+            if (oldWord) {
+                const oldEl = document.getElementById(`word3-${section}-${safeId3(oldWord)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            slot.style.minWidth = Math.max(word.length * 10 + 20, 100) + 'px';
+            // ex5 bank words are reusable — don't hide
+            if (section !== 'ex5') {
+                const wordEl = document.getElementById(`word3-${section}-${safeId3(word)}`);
+                if (wordEl) wordEl.classList.add('used');
+            }
+        }
+
+        function removeWord3(slotId, section) {
+            const slot = document.getElementById(slotId) || document.querySelector(`.drop-slot[data-id="${slotId}"]`);
+            if (!slot) return;
+            const word = slot.innerText.trim();
+            if (!word) return;
+            slot.innerText = ''; slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            slot.style.minWidth = '100px';
+            if (section !== 'ex5') {
+                const wordEl = document.getElementById(`word3-${section}-${safeId3(word)}`);
+                if (wordEl) wordEl.classList.remove('used');
+            }
         }
 
         // Initialize drag-and-drop for all banks
         document.addEventListener('DOMContentLoaded', () => {
-            setupDragDrop('#ex1-bank', '.drop-slot[data-id^="ex1-"]');
-            setupDragDrop('#ex3-bank', '.drop-slot[data-id^="ex3-"]');
-            setupDragDrop('#ex5-bank', '.drop-slot[data-id^="ex5-"]');
+            // Attach drag-drop to static HTML word banks and slots
+            ['ex1', 'ex3', 'ex5'].forEach(section => {
+                const bankId = section + '-bank';
+                const bank = document.getElementById(bankId);
+                if (!bank) return;
+                // Re-init bank items with new IDs and handlers
+                bank.querySelectorAll('.word-item').forEach(w => {
+                    const word = w.dataset.value || w.innerText.trim();
+                    w.id = `word3-${section}-${safeId3(word)}`;
+                    w.dataset.value = word;
+                    w.setAttribute('draggable', 'true');
+                    w.ondragstart = (e) => handleDragStart3(e, section);
+                    w.onclick = () => handleWordClick3(w, section);
+                });
+                // Attach events to static drop slots
+                document.querySelectorAll(`.drop-slot[data-id^="${section}-"]`).forEach(slot => {
+                    slot.setAttribute('data-section', section);
+                    slot.ondragover = (e) => handleDragOver3(e);
+                    slot.ondragenter = (e) => handleDragEnter3(e);
+                    slot.ondragleave = (e) => handleDragLeave3(e);
+                    slot.ondrop = (e) => handleDrop3(e, section);
+                    slot.onclick = () => handleSlotClick3(slot.dataset.id, section);
+                });
+            });
         });
 
         // ========== SHOW SECTION ANSWERS ==========
         function showAnswers(sectionId) {
             if (sectionId === 'ex1') {
                 document.querySelectorAll('.drop-slot[data-id^="ex1-"]').forEach(slot => {
-                    const ans = slot.dataset.ans;
-                    slot.innerText = ans;
-                    slot.classList.add('filled', 'correct');
-                    slot.classList.remove('incorrect-marked');
-                    slot.style.minWidth = Math.max(ans.length * 10 + 20, 100) + 'px';
-                    const bank = document.querySelector('#ex1-bank');
-                    const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === ans);
-                    if (wordItem) wordItem.style.display = 'none';
+                    placeWord3(slot.dataset.id, slot.dataset.ans, 'ex1');
+                    slot.classList.add('correct');
                 });
             } else if (sectionId === 'ex2') {
                 document.querySelectorAll('.choice-group[data-id^="ex2-"]').forEach(group => {
@@ -1521,14 +1591,8 @@
                 });
             } else if (sectionId === 'ex3') {
                 document.querySelectorAll('.drop-slot[data-id^="ex3-"]').forEach(slot => {
-                    const ans = slot.dataset.ans;
-                    slot.innerText = ans;
-                    slot.classList.add('filled', 'correct');
-                    slot.classList.remove('incorrect-marked');
-                    slot.style.minWidth = Math.max(ans.length * 10 + 20, 100) + 'px';
-                    const bank = document.querySelector('#ex3-bank');
-                    const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === ans);
-                    if (wordItem) wordItem.style.display = 'none';
+                    placeWord3(slot.dataset.id, slot.dataset.ans, 'ex3');
+                    slot.classList.add('correct');
                 });
             } else if (sectionId === 'ex4') {
                 document.querySelectorAll('.choice-gap[id^="ex4-"]').forEach(gap => {
@@ -1542,11 +1606,8 @@
                 });
             } else if (sectionId === 'ex5') {
                 document.querySelectorAll('.drop-slot[data-id^="ex5-"]').forEach(slot => {
-                    const ans = slot.dataset.ans;
-                    slot.innerText = ans;
-                    slot.classList.add('filled', 'correct');
-                    slot.classList.remove('incorrect-marked');
-                    slot.style.minWidth = Math.max(ans.length * 10 + 20, 100) + 'px';
+                    placeWord3(slot.dataset.id, slot.dataset.ans, 'ex5');
+                    slot.classList.add('correct');
                 });
             } else if (sectionId === 'ex6') {
                 const card = document.getElementById('ex6-card');
@@ -1568,36 +1629,27 @@
                 });
             }
         }
-
         // ========== RESET SECTION ==========
         function resetSection(sectionId) {
             if (sectionId === 'ex1') {
                 document.querySelectorAll('.drop-slot[data-id^="ex1-"]').forEach(slot => {
-                    slot.innerText = '';
-                    slot.classList.remove('filled', 'correct', 'incorrect-marked', 'selected-slot');
-                    slot.style.minWidth = '100px';
+                    removeWord3(slot.dataset.id, 'ex1');
                 });
-                document.querySelectorAll('#ex1-bank .word-item').forEach(w => w.style.display = '');
             } else if (sectionId === 'ex2') {
                 document.querySelectorAll('.choice-group[data-id^="ex2-"] .choice-btn').forEach(btn => {
                     btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight');
                 });
             } else if (sectionId === 'ex3') {
                 document.querySelectorAll('.drop-slot[data-id^="ex3-"]').forEach(slot => {
-                    slot.innerText = '';
-                    slot.classList.remove('filled', 'correct', 'incorrect-marked', 'selected-slot');
-                    slot.style.minWidth = '100px';
+                    removeWord3(slot.dataset.id, 'ex3');
                 });
-                document.querySelectorAll('#ex3-bank .word-item').forEach(w => w.style.display = '');
             } else if (sectionId === 'ex4') {
                 document.querySelectorAll('.choice-gap[id^="ex4-"] .word-choice').forEach(span => {
                     span.classList.remove('selected', 'correct-highlight', 'incorrect-highlight');
                 });
             } else if (sectionId === 'ex5') {
                 document.querySelectorAll('.drop-slot[data-id^="ex5-"]').forEach(slot => {
-                    slot.innerText = '';
-                    slot.classList.remove('filled', 'correct', 'incorrect-marked', 'selected-slot');
-                    slot.style.minWidth = '100px';
+                    removeWord3(slot.dataset.id, 'ex5');
                 });
             } else if (sectionId === 'ex6') {
                 const card = document.getElementById('ex6-card');
@@ -1615,7 +1667,7 @@
                 });
             }
             closeAllHints();
-            activeSlot = null;
+            activeWord3 = null; activeSection3 = null;
         }
 
         // ========== CHECK ALL ==========

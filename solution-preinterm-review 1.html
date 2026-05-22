@@ -254,42 +254,62 @@
 
         .word-item {
             background: var(--card-bg);
-            padding: 6px 16px;
+            padding: 8px 18px;
             border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
             user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
         
         .word-item:hover {
-            background: var(--primary);
-            color: white;
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         
         .word-item.active-word {
+            border-color: var(--primary);
             background: var(--primary);
             color: white;
             box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
         }
 
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
         .drop-slot {
             display: inline-flex;
             min-width: 100px;
+            height: 30px;
             background: rgba(13, 148, 136, 0.05);
             border-bottom: 2px solid var(--primary);
-            margin: 0 4px;
+            margin: 0 3px;
             vertical-align: middle;
             border-radius: 4px 4px 0 0;
-            padding: 0 8px;
-            height: 32px;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
+            transition: all 0.2s;
             font-weight: bold;
             color: var(--primary);
-            transition: all 0.2s;
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
         }
         
         .drop-slot.filled {
@@ -770,22 +790,28 @@
         });
 
         // ================= RENDERING =================
-        let dragWord = null;
-        let dragSection = null;
+        let activeWord = null, activeSection = null;
+        let dragWord = null, dragSection = null;
 
-        function setupDragAndDrop() {
-            window.activeWord = null;
-            window.activeWordElem = null;
-            window.activeSection = null;
+        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+        function initWordBank(bankId, words, section) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = words.map(w =>
+                `<div class="word-item" draggable="true" id="word-${section}-${safeId(w)}" ondragstart="handleDragStart(event,'${section}')" onclick="handleWordClick(this,'${section}')">${w}</div>`
+            ).join('');
         }
 
+        // Keep createWordBank as alias for backward compat with ex2
+        function createWordBank(id, words, section) { initWordBank(id, words, section); }
+
         function handleDragStart(e, section) {
-            dragWord = e.target.dataset.word;
+            dragWord = e.target.innerText.trim();
             dragSection = section;
             e.target.classList.add('dragging');
             e.dataTransfer.setData('text/plain', dragWord);
         }
-
         function handleDragOver(e) { e.preventDefault(); }
         function handleDragEnter(e) { e.target.classList.add('over'); }
         function handleDragLeave(e) { e.target.classList.remove('over'); }
@@ -796,56 +822,85 @@
             if (!slot) return;
             slot.classList.remove('over');
             if (section !== dragSection) return;
-            
-            const word = e.dataTransfer.getData('text/plain');
-            window.activeWord = word;
-            window.activeSection = section;
-            window.activeWordElem = document.getElementById(`word-${section}-${word.replace(/[^a-zA-Z0-9]/g, '-')}`);
-            
-            handleSlotClick(slot.id, section);
+            placeWord(slot.id, e.dataTransfer.getData('text/plain'), section);
             document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord = null; dragSection = null;
         }
 
-        function createWordBank(id, words, section) {
-            const bank = document.getElementById(id);
-            if (!bank) return;
-            bank.innerHTML = words.map(w => `<div class="word-item" draggable="true" ondragstart="handleDragStart(event, '${section}')" id="word-${section}-${w.replace(/[^a-zA-Z0-9]/g, '-')}" data-word="${w}" onclick="handleWordClick(this, '${w}', '${section}')">${w}</div>`).join('');
-        }
-
-        window.handleWordClick = function(elem, word, section) {
-            if (window.activeWordElem) {
-                window.activeWordElem.classList.remove('active-word');
+        function handleWordClick(el, section) {
+            if (section !== activeSection) {
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
             }
-            if (window.activeWord === word && window.activeSection === section) {
-                window.activeWord = null;
-                window.activeWordElem = null;
-                window.activeSection = null;
+            if (el.classList.contains('used')) return;
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord = null; activeSection = null;
             } else {
-                elem.classList.add('active-word');
-                window.activeWord = word;
-                window.activeWordElem = elem;
-                window.activeSection = section;
+                document.querySelectorAll(`.word-item[id^="word-${section}-"]`).forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord = el.innerText.trim();
+                activeSection = section;
             }
-        };
+        }
 
-        window.handleSlotClick = function(slotId, section) {
+        function handleSlotClick(slotId, section) {
             const slot = document.getElementById(slotId);
             if (!slot) return;
-            
-            if (window.activeWord && window.activeSection === section) {
-                slot.innerText = window.activeWord;
-                slot.classList.add('filled');
-                window.activeWordElem.classList.remove('active-word');
-                window.activeWord = null;
-                window.activeWordElem = null;
-                window.activeSection = null;
-                slot.classList.remove('correct', 'incorrect-marked');
-            } else if (slot.innerText) {
-                // Remove word if clicking on a filled slot
-                slot.innerText = '';
-                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            if (activeWord && activeSection === section) {
+                placeWord(slotId, activeWord, section);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord = null; activeSection = null;
+            } else if (slot.innerText.trim()) {
+                removeWord(slotId, section);
             }
-        };
+        }
+
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const oldWord = slot.innerText.trim();
+            // If this word is already in another slot, clear it
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.innerText.trim() === word && s.id !== slotId) {
+                    s.innerText = '';
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+            // Restore old word to bank
+            if (oldWord) {
+                const oldEl = document.getElementById(`word-${section}-${safeId(oldWord)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.innerText.trim();
+            if (!word) return;
+            slot.innerText = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`word-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function showSingleAns(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans.split('|')[0];
+            if (slot.innerText.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, section);
+            } else {
+                placeWord(slotId, ans, section);
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
+            }
+        }
 
         function renderEx1() {
             createWordBank('bank-ex1', ex1Words, 'ex1');

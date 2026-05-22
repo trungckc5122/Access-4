@@ -6,7 +6,7 @@
     <title>Solution Pre-Intermediate | Review Unit 4</title>
     <link rel="stylesheet" href="access-theme.css">
     <style>
-        /* ===== EXACT CSS FROM REVIEW 3 (100% COMPLIANT) ===== */
+        /* ===== EXACT CSS FROM REVIEW 1 (DRAG & DROP) ===== */
         .reading-split-container {
             display: flex;
             gap: 0;
@@ -111,6 +111,7 @@
         .task5-input:focus { outline: none; background: var(--primary-light); border-radius: 4px 4px 0 0; }
         .task5-input.correct { color: #166534; border-bottom-color: #16a34a; background: rgba(22, 163, 74, 0.1); }
         .task5-input.incorrect-marked { color: #991b1b; border-bottom-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+        /* Drag & drop styles (from Review 1) */
         .word-bank {
             display: flex;
             flex-wrap: wrap;
@@ -139,6 +140,7 @@
         }
         .word-item:hover { background: var(--primary); color: white; }
         .word-item.active-word { background: var(--primary); color: white; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3); }
+        .word-item.used { opacity: 0.35; cursor: default; pointer-events: none; }
         .drop-slot {
             display: inline-flex;
             min-width: 100px;
@@ -156,6 +158,7 @@
             color: var(--primary);
             transition: all 0.2s;
         }
+        .drop-slot.drag-over { background: var(--primary-light); border-bottom-color: var(--primary-dark); }
         .drop-slot.filled { background: var(--primary-light); }
         .drop-slot.correct { background: #dcfce7 !important; color: #166534 !important; border-bottom-color: #16a34a !important; }
         .drop-slot.incorrect-marked { background: #fee2e2 !important; color: #991b1b !important; border-bottom-color: #dc2626 !important; }
@@ -164,7 +167,6 @@
         .exercise-card { background: var(--card-bg); border-radius: 16px; padding: 25px; margin-bottom: 25px; border: 1px solid var(--glass-border); }
         .exercise-title { font-weight: 700; margin-bottom: 20px; font-size: 1.1rem; color: var(--text); border-left: 4px solid var(--primary); padding-left: 15px; }
         .solution-title-row h1 { display: flex !important; align-items: center !important; justify-content: flex-start !important; padding-left: 60px !important; gap: 15px !important; width: fit-content; }
-   
         .global-check { position: fixed; bottom: 25px; right: 25px; background: #27ae60; color: white; border: none; border-radius: 40px; padding: 14px 28px; font-weight: bold; font-size: 1.05rem; z-index: 1000; cursor: pointer; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); transition: all 0.2s; }
         .global-check:hover { transform: translateY(-2px); background: #219653; }
         .underlined-original { text-decoration: underline; font-weight: 600; margin-right: 8px; }
@@ -285,35 +287,137 @@
     function closeAllHints() { document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none'); }
     function toggleHint(event, id) { event.stopPropagation(); const h = document.getElementById(id); const isVisible = h && h.style.display === 'block'; closeAllHints(); if (h && !isVisible) h.style.display = 'block'; }
     function toggleInputAns(input) { if(!input || !input.dataset.ans) return; const answers = input.dataset.ans.split('|').map(a=>a.trim()); const cur = input.value.trim(); if(answers.includes(cur) && input.classList.contains('correct')) { input.value=''; input.classList.remove('correct','incorrect-marked'); } else { input.value = answers[0]; input.classList.remove('incorrect-marked'); input.classList.add('correct'); } adjustWidth(input); }
-    
-    // Slot toggle with bank restore (for drag-drop)
-    function toggleSlot(id, ans, bankSelector) {
-        const slot = document.querySelector(`.drop-slot[data-id="${id}"]`);
-        if(!slot) return;
-        const correctAns = slot.dataset.ans;
-        const current = slot.innerText.trim();
-        if(current === correctAns && slot.classList.contains('correct')) {
-            slot.innerText = '';
-            slot.classList.remove('filled','correct','incorrect-marked');
-            slot.style.minWidth = '100px';
-            if(bankSelector) {
-                const bank = document.querySelector(bankSelector);
-                const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === correctAns);
-                if(wordItem) wordItem.style.display = '';
+
+    // ========== NEW DRAG & DROP SYSTEM (FROM REVIEW 1) ==========
+    let activeWord = null, activeSection = null;
+    let dragWordEl = null, dragSection = null;
+
+    function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+    function getWordItem(wordValue, section) {
+        const bank = document.getElementById(`bank-${section}`);
+        return bank ? bank.querySelector(`.word-item[data-value="${CSS.escape(wordValue)}"]`) : null;
+    }
+
+    function removeWord(slotId, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        const word = slot.innerText.trim();
+        if (!word) return;
+        slot.innerText = '';
+        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+        slot.style.minWidth = '100px';
+        const wi = getWordItem(word, section);
+        if (wi) wi.classList.remove('used');
+    }
+
+    function placeWord(slotId, wordValue, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot || !wordValue) return;
+        if (slot.classList.contains('filled') && slot.innerText.trim()) {
+            removeWord(slotId, section);
+        }
+        document.querySelectorAll(`[data-section="${section}"]`).forEach(otherSlot => {
+            if (otherSlot.id !== slotId && otherSlot.innerText.trim() === wordValue) {
+                removeWord(otherSlot.id, section);
             }
+        });
+        slot.innerText = wordValue;
+        slot.classList.add('filled');
+        slot.classList.remove('correct', 'incorrect-marked');
+        slot.style.minWidth = Math.max(wordValue.length * 10 + 20, 100) + 'px';
+        const wi = getWordItem(wordValue, section);
+        if (wi) wi.classList.add('used');
+    }
+
+    function handleWordClick(el, section) {
+        if (el.classList.contains('used')) return;
+        if (activeWord === el.dataset.value && activeSection === section) {
+            el.classList.remove('active-word');
+            activeWord = null; activeSection = null;
         } else {
-            slot.innerText = correctAns;
-            slot.classList.add('filled','correct');
-            slot.classList.remove('incorrect-marked');
-            slot.style.minWidth = Math.max(correctAns.length * 10 + 20, 100) + 'px';
-            if(bankSelector) {
-                const bank = document.querySelector(bankSelector);
-                const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === correctAns);
-                if(wordItem) wordItem.style.display = 'none';
-            }
+            document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('active-word'));
+            el.classList.add('active-word');
+            activeWord = el.dataset.value;
+            activeSection = section;
         }
     }
-    // Choice button handlers
+
+    function handleSlotClick(slotId, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        if (activeWord && activeSection === section) {
+            placeWord(slotId, activeWord, section);
+            const activeItem = getWordItem(activeWord, section);
+            if (activeItem) activeItem.classList.remove('active-word');
+            activeWord = null; activeSection = null;
+        } else if (slot.innerText.trim()) {
+            removeWord(slotId, section);
+        }
+    }
+
+    function handleDragStart(e, section) {
+        const el = e.target;
+        if (el.classList.contains('used')) {
+            e.preventDefault();
+            return false;
+        }
+        dragWordEl = el;
+        dragSection = section;
+        el.classList.add('active-word');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', el.dataset.value);
+    }
+
+    function handleDragOver(e) { e.preventDefault(); }
+    function handleDragEnter(e) { e.preventDefault(); e.target.classList.add('drag-over'); }
+    function handleDragLeave(e) { e.target.classList.remove('drag-over'); }
+
+    function handleDrop(e, section) {
+        e.preventDefault();
+        const slot = e.target.closest('.drop-slot');
+        if (!slot) return;
+        slot.classList.remove('drag-over');
+        if (dragWordEl && dragSection === section) {
+            placeWord(slot.id, dragWordEl.dataset.value, section);
+            dragWordEl.classList.remove('active-word');
+            dragWordEl = null; dragSection = null;
+        }
+    }
+
+    function createWordBank(bankId, words, section) {
+        const bank = document.getElementById(bankId);
+        if (!bank) return;
+        bank.innerHTML = words.map(w =>
+            `<div class="word-item" data-value="${w}" draggable="true" 
+                  ondragstart="handleDragStart(event, '${section}')" 
+                  onclick="handleWordClick(this, '${section}')">${w}</div>`
+        ).join('');
+    }
+
+    function toggleSlot(id, ans, section) {
+        const slot = document.getElementById(id);
+        if (!slot) return;
+        const current = slot.innerText.trim();
+        if (current === ans && slot.classList.contains('correct')) {
+            const wi = getWordItem(ans, section);
+            if (wi) wi.classList.remove('used');
+            slot.innerText = ''; slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            slot.style.minWidth = '100px';
+        } else {
+            if (section) {
+                document.querySelectorAll(`[data-section="${section}"]`).forEach(s => {
+                    if (s.id !== id && s.innerText.trim() === ans) removeWord(s.id, section);
+                });
+            }
+            const wi = getWordItem(ans, section);
+            if (wi) wi.classList.add('used');
+            slot.innerText = ans; slot.classList.add('filled', 'correct'); slot.classList.remove('incorrect-marked');
+            slot.style.minWidth = Math.max(ans.length * 10 + 20, 100) + 'px';
+        }
+    }
+
+    // Choice button handlers (unchanged)
     function selectChoiceBtn(btn) { const group = btn.closest('.choice-group'); group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected','correct-highlight','incorrect-highlight')); btn.classList.add('selected'); }
     function toggleChoiceGroup(groupId) {
         const group = document.querySelector(`.choice-group[data-id="${groupId}"]`);
@@ -324,24 +428,7 @@
         else { group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected','correct-highlight','incorrect-highlight')); if(correctBtn) correctBtn.classList.add('correct-highlight'); }
     }
 
-    // Drag & Drop core
-    let activeWord = null;
-    let activeSlot = null;
-    function setupDragDrop(bankSelector, slotSelector) {
-        document.querySelectorAll(bankSelector + ' .word-item').forEach(word => {
-            word.setAttribute('draggable', 'true');
-            word.addEventListener('dragstart', (e) => { activeWord = word; word.classList.add('active-word'); e.dataTransfer.effectAllowed = 'move'; });
-            word.addEventListener('dragend', () => { word.classList.remove('active-word'); activeWord = null; });
-            word.addEventListener('click', () => { if(activeSlot && !activeSlot.innerText) { activeSlot.innerText = word.dataset.value; activeSlot.classList.add('filled'); activeSlot.style.minWidth = Math.max(word.dataset.value.length*10+20,100)+'px'; if(bankSelector !== '#bank-ex9') word.style.display = 'none'; activeSlot.classList.remove('selected-slot'); activeSlot = null; } });
-        });
-        document.querySelectorAll(slotSelector).forEach(slot => {
-            slot.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-            slot.addEventListener('drop', (e) => { e.preventDefault(); if(activeWord && !slot.innerText) { slot.innerText = activeWord.dataset.value; slot.classList.add('filled'); slot.style.minWidth = Math.max(activeWord.dataset.value.length*10+20,100)+'px'; if(bankSelector !== '#bank-ex9') activeWord.style.display = 'none'; } });
-            slot.addEventListener('click', () => { if(slot.innerText) { const val = slot.innerText; const bank = document.querySelector(bankSelector); if(bankSelector !== '#bank-ex9') { const wordItem = Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === val); if(wordItem) wordItem.style.display = ''; } slot.innerText = ''; slot.classList.remove('filled','correct','incorrect-marked'); slot.style.minWidth = '100px'; } else { document.querySelectorAll('.drop-slot').forEach(s=>s.classList.remove('selected-slot')); slot.classList.add('selected-slot'); activeSlot = slot; } });
-        });
-    }
-
-    // ========== DATA (hints updated to full 3‑part standard) ==========
+    // ========== DATA (unchanged except hints now have 3 parts) ==========
     const ex1Sentences = [
         {text:"The sky is full of clouds. It's very ______.", ans:"cloudy", hint:"<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “full of clouds” → trạng thái nhiều mây.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Cloud là danh từ (mây). Để miêu tả trời, ta dùng tính từ “cloudy” (có mây, u ám).</div>"},
         {text:"It's <strong>snowing</strong>! Did you know that every ______ is a different shape and pattern?", ans:"snowflake", hint:"<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “snowing” và “different shape and pattern” → nói về bông tuyết.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Snow là tuyết; snowflake là bông tuyết – mỗi bông có hình dạng riêng.</div>"},
@@ -383,8 +470,6 @@
         {text:"For some reason, the drivers often pass this ______ without picking up passengers.", opts:["traffic light","bus stop"], ans:"bus stop", hint:"<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “without picking up passengers” (không đón khách).</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Bus stop là điểm dừng xe buýt.</div>"},
         {text:"It's annoying when people ride their bikes on the ______.", opts:["pavement","street corner"], ans:"pavement", hint:"<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “ride their bikes on the …” (đạp xe trên…).</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Pavement là vỉa hè dành cho người đi bộ.</div>"}
     ];
-    
-    // ===== EXERCISE 6 HINTS DETAILED =====
     const ex6Words = ["carry on","close down","come up with","give up","look after","put off","use up","wake up to"];
     const ex6Sentences = [
         { text: "Can you <u>take care of</u> the baby while I go shopping?", ans: "look after", hint: "<strong>Đáp án:</strong> look after<br><strong>Bằng chứng:</strong> “take care of” được gạch chân.<br><strong>Giải thích:</strong> “look after” có nghĩa là chăm sóc, trông nom, tương đương với “take care of”." },
@@ -396,7 +481,6 @@
         { text: "They had to <u>shut their business</u> because of the storm damage.", ans: "close down", hint: "<strong>Đáp án:</strong> close down<br><strong>Bằng chứng:</strong> “shut their business” (đóng cửa doanh nghiệp).<br><strong>Giải thích:</strong> “close down” là đóng cửa vĩnh viễn." },
         { text: "People need to <u>become aware of</u> reality and stop using so many natural resources.", ans: "wake up to", hint: "<strong>Đáp án:</strong> wake up to<br><strong>Bằng chứng:</strong> “become aware of” (nhận thức ra).<br><strong>Giải thích:</strong> “wake up to” là tỉnh ngộ, nhận ra sự thật." }
     ];
-
     const ex7Data = [
         {prompt:"New York / cold / Los Angeles", ans:"New York is colder than Los Angeles.", hint:"<div class=\"hint-detail\"><strong>Đáp án:</strong> New York is colder than Los Angeles.</div><div class=\"hint-detail\"><strong>Bằng chứng:</strong> So sánh hơn với tính từ ngắn “cold”.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Thêm -er vào tính từ ngắn và dùng “than”.</div>"},
         {prompt:"The Atlantic Ocean / stormy / the Mediterranean", ans:"The Atlantic Ocean is stormier than the Mediterranean.", hint:"<div class=\"hint-detail\"><strong>Đáp án:</strong> The Atlantic Ocean is stormier than the Mediterranean.</div><div class=\"hint-detail\"><strong>Bằng chứng:</strong> “stormy” kết thúc bằng -y → đổi thành -ier.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> stormy → stormier (nhiều bão hơn).</div>"},
@@ -434,16 +518,16 @@
         document.getElementById('ex1-container').innerHTML = html;
         document.querySelectorAll('#ex1-container .task5-input').forEach(adjustWidth);
     }
+
     function renderEx2() {
-        const bank = document.getElementById('bank-ex2');
-        bank.innerHTML = ex2Words.map(w => `<div class="word-item" data-value="${w}">${w}</div>`).join('');
+        createWordBank('bank-ex2', ex2Words, 'ex2');
         let html = '';
         ex2Sentences.forEach((s,i) => {
-            html += `<div class="question-row">${i+1}. ${s.text.replace('______', `<span class="drop-slot" data-id="ex2-${i}" data-ans="${s.ans}"></span>`)} <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex2-${i}','${s.ans}','#bank-ex2')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
+            html += `<div class="question-row">${i+1}. ${s.text.replace('______', `<span class="drop-slot" id="ex2-q${i}" data-section="ex2" data-ans="${s.ans}" onclick="handleSlotClick('ex2-q${i}', 'ex2')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex2')"></span>`)} <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex2-q${i}','${s.ans}','ex2')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
         });
         document.getElementById('ex2-container').innerHTML = html;
-        setupDragDrop('#bank-ex2','.drop-slot[data-id^="ex2-"]');
     }
+
     function renderEx3() {
         let html = '';
         ex3Data.forEach((item,i) => {
@@ -453,39 +537,43 @@
         });
         document.getElementById('ex3-container').innerHTML = html;
     }
+
     function renderEx4() {
-        const bank = document.getElementById('bank-ex4');
-        bank.innerHTML = ex4Words.map(w => `<div class="word-item" data-value="${w}">${w}</div>`).join('');
-        let html = `<p><strong>A</strong><br>${ex4TextA.replace(/1______/, '<span class="drop-slot" data-id="ex4-0" data-ans="took off"></span>').replace(/2______/, '<span class="drop-slot" data-id="ex4-1" data-ans="headed"></span>').replace(/3______/, '<span class="drop-slot" data-id="ex4-2" data-ans="landed"></span>')}</p>`;
-        html += `<p><strong>B</strong><br>${ex4TextB.replace(/4______/, '<span class="drop-slot" data-id="ex4-3" data-ans="approached"></span>').replace(/5______/, '<span class="drop-slot" data-id="ex4-4" data-ans="spun"></span>').replace(/6______/, '<span class="drop-slot" data-id="ex4-5" data-ans="reach"></span>')}</p>`;
+        createWordBank('bank-ex4', ex4Words, 'ex4');
+        let textA = ex4TextA.replace(/1______/, '<span class="drop-slot" id="ex4-q0" data-section="ex4" data-ans="took off" onclick="handleSlotClick(\'ex4-q0\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
+                           .replace(/2______/, '<span class="drop-slot" id="ex4-q1" data-section="ex4" data-ans="headed" onclick="handleSlotClick(\'ex4-q1\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
+                           .replace(/3______/, '<span class="drop-slot" id="ex4-q2" data-section="ex4" data-ans="landed" onclick="handleSlotClick(\'ex4-q2\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>');
+        let textB = ex4TextB.replace(/4______/, '<span class="drop-slot" id="ex4-q3" data-section="ex4" data-ans="approached" onclick="handleSlotClick(\'ex4-q3\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
+                           .replace(/5______/, '<span class="drop-slot" id="ex4-q4" data-section="ex4" data-ans="spun" onclick="handleSlotClick(\'ex4-q4\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
+                           .replace(/6______/, '<span class="drop-slot" id="ex4-q5" data-section="ex4" data-ans="reach" onclick="handleSlotClick(\'ex4-q5\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>');
+        let html = `<p><strong>A</strong><br>${textA}</p><p><strong>B</strong><br>${textB}</p>`;
         document.getElementById('ex4-container').innerHTML = html;
         // Add buttons and hints manually
-        for(let i=0;i<6;i++) {
-            let slot = document.querySelector(`.drop-slot[data-id="ex4-${i}"]`);
-            if(slot && !slot.nextElementSibling?.classList?.contains('row-btns')) {
+        const explanations = [
+            { word: 'took off', evidence: '“from the airport and rose into the air” → cất cánh.', explanation: 'Took off là quá khứ của take off, nghĩa là cất cánh.' },
+            { word: 'headed', evidence: '“back to the airport” → quay trở lại.', explanation: 'Headed là quá khứ của head (hướng về).' },
+            { word: 'landed', evidence: '“safely on the ground” → hạ cánh an toàn.', explanation: 'Landed là quá khứ của land (hạ cánh).' },
+            { word: 'approached', evidence: '“As the car … the red traffic light” → đến gần đèn đỏ.', explanation: 'Approached là quá khứ của approach (tiếp cận).' },
+            { word: 'spun', evidence: '“round and round” → xoay tròn.', explanation: 'Spun là quá khứ của spin (quay).' },
+            { word: 'reach', evidence: '“didn’t … us” → không chạm tới.', explanation: 'Reach có nghĩa là đến được, chạm tới.' }
+        ];
+        for(let i=0; i<6; i++) {
+            let slot = document.getElementById(`ex4-q${i}`);
+            if(slot) {
                 let btnSpan = document.createElement('span');
                 btnSpan.className = 'row-btns';
                 btnSpan.style.marginLeft = '5px';
-                btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex4-${i}','${ex4Words[i]}','#bank-ex4')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>`;
+                btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex4-q${i}','${explanations[i].word}','ex4')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>`;
                 let hintDiv = document.createElement('div');
                 hintDiv.className = 'hint-box';
                 hintDiv.id = `ex4-h${i}`;
-                // Updated hints with 3 parts
-                const explanations = [
-                    { word: 'took off', evidence: '“from the airport and rose into the air” → cất cánh.', explanation: 'Took off là quá khứ của take off, nghĩa là cất cánh.' },
-                    { word: 'headed', evidence: '“back to the airport” → quay trở lại.', explanation: 'Headed là quá khứ của head (hướng về).' },
-                    { word: 'landed', evidence: '“safely on the ground” → hạ cánh an toàn.', explanation: 'Landed là quá khứ của land (hạ cánh).' },
-                    { word: 'approached', evidence: '“As the car … the red traffic light” → đến gần đèn đỏ.', explanation: 'Approached là quá khứ của approach (tiếp cận).' },
-                    { word: 'spun', evidence: '“round and round” → xoay tròn.', explanation: 'Spun là quá khứ của spin (quay).' },
-                    { word: 'reach', evidence: '“didn’t … us” → không chạm tới.', explanation: 'Reach có nghĩa là đến được, chạm tới.' }
-                ];
                 hintDiv.innerHTML = `<div class="hint-detail"><strong>Đáp án:</strong> ${explanations[i].word}</div><div class="hint-detail"><strong>Bằng chứng:</strong> ${explanations[i].evidence}</div><div class="hint-detail"><strong>Giải thích:</strong> ${explanations[i].explanation}</div>`;
                 slot.insertAdjacentElement('afterend', btnSpan);
                 btnSpan.insertAdjacentElement('afterend', hintDiv);
             }
         }
-        setupDragDrop('#bank-ex4','.drop-slot[data-id^="ex4-"]');
     }
+
     function renderEx5() {
         let html = '';
         ex5Data.forEach((item,i) => {
@@ -495,27 +583,25 @@
         });
         document.getElementById('ex5-container').innerHTML = html;
     }
-    
-    // ===== EXERCISE 6 RENDER (unchanged except hints already detailed) =====
+
     function renderEx6() {
-        const bank = document.getElementById('bank-ex6');
-        bank.innerHTML = ex6Words.map(w => `<div class="word-item" data-value="${w}">${w}</div>`).join('');
+        createWordBank('bank-ex6', ex6Words, 'ex6');
         let html = '';
         ex6Sentences.forEach((item, i) => {
             html += `<div class="question-row">
                         <strong>${i+1}</strong> ${item.text}
-                        <span class="drop-slot" data-id="ex6-${i}" data-ans="${item.ans}" style="min-width:120px;"></span>
+                        <span class="drop-slot" id="ex6-q${i}" data-section="ex6" data-ans="${item.ans}" style="min-width:120px;"
+                            onclick="handleSlotClick('ex6-q${i}', 'ex6')"
+                            ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" 
+                            ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex6')"></span>
                         <span class="row-btns">
-                            <button class="eye-btn" onclick="toggleSlot('ex6-${i}', '${item.ans}', '#bank-ex6')">👁️</button>
-                            <button class="hint-btn" onclick="toggleHint(event, 'ex6-h${i}')">i</button>
+                            <button class="eye-btn" onclick="toggleSlot('ex6-q${i}','${item.ans}','ex6')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex6-h${i}')">i</button>
                         </span>
-                        <div class="hint-box" id="ex6-h${i}">
-                            ${item.hint}
-                        </div>
+                        <div class="hint-box" id="ex6-h${i}">${item.hint}</div>
                     </div>`;
         });
         document.getElementById('ex6-container').innerHTML = html;
-        setupDragDrop('#bank-ex6', '.drop-slot[data-id^="ex6-"]');
     }
 
     function renderEx7() {
@@ -526,6 +612,7 @@
         document.getElementById('ex7-container').innerHTML = html;
         document.querySelectorAll('#ex7-container .task5-input').forEach(adjustWidth);
     }
+
     function renderEx8() {
         let html = '';
         ex8Data.forEach((item,i) => {
@@ -535,15 +622,14 @@
         document.getElementById('ex8-container').innerHTML = html;
         document.querySelectorAll('#ex8-container .task5-input').forEach(adjustWidth);
     }
+
     function renderEx9() {
-        const bank = document.getElementById('bank-ex9');
-        bank.innerHTML = ex9Words.map(w => `<div class="word-item" data-value="${w}">${w}</div>`).join('');
+        createWordBank('bank-ex9', ex9Words, 'ex9');
         let filled = ex9Text;
-        for(let i=0;i<ex9Answers.length;i++) {
-            filled = filled.replace(`${i+1} ______`, `<span class="drop-slot" data-id="ex9-${i}" data-ans="${ex9Answers[i]}"></span>`);
+        for(let i=0; i<ex9Answers.length; i++) {
+            filled = filled.replace(`${i+1} ______`, `<span class="drop-slot" id="ex9-q${i}" data-section="ex9" data-ans="${ex9Answers[i]}" onclick="handleSlotClick('ex9-q${i}', 'ex9')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex9')"></span>`);
         }
         document.getElementById('ex9-container').innerHTML = `<div style="background:var(--card-bg); padding:20px; border-radius:12px; line-height:2.2;">${filled}</div>`;
-        // Add buttons and hints
         const hints = [
             { ans: 'the', evidence: '“one of … best views” → cần mạo từ “the” trước so sánh nhất.', explanation: 'Cụm “one of the + superlative” là cấu trúc cố định.' },
             { ans: 'too', evidence: '“foggy to see very far” → cấu trúc too + adj + to V.', explanation: '“Too foggy” có nghĩa là quá nhiều sương mù để nhìn xa.' },
@@ -551,13 +637,13 @@
             { ans: 'than', evidence: '“uglier … it was before” → so sánh hơn cần “than”.', explanation: '“Uglier than” là cấu trúc so sánh hơn.' },
             { ans: 'out', evidence: '“run … of fossil fuels” → cụm động từ run out of.', explanation: '“Run out of” có nghĩa là cạn kiệt.' }
         ];
-        for(let i=0;i<ex9Answers.length;i++) {
-            let slot = document.querySelector(`.drop-slot[data-id="ex9-${i}"]`);
-            if(slot && !slot.nextElementSibling?.classList?.contains('row-btns')) {
+        for(let i=0; i<ex9Answers.length; i++) {
+            let slot = document.getElementById(`ex9-q${i}`);
+            if(slot) {
                 let btnSpan = document.createElement('span');
                 btnSpan.className = 'row-btns';
                 btnSpan.style.marginLeft = '5px';
-                btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex9-${i}','${ex9Answers[i]}','#bank-ex9')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>`;
+                btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex9-q${i}','${ex9Answers[i]}','ex9')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>`;
                 let hintDiv = document.createElement('div');
                 hintDiv.className = 'hint-box';
                 hintDiv.id = `ex9-h${i}`;
@@ -566,29 +652,27 @@
                 btnSpan.insertAdjacentElement('afterend', hintDiv);
             }
         }
-        setupDragDrop('#bank-ex9','.drop-slot[data-id^="ex9-"]');
     }
 
     // Show Answers & Reset
     window.showAnswers = function(section) {
         if(section === 'ex1') for(let i=0;i<ex1Sentences.length;i++) toggleInputAns(document.getElementById(`ex1-${i}`));
-        if(section === 'ex2') for(let i=0;i<ex2Sentences.length;i++) toggleSlot(`ex2-${i}`, ex2Sentences[i].ans, '#bank-ex2');
+        if(section === 'ex2') ex2Sentences.forEach((s,i) => toggleSlot(`ex2-q${i}`, s.ans, 'ex2'));
         if(section === 'ex3') for(let i=0;i<ex3Data.length;i++) toggleChoiceGroup(`ex3-${i}`);
-        if(section === 'ex4') for(let i=0;i<6;i++) toggleSlot(`ex4-${i}`, ex4Words[i], '#bank-ex4');
+        if(section === 'ex4') for(let i=0;i<6;i++) toggleSlot(`ex4-q${i}`, ex4Words[i], 'ex4');
         if(section === 'ex5') for(let i=0;i<ex5Data.length;i++) toggleChoiceGroup(`ex5-${i}`);
-        if(section === 'ex6') for(let i=0;i<ex6Sentences.length;i++) toggleSlot(`ex6-${i}`, ex6Sentences[i].ans, '#bank-ex6');
+        if(section === 'ex6') ex6Sentences.forEach((s,i) => toggleSlot(`ex6-q${i}`, s.ans, 'ex6'));
         if(section === 'ex7') for(let i=0;i<ex7Data.length;i++) toggleInputAns(document.getElementById(`ex7-${i}`));
         if(section === 'ex8') for(let i=0;i<ex8Data.length;i++) toggleInputAns(document.getElementById(`ex8-${i}`));
-        if(section === 'ex9') for(let i=0;i<ex9Answers.length;i++) toggleSlot(`ex9-${i}`, ex9Answers[i], '#bank-ex9');
+        if(section === 'ex9') ex9Answers.forEach((ans,i) => toggleSlot(`ex9-q${i}`, ans, 'ex9'));
     };
     window.resetSection = function(section) {
         if(section === 'ex1') document.querySelectorAll('#ex1-container .task5-input').forEach(inp => { inp.value=''; inp.classList.remove('correct','incorrect-marked'); adjustWidth(inp); });
-        if(['ex2','ex4','ex6','ex9'].includes(section)) document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => { slot.innerText=''; slot.classList.remove('filled','correct','incorrect-marked'); slot.style.minWidth='100px'; });
-        if(section === 'ex2') document.querySelectorAll('#bank-ex2 .word-item').forEach(w=>w.style.display='');
-        if(section === 'ex4') document.querySelectorAll('#bank-ex4 .word-item').forEach(w=>w.style.display='');
-        if(section === 'ex6') document.querySelectorAll('#bank-ex6 .word-item').forEach(w=>w.style.display='');
-        if(section === 'ex9') document.querySelectorAll('#bank-ex9 .word-item').forEach(w=>w.style.display='');
-        if(section === 'ex3'|| section === 'ex5') document.querySelectorAll(`#${section}-container .choice-btn`).forEach(b=>b.classList.remove('selected','correct-highlight','incorrect-highlight'));
+        if(['ex2','ex4','ex6','ex9'].includes(section)) {
+            document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => { if(slot.classList.contains('filled')) removeWord(slot.id, section); });
+            document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('used','active-word'));
+        }
+        if(section === 'ex3' || section === 'ex5') document.querySelectorAll(`#${section}-container .choice-btn`).forEach(b=>b.classList.remove('selected','correct-highlight','incorrect-highlight'));
         if(section === 'ex7') document.querySelectorAll('#ex7-container .task5-input').forEach(inp=>{inp.value=''; inp.classList.remove('correct','incorrect-marked'); adjustWidth(inp);});
         if(section === 'ex8') document.querySelectorAll('#ex8-container .task5-input').forEach(inp=>{inp.value=''; inp.classList.remove('correct','incorrect-marked'); adjustWidth(inp);});
         closeAllHints();

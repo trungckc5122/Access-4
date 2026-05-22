@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - 9C Listening: Intentions of the speaker</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Split Screen for Transcript (from 1C) */
+        .reading-split-container {
+            display: flex; align-items: flex-start; gap: 0;
+            margin-top: 20px; border: 1px solid var(--glass-border);
+            border-radius: 12px; background: var(--bg);
+        }
+        .transcript-panel {
+            flex: 0 0 0%; padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky; top: 20px;
+            max-height: 90vh; overflow-y: auto;
+        }
+        .transcript-panel.active {
+            flex: 0 0 45%; padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+        .reading-resizer {
+            width: 0px; background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize; flex-shrink: 0; z-index: 10;
+        }
+        .transcript-panel.active + .reading-resizer { width: 8px; }
+        .main-exercise-panel { flex: 1; padding: 25px; background: var(--card-bg, #fff); }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0; padding: 12px;
+            background: var(--primary-light); border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 15px;
+        }
+        .audio-player-container audio { flex: 1; height: 35px; }
+        .transcript-toggle-btn {
+            background: var(--primary); color: white; border: none;
+            padding: 8px 18px; border-radius: 20px; cursor: pointer;
+            font-weight: bold; display: inline-flex; align-items: center;
+            gap: 8px; margin-bottom: 10px; transition: all 0.3s; font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        /* Highlight */
+        .highlightable { transition: background-color 0.3s, box-shadow 0.3s; cursor: pointer; }
+        .highlightable.active-highlight {
+            background-color: rgba(250,204,21,0.4);
+            box-shadow: 0 0 0 4px rgba(250,204,21,0.3);
+            border-radius: 4px; color: #000; font-weight: 500;
+        }
+
+        /* Transcript speaker lines */
+        .speaker-line { margin-bottom: 10px; display: block; line-height: 1.8; }
+        .speaker-num { font-weight: bold; color: var(--primary-dark); }
+        .script-section { display: none; }
+        .script-section.active { display: block; }
+
+        /* Ex1: inline inputs */
+        .task5-input {
+            border: none; border-bottom: 2px solid var(--primary);
+            padding: 2px 6px; font-size: 1rem; color: var(--primary);
+            font-weight: bold; background: transparent; min-width: 80px;
+            transition: all 0.2s; text-align: center; field-sizing: content;
+        }
+        .task5-input:focus { outline: none; background: var(--primary-light); }
+        .task5-input.correct { color: var(--success); border-bottom-color: var(--success); background: rgba(22,163,74,0.1); }
+        .task5-input.incorrect-marked { color: var(--error); border-bottom-color: var(--error); background: rgba(220,38,38,0.1); }
+
+        /* Word bank */
+        .word-bank {
+            display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 18px;
+            background: var(--primary-light); border: 2px solid var(--primary);
+            border-radius: 14px; margin-bottom: 18px; justify-content: center;
+            position: sticky; top: 10px; z-index: 90;
+        }
+        .word-item {
+            padding: 6px 14px; background: var(--card-bg);
+            border: 2px solid var(--primary); border-radius: 10px;
+            cursor: grab; user-select: none; font-weight: bold;
+            color: var(--primary); font-size: 0.9rem; transition: all 0.2s;
+        }
+        .word-item:hover:not(.used) { background: var(--primary); color: white; transform: translateY(-2px); }
+        .word-item.used { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+        .word-item.active-word { background: var(--primary); color: white; }
+        .drop-slot {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 110px; height: 30px;
+            background: rgba(13,148,136,0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px; vertical-align: middle;
+            border-radius: 4px 4px 0 0; cursor: pointer; transition: all 0.2s;
+            font-weight: bold; color: var(--primary); font-size: 0.97rem;
+        }
+        .drop-slot.over { background: var(--primary-light); border-bottom-style: dashed; }
+        .drop-slot.filled { background: var(--primary-light); }
+        .drop-slot.correct { background: #dcfce7 !important; border-bottom-color: #16a34a !important; color: #166534 !important; }
+        .drop-slot.incorrect-marked { background: #fee2e2 !important; border-bottom-color: #dc2626 !important; color: #991b1b !important; }
+
+        /* Ex4: limit option width */
+        .mc-options { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+
+        /* Ex3 title fix */
+        .exercise-title {
+            font-size: 1.1rem;
+            display: block;
+            line-height: 1.6;
+            white-space: normal;
+            word-break: normal;
+        }
+
+        /* Ex1: display-only word reference (no drag) */
+        .ref-word-bank {
+            display: flex; flex-wrap: wrap; gap: 10px;
+            padding: 12px 16px; margin-bottom: 18px;
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+        }
+        .ref-word {
+            padding: 5px 12px; background: var(--card-bg);
+            border: 1px solid var(--primary); border-radius: 8px;
+            font-weight: 700; color: var(--primary-dark);
+            font-size: 0.9rem; user-select: none;
+        }
+
+        /* Ex3: inline inputs for speaker intentions */
+        .inline-group {
+            display: inline-flex; align-items: center; gap: 4px;
+            position: relative; vertical-align: middle;
+        }
+        .hint-box.absolute {
+            position: absolute; top: 100%; left: 0;
+            min-width: 260px; width: auto; max-width: 320px;
+            margin-top: 5px; z-index: 200;
+        }
+
+        /* Ex4: MCQ option cards */
+        .mc-card {
+            background: var(--card-bg); border: 1px solid var(--border-medium, #cbd5e1);
+            border-radius: 12px; padding: 16px; margin-bottom: 18px;
+        }
+        .mc-question { font-weight: bold; font-size: 1.05rem; margin-bottom: 10px; color: var(--text); }
+        .mc-options { display: flex; flex-direction: column; gap: 8px; }
+        .mc-option {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 14px; border: 1px solid var(--border-medium, #e2e8f0);
+            border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.98rem;
+        }
+        .mc-option:hover { background: var(--primary-light); border-color: var(--primary); }
+        .mc-option.selected { background: var(--primary-light); border-color: var(--primary); font-weight: 600; }
+        .mc-option.correct { background: #dcfce7 !important; border-color: #22c55e !important; color: #15803d !important; font-weight: bold; }
+        .mc-option.incorrect { background: #fee2e2 !important; border-color: #ef4444 !important; color: #b91c1c !important; }
+        .mc-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 22px; height: 22px; border-radius: 5px;
+            background: var(--border-medium, #e2e8f0); font-weight: bold;
+            font-size: 0.88rem; color: var(--text-muted); flex-shrink: 0;
+        }
+        .mc-option.selected .mc-badge { background: var(--primary); color: white; }
+        .mc-option.correct .mc-badge { background: #22c55e !important; color: white !important; }
+        .mc-option.incorrect .mc-badge { background: #ef4444 !important; color: white !important; }
+
+        /* Hint box */
+        .hint-box {
+            display: none; background: var(--hint-bg);
+            border: 1px solid var(--glass-border); border-left: 5px solid var(--hint-border);
+            color: var(--hint-text); padding: 15px; margin-top: 12px;
+            border-radius: 8px; font-size: 0.95rem; line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .hint-box strong { color: var(--primary); }
+
+        /* Listening Strategy */
+        .strategy-card {
+            background: var(--hint-bg); border: 2px dashed var(--primary);
+            border-radius: 12px; padding: 18px 22px; margin-bottom: 24px;
+            color: var(--hint-text);
+        }
+        .strategy-card .strategy-title {
+            font-size: 1.05rem; font-weight: bold; color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .strategy-card p { font-size: 0.97rem; line-height: 1.7; margin: 0; }
+
+        /* Row buttons */
+        .row-btns { display: inline-flex; gap: 5px; vertical-align: middle; margin-left: 8px; }
+        .controls-row { margin-top: 18px; display: flex; gap: 10px; }
+        .btn { padding: 9px 22px; border-radius: 22px; border: none; cursor: pointer; font-weight: bold; transition: all 0.3s; font-size: 0.9rem; }
+        .btn-show-all { background: #0d9488; color: white; }
+        .btn-show-all:hover { background: #14b8a6; }
+        .btn-reset { background: #34495e; color: white; }
+        .btn-reset:hover { background: #2c3e50; }
+
+        /* Title */
+        .solution-title-row h1 {
+            display: flex !important; align-items: center !important;
+            justify-content: flex-start !important; padding-left: 0 !important;
+            gap: 15px !important; width: fit-content; margin: 0 !important;
+            border: none !important; background: none !important; box-shadow: none !important;
+        }
+        .solution-title-row .home-btn { position: static !important; transform: none !important; }
+        .check-all-btn { position: fixed; bottom: 25px; right: 25px; z-index: 1000; }
+        .question-row { margin-bottom: 16px; line-height: 1.8; font-size: 1.05rem; }
+    </style>
+</head>
+<body data-theme="light">
+<div class="container">
+    <div class="solution-title-row">
+        <div class="solution-unit-badge">9C</div>
+        <div class="solution-title-content">
+            <div class="solution-skill-tag">Listening</div>
+            <h1>Intentions of the speaker</h1>
+            <p class="subtitle">I can identify the speaker's intention.</p>
+        </div>
+    </div>
+
+    <div class="reading-split-container">
+
+        <!-- LEFT: Transcript panel -->
+        <div class="transcript-panel" id="transcript-panel">
+            <h2 style="margin-bottom:20px; border-bottom:2px solid var(--primary); padding-bottom:10px;">Listening Scripts</h2>
+
+            <!-- Track 2.14 -->
+            <div id="script-2-14" class="script-section">
+                <h3 style="color:var(--primary); margin-bottom:15px;">Transcript 2.14 (Exercise 3)</h3>
+                <span class="speaker-line"><span class="speaker-num">Speaker 1:</span>
+                    As you go walking in the mountains today, <span class="highlightable" id="ts3-1">be very careful. The weather forecast isn't good</span> and if you don't know this area well, it's very easy to get lost. You must complete your walk before it gets dark. <span class="highlightable" id="ts3-1b">It's really dangerous to be in the mountains at night.</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 2:</span>
+                    I know … I know. It's 8 o'clock, I said I'd be here at 7. <span class="highlightable" id="ts3-2">I'm so sorry – I left home late, and then the bus was full and I had to wait for the next one.</span> And I couldn't call you because I'd left my phone at home! <span class="highlightable" id="ts3-2b">I'm really sorry.</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 3:</span>
+                    Oh hello. I was just wondering – <span class="highlightable" id="ts3-3">do you know what time the museum closes? I mean the museum of modern art, in the city centre?</span> Only this is our last day here and I don't want to miss it. <span class="highlightable" id="ts3-3b">Is it open in the evening?</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 4:</span>
+                    I heard about your accident. <span class="highlightable" id="ts3-4">You poor thing. It must hurt a lot.</span> I broke my ankle once and it was so painful! And it means you can't go skiing next week. Oh, how annoying! <span class="highlightable" id="ts3-4b">Look, if there's anything I can do, tell me. I could come over and keep you company.</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 5:</span>
+                    <span class="highlightable" id="ts3-5">Don't be nervous about the final. You're a great tennis player.</span> Just play your natural game and you'll be fine. <span class="highlightable" id="ts3-5b">We're already proud of you, win or lose. So just relax and I'm sure you'll do really well.</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 6:</span>
+                    <span class="highlightable" id="ts3-6">No, I'm afraid everything is not OK. For a start, I ordered chicken – this isn't chicken.</span> Also, this water tastes funny. Or maybe the glass isn't clean. Anyway, I can't drink it. <span class="highlightable" id="ts3-6b">For a five-star hotel restaurant, this really isn't good enough.</span>
+                </span>
+            </div>
+
+            <!-- Track 2.15 -->
+            <div id="script-2-15" class="script-section">
+                <h3 style="color:var(--primary); margin-bottom:15px;">Transcript 2.15 (Exercise 4)</h3>
+                <span class="speaker-line"><span class="speaker-num">Speaker 1:</span>
+                    <span class="highlightable" id="ts4-1">Good evening everybody and thank you for coming to our special event at this amazing castle.</span> It's wonderful to see so many people here for the launch of our new car, the Model TX3. Later, we'll give you lots of information about the vehicle and you'll have the chance to speak to our engineers and ask questions. But for now, just relax, get a drink and enjoy this spectacular venue for a while!
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 2:</span>
+                    I've had a look at your laptop, but I'm afraid it's bad news. If you look here, you can see where the water has damaged the inside of the laptop. You can't repair damage like that, I'm afraid. You can replace all of these parts, but that will cost a lot of money. <span class="highlightable" id="ts4-2">My advice would be that you just buy a new laptop.</span> I'm sorry, but there's nothing else I can suggest.
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 3:</span>
+                    This new type of battery is going to make it far quicker and cheaper for people to recharge their smartphones. The technology works, and it was discovered right here in our laboratories. All we need to do is find enough funding to develop our product. <span class="highlightable" id="ts4-3">And that's where you come in! You can help us raise the $5 million we need to turn this brilliant idea into reality.</span> We believe we're offering you a fantastic opportunity because these new batteries really are an improvement on what is available today.
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 4:</span>
+                    So, this is a little machine I made at home. As you can see, it's got wheels, like a little car. And it is powered by one small battery. I tested it three times and my best distance was eight metres and twenty centimetres. Now, this is what you have to do. <span class="highlightable" id="ts4-4">In your teams, you have to design and build a machine that is powered by the same type of battery as my machine. Can it beat my distance of eight metres twenty? That's your mission.</span>
+                </span>
+                <span class="speaker-line"><span class="speaker-num">Speaker 5:</span>
+                    <span class="highlightable" id="ts4-5">This is the new 3D television with ultra-high definition and surround sound. It's a smart TV – which means it has internet access, so you can stream films and TV programmes straight from the web.</span> You can also use it for browsing the internet, although personally, I find it much more difficult to use than a normal computer or even a smart phone. But for watching films and TV, it really is amazing. I'm not a fan of 3D myself, but the ultra high definition is spectacular. And considering it's the most advanced TV on the market, the remote control is amazingly simple to use.
+                </span>
+            </div>
+        </div>
+
+        <div class="reading-resizer" id="reading-resizer"></div>
+
+        <!-- RIGHT: Exercises -->
+        <div class="main-exercise-panel" id="main-exercise-panel">
+
+            <!-- Exercise 1 -->
+            <div class="exercise-card">
+                <div class="exercise-title"><strong>1.</strong> Complete the sentences with the verbs below. Remember to use the correct form of the verb.</div>
+                <div class="ref-word-bank">
+                    <span class="ref-word">browse</span>
+                    <span class="ref-word">come up with</span>
+                    <span class="ref-word">get</span>
+                    <span class="ref-word">lose</span>
+                    <span class="ref-word">prescribe</span>
+                    <span class="ref-word">run</span>
+                </div>
+                <div id="questions-ex1"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 2 -->
+            <div class="exercise-card">
+                <div class="exercise-title"><strong>2.</strong> Complete the definitions using the verbs below.</div>
+                <div class="word-bank" id="ex2-bank">
+                    <div class="word-item" draggable="true" data-word="apologise" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">apologise</div>
+                    <div class="word-item" draggable="true" data-word="challenge" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">challenge</div>
+                    <div class="word-item" draggable="true" data-word="comfort" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">comfort</div>
+                    <div class="word-item" draggable="true" data-word="complain" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">complain</div>
+                    <div class="word-item" draggable="true" data-word="encourage" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">encourage</div>
+                    <div class="word-item" draggable="true" data-word="enquire" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">enquire</div>
+                    <div class="word-item" draggable="true" data-word="entertain" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">entertain</div>
+                    <div class="word-item" draggable="true" data-word="inform" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">inform</div>
+                    <div class="word-item" draggable="true" data-word="persuade" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">persuade</div>
+                    <div class="word-item" draggable="true" data-word="recommend" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">recommend</div>
+                    <div class="word-item" draggable="true" data-word="warn" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">warn</div>
+                    <div class="word-item" draggable="true" data-word="welcome" onclick="wbClick(this,'ex2')" ondragstart="wbDragStart(event,'ex2')">welcome</div>
+                </div>
+                <div id="questions-ex2"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 3 -->
+            <div class="exercise-card">
+                <div class="exercise-title"><strong>3.</strong> Read the Listening Strategy. Then listen to six speakers. What are their intentions? Complete the sentences with the <em><strong>-ing</strong></em> form of verbs from exercise 2.</div>
+
+                <div class="strategy-card">
+                    <div class="strategy-title">Chiến thuật nghe (Listening Strategy)</div>
+                    <p>Đôi khi bạn phải xác định ý định của người nói (ví dụ: thuyết phục, cảnh báo, thông báo...). Hãy chú ý các cụm từ như <em>I think you should, be careful to, I'm going to tell you about...</em> để nhận ra ý định của người nói.</p>
+                </div>
+
+                <button class="transcript-toggle-btn" id="btn-toggle-2-14" onclick="toggleTranscript('2.14')">📜 Transcript 2.14</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/2_Track14.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div class="word-bank" id="ex3-bank">
+                    <div class="word-item" draggable="true" data-word="warning" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">warning</div>
+                    <div class="word-item" draggable="true" data-word="apologising" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">apologising</div>
+                    <div class="word-item" draggable="true" data-word="enquiring" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">enquiring</div>
+                    <div class="word-item" draggable="true" data-word="comforting" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">comforting</div>
+                    <div class="word-item" draggable="true" data-word="encouraging" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">encouraging</div>
+                    <div class="word-item" draggable="true" data-word="complaining" onclick="wbClick(this,'ex3')" ondragstart="wbDragStart(event,'ex3')">complaining</div>
+                </div>
+                <div id="questions-ex3"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                </div>
+            </div>
+
+            <!-- Exercise 4 -->
+            <div class="exercise-card">
+                <div class="exercise-title"><strong>4.</strong> Read the questions below. Then listen to the speakers and circle the correct answers.</div>
+                <button class="transcript-toggle-btn" id="btn-toggle-2-15" onclick="switchTranscript('2.15')">📜 Transcript 2.15</button>
+                <div class="audio-player-container">
+                    <audio controls><source src="audio-pre/2_Track15.mp3" type="audio/mpeg"></audio>
+                </div>
+                <div id="questions-ex4"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script src="access-core.js"></script>
+<script>
+    // ===================== DATA =====================
+    const ex1Data = [
+        { q: "He ______ 10 kg during his trip to Antarctica.", ans: "lost", hint: "<strong>Đáp án: lost</strong><br>lose (mất) → lost (quá khứ). 'lose weight' = giảm cân." },
+        { q: "Yesterday, my friend ______ a great idea for how to raise money for our club.", ans: "came up with", hint: "<strong>Đáp án: came up with</strong><br>come up with = nghĩ ra (ý tưởng). Quá khứ: came up with." },
+        { q: "My mum's got a new car and it ______ on biofuel.", ans: "runs", hint: "<strong>Đáp án: runs</strong><br>run on = chạy bằng (nhiên liệu). Hiện tại đơn số ít: runs." },
+        { q: "If you've got a smartphone, you can ______ the internet wherever you are.", ans: "browse", hint: "<strong>Đáp án: browse</strong><br>browse the internet = lướt internet. Nguyên thể sau 'can'." },
+        { q: "My sister always ______ a good deal when she goes shopping for clothes.", ans: "gets", hint: "<strong>Đáp án: gets</strong><br>get a good deal = mua được giá tốt. Hiện tại đơn số ít: gets." },
+        { q: "Last month, a doctor ______ some medicine for my headaches.", ans: "prescribed", hint: "<strong>Đáp án: prescribed</strong><br>prescribe = kê đơn thuốc. Quá khứ: prescribed." }
+    ];
+
+    const ex2Data = [
+        { q: "If you ______ somebody (about something), you tell them about a danger.", ans: "warn", hint: "<strong>Đáp án: warn</strong><br>warn sb about sth = cảnh báo ai về điều gì nguy hiểm." },
+        { q: "If you ______ to somebody (about something), you tell them why you are unhappy about it.", ans: "complain", hint: "<strong>Đáp án: complain</strong><br>complain to sb about sth = phàn nàn với ai về điều gì." },
+        { q: "If you ______ (for something), you say that you are sorry.", ans: "apologise", hint: "<strong>Đáp án: apologise</strong><br>apologise for sth = xin lỗi vì điều gì." },
+        { q: "If you ______ about something, you ask questions about it.", ans: "enquire", hint: "<strong>Đáp án: enquire</strong><br>enquire about sth = hỏi thông tin về điều gì." },
+        { q: "If you ______ something (to somebody), you say why it is good.", ans: "recommend", hint: "<strong>Đáp án: recommend</strong><br>recommend sth to sb = giới thiệu/đề xuất cái gì cho ai." },
+        { q: "If you ______ somebody (to do something), you make them feel more confident about it.", ans: "encourage", hint: "<strong>Đáp án: encourage</strong><br>encourage sb to do sth = khuyến khích ai làm gì." },
+        { q: "If you ______ somebody or something, you say you are happy about their arrival.", ans: "welcome", hint: "<strong>Đáp án: welcome</strong><br>welcome sb = chào đón ai." },
+        { q: "If you ______ somebody (about something), you tell them facts about it.", ans: "inform", hint: "<strong>Đáp án: inform</strong><br>inform sb about sth = thông báo cho ai về điều gì." },
+        { q: "If you ______ somebody, you invite them to compete with you.", ans: "challenge", hint: "<strong>Đáp án: challenge</strong><br>challenge sb = thách thức ai." },
+        { q: "If you ______ somebody, you try to make them feel better when they're sad.", ans: "comfort", hint: "<strong>Đáp án: comfort</strong><br>comfort sb = an ủi ai." },
+        { q: "If you ______ somebody (to do something), you say things which make them want to do it.", ans: "persuade", hint: "<strong>Đáp án: persuade</strong><br>persuade sb to do sth = thuyết phục ai làm gì." },
+        { q: "If you ______ somebody, you keep them amused and interested.", ans: "entertain", hint: "<strong>Đáp án: entertain</strong><br>entertain sb = giải trí cho ai, làm ai vui." }
+    ];
+
+    const ex3Data = [
+        { q: "Speaker 1 is ______ a group of tourists.", ans: "warning", target: "ts3-1",
+          hint: "<strong>Đáp án: warning</strong><br>Speaker 1 cảnh báo về thời tiết xấu và nguy hiểm khi đi núi: <em>'be very careful... It's really dangerous to be in the mountains at night.'</em>" },
+        { q: "Speaker 2 is ______ to a friend.", ans: "apologising", target: "ts3-2",
+          hint: "<strong>Đáp án: apologising</strong><br>Speaker 2 xin lỗi vì đến muộn: <em>'I'm so sorry... I'm really sorry.'</em>" },
+        { q: "Speaker 3 is ______ about a museum.", ans: "enquiring", target: "ts3-3",
+          hint: "<strong>Đáp án: enquiring</strong><br>Speaker 3 hỏi thông tin về giờ đóng cửa của bảo tàng: <em>'do you know what time the museum closes?'</em>" },
+        { q: "Speaker 4 is ______ a friend.", ans: "comforting", target: "ts3-4",
+          hint: "<strong>Đáp án: comforting</strong><br>Speaker 4 an ủi người bạn bị tai nạn: <em>'You poor thing... if there's anything I can do, tell me.'</em>" },
+        { q: "Speaker 5 is ______ a friend.", ans: "encouraging", target: "ts3-5",
+          hint: "<strong>Đáp án: encouraging</strong><br>Speaker 5 khuyến khích bạn trước trận chung kết tennis: <em>'You're a great tennis player... We're already proud of you.'</em>" },
+        { q: "Speaker 6 is ______ in a hotel.", ans: "complaining", target: "ts3-6",
+          hint: "<strong>Đáp án: complaining</strong><br>Speaker 6 phàn nàn về đồ ăn và nước uống tại nhà hàng khách sạn: <em>'I'm afraid everything is not OK... this really isn't good enough.'</em>" }
+    ];
+
+    const ex4Data = [
+        {
+            q: "1. The speaker's main aim is to",
+            ans: "a",
+            target: "ts4-1",
+            options: [
+                { val: "a", text: "welcome people to a special event." },
+                { val: "b", text: "complain about problems with a new car." },
+                { val: "c", text: "enquire about a new model of car." }
+            ],
+            hint: "<strong>Đáp án: a – welcome people to a special event.</strong><br>Speaker 1 chào đón khách đến sự kiện ra mắt xe mới: <em>'Good evening everybody and thank you for coming to our special event...'</em>"
+        },
+        {
+            q: "2. The speaker's main aim is to",
+            ans: "b",
+            target: "ts4-2",
+            options: [
+                { val: "a", text: "inform somebody about a new laptop." },
+                { val: "b", text: "recommend buying a new laptop." },
+                { val: "c", text: "apologise for damaging somebody's laptop." }
+            ],
+            hint: "<strong>Đáp án: b – recommend buying a new laptop.</strong><br>Speaker 2 khuyên nên mua laptop mới: <em>'My advice would be that you just buy a new laptop.'</em>"
+        },
+        {
+            q: "3. The speaker's main aim is to",
+            ans: "a",
+            target: "ts4-3",
+            options: [
+                { val: "a", text: "persuade people to invest money." },
+                { val: "b", text: "challenge people to invent a better product." },
+                { val: "c", text: "thank people for helping to develop a fantastic product." }
+            ],
+            hint: "<strong>Đáp án: a – persuade people to invest money.</strong><br>Speaker 3 thuyết phục đầu tư 5 triệu đô: <em>'You can help us raise the $5 million we need...'</em>"
+        },
+        {
+            q: "4. The speaker's main aim is to",
+            ans: "c",
+            target: "ts4-4",
+            options: [
+                { val: "a", text: "describe a machine to her students." },
+                { val: "b", text: "warn her students to be careful." },
+                { val: "c", text: "challenge her students to do better than her." }
+            ],
+            hint: "<strong>Đáp án: c – challenge her students to do better than her.</strong><br>Speaker 4 thách thức học sinh vượt qua kỷ lục của mình: <em>'Can it beat my distance of eight metres twenty? That's your mission.'</em>"
+        },
+        {
+            q: "5. The speaker's main aim is to",
+            ans: "b",
+            target: "ts4-5",
+            options: [
+                { val: "a", text: "recommend that viewers buy a new type of TV." },
+                { val: "b", text: "inform the viewers about a new type of TV." },
+                { val: "c", text: "warn viewers not to buy a new type of TV." }
+            ],
+            hint: "<strong>Đáp án: b – inform the viewers about a new type of TV.</strong><br>Speaker 5 giới thiệu thông tin về TV 3D mới: <em>'This is the new 3D television with ultra-high definition...'</em>"
+        }
+    ];
+
+    // State
+    const ex4State = {};
+    // Word bank active word state per section
+    const wbActive = {};
+    let wbDragging = null;
+    let wbDragSection = null;
+
+    // ===================== WORD BANK ENGINE =====================
+    function wbDragStart(event, section) {
+        wbDragging = event.currentTarget.dataset.word;
+        wbDragSection = section;
+        event.dataTransfer.setData('text/plain', wbDragging);
+    }
+
+    function wbClick(el, section) {
+        if (el.classList.contains('used')) return;
+        const bankId = `${section}-bank`;
+        if (wbActive[section] === el) {
+            el.classList.remove('active-word');
+            wbActive[section] = null;
+        } else {
+            document.querySelectorAll(`#${bankId} .word-item`).forEach(i => i.classList.remove('active-word'));
+            el.classList.add('active-word');
+            wbActive[section] = el;
+        }
+    }
+
+    function slotDrop(event, slotId, section) {
+        event.preventDefault();
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        slot.classList.remove('over');
+        const word = event.dataTransfer.getData('text/plain');
+        if (word) placeWord(slotId, word, section);
+        wbDragging = null; wbDragSection = null;
+    }
+
+    function slotClick(slotId, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        if (wbActive[section]) {
+            placeWord(slotId, wbActive[section].dataset.word, section);
+            wbActive[section].classList.remove('active-word');
+            wbActive[section] = null;
+        } else if (slot.textContent.trim()) {
+            removeWord(slotId, section);
+        }
+    }
+
+    function placeWord(slotId, word, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        const old = slot.textContent.trim();
+        if (old) returnToBank(old, section);
+        slot.textContent = word;
+        slot.classList.add('filled');
+        slot.classList.remove('correct', 'incorrect-marked');
+        markUsed(word, section, true);
+    }
+
+    function removeWord(slotId, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot || !slot.textContent.trim()) return;
+        returnToBank(slot.textContent.trim(), section);
+        slot.textContent = '';
+        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+    }
+
+    function markUsed(word, section, used) {
+        const bank = document.getElementById(`${section}-bank`);
+        if (!bank) return;
+        const items = Array.from(bank.querySelectorAll('.word-item'))
+            .filter(i => i.dataset.word === word && i.classList.contains('used') === !used);
+        if (items.length > 0) items[0].classList.toggle('used', used);
+    }
+
+    function returnToBank(word, section) {
+        markUsed(word, section, false);
+    }
+
+    function showSlotAns(slotId, section) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        const ans = slot.dataset.ans;
+        if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+            removeWord(slotId, section);
+        } else {
+            placeWord(slotId, ans, section);
+            slot.classList.add('correct');
+        }
+    }
+
+    // ===================== UTILS =====================
+    function adjustWidth(el) {
+        if (!el) return;
+        const text = el.value || "";
+        el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+    }
+
+    function showSingleAns(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const ans = el.getAttribute('data-ans').split('|')[0].trim();
+        if (el.value.toLowerCase().trim() === ans.toLowerCase()) {
+            el.value = ''; el.classList.remove('correct', 'incorrect-marked');
+        } else {
+            el.value = ans; el.classList.add('correct'); el.classList.remove('incorrect-marked');
+        }
+        adjustWidth(el);
+    }
+
+    function toggleHint(event, id) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(id + '-hint');
+        if (!h) return;
+        const isVisible = window.getComputedStyle(h).display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!isVisible) h.style.display = 'block';
+    }
+
+    // Transcript toggle (from 1C)
+    function toggleTranscript(track, forceOpen = false) {
+        const panel = document.getElementById('transcript-panel');
+        const sections = document.querySelectorAll('.script-section');
+        const currentActive = document.querySelector('.script-section.active');
+        const targetId = `script-${track.replace('.', '-')}`;
+        if (!forceOpen && panel.classList.contains('active') && currentActive && currentActive.id === targetId) {
+            panel.classList.remove('active');
+        } else {
+            sections.forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(targetId);
+            if (target) target.classList.add('active');
+            panel.classList.add('active');
+        }
+    }
+
+    // Always switch to target track (used by Ex4 button so it overrides Ex3's 2.14)
+    function switchTranscript(track) {
+        const panel = document.getElementById('transcript-panel');
+        const sections = document.querySelectorAll('.script-section');
+        const targetId = `script-${track.replace('.', '-')}`;
+        const currentActive = document.querySelector('.script-section.active');
+        // If already showing this track, toggle off
+        if (panel.classList.contains('active') && currentActive && currentActive.id === targetId) {
+            panel.classList.remove('active');
+        } else {
+            sections.forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(targetId);
+            if (target) target.classList.add('active');
+            panel.classList.add('active');
+        }
+    }
+
+    function showReadingHint(targetId, hintBoxId, track) {
+        const h = document.getElementById(hintBoxId);
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        if (!isVisible) {
+            h.style.display = 'block';
+            toggleTranscript(track, true);
+            const textEl = document.getElementById(targetId);
+            if (textEl) {
+                textEl.classList.add('active-highlight');
+                setTimeout(() => textEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+            }
+        }
+    }
+
+    // ===================== RENDER =====================
+    function makeSlot(slotId, ans, section, hintId) {
+        return `<span class="drop-slot" id="${slotId}" data-ans="${ans}"
+            ondragover="event.preventDefault(); this.classList.add('over')"
+            ondragleave="this.classList.remove('over')"
+            ondrop="slotDrop(event,'${slotId}','${section}')"
+            onclick="slotClick('${slotId}','${section}')"></span>`;
+    }
+
+    function renderEx1() {
+        const container = document.getElementById('questions-ex1');
+        container.innerHTML = ex1Data.map((it, i) => {
+            const qid = `ex1-q${i}`;
+            const html = it.q.replace('______', `<span class="inline-group" style="position:relative;"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)"></span>`);
+            return `<div class="question-row" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; line-height:2.4;">
+                <strong>${i+1}.</strong> ${html}
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                </span>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        }).join('');
+        document.querySelectorAll('#questions-ex1 input').forEach(adjustWidth);
+    }
+
+    function renderEx2() {
+        const container = document.getElementById('questions-ex2');
+        container.innerHTML = ex2Data.map((it, i) => {
+            const qid = `ex2-q${i}`;
+            const html = it.q.replace('______', makeSlot(qid, it.ans, 'ex2'));
+            return `<div class="question-row" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; line-height:2.2;">
+                <strong>${i+1}.</strong> ${html}
+                <span class="row-btns">
+                    <button class="eye-btn" onclick="showSlotAns('${qid}','ex2')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                </span>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderEx3() {
+        const container = document.getElementById('questions-ex3');
+        // Ex3: "Speaker N is ______ a group of tourists."
+        // Buttons must be inline right after the slot, not pushed to the right
+        container.innerHTML = ex3Data.map((it, i) => {
+            const qid = `ex3-q${i}`;
+            const slotHtml = makeSlot(qid, it.ans, 'ex3');
+            // Split the question at ______ to put buttons right after slot
+            const parts = it.q.split('______');
+            return `<div class="question-row" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; line-height:2.4;">
+                <strong>${i+1}.</strong>
+                <span>${parts[0]}</span>${slotHtml}<span class="row-btns">
+                    <button class="eye-btn" onclick="showSlotAns('${qid}','ex3')">👁️</button>
+                    <button class="hint-btn" onclick="showReadingHint('${it.target}','${qid}-hint','2.14')">i</button>
+                </span><span>${parts[1] || ''}</span>
+                <div class="hint-box" id="${qid}-hint" style="width:100%;">${it.hint}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderEx4() {
+        const container = document.getElementById('questions-ex4');
+        container.innerHTML = ex4Data.map((it, i) => {
+            const qid = `ex4-q${i}`;
+            const optionsHtml = it.options.map(opt => `
+                <div class="mc-option" id="${qid}-opt-${opt.val}" onclick="selectEx4Option('${qid}','${opt.val}')">
+                    <span class="mc-badge">${opt.val}</span>
+                    <span>${opt.text}</span>
+                </div>`).join('');
+            return `<div class="mc-card">
+                <div style="margin-bottom:10px; line-height:1.6;">
+                    <span class="mc-question" style="display:inline;">${it.q}</span>
+                    <span class="row-btns" style="display:inline-flex; margin-left:8px; vertical-align:middle;">
+                        <button class="eye-btn" onclick="revealEx4Ans('${qid}','${it.ans}')">👁️</button>
+                        <button class="hint-btn" onclick="showReadingHint('${it.target}','${qid}-hint','2.15')">i</button>
+                    </span>
+                </div>
+                <div class="mc-options">${optionsHtml}</div>
+                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function selectEx4Option(qid, val) {
+        document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => opt.classList.remove('selected','correct','incorrect'));
+        if (ex4State[qid] === val) { delete ex4State[qid]; }
+        else { ex4State[qid] = val; document.getElementById(`${qid}-opt-${val}`).classList.add('selected'); }
+    }
+
+    function revealEx4Ans(qid, correctVal) {
+        const idx = parseInt(qid.replace('ex4-q',''));
+        if (ex4State[qid] === correctVal) {
+            selectEx4Option(qid, correctVal);
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        } else {
+            selectEx4Option(qid, correctVal);
+            document.getElementById(`${qid}-opt-${correctVal}`).classList.add('correct');
+            if (ex4Data[idx]?.target) showReadingHint(ex4Data[idx].target, `${qid}-hint`, '2.15');
+        }
+    }
+
+    // ===================== CHECK ALL =====================
+    function checkAll() {
+        // Grade Ex1 text inputs
+        document.querySelectorAll(`input[id^="ex1-q"]`).forEach(input => {
+            const userVal = input.value.trim().toLowerCase();
+            if (userVal === '') { input.classList.remove('correct','incorrect-marked'); return; }
+            const allowed = input.getAttribute('data-ans').toLowerCase().split('|').map(x => x.trim());
+            if (allowed.includes(userVal)) {
+                input.classList.add('correct'); input.classList.remove('incorrect-marked');
+            } else {
+                input.classList.add('incorrect-marked'); input.classList.remove('correct');
+            }
+        });
+        // Grade drop slots in Ex2, Ex3
+        ['ex2','ex3'].forEach(section => {
+            document.querySelectorAll(`[id^="${section}-q"].drop-slot`).forEach(slot => {
+                if (!slot.textContent.trim()) return;
+                const isCorrect = slot.textContent.trim().toLowerCase() === slot.dataset.ans.toLowerCase();
+                slot.classList.remove('correct','incorrect-marked');
+                slot.classList.add(isCorrect ? 'correct' : 'incorrect-marked');
+            });
+        });
+        // Ex4 MCQ
+        ex4Data.forEach((it, i) => {
+            const qid = `ex4-q${i}`;
+            const userVal = ex4State[qid];
+            if (!userVal) return;
+            const el = document.getElementById(`${qid}-opt-${userVal}`);
+            if (!el) return;
+            el.classList.remove('selected');
+            el.classList.add(userVal === it.ans ? 'correct' : 'incorrect');
+        });
+    }
+    window.checkAll = checkAll;
+
+    // ===================== SHOW ALL / RESET =====================
+    function showAnswers(section) {
+        if (section === 'ex1') {
+            document.querySelectorAll(`input[id^="ex1-q"]`).forEach(el => {
+                el.value = el.getAttribute('data-ans').split('|')[0].trim();
+                el.classList.add('correct'); el.classList.remove('incorrect-marked');
+                adjustWidth(el);
+            });
+        } else if (['ex2','ex3'].includes(section)) {
+            document.querySelectorAll(`[id^="${section}-q"].drop-slot`).forEach(slot => {
+                placeWord(slot.id, slot.dataset.ans, section);
+                slot.classList.add('correct');
+            });
+        } else if (section === 'ex4') {
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                selectEx4Option(qid, it.ans);
+                document.getElementById(`${qid}-opt-${it.ans}`).classList.add('correct');
+            });
+        }
+    }
+
+    function resetSection(section) {
+        if (section === 'ex1') {
+            document.querySelectorAll(`input[id^="ex1-q"]`).forEach(el => {
+                el.value = ''; el.classList.remove('correct','incorrect-marked'); adjustWidth(el);
+            });
+        } else if (['ex2','ex3'].includes(section)) {
+            document.querySelectorAll(`[id^="${section}-q"].drop-slot`).forEach(slot => {
+                removeWord(slot.id, section);
+            });
+            const bank = document.getElementById(`${section}-bank`);
+            if (bank) bank.querySelectorAll('.word-item').forEach(i => { i.classList.remove('used','active-word'); });
+            wbActive[section] = null;
+        } else if (section === 'ex4') {
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                delete ex4State[qid];
+                document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => opt.className = 'mc-option');
+            });
+        }
+        document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+    }
+
+    // ===================== RESIZER =====================
+    window.addEventListener('DOMContentLoaded', () => {
+        renderEx1(); renderEx2(); renderEx3(); renderEx4();
+
+        const resizer = document.getElementById('reading-resizer');
+        const panel = document.getElementById('transcript-panel');
+        const mainPanel = document.getElementById('main-exercise-panel');
+        const container = document.querySelector('.reading-split-container');
+        if (resizer && panel && container) {
+            let isResizing = false;
+            resizer.addEventListener('mousedown', e => { isResizing = true; resizer.style.background = 'var(--primary)'; e.preventDefault(); });
+            document.addEventListener('mousemove', e => {
+                if (!isResizing) return;
+                const rect = container.getBoundingClientRect();
+                let pct = ((e.clientX - rect.left) / rect.width) * 100;
+                pct = Math.min(70, Math.max(20, pct));
+                panel.style.flex = `0 0 ${pct}%`;
+                mainPanel.style.flex = `1 1 0`;
+            });
+            document.addEventListener('mouseup', () => { isResizing = false; resizer.style.background = ''; });
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); checkAll(); } });
+    });
+</script>
+</body>
+</html>
