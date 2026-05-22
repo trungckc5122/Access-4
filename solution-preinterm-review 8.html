@@ -441,7 +441,6 @@
         let activeWord = null;
         let activeSlot = null;
 
-        // Helper: remove word from slot and make its bank item visible again
         function clearSlot(slot, bankSelector) {
             if (!slot) return;
             const oldValue = slot.innerText.trim();
@@ -455,15 +454,12 @@
             slot.style.minWidth = '110px';
         }
 
-        // Place a word into a slot, handling replacement if the slot is already filled
         function fillSlot(slot, value, bankSelector, allowMultipleUse) {
             if (!slot) return;
             const currentValue = slot.innerText.trim();
-            // If the slot already has a word, clear it first (swap)
             if (currentValue) {
                 clearSlot(slot, bankSelector);
             }
-            // Now fill with the new word
             slot.innerText = value;
             slot.classList.add('filled');
             slot.style.minWidth = Math.max(value.length * 10 + 28, 110) + 'px';
@@ -476,7 +472,6 @@
 
         function setupDragDrop(bankSelector, slotSelector, allowMultipleUse) {
             allowMultipleUse = allowMultipleUse || false;
-            // Word bank items: drag start / click
             document.querySelectorAll(bankSelector + ' .word-item').forEach(function (word) {
                 word.setAttribute('draggable', 'true');
                 word.addEventListener('dragstart', function (e) {
@@ -490,7 +485,6 @@
                 });
                 word.addEventListener('click', function () {
                     if (activeSlot) {
-                        // if there is a selected slot, fill it (even if occupied)
                         fillSlot(activeSlot, word.dataset.value, bankSelector, allowMultipleUse);
                         if (!allowMultipleUse) word.style.display = 'none';
                         activeSlot = null;
@@ -498,7 +492,6 @@
                 });
             });
 
-            // Drop slots
             document.querySelectorAll(slotSelector).forEach(function (slot) {
                 slot.addEventListener('dragover', function (e) { e.preventDefault(); slot.classList.add('drag-over'); });
                 slot.addEventListener('dragleave', function () { slot.classList.remove('drag-over'); });
@@ -512,14 +505,12 @@
                     activeWord = null;
                 });
                 slot.addEventListener('click', function () {
-                    // If a word is active (selected from bank), fill this slot (swap if needed)
                     if (activeWord) {
                         fillSlot(slot, activeWord.dataset.value, bankSelector, allowMultipleUse);
                         if (!allowMultipleUse) activeWord.style.display = 'none';
                         activeWord = null;
                         activeSlot = null;
                     }
-                    // Otherwise, if slot is filled, clear it (remove word and show it back in bank)
                     else if (slot.innerText.trim()) {
                         const oldValue = slot.innerText.trim();
                         const bank = document.querySelector(bankSelector);
@@ -529,7 +520,6 @@
                         slot.classList.remove('filled', 'correct', 'incorrect-marked');
                         slot.style.minWidth = '110px';
                     }
-                    // If slot is empty and no active word, set it as the active slot for later filling
                     else {
                         document.querySelectorAll(slotSelector).forEach(s => s.classList.remove('selected-slot'));
                         slot.classList.add('selected-slot');
@@ -539,44 +529,49 @@
             });
         }
 
-        // toggleSlot: eye button – shows the correct answer in the slot (replaces current content)
         function toggleSlot(id, ans, bankSelector) {
             var slot = document.querySelector('.drop-slot[data-id="' + id + '"]');
             if (!slot) return;
             var current = slot.innerText.trim();
             if (current.toLowerCase() === ans.toLowerCase() && slot.classList.contains('correct')) {
-                // If already correct, remove it (clear slot)
                 clearSlot(slot, bankSelector);
             } else {
-                // Otherwise, put the correct answer (swap if needed)
                 fillSlot(slot, ans, bankSelector, false);
                 slot.classList.add('correct');
                 slot.classList.remove('incorrect-marked');
             }
         }
 
-        // ========== EX1 DATA (unchanged) ==========
+        // ========== EX1 DATA (updated with individual hints) ==========
         var ex1BankWords = ["arson", "arsonist", "burglars", "burgled", "looters", "looting", "mugger", "muggings", "shoplifters", "shoplifting"];
         var ex1News = [
             {
                 text: "Someone set fire to an empty building early this morning. Police said it was [SLOT1] and that they haven't caught the [SLOT2] yet.",
-                slots: [{ id: "ex1-0a", ans: "arson" }, { id: "ex1-0b", ans: "arsonist" }],
-                hint: "<div class='hint-detail'><strong>arson</strong> = tội phóng hỏa; <strong>arsonist</strong> = kẻ phóng hỏa</div>"
+                slots: [
+                    { id: "ex1-0a", ans: "arson", hint: "<div class='hint-detail'><strong>arson</strong> = tội phóng hỏa (danh từ). Dấu hiệu: “set fire” → cần danh từ chỉ hành vi phạm tội.</div><div class='hint-detail'>Chỗ trống thứ nhất nói về tội danh đã xảy ra.</div>" },
+                    { id: "ex1-0b", ans: "arsonist", hint: "<div class='hint-detail'><strong>arsonist</strong> = kẻ phóng hỏa (danh từ chỉ người). Dấu hiệu: “haven't caught the …” → cần danh từ chỉ người bị truy nã.</div><div class='hint-detail'>Chỗ trống thứ hai là người gây ra vụ phóng hỏa.</div>" }
+                ]
             },
             {
                 text: "Someone attacked a woman and stole her handbag. She did not see the face of the [SLOT1]. There have been a lot of similar [SLOT2] in the area.",
-                slots: [{ id: "ex1-1a", ans: "mugger" }, { id: "ex1-1b", ans: "muggings" }],
-                hint: "<div class='hint-detail'><strong>mugger</strong> = kẻ cướp giật; <strong>muggings</strong> = các vụ cướp giật</div>"
+                slots: [
+                    { id: "ex1-1a", ans: "mugger", hint: "<div class='hint-detail'><strong>mugger</strong> = kẻ cướp giật (danh từ chỉ người). Dấu hiệu: “attacked a woman and stole her handbag” → cần danh từ chỉ thủ phạm.</div>" },
+                    { id: "ex1-1b", ans: "muggings", hint: "<div class='hint-detail'><strong>muggings</strong> = các vụ cướp giật (danh từ số nhiều). Dấu hiệu: “a lot of similar …” → cần danh từ số nhiều chỉ loại tội phạm.</div>" }
+                ]
             },
             {
                 text: "After a flood caused damage, [SLOT1] took food and tools from several buildings. All of the suspects had received fines for [SLOT2] before.",
-                slots: [{ id: "ex1-2a", ans: "burglars" }, { id: "ex1-2b", ans: "looting" }],
-                hint: "<div class='hint-detail'><strong>burglars</strong> = kẻ trộm đột nhập; <strong>looting</strong> = hôi của</div>"
+                slots: [
+                    { id: "ex1-2a", ans: "burglars", hint: "<div class='hint-detail'><strong>burglars</strong> = kẻ trộm đột nhập (danh từ số nhiều chỉ người). Dấu hiệu: “took food and tools from several buildings” → kẻ đột nhập lấy đồ.</div>" },
+                    { id: "ex1-2b", ans: "looting", hint: "<div class='hint-detail'><strong>looting</strong> = hôi của / cướp bóc (danh động từ). Dấu hiệu: “fines for …” → hành vi bị phạt tiền.</div>" }
+                ]
             },
             {
                 text: "Often young people's friends encourage them to steal from shops. It seems like a game, but [SLOT1] is a crime, and [SLOT2] can receive large fines.",
-                slots: [{ id: "ex1-3a", ans: "shoplifting" }, { id: "ex1-3b", ans: "shoplifters" }],
-                hint: "<div class='hint-detail'><strong>shoplifting</strong> = trộm cắp trong cửa hàng; <strong>shoplifters</strong> = kẻ trộm cắp trong cửa hàng</div>"
+                slots: [
+                    { id: "ex1-3a", ans: "shoplifting", hint: "<div class='hint-detail'><strong>shoplifting</strong> = tội trộm cắp trong cửa hàng (danh từ). Dấu hiệu: “steal from shops” → hành vi trộm đồ trong tiệm.</div>" },
+                    { id: "ex1-3b", ans: "shoplifters", hint: "<div class='hint-detail'><strong>shoplifters</strong> = những kẻ trộm cắp trong cửa hàng (danh từ số nhiều chỉ người). Dấu hiệu: “can receive large fines” → người bị phạt.</div>" }
+                ]
             }
         ];
 
@@ -585,16 +580,23 @@
             bank.innerHTML = ex1BankWords.map(function (w) { return '<div class="word-item" data-value="' + w + '">' + w + '</div>'; }).join('');
             var html = '';
             ex1News.forEach(function (item, i) {
-                var s0 = item.slots[0]; var s1 = item.slots[1];
                 var t = item.text;
-                t = t.replace('[SLOT1]', '<span class="drop-slot" data-id="' + s0.id + '" data-ans="' + s0.ans + '"></span>');
-                t = t.replace('[SLOT2]', '<span class="drop-slot" data-id="' + s1.id + '" data-ans="' + s1.ans + '"></span>');
-                var eyeBtn0 = '<button class="eye-btn" onclick="toggleSlot(\'' + s0.id + '\',\'' + s0.ans + '\',\'#bank-ex1\')">👁️</button>';
-                var eyeBtn1 = '<button class="eye-btn" onclick="toggleSlot(\'' + s1.id + '\',\'' + s1.ans + '\',\'#bank-ex1\')">👁️</button>';
-                html += '<div class="question-row"><strong>' + (i + 1) + '.</strong> ' + t +
-                    ' <span class="row-btns">' + eyeBtn0 + eyeBtn1 +
-                    '<button class="hint-btn" onclick="toggleHint(event,\'ex1-h' + i + '\')">i</button></span>' +
-                    '<div class="hint-box" id="ex1-h' + i + '">' + item.hint + '</div></div>';
+                // Thay thế từng slot kèm nút bấm riêng
+                item.slots.forEach(function (sl) {
+                    var slotMarker = sl.id.indexOf('a') !== -1 ? '[SLOT1]' : '[SLOT2]'; // dựa vào id để nhận biết, tuy nhiên an toàn hơn là duyệt tuần tự
+                    var slotHtml = '<span class="drop-slot" data-id="' + sl.id + '" data-ans="' + sl.ans + '"></span>' +
+                        '<span class="row-btns" style="margin-left:4px;">' +
+                        '<button class="eye-btn" onclick="toggleSlot(\'' + sl.id + '\',\'' + sl.ans + '\',\'#bank-ex1\')">👁️</button>' +
+                        '<button class="hint-btn" onclick="toggleHint(event,\'ex1-h-' + sl.id + '\')">i</button>' +
+                        '</span>';
+                    t = t.replace(sl.id.indexOf('a') !== -1 ? '[SLOT1]' : '[SLOT2]', slotHtml);
+                });
+                // Tạo hộp gợi ý riêng cho từng slot
+                var hintBoxes = '';
+                item.slots.forEach(function (sl) {
+                    hintBoxes += '<div class="hint-box" id="ex1-h-' + sl.id + '">' + sl.hint + '</div>';
+                });
+                html += '<div class="question-row"><strong>' + (i + 1) + '.</strong> ' + t + hintBoxes + '</div>';
             });
             document.getElementById('ex1-container').innerHTML = html;
             setupDragDrop('#bank-ex1', '#ex1-container .drop-slot', false);
@@ -691,7 +693,7 @@
                 html += '<div class="question-row"><strong>' + (i + 1) + '.</strong> ' +
                     '<span style="font-weight:600; color:var(--primary-dark);">' + item.colA + '</span> → ' +
                     '<span class="drop-slot" data-id="' + slotId + '" data-ans="' + item.ans + '"></span>' +
-                    ' <span style="color:var(--text-muted); font-size:0.9rem; font-style:italic;">(' + item.compound + ')</span>' +
+                    ' <span style="color:var(--text-muted); font-size:0.9rem; font-style:italic;"></span>' +
                     ' <span class="row-btns"><button class="eye-btn" onclick="toggleSlot(\'' + slotId + '\',\'' + item.ans + '\',\'#bank-ex3\')">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex3-h' + i + '\')">i</button></span>' +
                     '<div class="hint-box" id="ex3-h' + i + '">' + item.hint + '</div></div>';
@@ -885,7 +887,7 @@
             closeAllHints();
         }
 
-        // EX7 (unchanged except using updated drag-drop)
+        // EX7 (unchanged)
         var ex7BankWords = ["before", "described", "for", "on", "there", "when", "why"];
         var ex7Paragraph = [
             { before: "Witnesses to crimes are not always very good at remembering what they have seen. The appearance of a suspect is often ", ans: "described", after: " differently by different witnesses.", hint: "<div class='hint-detail'><strong>described</strong> = được mô tả; 'The appearance... is often described differently' = ngoại hình thường được mô tả khác nhau</div>" },
