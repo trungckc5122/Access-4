@@ -34,6 +34,10 @@
             field-sizing: content;
         }
 
+        #questions-v1 .task5-input {
+            min-width: 140px !important;
+        }
+
         .task5-input.correct {
             color: var(--success);
             border-bottom-color: var(--success);
@@ -172,6 +176,11 @@
             line-height: 2.2;
             font-size: 1.05rem;
             position: relative;
+        }
+
+        .q-row > strong:first-child {
+            color: var(--primary);
+            font-weight: 700;
         }
 
         .hint-box {
@@ -750,7 +759,9 @@
             let html = "";
             data.forEach((it, i) => {
                 const qid = `${prefix}-q${i}`;
-                const inputHtml = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" placeholder="${it.ph || ''}" oninput="adjustWidth(this)">`);
+                let inputHtml = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" placeholder="${it.ph || ''}" oninput="adjustWidth(this)">`);
+                // Auto-wrap leading number (e.g. "1. ") in <strong>
+                inputHtml = inputHtml.replace(/^(\d+\.\s*)/, '<strong>$1</strong>');
                 html += `<div class="q-row">${inputHtml}
                 <span class="inline-group">
                     <button class="eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
@@ -802,6 +813,8 @@
                     const spans = choices.map(c => `<span class="word-choice" onclick="selectChoice(this)" data-val="${c}">${c}</span>`);
                     return `<span class="choice-gap" id="${id}" data-ans="${ans}">${spans.join('<span class="choice-sep">/</span>')}</span>`;
                 });
+                // Auto-wrap leading number (e.g. "1. ") in <strong>
+                qHtml = qHtml.replace(/^(\d+\.\s*)/, '<strong>$1</strong>');
                 if (count === 0) return;
 
                 const eyeOnclick = it.subctx
@@ -1046,16 +1059,22 @@
             createWordBank('bank-v4', v4BankWords, '#bank-v4');
             renderParagraphWithDropSlots('questions-v4', [{ text: v4Data.map((d, i) => `${i + 1}. ${d.q}`).join('<br>'), blanks: v4Data }], 'v4', '#bank-v4');
             // Adjust v4 rendering to match original format
-            document.getElementById('questions-v4').innerHTML = v4Data.map((d, i) => `<div class="q-row">${d.q.replace('[INPUT]', `<span class="drop-slot-inline" id="v4-q${i}" data-ans="${d.ans}"></span>
+            document.getElementById('questions-v4').innerHTML = v4Data.map((d, i) => {
+                const qHtml = d.q.replace(/^(\d+\.\s*)/, '<strong>$1</strong>');
+                return `<div class="q-row">${qHtml.replace('[INPUT]', `<span class="drop-slot-inline" id="v4-q${i}" data-ans="${d.ans}"></span>
             <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v4-q${i}','${d.ans}','#bank-v4')">👁️</button>
             <button class="hint-btn" onclick="toggleHint(event, 'v4-q${i}')">i</button>
-            <div class="hint-box" id="v4-q${i}-hint">${d.hint}</div></span>`)}</div>`).join('');
+            <div class="hint-box" id="v4-q${i}-hint">${d.hint}</div></span>`)}</div>`;
+            }).join('');
             createDropSlots(document.getElementById('questions-v4'), '#bank-v4', 'v4', v4Data.length);
             createWordBank('bank-v5', v5BankWords, '#bank-v5');
-            document.getElementById('questions-v5').innerHTML = v5Data.map((d, i) => `<div class="q-row">${d.q.replace('[INPUT]', `<span class="drop-slot-inline" id="v5-q${i}" data-ans="${d.ans}"></span>
+            document.getElementById('questions-v5').innerHTML = v5Data.map((d, i) => {
+                const qHtml = d.q.replace(/^(\d+\.\s*)/, '<strong>$1</strong>');
+                return `<div class="q-row">${qHtml.replace('[INPUT]', `<span class="drop-slot-inline" id="v5-q${i}" data-ans="${d.ans}"></span>
             <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v5-q${i}','${d.ans}','#bank-v5')">👁️</button>
             <button class="hint-btn" onclick="toggleHint(event, 'v5-q${i}')">i</button>
-            <div class="hint-box" id="v5-q${i}-hint">${d.hint}</div></span>`)}</div>`).join('');
+            <div class="hint-box" id="v5-q${i}-hint">${d.hint}</div></span>`)}</div>`;
+            }).join('');
             createDropSlots(document.getElementById('questions-v5'), '#bank-v5', 'v5', v5Data.length);
             renderChoiceGaps('questions-g1', g1Data, 'g1');
             renderChoiceGaps('questions-g2', g2Data, 'g2');
