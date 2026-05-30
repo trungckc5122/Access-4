@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Pre-Intermediate - Final A</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            color: var(--primary);
+            font-weight: bold;
+            background: transparent;
+            min-width: 80px;
+            text-align: left;
+            field-sizing: content;
+        }
+
+        .task5-input.correct {
+            color: var(--success);
+            border-bottom-color: var(--success);
+        }
+
+        .task5-input.incorrect-marked {
+            color: var(--error, #e74c3c);
+            border-bottom-color: var(--error, #e74c3c);
+        }
+
+        /* Word Bank (sticky drag & drop) */
+        .word-bank-simple {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: var(--primary-light);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .word-bank-simple .word-item {
+            background: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-weight: 700;
+            cursor: grab;
+            user-select: none;
+            transition: 0.2s;
+        }
+
+        .word-bank-simple .word-item:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .word-bank-simple .word-item.used {
+            opacity: 0.4;
+            pointer-events: none;
+            cursor: default;
+        }
+
+        .sticky-word-bank {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Drop slot (inline) */
+        .drop-slot-inline {
+            display: inline-flex;
+            min-width: 90px;
+            min-height: 28px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 6px;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8px;
+            margin: 0 4px;
+            vertical-align: middle;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            color: var(--text-muted);
+            background: var(--bg);
+        }
+
+        .drop-slot-inline.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .drop-slot-inline.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+            color: var(--text);
+        }
+
+        .drop-slot-inline.filled-wrong {
+            border-style: solid;
+            border-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        /* Choice Gap */
+        .word-choice {
+            cursor: pointer;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: 0.2s;
+            color: var(--text);
+        }
+
+        .word-choice:hover {
+            background: var(--primary-light);
+        }
+
+        .word-choice.selected {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .word-choice.correct-select {
+            background: #16a34a !important;
+            color: #fff !important;
+        }
+
+        .word-choice.incorrect-select {
+            background: #dc2626 !important;
+            color: #fff !important;
+        }
+
+        .choice-gap {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--border-medium);
+            padding: 2px 4px;
+            border-radius: 6px;
+            background: var(--card-bg);
+            margin: 0 4px;
+        }
+
+        .choice-sep {
+            margin: 0 4px;
+            color: var(--text-muted);
+        }
+
+        .q-row {
+            margin-bottom: 15px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            width: auto;
+            max-width: 340px;
+            margin-top: 5px;
+            z-index: 200;
+        }
+
+        /* Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-top: 20px;
+            height: 750px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            background: var(--bg);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .reading-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+            line-height: 2.2;
+            font-size: 1.1rem;
+            text-align: justify;
+        }
+
+        .exercise-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover,
+        .reading-resizer.active {
+            background: var(--primary);
+        }
+
+        .active-highlight {
+            background-color: #fef08a;
+            box-shadow: 0 0 0 2px #fef08a;
+            border-radius: 3px;
+            transition: background-color 0.4s, box-shadow 0.4s;
+        }
+
+        .exercise-title {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+        }
+
+        .btn-show-all {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: 1px solid var(--primary);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .global-check {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 14px 28px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            z-index: 1000;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+            transition: all 0.2s;
+        }
+
+        .global-check:hover {
+            transform: translateY(-2px);
+            background: #219653;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">F</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Final Test</div>
+                <h1>Final Test A</h1>
+                <p class="subtitle">Vocabulary, Grammar &amp; Reading.</p>
+            </div>
+        </div>
+        <h2
+            style="color: var(--primary-dark); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 40px;">
+            Vocabulary</h2>
+
+        <!-- Task 1 (giữ nguyên) -->
+        <div class="exercise-card" id="card-v1">
+            <div class="exercise-title"><strong>Task 1:</strong> Complete the verbs, adjectives and nouns to do with the
+                weather.</div>
+            <div id="questions-v1"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('v1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('v1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Task 2 (kéo thả + sticky) -->
+        <div class="exercise-card" id="card-v2">
+            <div class="exercise-title"><strong>Task 2:</strong> Complete the weather forecast with the words below.
+                There are two extra words.</div>
+            <div class="word-bank-simple sticky-word-bank" id="bank-v2"></div>
+            <div id="questions-v2"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('v2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('v2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Task 3 (giữ nguyên) -->
+        <div class="exercise-card" id="card-v3">
+            <div class="exercise-title"><strong>Task 3:</strong> Choose the correct answers.</div>
+            <div id="questions-v3"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('v3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('v3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Task 4 (kéo thả + sticky) -->
+        <div class="exercise-card" id="card-v4">
+            <div class="exercise-title"><strong>Task 4:</strong> Read the definitions and write the correct word. Use
+                these words:</div>
+            <div class="word-bank-simple sticky-word-bank" id="bank-v4"></div>
+            <div id="questions-v4"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('v4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('v4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Task 5 (kéo thả + sticky) -->
+        <div class="exercise-card" id="card-v5">
+            <div class="exercise-title"><strong>Task 5:</strong> Complete the sentences with one word from the box:
+            </div>
+            <div class="word-bank-simple sticky-word-bank" id="bank-v5"></div>
+            <div id="questions-v5"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('v5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('v5')">Reset</button>
+            </div>
+        </div>
+
+        <h2
+            style="color: var(--primary-dark); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 40px;">
+            Grammar</h2>
+
+        <!-- Grammar Task 1 (giữ nguyên đoạn văn) -->
+        <div class="exercise-card" id="card-g1">
+            <div class="exercise-title"><strong>Task 1:</strong> Complete the email with <strong>some</strong> or
+                <strong>any</strong>.
+            </div>
+            <div id="questions-g1"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('g1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('g1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Grammar Task 2 (giữ nguyên) -->
+        <div class="exercise-card" id="card-g2">
+            <div class="exercise-title"><strong>Task 2:</strong> Choose the correct words to complete the sentences.
+            </div>
+            <div id="questions-g2"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('g2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('g2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Grammar Task 3 (giữ nguyên) -->
+        <div class="exercise-card" id="card-g3">
+            <div class="exercise-title"><strong>Task 3:</strong> Choose the correct words to complete the sentences.
+            </div>
+            <div id="questions-g3"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('g3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('g3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Grammar Task 4 (phân biệt must/have to rõ ràng) -->
+        <div class="exercise-card" id="card-g4">
+            <div class="exercise-title"><strong>Task 4:</strong> Read the advice for people who are going to take part
+                in a video game competition. Rewrite the advice using one of the verbs in brackets.</div>
+            <div id="questions-g4"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('g4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('g4')">Reset</button>
+            </div>
+        </div>
+
+        <h2
+            style="color: var(--primary-dark); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 40px;">
+            Reading</h2>
+
+        <!-- Reading Split Screen -->
+        <div class="reading-split-container" id="card-r">
+            <div class="reading-panel" id="readingPanel">
+                <h2 style="text-align: center; color: var(--primary-dark); margin-bottom: 20px;">Living with Extreme
+                    Weather</h2>
+                <p>
+                    <span id="r-ctx-1a">You might think that people only worry about the weather during holidays, but in
+                        some countries, the weather is a serious daily problem.</span>
+                    <span id="r-ctx-1b">In Australia, for example, temperatures can reach over 40°C in summer, and in
+                        some parts, there is hardly any rain for months.</span>
+                    <span id="r-ctx-1c">Farmers suffer greatly, as their animals and crops often don't survive.</span>
+                    <span id="r-ctx-1d">These long dry periods are called droughts.</span>
+                </p>
+                <p>
+                    <span id="r-ctx-2a">In other places, heavy rain can be more of a danger.</span>
+                    <span id="r-ctx-2b">In Southeast Asia, during the rainy season, strong storms and continuous
+                        rainfall cause floods, which damage homes, roads and schools.</span>
+                    <span id="r-ctx-2c">People sometimes have to leave their houses for weeks.</span>
+                </p>
+                <p>
+                    <span id="r-ctx-3a">Meanwhile, in the United States, tornadoes are a big threat in some
+                        states.</span>
+                    <span id="r-ctx-3b">These strong, spinning winds can destroy everything in their path.</span>
+                    <span id="r-ctx-3c">Meteorologists use special tools to try to warn people before a tornado arrives,
+                        but sometimes there is very little time to prepare.</span>
+                </p>
+                <p>
+                    <span id="r-ctx-4a">Many people now agree that climate change is making extreme weather
+                        worse.</span>
+                    <span id="r-ctx-4b">Summers are becoming hotter, and storms are stronger than before.</span>
+                    <span id="r-ctx-4c">That's why more schools are teaching students about climate and how to stay safe
+                        during dangerous weather.</span>
+                    <span id="r-ctx-4d">Even young children are learning what to do in emergencies.</span>
+                </p>
+            </div>
+            <div class="reading-resizer" id="reading-resizer"></div>
+            <div class="exercise-panel" id="exercisePanel">
+                <div class="exercise-title"><strong>True or False:</strong> Read the text and choose True (T) or False
+                    (F).</div>
+                <div id="questions-r"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('r')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('r')">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button onclick="checkAll()" class="global-check">✓ CHECK ALL ANSWERS (ENTER)</button>
+    <script src="access-core.js"></script>
+    <script>
+        // ========== DRAG & DROP CORE (dùng cho tất cả các bài kéo thả) ==========
+        let activeDragWord = null, activeDragSection = null;
+
+        function getAvailableWordItem(wordValue, bankSelector) {
+            const bank = document.querySelector(bankSelector);
+            if (!bank) return null;
+            const items = bank.querySelectorAll(`.word-item[data-value="${CSS.escape(wordValue)}"]`);
+            for (let item of items) {
+                if (!item.classList.contains('used')) return item;
+            }
+            return null;
+        }
+
+        function getUsedWordItem(wordValue, bankSelector) {
+            const bank = document.querySelector(bankSelector);
+            if (!bank) return null;
+            const items = bank.querySelectorAll(`.word-item[data-value="${CSS.escape(wordValue)}"]`);
+            for (let item of items) {
+                if (item.classList.contains('used')) return item;
+            }
+            return null;
+        }
+
+        function placeWordInSlot(slotElement, wordValue, bankSelector, allowDuplicates = false) {
+            if (!slotElement || !wordValue) return;
+            // Nếu slot đã có từ, trả từ cũ về bank
+            const currentWord = slotElement.innerText.trim();
+            if (currentWord) {
+                clearSlot(slotElement, bankSelector);
+            }
+            // Nếu không cho phép trùng lặp, xóa từ này khỏi tất cả slot khác
+            if (!allowDuplicates) {
+                document.querySelectorAll(`.drop-slot-inline[data-bank="${bankSelector}"]`).forEach(otherSlot => {
+                    if (otherSlot !== slotElement && otherSlot.innerText.trim() === wordValue) {
+                        clearSlot(otherSlot, bankSelector);
+                    }
+                });
+            }
+            // Đặt từ mới
+            slotElement.innerText = wordValue;
+            slotElement.classList.add('filled');
+            slotElement.classList.remove('filled-wrong');
+            const wi = allowDuplicates ? getAvailableWordItem(wordValue, bankSelector) : getAvailableWordItem(wordValue, bankSelector);
+            if (wi) wi.classList.add('used');
+        }
+
+        function clearSlot(slotElement, bankSelector) {
+            const word = slotElement.innerText.trim();
+            if (!word) return;
+            slotElement.innerText = '';
+            slotElement.classList.remove('filled', 'filled-wrong');
+            const wi = getUsedWordItem(word, bankSelector);
+            if (wi) wi.classList.remove('used');
+        }
+
+        function handleDragStart(e, bankSelector) {
+            const el = e.target.closest('.word-item');
+            if (!el || el.classList.contains('used')) {
+                e.preventDefault();
+                return false;
+            }
+            activeDragWord = el;
+            activeDragSection = bankSelector;
+            el.classList.add('active-word');
+            e.dataTransfer.setData('text/plain', el.dataset.value);
+        }
+
+        function handleSlotDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function handleSlotDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+        function handleSlotDrop(e, bankSelector, allowDuplicates = false) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            if (activeDragWord && activeDragSection === bankSelector) {
+                placeWordInSlot(e.currentTarget, activeDragWord.dataset.value, bankSelector, allowDuplicates);
+                activeDragWord.classList.remove('active-word');
+                activeDragWord = null; activeDragSection = null;
+            }
+        }
+
+        function handleSlotClick(e, bankSelector, allowDuplicates = false) {
+            const slot = e.currentTarget;
+            if (slot.innerText.trim()) {
+                clearSlot(slot, bankSelector);
+            }
+        }
+
+        function createWordBank(bankId, words, bankSelector) {
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            bank.innerHTML = words.map(w =>
+                `<span class="word-item" data-value="${w}" draggable="true" 
+                  ondragstart="handleDragStart(event, '${bankSelector}')" 
+                  ondragend="if(this.classList.contains('active-word')) this.classList.remove('active-word'); activeDragWord=null; activeDragSection=null;">${w}</span>`
+            ).join('');
+        }
+
+        function createDropSlots(container, bankSelector, prefix, count, allowDuplicates = false) {
+            for (let i = 0; i < count; i++) {
+                const slotId = `${prefix}-q${i}`;
+                const slot = container.querySelector(`#${slotId}`);
+                if (!slot) continue;
+                slot.setAttribute('data-bank', bankSelector);
+                slot.addEventListener('dragover', handleSlotDragOver);
+                slot.addEventListener('dragleave', handleSlotDragLeave);
+                slot.addEventListener('drop', (e) => handleSlotDrop(e, bankSelector, allowDuplicates));
+                slot.addEventListener('click', (e) => handleSlotClick(e, bankSelector, allowDuplicates));
+            }
+        }
+
+        function toggleSlotAns(id, ans, bankSelector, allowDuplicates = false) {
+            const slot = document.getElementById(id);
+            if (!slot) return;
+            const current = slot.innerText.trim();
+            if (current === ans && slot.classList.contains('filled')) {
+                clearSlot(slot, bankSelector);
+            } else {
+                placeWordInSlot(slot, ans, bankSelector, allowDuplicates);
+                slot.classList.add('filled');
+                slot.classList.remove('filled-wrong');
+            }
+        }
+
+        // ========== DATA ==========
+        const v1Data = [
+            { q: "1. Take an umbrella with you. It's starting to [INPUT].", ans: "rain", ph: "r_ _ _", hint: "<strong>Đáp án:</strong> rain<br><strong>Giải thích:</strong> 'rain' (mưa) bắt đầu bằng 'r'. Lấy ô che vì trời bắt đầu mưa." },
+            { q: "2. It's a beautiful day. Let's sit outside in the [INPUT].", ans: "sunshine", ph: "s_ _ _ _ _ _ _", hint: "<strong>Đáp án:</strong> sunshine<br><strong>Giải thích:</strong> 'sunshine' (ánh nắng). Trời đẹp nên ra ngoài ngồi dưới ánh nắng." },
+            { q: "3. It's going to [INPUT] in the mountains today, so maybe we can go skiing later.", ans: "snow", ph: "s_ _ _", hint: "<strong>Đáp án:</strong> snow<br><strong>Giải thích:</strong> 'snow' (tuyết rơi). Tuyết rơi trên núi nên có thể đi trượt tuyết." },
+            { q: "4. I love it when it's [INPUT], and you can't see very far.", ans: "misty", ph: "m_ _ _ _", hint: "<strong>Đáp án:</strong> misty<br><strong>Giải thích:</strong> 'misty' (nhiều sương mù). Khi có sương mù, bạn không thể nhìn xa." },
+            { q: "5. We can go kite-surfing today. It's really [INPUT].", ans: "windy", ph: "w_ _ _ _", hint: "<strong>Đáp án:</strong> windy<br><strong>Giải thích:</strong> 'windy' (nhiều gió). Lướt ván diều cần rất nhiều gió." },
+            { q: "6. The clouds opened and the sun began to [INPUT].", ans: "shine", ph: "s_ _ _ _", hint: "<strong>Đáp án:</strong> shine<br><strong>Giải thích:</strong> 'shine' (chiếu sáng). Mặt trời bắt đầu chiếu sáng." },
+            { q: "7. It was a [INPUT] night with rain and very strong winds. I didn't sleep at all.", ans: "stormy", ph: "s_ _ _ _ _", hint: "<strong>Đáp án:</strong> stormy<br><strong>Giải thích:</strong> 'stormy' (bão bùng). Đêm bão có mưa và gió mạnh." },
+            { q: "8. I hope we have some [INPUT] in December because I want to go skiing.", ans: "snow", ph: "s_ _ _", hint: "<strong>Đáp án:</strong> snow<br><strong>Giải thích:</strong> 'snow' (tuyết). Cần tuyết để trượt tuyết." },
+            { q: "9. It's so cold this morning, but the trees look beautiful because of the [INPUT].", ans: "frost", ph: "f_ _ _ _", hint: "<strong>Đáp án:</strong> frost<br><strong>Giải thích:</strong> 'frost' (băng giá, sương giá). Bám trên cây trông rất đẹp." },
+            { q: "10. The pavements are very [INPUT] so be careful not to slip.", ans: "icy", ph: "i_ _", hint: "<strong>Đáp án:</strong> icy<br><strong>Giải thích:</strong> 'icy' (đóng băng, trơn trượt). Vỉa hè đóng băng nên dễ trượt ngã." }
+        ];
+
+        const v2BankWords = ["cool", "degrees", "hot", "icy", "showers", "winds", "thunderstorms", "Celsius", "fog", "sunny", "thunder", "warm", "wind", "zero"];
+        const v2Paragraphs = [
+            {
+                text: "<strong>First forecast:</strong><br>It was a lovely 1.[INPUT] day today and the temperature was thirty-two 2.[INPUT] Celsius in many parts of the country. However, this evening there will be some wet weather with a few 3.[INPUT] in the east. Tomorrow there will be strong 4.[INPUT] of 70 kilometres per hour or more along the south coast, and there will be 5.[INPUT] in Devon and Cornwall, so be careful if you plan to go camping this weekend.",
+                blanks: [
+                    { ans: "hot", hint: "<strong>Đáp án:</strong> hot<br><strong>Giải thích:</strong> Ngày nóng, nhiệt độ 32 độ." },
+                    { ans: "degrees", hint: "<strong>Đáp án:</strong> degrees<br><strong>Giải thích:</strong> 'degrees' dùng để chỉ đơn vị nhiệt độ." },
+                    { ans: "showers", hint: "<strong>Đáp án:</strong> showers<br><strong>Giải thích:</strong> Mưa rào nhẹ ở phía đông." },
+                    { ans: "winds", hint: "<strong>Đáp án:</strong> winds<br><strong>Giải thích:</strong> Gió mạnh 70 km/h." },
+                    { ans: "thunderstorms", hint: "<strong>Đáp án:</strong> thunderstorms<br><strong>Giải thích:</strong> Giông bão có thể gây nguy hiểm khi cắm trại." }
+                ]
+            },
+            {
+                text: "<strong>Second forecast:</strong><br>Temperatures were between twelve and fifteen degrees 1.[INPUT] this morning, so it was quite 2.[INPUT] for March. However, this afternoon a cold 3.[INPUT] will blow from the east and temperatures will fall to below 4.[INPUT] in the north of the country. Be careful if you're travelling on the roads this evening as there will be 5.[INPUT] in many places and it will be difficult to see the road.",
+                blanks: [
+                    { ans: "Celsius", hint: "<strong>Đáp án:</strong> Celsius<br><strong>Giải thích:</strong> 'Celsius' là đơn vị đo nhiệt độ." },
+                    { ans: "warm", hint: "<strong>Đáp án:</strong> warm<br><strong>Giải thích:</strong> 12-15 độ C là khá ấm cho tháng 3." },
+                    { ans: "wind", hint: "<strong>Đáp án:</strong> wind<br><strong>Giải thích:</strong> Gió lạnh thổi từ phía đông." },
+                    { ans: "zero", hint: "<strong>Đáp án:</strong> zero<br><strong>Giải thích:</strong> Nhiệt độ giảm xuống dưới 0 độ." },
+                    { ans: "fog", hint: "<strong>Đáp án:</strong> fog<br><strong>Giải thích:</strong> Sương mù dày đặc làm khó nhìn đường." }
+                ]
+            }
+        ];
+
+        const v3Data = [
+            { q: "1. I love flying my kite when it's [CHOICE:icy / windy / misty].", ans: "windy", hint: "<strong>Đáp án:</strong> windy<br><strong>Giải thích:</strong> Thả diều cần có gió (windy)." },
+            { q: "2. I don't mind wet weather because I like watching [CHOICE:clouds / raindrops / storms] run down the window.", ans: "raindrops", hint: "<strong>Đáp án:</strong> raindrops<br><strong>Giải thích:</strong> Giọt mưa (raindrops) chảy dài trên cửa sổ." },
+            { q: "3. It was very cold last night and the car windows were covered with [CHOICE:frost / shower / cloud] this morning.", ans: "frost", hint: "<strong>Đáp án:</strong> frost<br><strong>Giải thích:</strong> Trời rất lạnh làm kính xe bị bao phủ bởi lớp sương giá (frost)." },
+            { q: "4. I often take my umbrella with me when I go out in case it [CHOICE:storms / rains / shines].", ans: "rains", hint: "<strong>Đáp án:</strong> rains<br><strong>Giải thích:</strong> Mang ô phòng trường hợp trời mưa (rains)." },
+            { q: "5. Be careful going for a walk in the winter as it's easy to slip on [CHOICE:rain / mist / ice].", ans: "ice", hint: "<strong>Đáp án:</strong> ice<br><strong>Giải thích:</strong> Trượt ngã trên băng (ice) vào mùa đông." },
+            { q: "6. If there's a [CHOICE:sun / snow / storm], it's a good idea to stay indoors.", ans: "storm", hint: "<strong>Đáp án:</strong> storm<br><strong>Giải thích:</strong> Nếu có bão (storm) thì nên ở trong nhà." },
+            { q: "7. People often say that [CHOICE:sunshine / lightning / thunder] makes them happy.", ans: "sunshine", hint: "<strong>Đáp án:</strong> sunshine<br><strong>Giải thích:</strong> Ánh nắng mặt trời (sunshine) thường làm con người cảm thấy vui vẻ." },
+            { q: "8. Children love playing out in [CHOICE:snowy / sunny / cloudy] weather if they are wearing warm clothes.", ans: "snowy", hint: "<strong>Đáp án:</strong> snowy<br><strong>Giải thích:</strong> Trẻ em thích chơi ngoài trời tuyết (snowy) nếu được mặc ấm." },
+            { q: "9. It was difficult to see in the [CHOICE:wind / mist / snow], but then he noticed her walking towards him.", ans: "mist", hint: "<strong>Đáp án:</strong> mist<br><strong>Giải thích:</strong> Sương mù (mist) làm giảm tầm nhìn." },
+            { q: "10. In the winter, I love watching [CHOICE:showers / winds / snowflakes] fall. It's amazing that each one is different.", ans: "snowflakes", hint: "<strong>Đáp án:</strong> snowflakes<br><strong>Giải thích:</strong> Bông tuyết (snowflakes) rơi vào mùa đông, và mỗi bông tuyết đều có hình dạng khác nhau." }
+        ];
+
+        const v4BankWords = ["avalanche", "drought", "earthquake", "epidemic", "famine", "flood", "forest fire", "mudslide", "tornado", "tsunami", "volcanic eruption"];
+        const v4Data = [
+            { q: "1. This happens when mud slides down a hill or mountain after heavy rain. &rarr; [INPUT]", ans: "mudslide", hint: "<strong>Đáp án:</strong> mudslide<br><strong>Giải thích:</strong> Lở bùn (mudslide) xảy ra khi bùn trượt xuống đồi sau mưa lớn." },
+            { q: "2. This happens when a volcano explodes and lava, ash, and gases come out. &rarr; [INPUT]", ans: "volcanic eruption", hint: "<strong>Đáp án:</strong> volcanic eruption<br><strong>Giải thích:</strong> Phun trào núi lửa (volcanic eruption) giải phóng dung nham, tro bụi và khí ga." },
+            { q: "3. This is when a disease spreads quickly to many people. &rarr; [INPUT]", ans: "epidemic", hint: "<strong>Đáp án:</strong> epidemic<br><strong>Giải thích:</strong> Dịch bệnh (epidemic) là khi một căn bệnh lây lan nhanh chóng cho nhiều người." },
+            { q: "4. If there is too much rain in a short period of time, you might experience one of these. &rarr; [INPUT]", ans: "flood", hint: "<strong>Đáp án:</strong> flood<br><strong>Giải thích:</strong> Lũ lụt (flood) xảy ra khi có quá nhiều mưa trong thời gian ngắn." },
+            { q: "5. This is a fire that spreads through trees and plants in a dry area. &rarr; [INPUT]", ans: "forest fire", hint: "<strong>Đáp án:</strong> forest fire<br><strong>Giải thích:</strong> Cháy rừng (forest fire) lan rộng qua cây cối ở khu vực khô hạn." },
+            { q: "6. When one of these happens, buildings shake and sometimes fall down. &rarr; [INPUT]", ans: "earthquake", hint: "<strong>Đáp án:</strong> earthquake<br><strong>Giải thích:</strong> Động đất (earthquake) làm các tòa nhà rung chuyển và có thể đổ sập." },
+            { q: "7. This happens in an area where there isn't enough food for everyone to eat. &rarr; [INPUT]", ans: "famine", hint: "<strong>Đáp án:</strong> famine<br><strong>Giải thích:</strong> Nạn đói (famine) là khi không có đủ thức ăn cho mọi người." },
+            { q: "8. This can happen in a place where it doesn't rain for a long time. &rarr; [INPUT]", ans: "drought", hint: "<strong>Đáp án:</strong> drought<br><strong>Giải thích:</strong> Hạn hán (drought) xảy ra khi không có mưa trong thời gian dài." },
+            { q: "9. This is a huge wave caused by an earthquake under the sea. &rarr; [INPUT]", ans: "tsunami", hint: "<strong>Đáp án:</strong> tsunami<br><strong>Giải thích:</strong> Sóng thần (tsunami) là một cơn sóng khổng lồ do động đất dưới đáy biển gây ra." },
+            { q: "10. This happens when strong winds form a spinning funnel that moves over land. &rarr; [INPUT]", ans: "tornado", hint: "<strong>Đáp án:</strong> tornado<br><strong>Giải thích:</strong> Lốc xoáy (tornado) là những luồng gió mạnh tạo thành phễu xoáy di chuyển trên mặt đất." },
+            { q: "11. This happens when snow, ice, and rocks fall quickly down the side of a mountain. &rarr; [INPUT]", ans: "avalanche", hint: "<strong>Đáp án:</strong> avalanche<br><strong>Giải thích:</strong> Tuyết lở (avalanche) là khi tuyết, đá và băng rơi nhanh xuống sườn núi." }
+        ];
+
+        const v5BankWords = ["sweltering", "mild", "hot", "cool", "freezing", "warm", "cold"];
+        const v5Data = [
+            { q: "1. It's -10°C. &rarr; It's [INPUT].", ans: "freezing", hint: "<strong>Đáp án:</strong> freezing<br><strong>Giải thích:</strong> Nhiệt độ -10°C là rất lạnh, đóng băng (freezing)." },
+            { q: "2. It's 2°C. &rarr; It's [INPUT].", ans: "cold", hint: "<strong>Đáp án:</strong> cold<br><strong>Giải thích:</strong> 2°C là mức nhiệt độ lạnh (cold)." },
+            { q: "3. It's 10°C. &rarr; It's [INPUT].", ans: "cool", hint: "<strong>Đáp án:</strong> cool<br><strong>Giải thích:</strong> 10°C là mát mẻ, hơi lạnh (cool)." },
+            { q: "4. It's 17°C. &rarr; It's [INPUT].", ans: "mild", hint: "<strong>Đáp án:</strong> mild<br><strong>Giải thích:</strong> 17°C là thời tiết ôn hòa, dịu mát (mild)." },
+            { q: "5. It's 23°C. &rarr; It's [INPUT].", ans: "warm", hint: "<strong>Đáp án:</strong> warm<br><strong>Giải thích:</strong> 23°C là ấm áp (warm)." },
+            { q: "6. It's 30°C. &rarr; It's [INPUT].", ans: "hot", hint: "<strong>Đáp án:</strong> hot<br><strong>Giải thích:</strong> 30°C là mức nhiệt độ nóng (hot)." },
+            { q: "7. It's 38°C. &rarr; It's [INPUT].", ans: "sweltering", hint: "<strong>Đáp án:</strong> sweltering<br><strong>Giải thích:</strong> 38°C là cực kì nóng bức, ngột ngạt (sweltering)." }
+        ];
+
+        const g1Data = [
+            { q: "<strong>Email 1 (Jeremy to Dean):</strong><br>Hi Dean<br>Do you want to come to my house on Saturday and watch 1.[CHOICE:some / any] DVDs? I've got a lot of good science fiction and comedy films. I know you like horror too, but I haven't got 2.[CHOICE:some / any] new horror films.<br>You often buy DVDs in town, so have you got 3.[CHOICE:some / any] good new films? Bring 4.[CHOICE:some / any] with you on Saturday, and we can watch your DVDs too. My mum says we can watch DVDs all day - and we can eat 5.[CHOICE:some / any] pizzas too!<br>Anyway, email or phone me later today. Jeremy", ans: ["some", "any", "any", "some", "some"], hint: "<strong>Đáp án:</strong> 1. some | 2. any | 3. any | 4. some | 5. some<br><strong>Giải thích:</strong><br>1. 'some' dùng trong câu mời mọc/đề nghị.<br>2. 'any' dùng trong câu phủ định.<br>3. 'any' dùng trong câu hỏi.<br>4. 'some' dùng như đại từ thay thế trong câu khẳng định.<br>5. 'some' dùng trong câu khẳng định." },
+            { q: "<strong>Email 2 (Karen to Julie):</strong><br>Hi Julie<br>It's the last day of the reality show Family Wars, and I'm really excited. Tonight, the families have to play 1.[CHOICE:some / any] really difficult games, and they don't get 2.[CHOICE:some / any] help.<br>I know you like watching the show too, so come to my house and watch it with me! We can eat 3.[CHOICE:some / any] food while we're watching TV too. I've got 4.[CHOICE:some / any] popcorn. Have you got 5.[CHOICE:some / any] crisps?<br>Phone me later. Karen", ans: ["some", "any", "some", "some", "any"], hint: "<strong>Đáp án:</strong> 1. some | 2. any | 3. some | 4. some | 5. any<br><strong>Giải thích:</strong><br>1, 3, 4. 'some' dùng trong câu khẳng định.<br>2. 'any' dùng trong câu phủ định (don't get).<br>5. 'any' dùng trong câu hỏi." }
+        ];
+
+        const g2Data = [
+            { q: "1. How [CHOICE:many / much] time have we got?", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'time' (thời gian) là danh từ không đếm được nên dùng 'How much'." },
+            { q: "2. I know [CHOICE:a few / a little] actors because my mum works for a film company.", ans: "a few", hint: "<strong>Đáp án:</strong> a few<br><strong>Giải thích:</strong> 'actors' là danh từ đếm được số nhiều nên dùng 'a few'." },
+            { q: "3. There is [CHOICE:much / a lot of] traffic in the city centre today.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> 'a lot of' dùng phổ biến trong câu khẳng định với danh từ không đếm được ('traffic'). 'much' thường chỉ dùng trong phủ định và nghi vấn." },
+            { q: "4. We haven't got [CHOICE:many / much] milk in the fridge.", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'milk' là danh từ không đếm được nên dùng 'much'." },
+            { q: "5. There are [CHOICE:much / a lot of] trees behind my house.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> 'trees' là danh từ đếm được số nhiều nên dùng 'a lot of' (much chỉ dùng cho không đếm được)." },
+            { q: "6. How [CHOICE:many / much] people are coming to the party?", ans: "many", hint: "<strong>Đáp án:</strong> many<br><strong>Giải thích:</strong> 'people' là danh từ đếm được số nhiều nên dùng 'How many'." },
+            { q: "7. There aren't [CHOICE:any / some] chairs in the garden.", ans: "any", hint: "<strong>Đáp án:</strong> any<br><strong>Giải thích:</strong> Câu phủ định (aren't) dùng 'any'." },
+            { q: "8. I need [CHOICE:a few / a little] more time to finish my school project.", ans: "a little", hint: "<strong>Đáp án:</strong> a little<br><strong>Giải thích:</strong> 'time' là danh từ không đếm được nên dùng 'a little'." },
+            { q: "9. There is [CHOICE:much / a lot of] wildlife in the park near our house.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> Trong câu khẳng định thường dùng 'a lot of' thay vì 'much'." },
+            { q: "10. Is there [CHOICE:much / a few] rubbish in your street?", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'rubbish' (rác) là danh từ không đếm được nên dùng 'much'." }
+        ];
+
+        const g3Data = [
+            { q: "1. We [CHOICE:needn't / mustn't] talk in the exam.", ans: "mustn't", hint: "<strong>Đáp án:</strong> mustn't<br><strong>Giải thích:</strong> Cấm nói chuyện trong phòng thi (mustn't)." },
+            { q: "2. I [CHOICE:must / don't have to] buy my dad a present because it's his birthday this weekend.", ans: "must", hint: "<strong>Đáp án:</strong> must<br><strong>Giải thích:</strong> 'must' chỉ sự bắt buộc, bổn phận từ phía người nói (phải mua quà cho bố)." },
+            { q: "3. We [CHOICE:have to / don't have to] do any school work tonight because the teacher didn't give us any homework.", ans: "don't have to", hint: "<strong>Đáp án:</strong> don't have to<br><strong>Giải thích:</strong> Giáo viên không giao bài tập nên 'không cần thiết phải làm' (don't have to)." },
+            { q: "4. In the UK, you [CHOICE:needn't / have to] be seventeen or older when you learn to drive.", ans: "have to", hint: "<strong>Đáp án:</strong> have to<br><strong>Giải thích:</strong> 'have to' chỉ quy định của pháp luật (phải đủ 17 tuổi)." },
+            { q: "5. We [CHOICE:needn't / have to] tidy the house now. We can do it later.", ans: "needn't", hint: "<strong>Đáp án:</strong> needn't<br><strong>Giải thích:</strong> Không cần thiết phải dọn bây giờ, có thể dọn sau (needn't = don't have to)." },
+            { q: "6. Dad says we [CHOICE:mustn't / needn't] play loud music in the evenings.", ans: "mustn't", hint: "<strong>Đáp án:</strong> mustn't<br><strong>Giải thích:</strong> Bố cấm không được mở nhạc to buổi tối (mustn't)." },
+            { q: "7. You [CHOICE:don't have to / must] buy a ticket before you go into the concert.", ans: "must", hint: "<strong>Đáp án:</strong> must<br><strong>Giải thích:</strong> Bắt buộc phải mua vé trước khi vào (must / have to)." },
+            { q: "8. You [CHOICE:don't have to / have to] keep this door closed because it's a fire door.", ans: "have to", hint: "<strong>Đáp án:</strong> have to<br><strong>Giải thích:</strong> Phải đóng cửa vì đây là cửa thoát hiểm (bắt buộc)." },
+            { q: "9. I [CHOICE:needn't / have to] get up early tomorrow because it's Sunday.", ans: "needn't", hint: "<strong>Đáp án:</strong> needn't<br><strong>Giải thích:</strong> Không cần dậy sớm vì mai là Chủ nhật." },
+            { q: "10. We [CHOICE:mustn't / don't have to] finish our projects tonight - the teacher doesn't want them tomorrow.", ans: "don't have to", hint: "<strong>Đáp án:</strong> don't have to<br><strong>Giải thích:</strong> Không cần thiết phải làm xong tối nay vì mai cô chưa thu." }
+        ];
+
+        const g4Data = [
+            { q: "1. It's very important to practise playing the game.<br>'I [INPUT].'", ans: "must practise playing the game", hint: "<strong>Đáp án:</strong> I must practise playing the game.<br><strong>Giải thích:</strong> 'Rất quan trọng' (very important) thể hiện ý chí, quyết tâm cá nhân → dùng <strong>must</strong> (bắt buộc chủ quan)." },
+            { q: "2. You are not allowed to talk to other people during the competition.<br>'I [INPUT].'", ans: "mustn't talk to other people during the competition", hint: "<strong>Đáp án:</strong> I mustn't talk to other people during the competition.<br><strong>Giải thích:</strong> 'Không được phép' (not allowed) là lệnh cấm từ ban tổ chức → dùng <strong>mustn't</strong> (cấm đoán)." },
+            { q: "3. Don't forget to pay £10 to enter.<br>'I [INPUT].'", ans: "mustn't forget to pay £10 to enter", hint: "<strong>Đáp án:</strong> I mustn't forget to pay £10 to enter.<br><strong>Giải thích:</strong> 'Đừng quên' là lời nhắc nhở bản thân → <strong>mustn't forget</strong> (bắt buộc chủ quan)." },
+            { q: "4. It's compulsory to bring ID with you.<br>'I [INPUT].'", ans: "have to bring ID with me", hint: "<strong>Đáp án:</strong> I have to bring ID with me.<br><strong>Giải thích:</strong> 'Bắt buộc' (compulsory) là quy định bên ngoài, không phải ý muốn cá nhân → dùng <strong>have to</strong> (bắt buộc khách quan)." },
+            { q: "5. If you are sixteen or under, you are obliged to take a break every hour.<br>'I [INPUT].'", ans: "have to take a break every hour", hint: "<strong>Đáp án:</strong> I have to take a break every hour.<br><strong>Giải thích:</strong> 'Bị bắt buộc' (obliged) là quy định từ ban tổ chức giải đấu → dùng <strong>have to</strong> (bắt buộc khách quan)." },
+            { q: "6. It isn't necessary to bring your own headphones.<br>'I [INPUT].'", ans: "needn't bring my own headphones", hint: "<strong>Đáp án:</strong> I needn't bring my own headphones.<br><strong>Giải thích:</strong> 'Không cần thiết' (isn't necessary) → không bắt buộc → dùng <strong>needn't</strong> (không cần)." },
+            { q: "7. You are not allowed to use your mobile phone.<br>'I [INPUT].'", ans: "mustn't use my mobile phone", hint: "<strong>Đáp án:</strong> I mustn't use my mobile phone.<br><strong>Giải thích:</strong> 'Không được phép' (not allowed) là lệnh cấm → dùng <strong>mustn't</strong> (cấm đoán)." }
+        ];
+
+        const rData = [
+            { q: "1. Some parts of Australia receive too much rain in summer. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-1b", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Trong bài viết: 'in some parts, there is hardly any rain for months' (có những nơi hầu như không có mưa trong nhiều tháng)." },
+            { q: "2. Droughts can kill farm animals and plants. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-1c", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'Farmers suffer greatly, as their animals and crops often don't survive. These long dry periods are called droughts.'" },
+            { q: "3. In Southeast Asia, floods are common during the dry season. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-2b", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Lũ lụt xảy ra vào mùa mưa (rainy season), không phải mùa khô (dry season)." },
+            { q: "4. Tornadoes happen in some areas of the USA. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-3a", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'in the United States, tornadoes are a big threat in some states.'" },
+            { q: "5. People always have a long time to prepare for tornadoes. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-3c", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Bài đọc nói: 'sometimes there is very little time to prepare' (đôi khi có rất ít thời gian để chuẩn bị)." },
+            { q: "6. Climate change is believed to be making weather worse. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4a", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'Many people now agree that climate change is making extreme weather worse.'" },
+            { q: "7. Children in some schools are learning about weather safety. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4c", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'That's why more schools are teaching students about climate and how to stay safe...'" }
+        ];
+
+        // ========== RENDER ==========
+        function renderStandardInputs(containerId, data, prefix) {
+            const container = document.getElementById(containerId);
+            let html = "";
+            data.forEach((it, i) => {
+                const qid = `${prefix}-q${i}`;
+                const inputHtml = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" placeholder="${it.ph || ''}" oninput="adjustWidth(this)">`);
+                html += `<div class="q-row">${inputHtml}
+                <span class="inline-group">
+                    <button class="eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                    <div class="hint-box" id="${qid}-hint">${it.hint || ''}</div>
+                </span></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderParagraphWithDropSlots(containerId, paragraphs, prefix, bankSelector) {
+            const container = document.getElementById(containerId);
+            let html = "";
+            let globalSlotIndex = 0; // Đếm slot toàn cục để tạo id duy nhất
+            paragraphs.forEach((p) => {
+                let localIndex = 0; // Đếm blank cục bộ trong từng đoạn văn
+                let text = p.text;
+                text = text.replace(/\[INPUT\]/g, () => {
+                    const id = `${prefix}-q${globalSlotIndex}`;
+                    const blank = p.blanks[localIndex]; // Dùng chỉ số cục bộ
+                    const ans = blank ? blank.ans : '';
+                    const hint = blank ? blank.hint : '';
+                    localIndex++;
+                    globalSlotIndex++;
+                    return `<span class="drop-slot-inline" id="${id}" data-ans="${ans}"></span>
+                    <span class="inline-group">
+                        <button class="eye-btn" onclick="toggleSlotAns('${id}','${ans}','${bankSelector}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
+                        <div class="hint-box" id="${id}-hint">${hint}</div>
+                    </span>`;
+                });
+                html += `<div class="q-row">${text}</div>`;
+            });
+            container.innerHTML = html;
+            createDropSlots(container, bankSelector, prefix, globalSlotIndex);
+        }
+
+        function renderChoiceGaps(containerId, data, prefix) {
+            const container = document.getElementById(containerId);
+            let html = "";
+            data.forEach((it, i) => {
+                const qid = `${prefix}-q${i}`;
+                let count = 0;
+                let qHtml = it.q.replace(/\[CHOICE:([^\]]+)\]/g, (match, choicesStr) => {
+                    const id = count === 0 ? qid : `${qid}_${count}`;
+                    const ans = Array.isArray(it.ans) ? it.ans[count] : it.ans;
+                    count++;
+                    const choices = choicesStr.split('/').map(c => c.trim());
+                    const spans = choices.map(c => `<span class="word-choice" onclick="selectChoice(this)" data-val="${c}">${c}</span>`);
+                    return `<span class="choice-gap" id="${id}" data-ans="${ans}">${spans.join('<span class="choice-sep">/</span>')}</span>`;
+                });
+                if (count === 0) return;
+
+                const eyeOnclick = it.subctx
+                    ? `toggleReadingChoiceAns('${qid}', '${it.subctx}')`
+                    : `toggleMultiChoiceAns('${qid}')`;
+                const hintOnclick = it.subctx
+                    ? `toggleReadingHint(event, '${qid}', '${it.subctx}')`
+                    : `toggleHint(event, '${qid}')`;
+
+                html += `<div class="q-row">${qHtml}
+                <span class="inline-group">
+                    <button class="eye-btn" onclick="${eyeOnclick}">👁️</button>
+                    <button class="hint-btn" onclick="${hintOnclick}">i</button>
+                    <div class="hint-box" id="${qid}-hint">${it.hint || ''}</div>
+                </span></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // ========== INTERACTION ==========
+        function toggleHint(e, id) {
+            e.stopPropagation();
+            const hintBox = document.getElementById(id + '-hint');
+            if (hintBox) {
+                if (hintBox.style.display === 'block') { hintBox.style.display = 'none'; }
+                else { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); hintBox.style.display = 'block'; }
+            }
+        }
+
+        function toggleReadingHint(e, id, subctxId) {
+            e.stopPropagation();
+            const hintBox = document.getElementById(id + '-hint');
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+                const ctxEl = document.getElementById(subctxId);
+                if (ctxEl) {
+                    ctxEl.classList.add('active-highlight');
+                    const textPanel = document.getElementById('readingPanel');
+                    if (textPanel) {
+                        const spanRect = ctxEl.getBoundingClientRect();
+                        const panelRect = textPanel.getBoundingClientRect();
+                        const relativeOffsetTop = spanRect.top - panelRect.top + textPanel.scrollTop;
+                        const scrollPosition = relativeOffsetTop - (panelRect.height / 2) + (spanRect.height / 2);
+                        textPanel.scrollTo({ top: scrollPosition, behavior: 'smooth' });
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.hint-box') && !e.target.closest('.hint-btn') && !e.target.closest('.eye-btn')) {
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+                if (!e.target.closest('#readingPanel')) {
+                    document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+                }
+            }
+        });
+
+        function adjustWidth(el) {
+            el.style.width = '0px';
+            const s = el.scrollWidth;
+            el.style.width = (s > 50 ? s : 50) + 'px';
+        }
+
+        function selectChoice(el) {
+            const gap = el.closest('.choice-gap');
+            gap.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            el.classList.add('selected');
+        }
+
+        function toggleInputAns(id) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const correctAns = input.dataset.ans.split('|')[0];
+            const isShowing = input.classList.contains('correct') && input.value === correctAns;
+            if (isShowing) {
+                input.value = ''; input.classList.remove('correct'); adjustWidth(input);
+            } else {
+                input.value = correctAns; input.classList.add('correct'); adjustWidth(input);
+            }
+        }
+
+        function toggleMultiChoiceAns(id) {
+            function toggleOneGap(gapEl) {
+                if (!gapEl) return;
+                const correctAns = gapEl.dataset.ans;
+                const correctSpan = Array.from(gapEl.querySelectorAll('.word-choice')).find(s => s.dataset.val === correctAns);
+                if (!correctSpan) return;
+                if (correctSpan.classList.contains('correct-select')) {
+                    gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                } else {
+                    gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                    correctSpan.classList.add('selected', 'correct-select');
+                }
+            }
+            toggleOneGap(document.getElementById(id));
+            let k = 1;
+            while (document.getElementById(`${id}_${k}`)) {
+                toggleOneGap(document.getElementById(`${id}_${k}`));
+                k++;
+            }
+        }
+
+        function toggleReadingChoiceAns(id, subctxId) {
+            const gap = document.getElementById(id);
+            if (!gap) return;
+            const correctAns = gap.dataset.ans;
+            const correctSpan = Array.from(gap.querySelectorAll('.word-choice')).find(s => s.dataset.val === correctAns);
+            if (!correctSpan) return;
+            if (correctSpan.classList.contains('correct-select')) {
+                gap.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+            } else {
+                gap.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                correctSpan.classList.add('selected', 'correct-select');
+                document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+                const ctxEl = document.getElementById(subctxId);
+                if (ctxEl) {
+                    ctxEl.classList.add('active-highlight');
+                    const textPanel = document.getElementById('readingPanel');
+                    if (textPanel) {
+                        const spanRect = ctxEl.getBoundingClientRect();
+                        const panelRect = textPanel.getBoundingClientRect();
+                        const relativeOffsetTop = spanRect.top - panelRect.top + textPanel.scrollTop;
+                        const scrollPosition = relativeOffsetTop - (panelRect.height / 2) + (spanRect.height / 2);
+                        textPanel.scrollTo({ top: scrollPosition, behavior: 'smooth' });
+                    }
+                }
+            }
+        }
+
+        function showAnswers(prefix) {
+            resetSection(prefix);
+            const container = document.querySelector(`#card-${prefix}, #card-r`);
+            if (!container) return;
+            container.querySelectorAll('input.task5-input').forEach(input => {
+                input.value = input.dataset.ans.split('|')[0];
+                input.classList.add('correct');
+                adjustWidth(input);
+            });
+            container.querySelectorAll('.choice-gap').forEach(gap => {
+                const correctAns = gap.dataset.ans;
+                const correctSpan = Array.from(gap.querySelectorAll('.word-choice')).find(s => s.dataset.val === correctAns);
+                if (correctSpan) correctSpan.classList.add('selected', 'correct-select');
+            });
+            // Fill drop slots
+            container.querySelectorAll('.drop-slot-inline').forEach(slot => {
+                const ans = slot.dataset.ans;
+                const bankSelector = slot.dataset.bank;
+                if (ans && bankSelector) {
+                    placeWordInSlot(slot, ans, bankSelector);
+                }
+            });
+        }
+
+        function resetSection(prefix) {
+            const container = document.querySelector(`#card-${prefix}, #card-r`);
+            if (!container) return;
+            container.querySelectorAll('input.task5-input').forEach(input => {
+                input.value = ""; input.classList.remove('correct', 'incorrect-marked'); adjustWidth(input);
+            });
+            container.querySelectorAll('.choice-gap').forEach(gap => {
+                gap.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            });
+            container.querySelectorAll('.drop-slot-inline').forEach(slot => {
+                const bankSelector = slot.dataset.bank;
+                if (bankSelector) clearSlot(slot, bankSelector);
+            });
+            container.querySelectorAll('.word-bank-simple .word-item').forEach(w => w.classList.remove('used', 'active-word'));
+            container.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        function checkAll() {
+            document.querySelectorAll('input.task5-input').forEach(input => {
+                const userVal = input.value.trim().toLowerCase();
+                const possibleAns = input.dataset.ans.toLowerCase().split('|');
+                if (userVal === "") { input.classList.remove('correct', 'incorrect-marked'); return; }
+                if (possibleAns.includes(userVal)) { input.classList.add('correct'); input.classList.remove('incorrect-marked'); }
+                else { input.classList.add('incorrect-marked'); input.classList.remove('correct'); }
+            });
+            document.querySelectorAll('.choice-gap').forEach(gap => {
+                const correctAns = gap.dataset.ans;
+                const selected = gap.querySelector('.word-choice.selected');
+                gap.querySelectorAll('.word-choice').forEach(w => w.classList.remove('correct-select', 'incorrect-select'));
+                if (!selected) return;
+                if (selected.dataset.val === correctAns) { selected.classList.add('correct-select'); selected.classList.remove('incorrect-select'); }
+                else { selected.classList.add('incorrect-select'); selected.classList.remove('correct-select'); }
+            });
+            document.querySelectorAll('.drop-slot-inline').forEach(slot => {
+                const val = slot.innerText.trim();
+                const ans = slot.dataset.ans;
+                if (!val) { slot.classList.remove('filled', 'filled-wrong'); return; }
+                if (val.toLowerCase() === ans.toLowerCase()) { slot.classList.add('filled'); slot.classList.remove('filled-wrong'); }
+                else { slot.classList.add('filled-wrong'); slot.classList.remove('filled'); }
+            });
+        }
+        window.checkAll = checkAll;
+
+        // Resizer
+        const resizer = document.getElementById('reading-resizer');
+        if (resizer) {
+            const leftSide = document.getElementById('readingPanel');
+            const rightSide = document.getElementById('exercisePanel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                leftSide.style.userSelect = 'none';
+                rightSide.style.userSelect = 'none';
+                resizer.classList.add('active');
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerOffsetLeft = leftSide.parentNode.getBoundingClientRect().left;
+                let pointerRelativeXpos = e.clientX - containerOffsetLeft;
+                const boxWidth = leftSide.parentNode.offsetWidth;
+                let flexBasis = Math.max(20, Math.min(80, (pointerRelativeXpos / boxWidth) * 100));
+                leftSide.style.flex = `1 1 ${flexBasis}%`;
+                rightSide.style.flex = `1 1 ${100 - flexBasis}%`;
+            });
+            document.addEventListener('mouseup', function (e) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                leftSide.style.userSelect = 'auto';
+                rightSide.style.userSelect = 'auto';
+                resizer.classList.remove('active');
+            });
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+
+        window.onload = () => {
+            renderStandardInputs('questions-v1', v1Data, 'v1');
+            createWordBank('bank-v2', v2BankWords, '#bank-v2');
+            renderParagraphWithDropSlots('questions-v2', v2Paragraphs, 'v2', '#bank-v2');
+            renderChoiceGaps('questions-v3', v3Data, 'v3');
+            createWordBank('bank-v4', v4BankWords, '#bank-v4');
+            renderParagraphWithDropSlots('questions-v4', [{ text: v4Data.map((d, i) => `${i + 1}. ${d.q}`).join('<br>'), blanks: v4Data }], 'v4', '#bank-v4');
+            // Adjust v4 rendering to match original format
+            document.getElementById('questions-v4').innerHTML = v4Data.map((d, i) => `<div class="q-row">${d.q.replace('[INPUT]', `<span class="drop-slot-inline" id="v4-q${i}" data-ans="${d.ans}"></span>
+            <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v4-q${i}','${d.ans}','#bank-v4')">👁️</button>
+            <button class="hint-btn" onclick="toggleHint(event, 'v4-q${i}')">i</button>
+            <div class="hint-box" id="v4-q${i}-hint">${d.hint}</div></span>`)}</div>`).join('');
+            createDropSlots(document.getElementById('questions-v4'), '#bank-v4', 'v4', v4Data.length);
+            createWordBank('bank-v5', v5BankWords, '#bank-v5');
+            document.getElementById('questions-v5').innerHTML = v5Data.map((d, i) => `<div class="q-row">${d.q.replace('[INPUT]', `<span class="drop-slot-inline" id="v5-q${i}" data-ans="${d.ans}"></span>
+            <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v5-q${i}','${d.ans}','#bank-v5')">👁️</button>
+            <button class="hint-btn" onclick="toggleHint(event, 'v5-q${i}')">i</button>
+            <div class="hint-box" id="v5-q${i}-hint">${d.hint}</div></span>`)}</div>`).join('');
+            createDropSlots(document.getElementById('questions-v5'), '#bank-v5', 'v5', v5Data.length);
+            renderChoiceGaps('questions-g1', g1Data, 'g1');
+            renderChoiceGaps('questions-g2', g2Data, 'g2');
+            renderChoiceGaps('questions-g3', g3Data, 'g3');
+            renderStandardInputs('questions-g4', g4Data, 'g4');
+            renderChoiceGaps('questions-r', rData, 'r');
+            setTimeout(() => { document.querySelectorAll('input.task5-input').forEach(adjustWidth); }, 100);
+        };
+    </script>
+</body>
+
+</html>
