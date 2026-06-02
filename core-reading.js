@@ -662,43 +662,43 @@ class MiniDashboardManager {
 
         20: { cambridge: 134, cefr: 'A2' },
 
-        19: { cambridge: 134, cefr: 'A2' },
+        19: { cambridge: 132, cefr: 'A2' },
 
-        18: { cambridge: 132, cefr: 'A2' },
+        18: { cambridge: 130, cefr: 'A2' },
 
-        17: { cambridge: 130, cefr: 'A2' },
+        17: { cambridge: 126, cefr: 'A2' },
 
-        16: { cambridge: 126, cefr: 'A2' },
+        16: { cambridge: 124, cefr: 'A2' },
 
-        15: { cambridge: 124, cefr: 'A2' },
+        15: { cambridge: 122, cefr: 'A2' },
 
-        14: { cambridge: 122, cefr: 'A2' },
+        14: { cambridge: 120, cefr: 'A2' },
 
-        13: { cambridge: 120, cefr: 'A2' },
+        13: { cambridge: 118, cefr: '-' },
 
-        12: { cambridge: 118, cefr: '-' },
+        12: { cambridge: 116, cefr: '-' },
 
-        11: { cambridge: 116, cefr: '-' },
+        11: { cambridge: 113, cefr: '-' },
 
-        10: { cambridge: 113, cefr: '-' },
+        10: { cambridge: 111, cefr: '-' },
 
-        9: { cambridge: 111, cefr: '-' },
+        9: { cambridge: 109, cefr: '-' },
 
-        8: { cambridge: 109, cefr: '-' },
+        8: { cambridge: 107, cefr: '-' },
 
-        7: { cambridge: 107, cefr: '-' },
+        7: { cambridge: 104, cefr: '-' },
 
-        6: { cambridge: 104, cefr: '-' },
+        6: { cambridge: 102, cefr: '-' },
 
-        5: { cambridge: 102, cefr: '-' },
+        5: { cambridge: 82, cefr: '-' },
 
-        4: { cambridge: 82, cefr: '-' },
+        4: { cambridge: 61, cefr: '-' },
 
-        3: { cambridge: 61, cefr: '-' },
+        3: { cambridge: 41, cefr: '-' },
 
-        2: { cambridge: 41, cefr: '-' },
+        2: { cambridge: 20, cefr: '-' },
 
-        1: { cambridge: 20, cefr: '-' },
+        1: { cambridge: 10, cefr: '-' },
 
         0: { cambridge: 0, cefr: '-' }
 
@@ -3219,8 +3219,11 @@ class ReadingCore {
 
                     inp.disabled = true;
 
-                    // Class correct/incorrect được gán bởi submitExam hoặc handleExplain
-                    // sau khi value đã được điền vào — không gán tại đây vì value có thể còn rỗng
+                    const val = inp.value.trim();
+
+                    const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
+
+                    inp.classList.add(correct ? 'correct' : 'incorrect');
 
                 }
 
@@ -4123,9 +4126,6 @@ class ReadingCore {
                 }
 
             }
-
-            // Đánh dấu đã render split để handleExplain không renderSplitColumn lại (tránh mất class)
-            this.currentSplit = true;
 
         } else {
 
