@@ -843,15 +843,21 @@ class ListeningCore {
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
-            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
-            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
-            if (!this.examSubmitted && !this.explanationMode) {
-                const draftKey = this.getStorageKey(true);
-                const localDraft = localStorage.getItem(draftKey);
-                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                if (!hasDraft) {
-                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
-                    await this.loadDraft();
+            // Sau khi sync cloud → local xong, kiểm tra lại trạng thái
+            // (initializeTest chạy loadDraft/restoreSubmittedState trước khi CloudStorage tồn tại)
+            if (!this.examSubmitted) {
+                const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+                if (submittedState && submittedState.submitted) {
+                    console.log('[Cloud] Post-sync: restoring submitted state...');
+                    this.restoreSubmittedState(submittedState);
+                } else {
+                    const draftKey = this.getStorageKey(true);
+                    const localDraft = localStorage.getItem(draftKey);
+                    const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                    if (!hasDraft) {
+                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                        await this.loadDraft();
+                    }
                 }
             }
 
@@ -2592,7 +2598,7 @@ class StorageManager {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-        const key = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+
         const submittedData = {
             timestamp: Date.now(),
             answers: userAnswers,
@@ -2600,31 +2606,77 @@ class StorageManager {
             correctCount,
             totalQuestions
         };
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+
+        // Key _submitted: dùng để loadSubmittedState đọc local
+        const submittedKey = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+        localStorage.setItem(submittedKey, JSON.stringify(submittedData));
+
+        // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
+        const mainKey = `ket_listening_book${book}_test${test}_part${part}`;
+        const existingMain = (() => {
+            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
+        })();
+        const mainData = {
+            ...existingMain,
+            answers: userAnswers,
+            submitted: true,
+            correctCount,
+            totalQuestions,
+            timestamp: Date.now()
+        };
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-            localStorage.setItem(key, JSON.stringify(submittedData));
+            localStorage.setItem(mainKey, JSON.stringify(mainData));
         }
+
+        // Sync cả hai lên Cloud
         if (window.CloudStorage) {
-            window.CloudStorage.save(key, submittedData);
+            window.CloudStorage.save(submittedKey, submittedData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced submitted state:', submittedKey);
+            });
+            window.CloudStorage.save(mainKey, mainData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced main key with answers:', mainKey);
+            });
         }
-        console.log('[Storage] Saved submitted state:', key);
+        console.log('[Storage] Saved submitted state:', submittedKey);
     }
 
     loadSubmittedState(testData) {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-        const key = `ket_listening_book${book}_test${test}_part${part}_submitted`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
+
+        const submittedKey = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+        const mainKey = `ket_listening_book${book}_test${test}_part${part}`;
+
+        // Thử đọc key _submitted trước
+        const storedSubmitted = localStorage.getItem(submittedKey);
+        if (storedSubmitted) {
             try {
-                const data = JSON.parse(stored);
-                console.log('[Storage] Loaded submitted state:', key);
-                return data;
+                const data = JSON.parse(storedSubmitted);
+                if (data.submitted && data.answers) {
+                    console.log('[Storage] Loaded submitted state from _submitted key:', submittedKey);
+                    return data;
+                }
             } catch (e) {
                 console.error('[Storage] Error parsing submitted state:', e);
             }
         }
+
+        // Fallback: đọc key chính (được sync từ cloud về)
+        const storedMain = localStorage.getItem(mainKey);
+        if (storedMain) {
+            try {
+                const data = JSON.parse(storedMain);
+                if (data.submitted && data.answers) {
+                    console.log('[Storage] Loaded submitted state from main key (cloud sync):', mainKey);
+                    localStorage.setItem(submittedKey, JSON.stringify(data));
+                    return data;
+                }
+            } catch (e) {
+                console.error('[Storage] Error parsing main key:', e);
+            }
+        }
+
         return null;
     }
 
