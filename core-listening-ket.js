@@ -843,15 +843,21 @@ class ListeningCore {
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
-            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
-            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
-            if (!this.examSubmitted && !this.explanationMode) {
-                const draftKey = this.getStorageKey(true);
-                const localDraft = localStorage.getItem(draftKey);
-                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                if (!hasDraft) {
-                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
-                    await this.loadDraft();
+            // Sau khi sync cloud → local xong, kiểm tra lại trạng thái
+            // (initializeTest chạy loadDraft/restoreSubmittedState trước khi CloudStorage tồn tại)
+            if (!this.examSubmitted) {
+                const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
+                if (submittedState && submittedState.submitted) {
+                    console.log('[Cloud] Post-sync: restoring submitted state...');
+                    this.restoreSubmittedState(submittedState);
+                } else {
+                    const draftKey = this.getStorageKey(true);
+                    const localDraft = localStorage.getItem(draftKey);
+                    const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                    if (!hasDraft) {
+                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                        await this.loadDraft();
+                    }
                 }
             }
 
@@ -2288,20 +2294,37 @@ class HighlightManager {
     }
 
     setupContextMenu() {
-        document.addEventListener('contextmenu', (e) => {
+        // Hiện popup ngay khi thả chuột trái sau khi tô chọn
+        document.addEventListener('mouseup', (e) => {
+            // Bỏ qua nếu click vào chính contextMenu
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && contextMenu.contains(e.target)) return;
+
             const highlightArea = e.target.closest('#transcriptContent, .transcript-content, .reading-content, #questionsContainer, .questions-panel, .question-item, .questions-list, #mainArea');
-            if (!highlightArea) return;
-            const selection = window.getSelection();
-            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
-            e.preventDefault();
-            this.selectedRange = selection.getRangeAt(0);
-            this.showContextMenu(e.pageX, e.pageY);
+            if (!highlightArea) {
+                this.hideContextMenu();
+                return;
+            }
+
+            // Dùng setTimeout để đợi browser hoàn tất cập nhật selection
+            setTimeout(() => {
+                const selection = window.getSelection();
+                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) {
+                    this.hideContextMenu();
+                    return;
+                }
+                this.selectedRange = selection.getRangeAt(0);
+                this.showContextMenu(e.clientX, e.clientY);
+            }, 10);
         });
 
-        const contextMenu = document.getElementById('contextMenu');
-        if (contextMenu) {
-            contextMenu.addEventListener('mousedown', (e) => e.preventDefault());
-        }
+        // Dùng event delegation để tránh lỗi DOM chưa ready khi constructor chạy
+        document.addEventListener('mousedown', (e) => {
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && contextMenu.contains(e.target)) {
+                e.preventDefault(); // Giữ selection không bị mất khi click vào menu
+            }
+        });
 
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
@@ -2312,9 +2335,27 @@ class HighlightManager {
     showContextMenu(x, y) {
         const contextMenu = document.getElementById('contextMenu');
         if (contextMenu) {
-            contextMenu.style.left = x + 'px';
-            contextMenu.style.top = y + 'px';
+            // Hiện tạm thời để đo kích thước
             contextMenu.style.display = 'block';
+            const rect = contextMenu.getBoundingClientRect();
+
+            // Điều chỉnh vị trí nếu tràn ra ngoài viewport
+            let finalX = x;
+            let finalY = y;
+
+            if (finalX + rect.width > window.innerWidth) {
+                finalX = window.innerWidth - rect.width - 10;
+            }
+            if (finalY + rect.height > window.innerHeight) {
+                finalY = window.innerHeight - rect.height - 10;
+            }
+
+            // Đảm bảo không bị âm
+            finalX = Math.max(10, finalX);
+            finalY = Math.max(10, finalY);
+
+            contextMenu.style.left = finalX + 'px';
+            contextMenu.style.top = finalY + 'px';
         }
     }
 
@@ -2557,7 +2598,7 @@ class StorageManager {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-        const key = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+
         const submittedData = {
             timestamp: Date.now(),
             answers: userAnswers,
@@ -2565,31 +2606,77 @@ class StorageManager {
             correctCount,
             totalQuestions
         };
-        // Bug 1 fix: Chỉ ghi localStorage nếu không phải cloud-only mode
+
+        // Key _submitted: dùng để loadSubmittedState đọc local
+        const submittedKey = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+        localStorage.setItem(submittedKey, JSON.stringify(submittedData));
+
+        // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
+        const mainKey = `ket_listening_book${book}_test${test}_part${part}`;
+        const existingMain = (() => {
+            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
+        })();
+        const mainData = {
+            ...existingMain,
+            answers: userAnswers,
+            submitted: true,
+            correctCount,
+            totalQuestions,
+            timestamp: Date.now()
+        };
         if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-            localStorage.setItem(key, JSON.stringify(submittedData));
+            localStorage.setItem(mainKey, JSON.stringify(mainData));
         }
+
+        // Sync cả hai lên Cloud
         if (window.CloudStorage) {
-            window.CloudStorage.save(key, submittedData);
+            window.CloudStorage.save(submittedKey, submittedData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced submitted state:', submittedKey);
+            });
+            window.CloudStorage.save(mainKey, mainData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced main key with answers:', mainKey);
+            });
         }
-        console.log('[Storage] Saved submitted state:', key);
+        console.log('[Storage] Saved submitted state:', submittedKey);
     }
 
     loadSubmittedState(testData) {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-        const key = `ket_listening_book${book}_test${test}_part${part}_submitted`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
+
+        const submittedKey = `ket_listening_book${book}_test${test}_part${part}_submitted`;
+        const mainKey = `ket_listening_book${book}_test${test}_part${part}`;
+
+        // Thử đọc key _submitted trước
+        const storedSubmitted = localStorage.getItem(submittedKey);
+        if (storedSubmitted) {
             try {
-                const data = JSON.parse(stored);
-                console.log('[Storage] Loaded submitted state:', key);
-                return data;
+                const data = JSON.parse(storedSubmitted);
+                if (data.submitted && data.answers) {
+                    console.log('[Storage] Loaded submitted state from _submitted key:', submittedKey);
+                    return data;
+                }
             } catch (e) {
                 console.error('[Storage] Error parsing submitted state:', e);
             }
         }
+
+        // Fallback: đọc key chính (được sync từ cloud về)
+        const storedMain = localStorage.getItem(mainKey);
+        if (storedMain) {
+            try {
+                const data = JSON.parse(storedMain);
+                if (data.submitted && data.answers) {
+                    console.log('[Storage] Loaded submitted state from main key (cloud sync):', mainKey);
+                    localStorage.setItem(submittedKey, JSON.stringify(data));
+                    return data;
+                }
+            } catch (e) {
+                console.error('[Storage] Error parsing main key:', e);
+            }
+        }
+
         return null;
     }
 
