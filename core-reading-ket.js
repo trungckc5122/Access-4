@@ -1791,9 +1791,7 @@ class ReadingCore {
             container.querySelectorAll('.gap-input').forEach(inp => {
                 if (this.examSubmitted) {
                     inp.disabled = true;
-                    const val = inp.value.trim();
-                    const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
-                    inp.classList.add(correct ? 'correct' : 'incorrect');
+                    // Class correct/incorrect được gán sau khi value đã set (tránh race condition)
                 }
             });
         }
@@ -2294,6 +2292,9 @@ class ReadingCore {
         this.clearDraft();
         this.disableInputs();
         this.attachInputEvents();
+
+        // Refresh mini dashboard ngay trong cùng tab (BroadcastChannel không fire same-tab)
+        if (this.miniDashboard?.isVisible) this.miniDashboard.refreshData();
     }
 
     markAnswers() {
@@ -2398,7 +2399,14 @@ class ReadingCore {
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+                        el.value = vals[i] || "";
+                        // Gán class đúng/sai SAU khi đã set value
+                        el.classList.remove('correct', 'incorrect');
+                        const correct = this.isAnswerCorrect(i, el.value.trim());
+                        el.classList.add(correct ? 'correct' : 'incorrect');
+                        el.disabled = true;
+                    }
                     // Không hiện badge ngay, chỉ tạo nhưng ẩn
                     this.addBadgeForQuestion(i);
                 }
@@ -2423,7 +2431,14 @@ class ReadingCore {
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+                        el.value = vals[i] || "";
+                        // Gán class đúng/sai SAU khi đã set value
+                        el.classList.remove('correct', 'incorrect');
+                        const correct = this.isAnswerCorrect(i, el.value.trim());
+                        el.classList.add(correct ? 'correct' : 'incorrect');
+                        el.disabled = true;
+                    }
                 }
             }
             const rightCol = document.getElementById('rightCol');

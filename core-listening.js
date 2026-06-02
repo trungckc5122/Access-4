@@ -1739,6 +1739,9 @@ class ListeningCore {
 
         this.clearDraft();
         this.disableInputs();
+
+        // Refresh mini dashboard ngay trong cùng tab (BroadcastChannel không fire same-tab)
+        if (this.miniDashboard?.isVisible) this.miniDashboard.refreshData();
     }
 
     showTranscript() {

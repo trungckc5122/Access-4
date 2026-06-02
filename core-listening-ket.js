@@ -1910,15 +1910,9 @@ class ListeningCore {
 
         this.clearDraft();
         this.disableInputs();
-    }
 
-    showTranscript() {
-        const mainArea = document.getElementById('mainArea');
-        const transcriptContent = document.getElementById('transcriptContent');
-        if (mainArea && transcriptContent && this.currentTestData.transcript) {
-            mainArea.classList.add('show-transcript');
-            transcriptContent.innerHTML = this.currentTestData.transcript;
-        }
+        // Refresh mini dashboard ngay trong cùng tab (BroadcastChannel không fire same-tab)
+        if (this.miniDashboard?.isVisible) this.miniDashboard.refreshData();
     }
 
     markAnswers() {
