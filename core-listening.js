@@ -2390,21 +2390,17 @@ class StorageManager {
     }
 
     saveSubmittedState(testData, userAnswers) {
-        // Calculate scores to include in the submitted state for cloud sync
-        let correctCount = 0;
-        const questionRange = this.getQuestionRange(testData);
-        let totalQuestions = 0;
-
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            totalQuestions++;
-            const userAnswer = userAnswers[i];
-            const correctAnswer = testData.answerKey[`q${i}`];
-            if (this.checkAnswer(userAnswer, correctAnswer)) correctCount++;
-        }
-
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
+
+        // Đọc correctCount từ saveResults đã lưu trước đó (tránh tính lại bị sai)
+        const mainKey = `pet_listening_book${book}_test${test}_part${part}`;
+        const existingMain = (() => {
+            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
+        })();
+        const correctCount = existingMain.correctCount ?? 0;
+        const totalQuestions = existingMain.totalQuestions ?? 0;
 
         const submittedData = {
             timestamp: Date.now(),
@@ -2420,10 +2416,6 @@ class StorageManager {
 
         // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
         // (syncCloudToLocal chỉ sync key chính, không sync _submitted)
-        const mainKey = `pet_listening_book${book}_test${test}_part${part}`;
-        const existingMain = (() => {
-            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
-        })();
         const mainData = {
             ...existingMain,
             answers: userAnswers,

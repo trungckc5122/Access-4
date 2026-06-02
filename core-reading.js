@@ -3242,13 +3242,20 @@ class ReadingCore {
 
 
 
-            if (this.explanationMode || this.examSubmitted) {
+            if (this.explanationMode) {
 
                 icon.style.display = 'inline-flex';
 
                 icon.textContent = '👁️';
 
                 icon.title = 'Xem giải thích';
+
+                icon.classList.remove('is-flag');
+
+            } else if (this.examSubmitted) {
+
+                // Đã nộp nhưng chưa vào chế độ xem giải thích → ẩn mắt
+                icon.style.display = 'none';
 
                 icon.classList.remove('is-flag');
 
@@ -4132,6 +4139,9 @@ class ReadingCore {
 
             }
 
+            // Đánh dấu split đã render để handleExplain không renderSplitColumn lại
+            this.currentSplit = true;
+
         } else {
 
             this.markAnswers();
@@ -4156,11 +4166,8 @@ class ReadingCore {
 
         this.storageManager.saveResults(this.currentTestData, userAnswers);
 
-        // LƯU TRẠNG THÁI SUBMITTED - dùng getDraftData() để có slotState đầy đủ
-
-        const draftData = this.getDraftData();
-
-        this.storageManager.saveSubmittedState(this.currentTestData, draftData);
+        // LƯU TRẠNG THÁI SUBMITTED - dùng userAnswers (số key) để correctCount đúng
+        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers);
 
 
 
@@ -5690,44 +5697,6 @@ class ReadingStorageManager {
 
     saveSubmittedState(testData, userAnswers) {
 
-        // Calculate scores to include in the submitted state for cloud sync
-
-        let correctCount = 0;
-
-        const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
-
-        const questionRangeStart = Math.min(...questions.map(q => q.num));
-
-        const questionRangeEnd = Math.max(...questions.map(q => q.num));
-
-        let totalQuestions = 0;
-
-
-
-        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
-
-            totalQuestions++;
-
-            const userAnswer = userAnswers[i];
-
-            const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
-
-            let isCorrect = false;
-
-            if (userAnswer) {
-
-                if (Array.isArray(answerKeyRaw)) isCorrect = answerKeyRaw.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
-
-                else if (typeof answerKeyRaw === 'string') isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
-
-            }
-
-            if (isCorrect) correctCount++;
-
-        }
-
-
-
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
 
         const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
@@ -5735,6 +5704,14 @@ class ReadingStorageManager {
         const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
 
         const resolvedPart = testData.part || part;
+        const mainKey = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
+
+        // Đọc correctCount từ saveResults đã lưu trước đó (tránh tính lại bị sai)
+        const existingMain = (() => {
+            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
+        })();
+        const correctCount = existingMain.correctCount ?? 0;
+        const totalQuestions = existingMain.totalQuestions ?? Object.keys(userAnswers).length;
 
         const submittedData = {
 
@@ -5755,10 +5732,6 @@ class ReadingStorageManager {
         localStorage.setItem(submittedKey, JSON.stringify(submittedData));
 
         // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
-        const mainKey = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
-        const existingMain = (() => {
-            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
-        })();
         const mainData = {
             ...existingMain,
             answers: userAnswers,
