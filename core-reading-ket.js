@@ -1785,9 +1785,8 @@ class ReadingCore {
             container.querySelectorAll('.gap-input').forEach(inp => {
                 if (this.examSubmitted) {
                     inp.disabled = true;
-                    const val = inp.value.trim();
-                    const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
-                    inp.classList.add(correct ? 'correct' : 'incorrect');
+                    // Class correct/incorrect được gán bởi submitExam hoặc handleExplain
+                    // sau khi value đã được điền vào — không gán tại đây vì value có thể còn rỗng
                 }
             });
         }
@@ -2255,6 +2254,8 @@ class ReadingCore {
                     inp.disabled = true;
                 }
             }
+            // Đánh dấu đã render split để handleExplain không renderSplitColumn lại (tránh mất class)
+            this.currentSplit = true;
         } else {
             this.markAnswers();
         }

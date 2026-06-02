@@ -327,10 +327,37 @@ class MiniDashboardManager {
 
     ketReadingScoreMap() {
         return {
-            30: 150, 29: 145, 28: 140, 27: 138, 26: 135, 25: 133, 24: 130, 23: 128,
-            22: 125, 21: 123, 20: 120, 19: 117, 18: 114, 17: 111, 16: 109, 15: 106,
-            14: 103, 13: 100, 12: 97, 11: 94, 10: 91, 9: 88, 8: 85, 7: 82,
-            6: 70, 5: 59, 4: 47, 3: 35, 2: 23, 1: 12, 0: 0
+            30: { cambridge: 150, cefr: 'B1' },
+            29: { cambridge: 145, cefr: 'B1' },
+            28: { cambridge: 140, cefr: 'B1' },
+            27: { cambridge: 138, cefr: 'A2' },
+            26: { cambridge: 135, cefr: 'A2' },
+            25: { cambridge: 133, cefr: 'A2' },
+            24: { cambridge: 130, cefr: 'A2' },
+            23: { cambridge: 128, cefr: 'A2' },
+            22: { cambridge: 125, cefr: 'A2' },
+            21: { cambridge: 123, cefr: 'A2' },
+            20: { cambridge: 120, cefr: 'A2' },
+            19: { cambridge: 117, cefr: 'A1' },
+            18: { cambridge: 114, cefr: 'A1' },
+            17: { cambridge: 111, cefr: 'A1' },
+            16: { cambridge: 109, cefr: 'A1' },
+            15: { cambridge: 106, cefr: 'A1' },
+            14: { cambridge: 103, cefr: 'A1' },
+            13: { cambridge: 100, cefr: 'A1' },
+            12: { cambridge: 97, cefr: '-' },
+            11: { cambridge: 94, cefr: '-' },
+            10: { cambridge: 91, cefr: '-' },
+            9:  { cambridge: 88, cefr: '-' },
+            8:  { cambridge: 85, cefr: '-' },
+            7:  { cambridge: 82, cefr: '-' },
+            6:  { cambridge: 70, cefr: '-' },
+            5:  { cambridge: 59, cefr: '-' },
+            4:  { cambridge: 47, cefr: '-' },
+            3:  { cambridge: 35, cefr: '-' },
+            2:  { cambridge: 23, cefr: '-' },
+            1:  { cambridge: 12, cefr: '-' },
+            0:  { cambridge: 0,  cefr: '-' }
         };
     }
 
