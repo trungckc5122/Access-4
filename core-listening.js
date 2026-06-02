@@ -797,6 +797,18 @@ class ListeningCore {
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
+            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
+            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
+            if (!this.examSubmitted && !this.explanationMode) {
+                const draftKey = this.getStorageKey(true);
+                const localDraft = localStorage.getItem(draftKey);
+                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                if (!hasDraft) {
+                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    await this.loadDraft();
+                }
+            }
+
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
                 if (this._isResetting || !this.cloudSupportInitialized) return;
@@ -1233,8 +1245,11 @@ class ListeningCore {
 
     draftHasAnswers(draft) {
         if (!draft) return false;
-        const { timestamp, ...answers } = draft;
-        return Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        // Strip tất cả metadata fields (phải khớp với getDraftData)
+        const { type, slotState, timestamp, flaggedQuestions, ...answers } = draft;
+        const hasValues = Object.values(answers).some(val => val !== null && val !== undefined && val !== '');
+        const hasSlots = slotState && Object.values(slotState).some(val => val !== null && val !== undefined && val !== '');
+        return hasValues || hasSlots;
     }
 
     async loadDraft() {

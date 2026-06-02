@@ -813,6 +813,18 @@ class ReadingCore {
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
+            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
+            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
+            if (!this.examSubmitted && !this.explanationMode) {
+                const draftKey = this.getStorageKey(true);
+                const localDraft = localStorage.getItem(draftKey);
+                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                if (!hasDraft) {
+                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    await this.loadDraft();
+                }
+            }
+
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
                 if (this._isResetting || !this.cloudSupportInitialized) return;
