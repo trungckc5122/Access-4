@@ -4161,7 +4161,7 @@ class ReadingCore {
 
         const draftData = this.getDraftData();
 
-        this.storageManager.saveSubmittedState(this.currentTestData, draftData);
+        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers, draftData);
 
 
 
@@ -4405,7 +4405,19 @@ class ReadingCore {
 
                     const el = document.getElementById(`q${i}`);
 
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+
+                        el.value = vals[i] || "";
+
+                        el.disabled = true;
+
+                        const correct = this.isAnswerCorrect(i, vals[i] || "");
+
+                        el.classList.remove('correct', 'incorrect');
+
+                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+
+                    }
 
                     // Không hiện badge ngay, chỉ tạo nhưng ẩn
 
@@ -4455,7 +4467,19 @@ class ReadingCore {
 
                     const el = document.getElementById(`q${i}`);
 
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+
+                        el.value = vals[i] || "";
+
+                        el.disabled = true;
+
+                        const correct = this.isAnswerCorrect(i, vals[i] || "");
+
+                        el.classList.remove('correct', 'incorrect');
+
+                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+
+                    }
 
                 }
 
@@ -5006,9 +5030,12 @@ class ReadingCore {
 
                 const inp = document.getElementById(`q${i}`);
 
-                if (inp && answers[`q${i}`] !== undefined) {
+                // answers có thể có key số (i) hoặc string ("qi")
+                const val = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
 
-                    inp.value = answers[`q${i}`];
+                if (inp && val !== undefined) {
+
+                    inp.value = val;
 
                 }
 
@@ -5018,7 +5045,7 @@ class ReadingCore {
 
             for (let i = questionRange.start; i <= questionRange.end; i++) {
 
-                const answer = answers[`q${i}`];
+                const answer = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
 
                 if (answer) {
 
@@ -5052,9 +5079,11 @@ class ReadingCore {
 
                 const input = document.getElementById(`answer-${i}`);
 
-                if (input && answers[`q${i}`]) {
+                const val = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
 
-                    input.value = answers[`q${i}`];
+                if (input && val) {
+
+                    input.value = val;
 
                 }
 
@@ -5666,9 +5695,11 @@ class ReadingStorageManager {
 
 
 
-    saveSubmittedState(testData, userAnswers) {
+    saveSubmittedState(testData, userAnswers, draftData) {
 
         // Calculate scores to include in the submitted state for cloud sync
+
+        // userAnswers: keys số (từ getUserAnswers), draftData: optional, có slotState cho drag-drop
 
         let correctCount = 0;
 
@@ -5686,7 +5717,9 @@ class ReadingStorageManager {
 
             totalQuestions++;
 
-            const userAnswer = userAnswers[i];
+            // Hỗ trợ cả key số và key string "qi"
+
+            const userAnswer = userAnswers[i] !== undefined ? userAnswers[i] : userAnswers[`q${i}`];
 
             const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
 

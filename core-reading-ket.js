@@ -2273,9 +2273,9 @@ class ReadingCore {
         this.showResults();
         const userAnswers = this.getUserAnswers();
         this.storageManager.saveResults(this.currentTestData, userAnswers);
-        // LƯU TRẠNG THÁI SUBMITTED - dùng getDraftData() để có slotState đầy đủ
+        // LƯU TRẠNG THÁI SUBMITTED - truyền userAnswers (keys số) để tính correctCount đúng
         const draftData = this.getDraftData();
-        this.storageManager.saveSubmittedState(this.currentTestData, draftData);
+        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers, draftData);
 
         try {
             const channel = new BroadcastChannel('ket_update_channel');
@@ -2397,7 +2397,13 @@ class ReadingCore {
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+                        el.value = vals[i] || "";
+                        el.disabled = true;
+                        const correct = this.isAnswerCorrect(i, vals[i] || "");
+                        el.classList.remove('correct', 'incorrect');
+                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                    }
                     // Không hiện badge ngay, chỉ tạo nhưng ẩn
                     this.addBadgeForQuestion(i);
                 }
@@ -2422,7 +2428,13 @@ class ReadingCore {
                 const questionRange = this.getQuestionRange();
                 for (let i = questionRange.start; i <= questionRange.end; i++) {
                     const el = document.getElementById(`q${i}`);
-                    if (el) el.value = vals[i] || "";
+                    if (el) {
+                        el.value = vals[i] || "";
+                        el.disabled = true;
+                        const correct = this.isAnswerCorrect(i, vals[i] || "");
+                        el.classList.remove('correct', 'incorrect');
+                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                    }
                 }
             }
             const rightCol = document.getElementById('rightCol');
@@ -2712,13 +2724,15 @@ class ReadingCore {
         if (this.currentTestData.type === 'split-layout') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const inp = document.getElementById(`q${i}`);
-                if (inp && answers[`q${i}`] !== undefined) {
-                    inp.value = answers[`q${i}`];
+                // Hỗ trợ cả key số lẫn key string "qi"
+                const val = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
+                if (inp && val !== undefined) {
+                    inp.value = val;
                 }
             }
         } else if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const answer = answers[`q${i}`];
+                const answer = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
                 if (answer) {
                     const radios = document.getElementsByName(`q${i}`);
                     radios.forEach(radio => {
@@ -2735,8 +2749,9 @@ class ReadingCore {
         } else if (this.currentTestData.type === 'matching' || this.currentTestData.type === 'matching-dropdown') {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 const input = document.getElementById(`answer-${i}`);
-                if (input && answers[`q${i}`]) {
-                    input.value = answers[`q${i}`];
+                const val = answers[i] !== undefined ? answers[i] : answers[`q${i}`];
+                if (input && val) {
+                    input.value = val;
                 }
             }
         } else if (this.currentTestData.type === 'drag-drop') {
@@ -3066,8 +3081,9 @@ class ReadingStorageManager {
         return { book, test, part };
     }
 
-    saveSubmittedState(testData, userAnswers) {
+    saveSubmittedState(testData, userAnswers, draftData) {
         // Calculate scores to include in the submitted state for cloud sync
+        // userAnswers: keys số (từ getUserAnswers), draftData: optional, có slotState cho drag-drop
         let correctCount = 0;
         const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
         const questionRangeStart = Math.min(...questions.map(q => q.num));
@@ -3076,7 +3092,8 @@ class ReadingStorageManager {
 
         for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
             totalQuestions++;
-            const userAnswer = userAnswers[i];
+            // Hỗ trợ cả key số và key string "qi"
+            const userAnswer = userAnswers[i] !== undefined ? userAnswers[i] : userAnswers[`q${i}`];
             const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
             let isCorrect = false;
             if (userAnswer) {

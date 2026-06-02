@@ -1660,9 +1660,12 @@ class ListeningCore {
     }
 
     isAnswerCorrect(questionNum, userAnswer) {
+        if (!userAnswer) return false;
         const correctAnswer = this.currentTestData.answerKey[`q${questionNum}`];
-        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer);
-        else return userAnswer === correctAnswer;
+        const normalizedUser = userAnswer.toLowerCase().trim();
+        if (Array.isArray(correctAnswer)) return correctAnswer.some(a => normalizedUser === a.toLowerCase().trim());
+        else if (typeof correctAnswer === 'string') return normalizedUser === correctAnswer.toLowerCase().trim();
+        return false;
     }
 
     updateAnswerCount() {
@@ -2507,8 +2510,9 @@ class StorageManager {
 
     checkAnswer(userAnswer, correctAnswer) {
         if (!userAnswer) return false;
-        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer.toLowerCase());
-        else return userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+        const normalizedUser = userAnswer.toLowerCase().trim();
+        if (Array.isArray(correctAnswer)) return correctAnswer.some(a => normalizedUser === a.toLowerCase().trim());
+        else return normalizedUser === correctAnswer.toLowerCase().trim();
     }
 
     parseTestInfo(title) {
