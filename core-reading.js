@@ -5118,35 +5118,56 @@ class ReadingHighlightManager {
 
     setupContextMenu() {
 
-        document.addEventListener('contextmenu', (e) => {
+        // Hiện popup ngay khi thả chuột trái sau khi tô chọn
+        document.addEventListener('mouseup', (e) => {
+
+            // Bỏ qua nếu click vào chính contextMenu
+            const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && contextMenu.contains(e.target)) return;
 
             const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
 
-            if (!highlightArea) return;
+            if (!highlightArea) {
 
-            const selection = window.getSelection();
+                this.hideContextMenu();
 
-            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
+                return;
 
-            e.preventDefault();
+            }
 
-            this.selectedRange = selection.getRangeAt(0);
+            // Dùng setTimeout để đợi browser hoàn tất cập nhật selection
+            setTimeout(() => {
 
-            this.showContextMenu(e.pageX, e.pageY);
+                const selection = window.getSelection();
+
+                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) {
+
+                    this.hideContextMenu();
+
+                    return;
+
+                }
+
+                this.selectedRange = selection.getRangeAt(0);
+
+                this.showContextMenu(e.clientX, e.clientY);
+
+            }, 10);
 
         });
 
+        // Dùng event delegation để tránh lỗi DOM chưa ready khi constructor chạy
+        document.addEventListener('mousedown', (e) => {
 
+            const contextMenu = document.getElementById('contextMenu');
 
-        const contextMenu = document.getElementById('contextMenu');
+            if (contextMenu && contextMenu.contains(e.target)) {
 
-        if (contextMenu) {
+                e.preventDefault(); // Giữ selection không bị mất khi click vào menu
 
-            contextMenu.addEventListener('mousedown', (e) => e.preventDefault());
+            }
 
-        }
-
-
+        });
 
         document.addEventListener('click', (e) => {
 
@@ -5166,11 +5187,23 @@ class ReadingHighlightManager {
 
         if (contextMenu) {
 
-            contextMenu.style.left = x + 'px';
-
-            contextMenu.style.top = y + 'px';
-
+            // Hiện tạm thời để đo kích thước
             contextMenu.style.display = 'block';
+            const rect = contextMenu.getBoundingClientRect();
+
+            // Điều chỉnh vị trí nếu tràn ra ngoài viewport
+            let finalX = x;
+            let finalY = y;
+
+            if (finalX + rect.width > window.innerWidth) finalX = window.innerWidth - rect.width - 10;
+            if (finalY + rect.height > window.innerHeight) finalY = window.innerHeight - rect.height - 10;
+
+            finalX = Math.max(10, finalX);
+            finalY = Math.max(10, finalY);
+
+            contextMenu.style.left = finalX + 'px';
+
+            contextMenu.style.top = finalY + 'px';
 
         }
 
