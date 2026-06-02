@@ -1747,7 +1747,7 @@ class ReadingCore {
 
         mainArea.innerHTML = `
             <div class="split-container">
-                <div class="left-col">
+                <div class="left-col" id="leftCol">
                     <div class="part-header">
                         <h3>Questions ${this.getQuestionRange().start}–${this.getQuestionRange().end}</h3>
                         <p>For each question, write the correct answer. Write <strong>ONE</strong> word for each gap.</p>
@@ -2257,6 +2257,7 @@ class ReadingCore {
                 const inp = document.getElementById(`q${i}`);
                 if (inp) {
                     const correct = this.isAnswerCorrect(i, this.getUserAnswer(i));
+                    inp.classList.remove('correct', 'incorrect');
                     inp.classList.add(correct ? 'correct' : 'incorrect');
                     inp.disabled = true;
                 }
@@ -2402,7 +2403,8 @@ class ReadingCore {
                         el.disabled = true;
                         const correct = this.isAnswerCorrect(i, vals[i] || "");
                         el.classList.remove('correct', 'incorrect');
-                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                        // Tô đỏ câu sai hoặc chưa điền, tô xanh câu đúng
+                        el.classList.add(correct ? 'correct' : 'incorrect');
                     }
                     // Không hiện badge ngay, chỉ tạo nhưng ẩn
                     this.addBadgeForQuestion(i);
@@ -2433,7 +2435,8 @@ class ReadingCore {
                         el.disabled = true;
                         const correct = this.isAnswerCorrect(i, vals[i] || "");
                         el.classList.remove('correct', 'incorrect');
-                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                        // Tô đỏ câu sai hoặc chưa điền, tô xanh câu đúng
+                        el.classList.add(correct ? 'correct' : 'incorrect');
                     }
                 }
             }

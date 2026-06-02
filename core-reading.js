@@ -3137,7 +3137,7 @@ class ReadingCore {
 
             <div class="split-container">
 
-                <div class="left-col">
+                <div class="left-col" id="leftCol">
 
                     <div class="part-header">
 
@@ -4125,6 +4125,8 @@ class ReadingCore {
 
                     const correct = this.isAnswerCorrect(i, this.getUserAnswer(i));
 
+                    inp.classList.remove('correct', 'incorrect');
+
                     inp.classList.add(correct ? 'correct' : 'incorrect');
 
                     inp.disabled = true;
@@ -4415,7 +4417,9 @@ class ReadingCore {
 
                         el.classList.remove('correct', 'incorrect');
 
-                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                        // Tô đỏ câu sai hoặc chưa điền, tô xanh câu đúng
+
+                        el.classList.add(correct ? 'correct' : 'incorrect');
 
                     }
 
@@ -4477,7 +4481,9 @@ class ReadingCore {
 
                         el.classList.remove('correct', 'incorrect');
 
-                        if (vals[i]) el.classList.add(correct ? 'correct' : 'incorrect');
+                        // Tô đỏ câu sai hoặc chưa điền, tô xanh câu đúng
+
+                        el.classList.add(correct ? 'correct' : 'incorrect');
 
                     }
 
