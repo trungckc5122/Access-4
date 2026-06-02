@@ -662,43 +662,43 @@ class MiniDashboardManager {
 
         20: { cambridge: 134, cefr: 'A2' },
 
-        19: { cambridge: 134, cefr: 'A2' },
+        19: { cambridge: 132, cefr: 'A2' },
 
-        18: { cambridge: 132, cefr: 'A2' },
+        18: { cambridge: 130, cefr: 'A2' },
 
-        17: { cambridge: 130, cefr: 'A2' },
+        17: { cambridge: 126, cefr: 'A2' },
 
-        16: { cambridge: 126, cefr: 'A2' },
+        16: { cambridge: 124, cefr: 'A2' },
 
-        15: { cambridge: 124, cefr: 'A2' },
+        15: { cambridge: 122, cefr: 'A2' },
 
-        14: { cambridge: 122, cefr: 'A2' },
+        14: { cambridge: 120, cefr: 'A2' },
 
-        13: { cambridge: 120, cefr: 'A2' },
+        13: { cambridge: 118, cefr: '-' },
 
-        12: { cambridge: 118, cefr: '-' },
+        12: { cambridge: 116, cefr: '-' },
 
-        11: { cambridge: 116, cefr: '-' },
+        11: { cambridge: 113, cefr: '-' },
 
-        10: { cambridge: 113, cefr: '-' },
+        10: { cambridge: 111, cefr: '-' },
 
-        9: { cambridge: 111, cefr: '-' },
+        9: { cambridge: 109, cefr: '-' },
 
-        8: { cambridge: 109, cefr: '-' },
+        8: { cambridge: 107, cefr: '-' },
 
-        7: { cambridge: 107, cefr: '-' },
+        7: { cambridge: 104, cefr: '-' },
 
-        6: { cambridge: 104, cefr: '-' },
+        6: { cambridge: 102, cefr: '-' },
 
-        5: { cambridge: 102, cefr: '-' },
+        5: { cambridge: 82, cefr: '-' },
 
-        4: { cambridge: 82, cefr: '-' },
+        4: { cambridge: 61, cefr: '-' },
 
-        3: { cambridge: 61, cefr: '-' },
+        3: { cambridge: 41, cefr: '-' },
 
-        2: { cambridge: 41, cefr: '-' },
+        2: { cambridge: 20, cefr: '-' },
 
-        1: { cambridge: 20, cefr: '-' },
+        1: { cambridge: 10, cefr: '-' },
 
         0: { cambridge: 0, cefr: '-' }
 
@@ -1565,21 +1565,15 @@ class ReadingCore {
 
             console.log('[Cloud] Support initialized at:', basePath);
 
-            // Sau khi sync cloud → local xong, kiểm tra lại trạng thái
-            // (initializeTest chạy loadDraft/restoreSubmittedState trước khi CloudStorage tồn tại)
-            if (!this.examSubmitted) {
-                const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
-                if (submittedState && submittedState.submitted) {
-                    console.log('[Cloud] Post-sync: restoring submitted state...');
-                    this.restoreSubmittedState(submittedState);
-                } else {
-                    const draftKey = this.getStorageKey(true);
-                    const localDraft = localStorage.getItem(draftKey);
-                    const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                    if (!hasDraft) {
-                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
-                        await this.loadDraft();
-                    }
+            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
+            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
+            if (!this.examSubmitted && !this.explanationMode) {
+                const draftKey = this.getStorageKey(true);
+                const localDraft = localStorage.getItem(draftKey);
+                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                if (!hasDraft) {
+                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    await this.loadDraft();
                 }
             }
 
@@ -3225,8 +3219,11 @@ class ReadingCore {
 
                     inp.disabled = true;
 
-                    // Class correct/incorrect sẽ được gán sau khi value đã được set
-                    // (tránh race condition khi attachInputEvents chạy trước khi value được fill vào)
+                    const val = inp.value.trim();
+
+                    const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
+
+                    inp.classList.add(correct ? 'correct' : 'incorrect');
 
                 }
 
@@ -3242,20 +3239,13 @@ class ReadingCore {
 
 
 
-            if (this.explanationMode) {
+            if (this.explanationMode || this.examSubmitted) {
 
                 icon.style.display = 'inline-flex';
 
                 icon.textContent = '👁️';
 
                 icon.title = 'Xem giải thích';
-
-                icon.classList.remove('is-flag');
-
-            } else if (this.examSubmitted) {
-
-                // Đã nộp nhưng chưa vào chế độ xem giải thích → ẩn mắt
-                icon.style.display = 'none';
 
                 icon.classList.remove('is-flag');
 
@@ -3895,11 +3885,9 @@ class ReadingCore {
 
         const keyMap = this.currentTestData.answerKey[`q${questionNum}`] || this.currentTestData.answerKey[questionNum];
 
-        const u = userAnswer.trim().toLowerCase();
+        if (Array.isArray(keyMap)) return keyMap.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
 
-        if (Array.isArray(keyMap)) return keyMap.some(correct => u === correct.trim().toLowerCase());
-
-        else if (typeof keyMap === 'string') return u === keyMap.trim().toLowerCase();
+        else if (typeof keyMap === 'string') return userAnswer.toLowerCase() === keyMap.toLowerCase();
 
         return false;
 
@@ -4139,9 +4127,6 @@ class ReadingCore {
 
             }
 
-            // Đánh dấu split đã render để handleExplain không renderSplitColumn lại
-            this.currentSplit = true;
-
         } else {
 
             this.markAnswers();
@@ -4166,8 +4151,11 @@ class ReadingCore {
 
         this.storageManager.saveResults(this.currentTestData, userAnswers);
 
-        // LƯU TRẠNG THÁI SUBMITTED - dùng userAnswers (số key) để correctCount đúng
-        this.storageManager.saveSubmittedState(this.currentTestData, userAnswers);
+        // LƯU TRẠNG THÁI SUBMITTED - dùng getDraftData() để có slotState đầy đủ
+
+        const draftData = this.getDraftData();
+
+        this.storageManager.saveSubmittedState(this.currentTestData, draftData);
 
 
 
@@ -4202,9 +4190,6 @@ class ReadingCore {
         this.disableInputs();
 
         this.attachInputEvents();
-
-        // Refresh mini dashboard ngay trong cùng tab (BroadcastChannel không fire same-tab)
-        if (this.miniDashboard?.isVisible) this.miniDashboard.refreshData();
 
     }
 
@@ -4414,17 +4399,7 @@ class ReadingCore {
 
                     const el = document.getElementById(`q${i}`);
 
-                    if (el) {
-
-                        el.value = vals[i] || "";
-
-                        // Gán class đúng/sai SAU khi đã set value
-                        el.classList.remove('correct', 'incorrect');
-                        const correct = this.isAnswerCorrect(i, el.value.trim());
-                        el.classList.add(correct ? 'correct' : 'incorrect');
-                        el.disabled = true;
-
-                    }
+                    if (el) el.value = vals[i] || "";
 
                     // Không hiện badge ngay, chỉ tạo nhưng ẩn
 
@@ -4474,17 +4449,7 @@ class ReadingCore {
 
                     const el = document.getElementById(`q${i}`);
 
-                    if (el) {
-
-                        el.value = vals[i] || "";
-
-                        // Gán class đúng/sai SAU khi đã set value
-                        el.classList.remove('correct', 'incorrect');
-                        const correct = this.isAnswerCorrect(i, el.value.trim());
-                        el.classList.add(correct ? 'correct' : 'incorrect');
-                        el.disabled = true;
-
-                    }
+                    if (el) el.value = vals[i] || "";
 
                 }
 
@@ -5153,56 +5118,35 @@ class ReadingHighlightManager {
 
     setupContextMenu() {
 
-        // Hiện popup ngay khi thả chuột trái sau khi tô chọn
-        document.addEventListener('mouseup', (e) => {
-
-            // Bỏ qua nếu click vào chính contextMenu
-            const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu && contextMenu.contains(e.target)) return;
+        document.addEventListener('contextmenu', (e) => {
 
             const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
 
-            if (!highlightArea) {
+            if (!highlightArea) return;
 
-                this.hideContextMenu();
+            const selection = window.getSelection();
 
-                return;
+            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
 
-            }
+            e.preventDefault();
 
-            // Dùng setTimeout để đợi browser hoàn tất cập nhật selection
-            setTimeout(() => {
+            this.selectedRange = selection.getRangeAt(0);
 
-                const selection = window.getSelection();
-
-                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) {
-
-                    this.hideContextMenu();
-
-                    return;
-
-                }
-
-                this.selectedRange = selection.getRangeAt(0);
-
-                this.showContextMenu(e.clientX, e.clientY);
-
-            }, 10);
+            this.showContextMenu(e.pageX, e.pageY);
 
         });
 
-        // Dùng event delegation để tránh lỗi DOM chưa ready khi constructor chạy
-        document.addEventListener('mousedown', (e) => {
 
-            const contextMenu = document.getElementById('contextMenu');
 
-            if (contextMenu && contextMenu.contains(e.target)) {
+        const contextMenu = document.getElementById('contextMenu');
 
-                e.preventDefault(); // Giữ selection không bị mất khi click vào menu
+        if (contextMenu) {
 
-            }
+            contextMenu.addEventListener('mousedown', (e) => e.preventDefault());
 
-        });
+        }
+
+
 
         document.addEventListener('click', (e) => {
 
@@ -5222,23 +5166,11 @@ class ReadingHighlightManager {
 
         if (contextMenu) {
 
-            // Hiện tạm thời để đo kích thước
+            contextMenu.style.left = x + 'px';
+
+            contextMenu.style.top = y + 'px';
+
             contextMenu.style.display = 'block';
-            const rect = contextMenu.getBoundingClientRect();
-
-            // Điều chỉnh vị trí nếu tràn ra ngoài viewport
-            let finalX = x;
-            let finalY = y;
-
-            if (finalX + rect.width > window.innerWidth) finalX = window.innerWidth - rect.width - 10;
-            if (finalY + rect.height > window.innerHeight) finalY = window.innerHeight - rect.height - 10;
-
-            finalX = Math.max(10, finalX);
-            finalY = Math.max(10, finalY);
-
-            contextMenu.style.left = finalX + 'px';
-
-            contextMenu.style.top = finalY + 'px';
 
         }
 
@@ -5697,6 +5629,44 @@ class ReadingStorageManager {
 
     saveSubmittedState(testData, userAnswers) {
 
+        // Calculate scores to include in the submitted state for cloud sync
+
+        let correctCount = 0;
+
+        const questions = testData.questions || Object.keys(testData.answerKey).map(k => ({ num: parseInt(k.replace('q', '')) })).filter(q => !isNaN(q.num));
+
+        const questionRangeStart = Math.min(...questions.map(q => q.num));
+
+        const questionRangeEnd = Math.max(...questions.map(q => q.num));
+
+        let totalQuestions = 0;
+
+
+
+        for (let i = questionRangeStart; i <= questionRangeEnd; i++) {
+
+            totalQuestions++;
+
+            const userAnswer = userAnswers[i];
+
+            const answerKeyRaw = testData.answerKey[`q${i}`] || testData.answerKey[i];
+
+            let isCorrect = false;
+
+            if (userAnswer) {
+
+                if (Array.isArray(answerKeyRaw)) isCorrect = answerKeyRaw.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
+
+                else if (typeof answerKeyRaw === 'string') isCorrect = userAnswer.toLowerCase() === answerKeyRaw.toLowerCase();
+
+            }
+
+            if (isCorrect) correctCount++;
+
+        }
+
+
+
         const book = testData.book || testData.metadata?.book || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).book;
 
         const test = testData.test || testData.metadata?.test || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).test;
@@ -5704,14 +5674,8 @@ class ReadingStorageManager {
         const part = testData.part || testData.metadata?.part || this.parseTestInfo(document.querySelector('.candidate')?.textContent || document.title).part;
 
         const resolvedPart = testData.part || part;
-        const mainKey = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
 
-        // Đọc correctCount từ saveResults đã lưu trước đó (tránh tính lại bị sai)
-        const existingMain = (() => {
-            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
-        })();
-        const correctCount = existingMain.correctCount ?? 0;
-        const totalQuestions = existingMain.totalQuestions ?? Object.keys(userAnswers).length;
+        const key = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
 
         const submittedData = {
 
@@ -5727,37 +5691,16 @@ class ReadingStorageManager {
 
         };
 
-        // Key _submitted: dùng để loadSubmittedState đọc local
-        const submittedKey = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
-        localStorage.setItem(submittedKey, JSON.stringify(submittedData));
+        // Luôn ghi localStorage để loadSubmittedState() đọc được sync (không cần đợi cloud init)
+        localStorage.setItem(key, JSON.stringify(submittedData));
 
-        // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
-        const mainData = {
-            ...existingMain,
-            answers: userAnswers,
-            submitted: true,
-            correctCount,
-            totalQuestions,
-            timestamp: Date.now()
-        };
-        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-            localStorage.setItem(mainKey, JSON.stringify(mainData));
-        }
-
-        // Sync cả hai lên Cloud
         if (window.CloudStorage) {
 
-            window.CloudStorage.save(submittedKey, submittedData).then(res => {
-                if (res.synced) console.log('[Cloud] Synced submitted state:', submittedKey);
-            });
-
-            window.CloudStorage.save(mainKey, mainData).then(res => {
-                if (res.synced) console.log('[Cloud] Synced main key with answers:', mainKey);
-            });
+            window.CloudStorage.save(key, submittedData);
 
         }
 
-        console.log('[Storage] Saved submitted state:', submittedKey);
+        console.log('[Storage] Saved submitted state:', key);
 
     }
 
@@ -5773,36 +5716,26 @@ class ReadingStorageManager {
 
         const resolvedPart = testData.part || part;
 
-        const submittedKey = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
-        const mainKey = `pet_reading_book${book}_test${test}_part${resolvedPart}`;
+        const key = `pet_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
 
-        // Thử đọc key _submitted trước
-        const storedSubmitted = localStorage.getItem(submittedKey);
-        if (storedSubmitted) {
+        const stored = localStorage.getItem(key);
+
+        if (stored) {
+
             try {
-                const data = JSON.parse(storedSubmitted);
-                if (data.submitted && data.answers) {
-                    console.log('[Storage] Loaded submitted state from _submitted key:', submittedKey);
-                    return data;
-                }
+
+                const data = JSON.parse(stored);
+
+                console.log('[Storage] Loaded submitted state:', key);
+
+                return data;
+
             } catch (e) {
+
                 console.error('[Storage] Error parsing submitted state:', e);
-            }
-        }
 
-        // Fallback: đọc key chính (được sync từ cloud về)
-        const storedMain = localStorage.getItem(mainKey);
-        if (storedMain) {
-            try {
-                const data = JSON.parse(storedMain);
-                if (data.submitted && data.answers) {
-                    console.log('[Storage] Loaded submitted state from main key (cloud sync):', mainKey);
-                    localStorage.setItem(submittedKey, JSON.stringify(data));
-                    return data;
-                }
-            } catch (e) {
-                console.error('[Storage] Error parsing main key:', e);
             }
+
         }
 
         return null;

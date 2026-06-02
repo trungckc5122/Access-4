@@ -797,21 +797,15 @@ class ListeningCore {
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
-            // Sau khi sync cloud → local xong, kiểm tra lại trạng thái
-            // (initializeTest chạy loadDraft/restoreSubmittedState trước khi CloudStorage tồn tại)
-            if (!this.examSubmitted) {
-                const submittedState = this.storageManager.loadSubmittedState(this.currentTestData);
-                if (submittedState && submittedState.submitted) {
-                    console.log('[Cloud] Post-sync: restoring submitted state...');
-                    this.restoreSubmittedState(submittedState);
-                } else {
-                    const draftKey = this.getStorageKey(true);
-                    const localDraft = localStorage.getItem(draftKey);
-                    const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                    if (!hasDraft) {
-                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
-                        await this.loadDraft();
-                    }
+            // Sau khi sync cloud → local xong, load lại draft nếu chưa có đáp án nào
+            // (loadDraft() được gọi trước đó khi CloudStorage chưa tồn tại)
+            if (!this.examSubmitted && !this.explanationMode) {
+                const draftKey = this.getStorageKey(true);
+                const localDraft = localStorage.getItem(draftKey);
+                const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
+                if (!hasDraft) {
+                    console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    await this.loadDraft();
                 }
             }
 
@@ -1661,10 +1655,8 @@ class ListeningCore {
 
     isAnswerCorrect(questionNum, userAnswer) {
         const correctAnswer = this.currentTestData.answerKey[`q${questionNum}`];
-        if (!userAnswer) return false;
-        const u = userAnswer.trim().toLowerCase();
-        if (Array.isArray(correctAnswer)) return correctAnswer.some(c => u === c.trim().toLowerCase());
-        else return u === correctAnswer.trim().toLowerCase();
+        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer);
+        else return userAnswer === correctAnswer;
     }
 
     updateAnswerCount() {
@@ -1739,9 +1731,6 @@ class ListeningCore {
 
         this.clearDraft();
         this.disableInputs();
-
-        // Refresh mini dashboard ngay trong cùng tab (BroadcastChannel không fire same-tab)
-        if (this.miniDashboard?.isVisible) this.miniDashboard.refreshData();
     }
 
     showTranscript() {
@@ -2080,32 +2069,33 @@ class ListeningCore {
     restoreSubmittedState(submittedState) {
         console.log('[Restore] Restoring submitted state with answers:', submittedState.answers);
 
-        const answers = submittedState.answers;
-        if (!answers) { console.warn('[Restore] No answers found in submitted state'); return; }
-
-        // Normalize: hỗ trợ cả {1:'A', 2:'B'} và {q1:'A', q2:'B'}
-        const getAnswer = (i) => answers[i] ?? answers[`q${i}`] ?? null;
-
+        // Khôi phục câu trả lời
         const questionRange = this.getQuestionRange();
 
-        for (let i = questionRange.start; i <= questionRange.end; i++) {
-            const answer = getAnswer(i);
-            if (!answer) continue;
-
-            // Multiple choice (radio buttons)
-            const radios = document.getElementsByName(`q${i}`);
-            if (radios.length > 0) {
-                radios.forEach(radio => { if (radio.value === answer) radio.checked = true; });
-                continue;
+        if (this.currentTestData.type === 'multiple-choice') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const answer = submittedState.answers[i];
+                if (answer) {
+                    const radios = document.getElementsByName(`q${i}`);
+                    radios.forEach(radio => {
+                        if (radio.value === answer) {
+                            radio.checked = true;
+                        }
+                    });
+                }
             }
-
-            // Fill-blank / fill-in / matching (input fields)
-            const input = document.getElementById(`q${i}`);
-            if (input) { input.value = answer; }
+        } else if (this.currentTestData.type === 'fill-in' || this.currentTestData.type === 'matching') {
+            for (let i = questionRange.start; i <= questionRange.end; i++) {
+                const input = document.getElementById(`q${i}`);
+                if (input && submittedState.answers[i]) {
+                    input.value = submittedState.answers[i];
+                }
+            }
         }
 
         // Gọi submitExam để hiển thị trạng thái đã nộp
         this.submitExam();
+
         console.log('[Restore] Submitted state restored successfully');
     }
 }
@@ -2120,37 +2110,20 @@ class HighlightManager {
     }
 
     setupContextMenu() {
-        // Hiện popup ngay khi thả chuột trái sau khi tô chọn
-        document.addEventListener('mouseup', (e) => {
-            // Bỏ qua nếu click vào chính contextMenu
-            const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu && contextMenu.contains(e.target)) return;
-
+        document.addEventListener('contextmenu', (e) => {
             const highlightArea = e.target.closest('#transcriptContent, .transcript-content, .reading-content, #questionsContainer, .questions-panel, .question-item, .questions-list, #mainArea');
-            if (!highlightArea) {
-                this.hideContextMenu();
-                return;
-            }
-
-            // Dùng setTimeout để đợi browser hoàn tất cập nhật selection
-            setTimeout(() => {
-                const selection = window.getSelection();
-                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) {
-                    this.hideContextMenu();
-                    return;
-                }
-                this.selectedRange = selection.getRangeAt(0);
-                this.showContextMenu(e.clientX, e.clientY);
-            }, 10);
+            if (!highlightArea) return;
+            const selection = window.getSelection();
+            if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) return;
+            e.preventDefault();
+            this.selectedRange = selection.getRangeAt(0);
+            this.showContextMenu(e.pageX, e.pageY);
         });
 
-        // Dùng event delegation để tránh lỗi DOM chưa ready khi constructor chạy
-        document.addEventListener('mousedown', (e) => {
-            const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu && contextMenu.contains(e.target)) {
-                e.preventDefault(); // Giữ selection không bị mất khi click vào menu
-            }
-        });
+        const contextMenu = document.getElementById('contextMenu');
+        if (contextMenu) {
+            contextMenu.addEventListener('mousedown', (e) => e.preventDefault());
+        }
 
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
@@ -2161,27 +2134,9 @@ class HighlightManager {
     showContextMenu(x, y) {
         const contextMenu = document.getElementById('contextMenu');
         if (contextMenu) {
-            // Hiện tạm thời để đo kích thước
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
             contextMenu.style.display = 'block';
-            const rect = contextMenu.getBoundingClientRect();
-            
-            // Điều chỉnh vị trí nếu tràn ra ngoài viewport
-            let finalX = x;
-            let finalY = y;
-            
-            if (finalX + rect.width > window.innerWidth) {
-                finalX = window.innerWidth - rect.width - 10;
-            }
-            if (finalY + rect.height > window.innerHeight) {
-                finalY = window.innerHeight - rect.height - 10;
-            }
-            
-            // Đảm bảo không bị âm
-            finalX = Math.max(10, finalX);
-            finalY = Math.max(10, finalY);
-            
-            contextMenu.style.left = finalX + 'px';
-            contextMenu.style.top = finalY + 'px';
         }
     }
 
@@ -2390,18 +2345,22 @@ class StorageManager {
     }
 
     saveSubmittedState(testData, userAnswers) {
+        // Calculate scores to include in the submitted state for cloud sync
+        let correctCount = 0;
+        const questionRange = this.getQuestionRange(testData);
+        let totalQuestions = 0;
+
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            totalQuestions++;
+            const userAnswer = userAnswers[i];
+            const correctAnswer = testData.answerKey[`q${i}`];
+            if (this.checkAnswer(userAnswer, correctAnswer)) correctCount++;
+        }
+
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-
-        // Đọc correctCount từ saveResults đã lưu trước đó (tránh tính lại bị sai)
-        const mainKey = `pet_listening_book${book}_test${test}_part${part}`;
-        const existingMain = (() => {
-            try { return JSON.parse(localStorage.getItem(mainKey)) || {}; } catch { return {}; }
-        })();
-        const correctCount = existingMain.correctCount ?? 0;
-        const totalQuestions = existingMain.totalQuestions ?? 0;
-
+        const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
         const submittedData = {
             timestamp: Date.now(),
             answers: userAnswers,
@@ -2409,75 +2368,34 @@ class StorageManager {
             correctCount,
             totalQuestions
         };
+        
+        // Luôn ghi localStorage để loadSubmittedState() đọc được sync (không cần đợi cloud init)
+        localStorage.setItem(key, JSON.stringify(submittedData));
 
-        // Key _submitted: dùng để loadSubmittedState đọc local
-        const submittedKey = `pet_listening_book${book}_test${test}_part${part}_submitted`;
-        localStorage.setItem(submittedKey, JSON.stringify(submittedData));
-
-        // Key chính: merge answers + submitted vào để cloud sync đủ thông tin
-        // (syncCloudToLocal chỉ sync key chính, không sync _submitted)
-        const mainData = {
-            ...existingMain,
-            answers: userAnswers,
-            submitted: true,
-            correctCount,
-            totalQuestions,
-            timestamp: Date.now()
-        };
-        if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-            localStorage.setItem(mainKey, JSON.stringify(mainData));
-        }
-
-        // Sync cả hai lên Cloud
+        // Sync to Cloud
         if (window.CloudStorage) {
-            window.CloudStorage.save(submittedKey, submittedData).then(res => {
-                if (res.synced) console.log('[Cloud] Synced submitted state:', submittedKey);
-            });
-            window.CloudStorage.save(mainKey, mainData).then(res => {
-                if (res.synced) console.log('[Cloud] Synced main key with answers:', mainKey);
+            window.CloudStorage.save(key, submittedData).then(res => {
+                if (res.synced) console.log('[Cloud] Synced submitted state for:', key);
             });
         }
-        console.log('[Storage] Saved submitted state:', submittedKey);
+        console.log('[Storage] Saved submitted state:', key);
     }
 
     loadSubmittedState(testData) {
         const book = testData.book || this.parseTestInfo(testData.title).book;
         const test = testData.test || this.parseTestInfo(testData.title).test;
         const part = testData.part || this.parseTestInfo(testData.title).part;
-
-        const submittedKey = `pet_listening_book${book}_test${test}_part${part}_submitted`;
-        const mainKey = `pet_listening_book${book}_test${test}_part${part}`;
-
-        // Thử đọc key _submitted trước
-        const storedSubmitted = localStorage.getItem(submittedKey);
-        if (storedSubmitted) {
+        const key = `pet_listening_book${book}_test${test}_part${part}_submitted`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
             try {
-                const data = JSON.parse(storedSubmitted);
-                if (data.submitted && data.answers) {
-                    console.log('[Storage] Loaded submitted state from _submitted key:', submittedKey);
-                    return data;
-                }
+                const data = JSON.parse(stored);
+                console.log('[Storage] Loaded submitted state:', key);
+                return data;
             } catch (e) {
                 console.error('[Storage] Error parsing submitted state:', e);
             }
         }
-
-        // Fallback: đọc key chính (được sync từ cloud về)
-        const storedMain = localStorage.getItem(mainKey);
-        if (storedMain) {
-            try {
-                const data = JSON.parse(storedMain);
-                if (data.submitted && data.answers) {
-                    console.log('[Storage] Loaded submitted state from main key (cloud sync):', mainKey);
-                    // Ghi lại vào _submitted để lần sau đọc nhanh hơn
-                    localStorage.setItem(submittedKey, JSON.stringify(data));
-                    return data;
-                }
-            } catch (e) {
-                console.error('[Storage] Error parsing main key:', e);
-            }
-        }
-
         return null;
     }
 
@@ -2503,9 +2421,8 @@ class StorageManager {
 
     checkAnswer(userAnswer, correctAnswer) {
         if (!userAnswer) return false;
-        const u = userAnswer.trim().toLowerCase();
-        if (Array.isArray(correctAnswer)) return correctAnswer.some(c => u === c.trim().toLowerCase());
-        else return u === correctAnswer.trim().toLowerCase();
+        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer.toLowerCase());
+        else return userAnswer.toLowerCase() === correctAnswer.toLowerCase();
     }
 
     parseTestInfo(title) {
