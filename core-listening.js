@@ -1661,8 +1661,10 @@ class ListeningCore {
 
     isAnswerCorrect(questionNum, userAnswer) {
         const correctAnswer = this.currentTestData.answerKey[`q${questionNum}`];
-        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer);
-        else return userAnswer === correctAnswer;
+        if (!userAnswer) return false;
+        const u = userAnswer.trim().toLowerCase();
+        if (Array.isArray(correctAnswer)) return correctAnswer.some(c => u === c.trim().toLowerCase());
+        else return u === correctAnswer.trim().toLowerCase();
     }
 
     updateAnswerCount() {
@@ -2075,33 +2077,32 @@ class ListeningCore {
     restoreSubmittedState(submittedState) {
         console.log('[Restore] Restoring submitted state with answers:', submittedState.answers);
 
-        // Khôi phục câu trả lời
+        const answers = submittedState.answers;
+        if (!answers) { console.warn('[Restore] No answers found in submitted state'); return; }
+
+        // Normalize: hỗ trợ cả {1:'A', 2:'B'} và {q1:'A', q2:'B'}
+        const getAnswer = (i) => answers[i] ?? answers[`q${i}`] ?? null;
+
         const questionRange = this.getQuestionRange();
 
-        if (this.currentTestData.type === 'multiple-choice') {
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const answer = submittedState.answers[i];
-                if (answer) {
-                    const radios = document.getElementsByName(`q${i}`);
-                    radios.forEach(radio => {
-                        if (radio.value === answer) {
-                            radio.checked = true;
-                        }
-                    });
-                }
+        for (let i = questionRange.start; i <= questionRange.end; i++) {
+            const answer = getAnswer(i);
+            if (!answer) continue;
+
+            // Multiple choice (radio buttons)
+            const radios = document.getElementsByName(`q${i}`);
+            if (radios.length > 0) {
+                radios.forEach(radio => { if (radio.value === answer) radio.checked = true; });
+                continue;
             }
-        } else if (this.currentTestData.type === 'fill-in' || this.currentTestData.type === 'matching') {
-            for (let i = questionRange.start; i <= questionRange.end; i++) {
-                const input = document.getElementById(`q${i}`);
-                if (input && submittedState.answers[i]) {
-                    input.value = submittedState.answers[i];
-                }
-            }
+
+            // Fill-blank / fill-in / matching (input fields)
+            const input = document.getElementById(`q${i}`);
+            if (input) { input.value = answer; }
         }
 
         // Gọi submitExam để hiển thị trạng thái đã nộp
         this.submitExam();
-
         console.log('[Restore] Submitted state restored successfully');
     }
 }
@@ -2507,8 +2508,9 @@ class StorageManager {
 
     checkAnswer(userAnswer, correctAnswer) {
         if (!userAnswer) return false;
-        if (Array.isArray(correctAnswer)) return correctAnswer.includes(userAnswer.toLowerCase());
-        else return userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+        const u = userAnswer.trim().toLowerCase();
+        if (Array.isArray(correctAnswer)) return correctAnswer.some(c => u === c.trim().toLowerCase());
+        else return u === correctAnswer.trim().toLowerCase();
     }
 
     parseTestInfo(title) {

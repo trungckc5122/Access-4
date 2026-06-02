@@ -2140,8 +2140,9 @@ class ReadingCore {
     isAnswerCorrect(questionNum, userAnswer) {
         if (!userAnswer) return false;
         const keyMap = this.currentTestData.answerKey[`q${questionNum}`] || this.currentTestData.answerKey[questionNum];
-        if (Array.isArray(keyMap)) return keyMap.some(correct => userAnswer.toLowerCase() === correct.toLowerCase());
-        else if (typeof keyMap === 'string') return userAnswer.toLowerCase() === keyMap.toLowerCase();
+        const u = userAnswer.trim().toLowerCase();
+        if (Array.isArray(keyMap)) return keyMap.some(correct => u === correct.trim().toLowerCase());
+        else if (typeof keyMap === 'string') return u === keyMap.trim().toLowerCase();
         return false;
     }
 
