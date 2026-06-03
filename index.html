@@ -2575,6 +2575,34 @@
         });
       }
 
+      function getProgressValue(key, progressMap = {}) {
+        if (progressMap && progressMap[key] !== undefined) return progressMap[key];
+        const localValue = localStorage.getItem(key);
+        if (!localValue) return undefined;
+        try {
+          return JSON.parse(localValue);
+        } catch {
+          return localValue;
+        }
+      }
+
+      function hasCompletedProgress(completedKey, progressMap = {}) {
+        const completed = getProgressValue(completedKey, progressMap);
+        if (completed !== undefined && completed !== null) return true;
+
+        const submitted = getProgressValue(completedKey + '_submitted', progressMap);
+        if (!submitted) return false;
+        if (typeof submitted === 'string') {
+          try {
+            const parsed = JSON.parse(submitted);
+            return parsed?.submitted === true;
+          } catch {
+            return false;
+          }
+        }
+        return submitted.submitted === true;
+      }
+
       // --- 1. Hover cho details (giữ nguyên) ---
       function enableHoverForAllDetails() {
         const allDetails = document.querySelectorAll('details');
@@ -2712,10 +2740,13 @@
             if (!testInfo) return;
             const completedKey = getStorageKeyForTest(testInfo, false);
             const draftKey = getStorageKeyForTest(testInfo, true);
-            const hasCompleted = progressMap[completedKey] !== undefined;
+            const hasCompleted = hasCompletedProgress(completedKey, progressMap);
             const hasDraft = hasValidDraftData(draftKey, progressMap);
             const noteKey = completedKey + '_note';
-            const hasNote = progressMap[noteKey] && progressMap[noteKey].trim().length > 0;
+            const noteValue = getProgressValue(noteKey, progressMap);
+            const hasNote = typeof noteValue === 'string'
+              ? noteValue.trim().length > 0
+              : noteValue !== undefined && noteValue !== null;
             if (hasNote) {
               const noteBadge = document.createElement('span');
               noteBadge.className = 'status-badge note';
@@ -2727,7 +2758,8 @@
               badge.className = 'status-badge completed';
               badge.innerHTML = '✓ Đã xong';
               link.appendChild(badge);
-              const resultData = progressMap[completedKey];
+              const resultData = getProgressValue(completedKey, progressMap)
+                || getProgressValue(completedKey + '_submitted', progressMap);
               if (resultData) {
                 try {
                   const parsed = typeof resultData === 'string' ? JSON.parse(resultData) : resultData;
