@@ -480,6 +480,22 @@ export class CloudStorage {
   // Trả về object map với key là storageKey, value là dữ liệu
   // ─────────────────────────────────────────────
   static async getAllProgress() {
+    const readLocalProgress = () => {
+      const map = {};
+      const prefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (prefixes.some(p => key.startsWith(p))) {
+          try {
+            map[key] = JSON.parse(localStorage.getItem(key));
+          } catch {
+            map[key] = localStorage.getItem(key);
+          }
+        }
+      }
+      return map;
+    };
+
     const user = await getCurrentUser();
     // Nếu có user, lấy từ Supabase (ưu tiên vì đồng bộ nhất)
     if (user) {
@@ -516,23 +532,12 @@ export class CloudStorage {
             map[baseKey + '_note'] = row.note;
           }
         });
+        Object.assign(map, readLocalProgress());
         return map;
       }
     }
     // Fallback: đọc localStorage (hoặc dùng khi không có user)
-    const map = {};
-    const prefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (prefixes.some(p => key.startsWith(p))) {
-        try {
-          map[key] = JSON.parse(localStorage.getItem(key));
-        } catch {
-          map[key] = localStorage.getItem(key);
-        }
-      }
-    }
-    return map;
+    return readLocalProgress();
   }
 }
 
