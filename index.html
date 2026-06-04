@@ -384,6 +384,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 16px;
+      align-items: start;
     }
 
     .test-grid,
@@ -391,6 +392,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 20px;
+      align-items: start;
     }
 
     .units-grid {
@@ -2613,13 +2615,33 @@
       // --- 1. Hover cho details (giữ nguyên) ---
       function enableHoverForAllDetails() {
         const allDetails = document.querySelectorAll('details');
-        function closeAll() { allDetails.forEach(d => d.removeAttribute('open')); }
+        let closeTimer = null;
+
         allDetails.forEach(detail => {
           const summaryElem = detail.querySelector('summary');
           if (!summaryElem) return;
           summaryElem.addEventListener('click', (e) => e.preventDefault());
-          detail.addEventListener('mouseenter', () => { closeAll(); detail.setAttribute('open', ''); });
-          detail.addEventListener('mouseleave', () => { detail.removeAttribute('open'); });
+
+          detail.addEventListener('mouseenter', () => {
+            if (closeTimer) {
+              clearTimeout(closeTimer);
+              closeTimer = null;
+            }
+            // Đóng tất cả các details khác NGAY LẬP TỨC (không delay)
+            allDetails.forEach(d => {
+              if (d !== detail) d.removeAttribute('open');
+            });
+            detail.setAttribute('open', '');
+          });
+
+          detail.addEventListener('mouseleave', () => {
+            // Đợi 150ms rồi mới đóng detail hiện tại (và các detail khác)
+            if (closeTimer) clearTimeout(closeTimer);
+            closeTimer = setTimeout(() => {
+              allDetails.forEach(d => d.removeAttribute('open'));
+              closeTimer = null;
+            }, 150);
+          });
         });
       }
 
