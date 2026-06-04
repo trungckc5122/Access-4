@@ -312,6 +312,20 @@ export class CloudStorage {
     }
 
     if (!owner || owner === 'guest') {
+      // ── CHẶN LÂY NHIỄM CHÉO: Guest data thuộc về tài khoản KHÁC ─────────
+      // Nếu dữ liệu guest này có nguồn gốc từ một tài khoản khác (không phải user hiện tại),
+      // tuyệt đối không migrate lên cloud — xóa sạch và kéo dữ liệu đúng của user xuống.
+      if (prevOwner && prevOwner !== currentUser.id) {
+        console.warn(`[CloudStorage] Guest progress originated from a different account ("${prevOwner}"). Clearing to prevent cross-account contamination.`);
+        CloudStorage.clearLocalProgressKeys();
+        localStorage.removeItem('_local_progress_owner_previous');
+        localStorage.removeItem('_local_progress_dirty');
+        localStorage.setItem('_local_progress_owner', currentUser.id);
+        localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+        const syncedCount = await CloudStorage.syncCloudToLocal();
+        return { syncedCount, migratedCount: 0, action: 'cleared-foreign-guest-and-synced' };
+      }
+
       if (hasLocalProgress) {
         const { data: cloudRows } = await supabase
           .from('progress')
@@ -329,6 +343,7 @@ export class CloudStorage {
         }
       }
 
+      // Dữ liệu guest hoàn toàn sạch hoặc thuộc chính user này → migrate bình thường
       const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
       localStorage.setItem('_local_progress_owner', currentUser.id);
       await CloudStorage.syncCloudToLocal();
