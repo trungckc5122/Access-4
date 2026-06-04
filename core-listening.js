@@ -789,11 +789,7 @@ class ListeningCore {
             this._authUI = new AuthUI();
             await this._authUI.init({ injectButton: false });
 
-            if (await CloudStorage.shouldMigrate()) {
-                await CloudStorage.migrateLocalStorageToCloud();
-            } else {
-                await CloudStorage.syncCloudToLocal();
-            }
+            await CloudStorage.handleAuthSync();
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
@@ -3290,7 +3286,7 @@ class UIManager {
 
         try {
             if (window.CloudStorage) {
-                await window.CloudStorage.migrateLocalStorageToCloud();
+                await window.CloudStorage.handleAuthSync();
             }
 
             localStorage.setItem('_storage_mode', 'cloud_only');

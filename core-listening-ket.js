@@ -862,11 +862,7 @@ class ListeningCore {
             this._authUI = new AuthUI();
             await this._authUI.init({ injectButton: false });
 
-            if (await CloudStorage.shouldMigrate()) {
-                await CloudStorage.migrateLocalStorageToCloud();
-            } else {
-                await CloudStorage.syncCloudToLocal();
-            }
+            await CloudStorage.handleAuthSync();
             this.cloudSupportInitialized = true;
             console.log('[Cloud] Support initialized at:', basePath);
 
@@ -3444,7 +3440,7 @@ class UIManager {
         this._showStorageToast('Đang đồng bộ dữ liệu lên Cloud...', '#3b82f6');
         try {
             if (window.CloudStorage) {
-                await window.CloudStorage.migrateLocalStorageToCloud();
+                await window.CloudStorage.handleAuthSync();
             }
             localStorage.setItem('_storage_mode', 'cloud_only');
             this._showStorageToast('✅ Đã kích hoạt Cloud-Only thành công!', '#0d9488');

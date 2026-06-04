@@ -2577,6 +2577,13 @@
 
       function getProgressValue(key, progressMap = {}) {
         if (progressMap && progressMap[key] !== undefined) return progressMap[key];
+        // Fallback local chỉ an toàn nếu dữ liệu local thuộc đúng user đang đăng nhập
+        // (hoặc chưa đăng nhập / chưa set owner / là guest)
+        const localOwner = localStorage.getItem('_local_progress_owner');
+        const currentUserId = window._currentUserId || null; // set bởi onAuthStateChange
+        if (localOwner && localOwner !== 'guest' && currentUserId && localOwner !== currentUserId) {
+          return undefined; // local thuộc user khác, không đọc
+        }
         const localValue = localStorage.getItem(key);
         if (!localValue) return undefined;
         try {
@@ -5127,44 +5134,51 @@
           return;
         }
 
-        // Nếu người dùng chủ động đăng nhập → xóa flag đăng xuất
-        if (event === 'SIGNED_IN') {
-          localStorage.removeItem('_user_signed_out');
-        }
-
         const user = session?.user || await getCurrentUser();
         if (!user) return;
 
-        // 1. Luôn ưu tiên sync từ Cloud về Local trước
-        const syncedCount = await CloudStorage.syncCloudToLocal();
-        // Luôn gọi initStatusBadges và initResumeButtons sau sync, bất kể count
-        if (typeof window.initStatusBadges === 'function') {
-          await window.initStatusBadges();
-        }
-        if (typeof window.initResumeButtons === 'function') {
-          window.initResumeButtons();
-        }
-        if (syncedCount > 0) {
-          showCloudToast(`☁️ Đã tải ${syncedCount} bài từ đám mây!`);
-        }
+        // Expose user id cho getProgressValue() owner check
+        window._currentUserId = user.id;
 
-        // 2. Nếu có dữ liệu local chưa có trên cloud (migrate lần đầu)
-        if (await CloudStorage.shouldMigrate()) {
-          const count = await CloudStorage.migrateLocalStorageToCloud();
-          if (count > 0) showCloudToast(`☁️ Đã đồng bộ thêm ${count} bài lên đám mây!`);
+        // NOTE: Sync/migrate owner-aware được xử lý hoàn toàn bởi auth-ui.js:onSignedIn()
+        // để tránh race condition khi hai listener chạy song song.
+        // Index.html chỉ chịu trách nhiệm: refresh UI sau khi sync xong và setup realtime.
+        // auth-ui.js sẽ emit custom event 'cloud:synced' sau khi hoàn tất.
+
+        // Lắng nghe event từ auth-ui.js báo sync xong rồi mới refresh UI
+        const onSynced = async (e) => {
+          window.removeEventListener('cloud:synced', onSynced);
+          const syncedCount = e?.detail?.syncedCount ?? 0;
           if (typeof window.initStatusBadges === 'function') {
             await window.initStatusBadges();
           }
           if (typeof window.initResumeButtons === 'function') {
             window.initResumeButtons();
           }
-        }
+          if (syncedCount > 0) {
+            showCloudToast(`☁️ Đã tải ${syncedCount} bài từ đám mây!`);
+          }
+        };
+        window.addEventListener('cloud:synced', onSynced);
 
-        // 3. Setup realtime sync sau khi đăng nhập
+        // Fallback: nếu auth-ui.js không emit event trong 5 giây (VD: auth-ui không được init)
+        // thì tự refresh UI luôn
+        setTimeout(async () => {
+          window.removeEventListener('cloud:synced', onSynced);
+          if (typeof window.initStatusBadges === 'function') {
+            await window.initStatusBadges();
+          }
+          if (typeof window.initResumeButtons === 'function') {
+            window.initResumeButtons();
+          }
+        }, 5000);
+
+        // Setup realtime sync sau khi đăng nhập
         await setupRealtimeSync();
       }
 
       if (event === 'SIGNED_OUT') {
+        window._currentUserId = null;
         // ✅ Hủy Realtime khi đăng xuất để tránh memory leak
         if (_realtimeChannel) {
           await supabase.removeChannel(_realtimeChannel);

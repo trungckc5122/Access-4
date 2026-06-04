@@ -1551,15 +1551,7 @@ class ReadingCore {
 
 
 
-            if (await CloudStorage.shouldMigrate()) {
-
-                await CloudStorage.migrateLocalStorageToCloud();
-
-            } else {
-
-                await CloudStorage.syncCloudToLocal();
-
-            }
+            await CloudStorage.handleAuthSync();
 
             this.cloudSupportInitialized = true;
 
@@ -7368,7 +7360,7 @@ class ReadingUIManager {
 
             if (window.CloudStorage) {
 
-                await window.CloudStorage.migrateLocalStorageToCloud();
+                await window.CloudStorage.handleAuthSync();
 
             }
 
