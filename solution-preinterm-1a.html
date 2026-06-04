@@ -47,11 +47,36 @@
             padding: 10px;
         }
         
+        /* Task 1: Side-by-side layout */
+        .ex1-split {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .ex1-image-side {
+            flex: 0 0 31.5%;
+            max-width: 31.5%;
+        }
+
+        .ex1-image-side img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: block;
+        }
+
+        .ex1-puzzle-side {
+            flex: 1;
+            min-width: 0;
+            overflow-x: auto;
+        }
+
         .puzzle-container {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            margin: 40px 0;
+            align-items: flex-start;
+            margin: 0;
             overflow-x: auto;
         }
         
@@ -70,8 +95,8 @@
         }
         
         .puzzle-cell {
-            width: 40px;
-            height: 40px;
+            width: 39px;
+            height: 39px;
             background: var(--card-bg, #fff);
             display: flex;
             align-items: center;
@@ -91,7 +116,7 @@
             height: 100%;
             border: none;
             text-align: center;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: bold;
             text-transform: uppercase;
             background: transparent;
@@ -106,6 +131,17 @@
         .puzzle-cell.mystery {
             background: var(--mystery-bg);
             border: 2px solid var(--mystery-color);
+        }
+
+        @media (max-width: 768px) {
+            .ex1-split {
+                flex-direction: column;
+            }
+            .ex1-image-side {
+                flex: none;
+                max-width: 100%;
+                width: 100%;
+            }
         }
 
         .intensity-container {
@@ -182,9 +218,9 @@
         
         .row-number {
             position: absolute;
-            top: 2px;
-            left: 2px;
-            font-size: 0.7rem;
+            top: 1px;
+            left: 1px;
+            font-size: 0.65rem;
             color: #888;
         }
         
@@ -435,22 +471,28 @@
     <div class="exercise-card">
         <div class="exercise-title">1. Look at the pictures and complete the puzzle with adjectives to describe feelings.</div>
         
-        <div style="text-align: center; margin-bottom: 30px;">
-            <img src="img-pre/module 1a-ex1.png" alt="Vocabulary Pictures" style="max-width: 100%; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-        </div>
+        <div class="ex1-split">
+            <!-- Left: Image -->
+            <div class="ex1-image-side">
+                <img src="img-pre/module 1a-ex1.png" alt="Vocabulary Pictures">
+            </div>
 
-        <div class="puzzle-container">
-            <div class="puzzle-grid" id="puzzle-grid">
-                <!-- Will be populated by JS -->
+            <!-- Right: Puzzle -->
+            <div class="ex1-puzzle-side">
+                <div class="puzzle-container">
+                    <div class="puzzle-grid" id="puzzle-grid">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="mystery-word-display" id="mystery-display" style="font-size: 1.3rem; margin-top: 15px;">
+                        MYSTERY WORD: _ _ _ _ _ _ _ _ _ _ _ _
+                    </div>
+                </div>
+                
+                <div class="controls-row" style="margin-top: 10px;">
+                    <button class="btn btn-show-all" onclick="showPuzzleAnswers()">Show All</button>
+                    <button class="btn btn-reset" onclick="resetPuzzle()">Reset</button>
+                </div>
             </div>
-            <div class="mystery-word-display" id="mystery-display">
-                MYSTERY WORD: _ _ _ _ _ _ _ _ _ _ _ _
-            </div>
-        </div>
-        
-        <div class="controls-row">
-            <button class="btn btn-show-all" onclick="showPuzzleAnswers()">Show All</button>
-            <button class="btn btn-reset" onclick="resetPuzzle()">Reset</button>
         </div>
     </div>
 
@@ -718,7 +760,13 @@
                 ];
                 
                 const pf = preFills.find(p => p.row === rowIdx && p.col === i);
-                if(pf) input.value = pf.char;
+                if(pf) {
+                    input.value = pf.char;
+                    input.dataset.prefill = "true";
+                    input.readOnly = true;
+                    input.style.opacity = "0.6";
+                    input.style.cursor = "default";
+                }
                 
                 input.oninput = (e) => {
                     const val = input.value.toUpperCase();
@@ -788,6 +836,7 @@
         });
 
         inputs.forEach(input => {
+            if(input.dataset.prefill === "true") return; // giữ nguyên ô có sẵn
             if(allFilled) {
                 input.value = "";
                 input.style.color = "";
@@ -870,6 +919,7 @@
 
     function resetPuzzle() {
         document.querySelectorAll('#puzzle-grid input').forEach(input => {
+            if(input.dataset.prefill === "true") return;
             input.value = "";
             input.style.color = "";
             input.style.fontWeight = "";
