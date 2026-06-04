@@ -15,7 +15,16 @@ export class CloudStorage {
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
     const user = await getCurrentUser();
-    if (!user) return { synced: false };
+    if (!user) {
+      // Guest đang làm bài — đánh dấu owner là 'guest' nếu chưa có owner
+      if (!localStorage.getItem('_local_progress_owner')) {
+        localStorage.setItem('_local_progress_owner', 'guest');
+      }
+      return { synced: false };
+    }
+
+    // User đã đăng nhập → cập nhật owner thành user.id
+    localStorage.setItem('_local_progress_owner', user.id);
 
     const params = parseStorageKey(localStorageKey);
     if (!params) return { synced: false };
@@ -106,7 +115,14 @@ export class CloudStorage {
       }
     }
 
-    // Fallback: localStorage
+    // Fallback: localStorage — chỉ dùng nếu dữ liệu local thuộc đúng user hiện tại
+    // (Tránh trả về draft/result của user khác còn sót trên máy dùng chung)
+    const localOwner = localStorage.getItem('_local_progress_owner');
+    const isSafeToReadLocal = !user || !localOwner || localOwner === 'guest' || localOwner === user?.id;
+    if (!isSafeToReadLocal) {
+      console.warn('[CloudStorage] load(): Skipping local fallback — local data belongs to a different user.');
+      return null;
+    }
     try {
       const raw = localStorage.getItem(localStorageKey);
       return raw ? JSON.parse(raw) : null;
@@ -215,6 +231,83 @@ export class CloudStorage {
   }
 
     // ─────────────────────────────────────────────
+  // OWNER HELPERS
+  // ─────────────────────────────────────────────
+
+  // Đánh dấu dữ liệu local hiện tại là của guest (chưa đăng nhập)
+  static setGuestOwner() {
+    if (!localStorage.getItem('_local_progress_owner')) {
+      localStorage.setItem('_local_progress_owner', 'guest');
+    }
+  }
+
+  // Xóa toàn bộ progress keys của user khác khỏi localStorage
+  static clearLocalProgressKeys() {
+    const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+    const keysToRemove = Object.keys(localStorage).filter(k =>
+      examPrefixes.some(p => k.startsWith(p))
+    );
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    console.log(`[CloudStorage] Cleared ${keysToRemove.length} local progress keys belonging to another user.`);
+  }
+
+  static async handleAuthSync(user = null) {
+    const currentUser = user || await getCurrentUser();
+    if (!currentUser) return { syncedCount: 0, migratedCount: 0, action: 'none' };
+    if (CloudStorage._authSyncPromise) return CloudStorage._authSyncPromise;
+
+    CloudStorage._authSyncPromise = (async () => {
+
+    const owner = localStorage.getItem('_local_progress_owner');
+    const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+    const hasLocalProgress = Object.keys(localStorage).some(k =>
+      examPrefixes.some(p => k.startsWith(p))
+    );
+
+    if (!owner || owner === 'guest') {
+      if (!owner && hasLocalProgress) {
+        const { data: cloudRows } = await supabase
+          .from('progress')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .limit(1);
+
+        if (cloudRows && cloudRows.length > 0) {
+          console.warn('[CloudStorage] Legacy local progress found, but current user already has cloud data. Clearing local progress before sync.');
+          CloudStorage.clearLocalProgressKeys();
+          localStorage.setItem('_local_progress_owner', currentUser.id);
+          localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+          const syncedCount = await CloudStorage.syncCloudToLocal();
+          return { syncedCount, migratedCount: 0, action: 'cleared-legacy-and-synced' };
+        }
+      }
+
+      const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
+      localStorage.setItem('_local_progress_owner', currentUser.id);
+      return { syncedCount: 0, migratedCount, action: 'migrated' };
+    }
+
+    if (owner === currentUser.id) {
+      const syncedCount = await CloudStorage.syncCloudToLocal();
+      return { syncedCount, migratedCount: 0, action: 'synced' };
+    }
+
+    console.warn('[CloudStorage] Local progress belongs to another user. Clearing local progress before sync.');
+    CloudStorage.clearLocalProgressKeys();
+    localStorage.setItem('_local_progress_owner', currentUser.id);
+    localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+    const syncedCount = await CloudStorage.syncCloudToLocal();
+    return { syncedCount, migratedCount: 0, action: 'cleared-and-synced' };
+    })();
+
+    try {
+      return await CloudStorage._authSyncPromise;
+    } finally {
+      CloudStorage._authSyncPromise = null;
+    }
+  }
+
+  // ─────────────────────────────────────────────
   // MIGRATE: Đẩy toàn bộ localStorage cũ lên Supabase
   // Gọi 1 lần sau khi user đăng nhập lần đầu
   // ─────────────────────────────────────────────
@@ -249,7 +342,10 @@ export class CloudStorage {
   static async shouldMigrate() {
     const user = await getCurrentUser();
     if (!user) return false;
-    return !localStorage.getItem('_cloud_migrated_' + user.id);
+    // Chỉ migrate nếu dữ liệu local là của guest hoặc chưa có owner
+    const owner = localStorage.getItem('_local_progress_owner');
+    const isGuestData = !owner || owner === 'guest';
+    return isGuestData && !localStorage.getItem('_cloud_migrated_' + user.id);
   }
 
   // ─────────────────────────────────────────────
@@ -297,6 +393,24 @@ export class CloudStorage {
       const lastSyncTime = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0');
       const now = Date.now();
 
+      // ── KIỂM TRA OWNER TRƯỚC KHI UPLOAD ──────────────────────────────────
+      // Nếu dữ liệu local thuộc user khác → xóa hết, không upload lên cloud user hiện tại
+      const localOwner = localStorage.getItem('_local_progress_owner');
+      const hasLocalProgress = Object.keys(localStorage).some(k =>
+        examPrefixes.some(p => k.startsWith(p))
+      );
+      if (!localOwner && hasLocalProgress && data && data.length > 0) {
+        console.warn('[CloudStorage] Legacy local progress found during sync, but current user already has cloud data. Clearing local progress before pull.');
+        CloudStorage.clearLocalProgressKeys();
+        localStorage.setItem('_local_progress_owner', user.id);
+        localStorage.setItem('_cloud_migrated_' + user.id, '1');
+      } else if (localOwner && localOwner !== 'guest' && localOwner !== user.id) {
+        console.warn(`[CloudStorage] Local progress belongs to user "${localOwner}", current user is "${user.id}". Clearing local data to prevent cross-account contamination.`);
+        CloudStorage.clearLocalProgressKeys();
+        localStorage.setItem('_local_progress_owner', user.id);
+        // Không upload gì — chỉ pull dữ liệu đúng của user này từ cloud xuống
+      } else {
+        // Dữ liệu local là guest hoặc đúng user hiện tại → an toàn để upload offline data
 
       // Scan localStorage tìm dữ liệu mới hơn lastSyncTime mà cloud chưa có
       // → đây là bài làm khi offline / chưa đăng nhập → đẩy lên cloud trước
@@ -335,6 +449,8 @@ export class CloudStorage {
           });
         }
       }
+
+      } // end else (safe owner)
 
       // Chỉ thực hiện xóa nếu user đã được đánh dấu là đã migrate
       if (localStorage.getItem('_cloud_migrated_' + user.id)) {
@@ -532,7 +648,11 @@ export class CloudStorage {
             map[baseKey + '_note'] = row.note;
           }
         });
-        Object.assign(map, readLocalProgress());
+        // Chỉ merge local vào nếu local thuộc đúng user này (tránh dữ liệu user cũ ghi đè cloud)
+        const localOwner = localStorage.getItem('_local_progress_owner');
+        if (!localOwner || localOwner === 'guest' || localOwner === user.id) {
+          Object.assign(map, readLocalProgress());
+        }
         return map;
       }
     }

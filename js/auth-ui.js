@@ -1,4 +1,4 @@
-// js/auth-ui.js
+﻿// js/auth-ui.js
 import { supabase } from './supabase-client.js';
 
 export class AuthUI {
@@ -270,12 +270,27 @@ export class AuthUI {
 
   async signOut() {
     if (!confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')) return;
+
+    // Lấy user.id trước khi sign out để đánh dấu owner
+    let currentUserId = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUserId = user?.id || null;
+    } catch {}
+
     try { await supabase.auth.signOut({ scope: 'global' }); } catch (e) { console.error('SignOut error:', e); }
 
+    const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
     const backup = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth-token'))
+      // Không backup progress keys — chúng thuộc user vừa đăng xuất
+      // User tiếp theo đăng nhập phải lấy dữ liệu của họ từ cloud
+      if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth-token')
+          && !examPrefixes.some(p => key.startsWith(p))
+          && key !== '_local_progress_owner'
+          && !key.startsWith('_cloud_migrated_')
+          && !key.startsWith('_last_cloud_sync_'))
         backup[key] = localStorage.getItem(key);
     }
     localStorage.clear();
@@ -310,6 +325,19 @@ export class AuthUI {
       const { data } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (data?.full_name) displayName = data.full_name;
     } catch {}
+
+    // ── XỬ LÝ OWNER & MIGRATE/SYNC ────────────────────────────────────
+    let syncedCount = 0;
+    try {
+      const { CloudStorage } = await import('./cloud-storage.js');
+      const result = await CloudStorage.handleAuthSync(user);
+      syncedCount = result.syncedCount || result.migratedCount || 0;
+    } catch (e) {
+      console.error('[AuthUI] Owner check / migrate failed:', e);
+    }
+
+    // Báo cho index.html biết sync đã xong để refresh UI
+    window.dispatchEvent(new CustomEvent('cloud:synced', { detail: { syncedCount } }));
 
     const btn = document.getElementById('auth-btn');
     const txt = document.getElementById('auth-btn-text');
@@ -405,3 +433,4 @@ export class AuthUI {
     return msg;
   }
 }
+
