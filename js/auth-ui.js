@@ -11,6 +11,7 @@ export class AuthUI {
   }
 
   async init(options = { injectButton: true }) {
+    window._authUI = this;
     this.injectModal();
     this.injectRegisterModal();
     this.injectForgotModal();
@@ -289,7 +290,10 @@ export class AuthUI {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
 
-      const isProgressKey = examPrefixes.some(p => key.startsWith(p)) || key === '_local_progress_owner';
+      const isProgressKey = examPrefixes.some(p => key.startsWith(p)) 
+          || key === '_local_progress_owner'
+          || key === '_local_progress_dirty'
+          || key === '_local_progress_owner_previous';
 
       if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth-token')
         && (!clearProgress || !isProgressKey)
@@ -334,7 +338,7 @@ export class AuthUI {
         padding:32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);
         animation:authSlideIn 0.28s cubic-bezier(.22,.68,0,1.2);text-align:center;">
         <h2 style="font-size:20px;font-weight:800;color:#0d9488;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
-          🚪 Đăng xuất
+          Đăng xuất
         </h2>
         <p style="font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.5;">
           Bạn có chắc muốn đăng xuất khỏi hệ thống? Vui lòng chọn cách xử lý dữ liệu học tập hiện tại của bạn trên máy này.
@@ -358,7 +362,7 @@ export class AuthUI {
           background:#f1f5f9;color:#475569;font-size:13.5px;font-weight:600;
           border:none;cursor:pointer;transition:all 0.2s;"
           onmouseenter="this.style.background='#e2e8f0'" onmouseleave="this.style.background='#f1f5f9'">
-          ↩ Quay lại
+          Quay lại
         </button>
         
         <button id="so-close-btn" style="position:absolute;top:16px;right:16px;background:none;
@@ -438,7 +442,7 @@ export class AuthUI {
       <div id="menu-sign-out" style="padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;
         color:#dc2626;font-weight:600;display:flex;align-items:center;gap:8px;"
         onmouseenter="this.style.background='#fef2f2'" onmouseleave="this.style.background='transparent'">
-        🚪 Đăng xuất
+         Đăng xuất
       </div>
     `;
 
@@ -480,6 +484,61 @@ export class AuthUI {
   hideChangePassModal() { if (this.changePassModal) this.changePassModal.style.display = 'none'; }
   showSignOutModal() { if (this.signOutModal) this.signOutModal.style.display = 'flex'; }
   hideSignOutModal() { if (this.signOutModal) this.signOutModal.style.display = 'none'; }
+
+  showConflictModal(email) {
+    return new Promise((resolve) => {
+      let modal = document.getElementById('auth-conflict-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'auth-conflict-modal';
+        modal.style.cssText = `display:none;position:fixed;inset:0;z-index:999999;
+          background:rgba(0,0,0,0.5);align-items:center;justify-content:center;`;
+        document.body.appendChild(modal);
+      }
+
+      modal.innerHTML = `
+        <div style="position:relative;background:var(--card-bg,#fff);border-radius:20px;
+          padding:32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+          animation:authSlideIn 0.28s cubic-bezier(.22,.68,0,1.2);text-align:center;">
+          <h2 style="font-size:20px;font-weight:800;color:#0d9488;margin-bottom:12px;">
+            Xác nhận đồng bộ dữ liệu
+          </h2>
+          <p style="font-size:14px;color:#334155;margin-bottom:20px;line-height:1.6;font-weight:500;">
+            Tài khoản ${email} có sự thay đổi dữ liệu tại thiết bị này trong thời gian ngoại tuyến.
+          </p>
+          <p style="font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.5;">
+            Bạn muốn tải dữ liệu mới làm này lên tài khoản của mình hay từ chối để khôi phục dữ liệu cũ từ đám mây?
+          </p>
+          
+          <button id="conf-update-btn" style="width:100%;padding:12px;border-radius:12px;
+            background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;font-size:13.5px;font-weight:700;
+            border:none;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 12px rgba(13,148,136,0.25);
+            transition:all 0.2s;">
+            Cập nhật dữ liệu thay đổi lên
+          </button>
+          
+          <button id="conf-reject-btn" style="width:100%;padding:12px;border-radius:12px;
+            background:#fff;color:#dc2626;font-size:13.5px;font-weight:700;
+            border:1.5px solid #fecaca;cursor:pointer;transition:all 0.2s;"
+            onmouseenter="this.style.background='#fef2f2'" onmouseleave="this.style.background='#fff'">
+            Từ chối sao lưu
+          </button>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+
+      modal.querySelector('#conf-update-btn').onclick = () => {
+        modal.style.display = 'none';
+        resolve(true);
+      };
+
+      modal.querySelector('#conf-reject-btn').onclick = () => {
+        modal.style.display = 'none';
+        resolve(false);
+      };
+    });
+  }
 
   showError(form, msg) {
     const map = { login: 'auth-error', reg: 'reg-error', forgot: 'forgot-error', cp: 'cp-error' };

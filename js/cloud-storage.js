@@ -19,8 +19,27 @@ export class CloudStorage {
       // Guest đang làm bài — đánh dấu owner là 'guest' nếu chưa có owner
       // hoặc nếu owner hiện tại là của một user đã logout (để tránh sync đè khi user cũ đăng nhập lại)
       const currentOwner = localStorage.getItem('_local_progress_owner');
-      if (!currentOwner || (currentOwner !== 'guest' && currentOwner !== 'null')) {
+      if (!currentOwner) {
         localStorage.setItem('_local_progress_owner', 'guest');
+      } else if (currentOwner !== 'guest' && currentOwner !== 'null') {
+        // Chỉ đánh dấu dirty và đổi owner sang guest nếu dữ liệu thực sự có sự thay đổi
+        const existingRaw = localStorage.getItem(localStorageKey);
+        let isChanged = true;
+        if (existingRaw) {
+          try {
+            const normExisting = JSON.stringify(JSON.parse(existingRaw));
+            const normData = JSON.stringify(typeof data === 'string' ? JSON.parse(data) : data);
+            isChanged = normExisting !== normData;
+          } catch {
+            isChanged = existingRaw !== (typeof data === 'string' ? data : JSON.stringify(data));
+          }
+        }
+        
+        if (isChanged) {
+          localStorage.setItem('_local_progress_owner_previous', currentOwner);
+          localStorage.setItem('_local_progress_dirty', '1');
+          localStorage.setItem('_local_progress_owner', 'guest');
+        }
       }
       return { synced: false };
     }
@@ -261,10 +280,36 @@ export class CloudStorage {
     CloudStorage._authSyncPromise = (async () => {
 
     const owner = localStorage.getItem('_local_progress_owner');
+    const prevOwner = localStorage.getItem('_local_progress_owner_previous');
+    const isDirty = localStorage.getItem('_local_progress_dirty') === '1';
+
     const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
     const hasLocalProgress = Object.keys(localStorage).some(k =>
       examPrefixes.some(p => k.startsWith(p))
     );
+
+    if (owner === 'guest' && prevOwner === currentUser.id && isDirty && hasLocalProgress) {
+      let shouldUpdate = false;
+      if (window._authUI && typeof window._authUI.showConflictModal === 'function') {
+        shouldUpdate = await window._authUI.showConflictModal(currentUser.email);
+      }
+
+      localStorage.removeItem('_local_progress_owner_previous');
+      localStorage.removeItem('_local_progress_dirty');
+
+      if (shouldUpdate) {
+        const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
+        localStorage.setItem('_local_progress_owner', currentUser.id);
+        await CloudStorage.syncCloudToLocal();
+        return { syncedCount: 0, migratedCount, action: 'migrated-guest-changes' };
+      } else {
+        CloudStorage.clearLocalProgressKeys();
+        localStorage.setItem('_local_progress_owner', currentUser.id);
+        localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+        const syncedCount = await CloudStorage.syncCloudToLocal();
+        return { syncedCount, migratedCount: 0, action: 'rejected-guest-changes-and-synced' };
+      }
+    }
 
     if (!owner || owner === 'guest') {
       if (hasLocalProgress) {
@@ -286,6 +331,7 @@ export class CloudStorage {
 
       const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
       localStorage.setItem('_local_progress_owner', currentUser.id);
+      await CloudStorage.syncCloudToLocal();
       return { syncedCount: 0, migratedCount, action: 'migrated' };
     }
 
@@ -335,8 +381,7 @@ export class CloudStorage {
     localStorage.setItem('_cloud_migrated_' + user.id, '1');
     console.log(`[CloudStorage] Migrated ${migrated} items for ${user.email}`);
     
-    // Sau khi migrate xong, sync ngược lại để đảm bảo local có đủ bản ghi (nếu login máy mới)
-    await this.syncCloudToLocal();
+    // Sau khi migrate xong, không tự gọi sync nữa, để nơi gọi kiểm soát đồng bộ
     
     return migrated;
   }
