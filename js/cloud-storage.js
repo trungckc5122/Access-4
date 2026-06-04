@@ -17,7 +17,9 @@ export class CloudStorage {
     const user = await getCurrentUser();
     if (!user) {
       // Guest đang làm bài — đánh dấu owner là 'guest' nếu chưa có owner
-      if (!localStorage.getItem('_local_progress_owner')) {
+      // hoặc nếu owner hiện tại là của một user đã logout (để tránh sync đè khi user cũ đăng nhập lại)
+      const currentOwner = localStorage.getItem('_local_progress_owner');
+      if (!currentOwner || (currentOwner !== 'guest' && currentOwner !== 'null')) {
         localStorage.setItem('_local_progress_owner', 'guest');
       }
       return { synced: false };
@@ -265,7 +267,7 @@ export class CloudStorage {
     );
 
     if (!owner || owner === 'guest') {
-      if (!owner && hasLocalProgress) {
+      if (hasLocalProgress) {
         const { data: cloudRows } = await supabase
           .from('progress')
           .select('id')
@@ -399,7 +401,7 @@ export class CloudStorage {
       const hasLocalProgress = Object.keys(localStorage).some(k =>
         examPrefixes.some(p => k.startsWith(p))
       );
-      if (!localOwner && hasLocalProgress && data && data.length > 0) {
+      if ((!localOwner || localOwner === 'guest') && hasLocalProgress && data && data.length > 0) {
         console.warn('[CloudStorage] Legacy local progress found during sync, but current user already has cloud data. Clearing local progress before pull.');
         CloudStorage.clearLocalProgressKeys();
         localStorage.setItem('_local_progress_owner', user.id);

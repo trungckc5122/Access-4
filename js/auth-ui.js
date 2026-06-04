@@ -1,4 +1,4 @@
-﻿// js/auth-ui.js
+// js/auth-ui.js
 import { supabase } from './supabase-client.js';
 
 export class AuthUI {
@@ -7,6 +7,7 @@ export class AuthUI {
     this.registerModal = null;
     this.forgotModal = null;
     this.changePassModal = null;
+    this.signOutModal = null;
   }
 
   async init(options = { injectButton: true }) {
@@ -14,6 +15,7 @@ export class AuthUI {
     this.injectRegisterModal();
     this.injectForgotModal();
     this.injectChangePassModal();
+    this.injectSignOutModal();
     if (options.injectButton) this.injectAuthButton();
 
     supabase.auth.onAuthStateChange(async (event, session) => {
@@ -94,10 +96,10 @@ export class AuthUI {
     const pw = modal.querySelector('#auth-password');
     em.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); pw.focus(); } };
     pw.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); this.signInWithEmail(); } };
-    modal.querySelector('#auth-login-btn').onclick          = () => this.signInWithEmail();
-    modal.querySelector('#auth-close-btn').onclick          = () => this.hideModal();
+    modal.querySelector('#auth-login-btn').onclick = () => this.signInWithEmail();
+    modal.querySelector('#auth-close-btn').onclick = () => this.hideModal();
     modal.querySelector('#auth-switch-to-register').onclick = () => { this.hideModal(); this.showRegisterModal(); };
-    modal.querySelector('#auth-forgot-link').onclick        = () => { this.hideModal(); this.showForgotModal(); };
+    modal.querySelector('#auth-forgot-link').onclick = () => { this.hideModal(); this.showForgotModal(); };
     modal.onclick = (e) => { if (e.target === modal) this.hideModal(); };
   }
 
@@ -140,8 +142,8 @@ export class AuthUI {
     const pw = modal.querySelector('#reg-password');
     em.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); pw.focus(); } };
     pw.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); this.signUpWithEmail(); } };
-    modal.querySelector('#reg-submit-btn').onclick      = () => this.signUpWithEmail();
-    modal.querySelector('#reg-close-btn').onclick       = () => this.hideRegisterModal();
+    modal.querySelector('#reg-submit-btn').onclick = () => this.signUpWithEmail();
+    modal.querySelector('#reg-close-btn').onclick = () => this.hideRegisterModal();
     modal.querySelector('#reg-switch-to-login').onclick = () => { this.hideRegisterModal(); this.showModal(); };
     modal.onclick = (e) => { if (e.target === modal) this.hideRegisterModal(); };
   }
@@ -180,7 +182,7 @@ export class AuthUI {
     const em = modal.querySelector('#forgot-email');
     em.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); this.sendPasswordReset(); } };
     modal.querySelector('#forgot-submit-btn').onclick = () => this.sendPasswordReset();
-    modal.querySelector('#forgot-close-btn').onclick  = () => this.hideForgotModal();
+    modal.querySelector('#forgot-close-btn').onclick = () => this.hideForgotModal();
     modal.querySelector('#forgot-back-login').onclick = () => { this.hideForgotModal(); this.showModal(); };
     modal.onclick = (e) => { if (e.target === modal) this.hideForgotModal(); };
   }
@@ -221,13 +223,13 @@ export class AuthUI {
     p1.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); p2.focus(); } };
     p2.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); this.changePassword(); } };
     modal.querySelector('#cp-submit-btn').onclick = () => this.changePassword();
-    modal.querySelector('#cp-close-btn').onclick  = () => this.hideChangePassModal();
+    modal.querySelector('#cp-close-btn').onclick = () => this.hideChangePassModal();
     modal.onclick = (e) => { if (e.target === modal) this.hideChangePassModal(); };
   }
 
   // ─── AUTH ACTIONS ────────────────────────────────────
   async signInWithEmail() {
-    const email    = document.getElementById('auth-email').value.trim();
+    const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value;
     if (!email || !password) { this.showError('login', 'Vui lòng nhập email và mật khẩu.'); return; }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -235,13 +237,13 @@ export class AuthUI {
   }
 
   async signUpWithEmail() {
-    const email    = document.getElementById('reg-email').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
-    if (!email)    { this.showError('reg', 'Vui lòng nhập email.'); return; }
+    if (!email) { this.showError('reg', 'Vui lòng nhập email.'); return; }
     if (!password) { this.showError('reg', 'Vui lòng nhập mật khẩu.'); return; }
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) this.showError('reg', this._translateError(error.message));
-    else       this.showError('reg', '✓ Tài khoản đã tạo! Đang đăng nhập...');
+    else this.showError('reg', '✓ Tài khoản đã tạo! Đang đăng nhập...');
   }
 
   async sendPasswordReset() {
@@ -251,13 +253,13 @@ export class AuthUI {
       redirectTo: window.location.origin + window.location.pathname
     });
     if (error) this.showError('forgot', this._translateError(error.message));
-    else       this.showError('forgot', '✓ Đã gửi! Kiểm tra hộp thư email của bạn để đặt lại mật khẩu.');
+    else this.showError('forgot', '✓ Đã gửi! Kiểm tra hộp thư email của bạn để đặt lại mật khẩu.');
   }
 
   async changePassword() {
     const p1 = document.getElementById('cp-new-password').value;
     const p2 = document.getElementById('cp-confirm-password').value;
-    if (!p1)     { this.showError('cp', 'Vui lòng nhập mật khẩu mới.'); return; }
+    if (!p1) { this.showError('cp', 'Vui lòng nhập mật khẩu mới.'); return; }
     if (p1 !== p2) { this.showError('cp', 'Mật khẩu nhập lại không khớp.'); return; }
     if (p1.length < 6) { this.showError('cp', 'Mật khẩu cần ít nhất 6 ký tự.'); return; }
     const { error } = await supabase.auth.updateUser({ password: p1 });
@@ -268,15 +270,17 @@ export class AuthUI {
     }
   }
 
-  async signOut() {
-    if (!confirm('Bạn có chắc muốn đăng xuất khỏi hệ thống?')) return;
+  signOut() {
+    this.showSignOutModal();
+  }
 
+  async executeSignOut(clearProgress) {
     // Lấy user.id trước khi sign out để đánh dấu owner
     let currentUserId = null;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       currentUserId = user?.id || null;
-    } catch {}
+    } catch { }
 
     try { await supabase.auth.signOut({ scope: 'global' }); } catch (e) { console.error('SignOut error:', e); }
 
@@ -284,13 +288,13 @@ export class AuthUI {
     const backup = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      // Không backup progress keys — chúng thuộc user vừa đăng xuất
-      // User tiếp theo đăng nhập phải lấy dữ liệu của họ từ cloud
+
+      const isProgressKey = examPrefixes.some(p => key.startsWith(p)) || key === '_local_progress_owner';
+
       if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth-token')
-          && !examPrefixes.some(p => key.startsWith(p))
-          && key !== '_local_progress_owner'
-          && !key.startsWith('_cloud_migrated_')
-          && !key.startsWith('_last_cloud_sync_'))
+        && (!clearProgress || !isProgressKey)
+        && !key.startsWith('_cloud_migrated_')
+        && !key.startsWith('_last_cloud_sync_'))
         backup[key] = localStorage.getItem(key);
     }
     localStorage.clear();
@@ -310,12 +314,73 @@ export class AuthUI {
           if (db.name && (db.name.includes('supabase') || db.name.includes('auth')))
             window.indexedDB.deleteDatabase(db.name);
         });
-      } catch {}
+      } catch { }
     }
 
     Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
     localStorage.setItem('_user_signed_out', '1');
     window.location.replace(window.location.origin + window.location.pathname + '?t=' + Date.now());
+  }
+
+  // ─── MODAL XÁC NHẬN ĐĂNG XUẤT ────────────────────────────────────
+  injectSignOutModal() {
+    if (document.getElementById('auth-signout-modal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'auth-signout-modal';
+    modal.style.cssText = `display:none;position:fixed;inset:0;z-index:99999;
+      background:rgba(0,0,0,0.5);align-items:center;justify-content:center;`;
+    modal.innerHTML = `
+      <div style="position:relative;background:var(--card-bg,#fff);border-radius:20px;
+        padding:32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+        animation:authSlideIn 0.28s cubic-bezier(.22,.68,0,1.2);text-align:center;">
+        <h2 style="font-size:20px;font-weight:800;color:#0d9488;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+          🚪 Đăng xuất
+        </h2>
+        <p style="font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.5;">
+          Bạn có chắc muốn đăng xuất khỏi hệ thống? Vui lòng chọn cách xử lý dữ liệu học tập hiện tại của bạn trên máy này.
+        </p>
+        
+        <button id="so-keep-btn" style="width:100%;padding:12px;border-radius:12px;
+          background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;font-size:13.5px;font-weight:700;
+          border:none;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 12px rgba(13,148,136,0.25);
+          transition:all 0.2s;">
+           Lưu dữ liệu & Đăng xuất
+        </button>
+        
+        <button id="so-clear-btn" style="width:100%;padding:12px;border-radius:12px;
+          background:#fff;color:#dc2626;font-size:13.5px;font-weight:700;
+          border:1.5px solid #fecaca;cursor:pointer;margin-bottom:10px;transition:all 0.2s;"
+          onmouseenter="this.style.background='#fef2f2'" onmouseleave="this.style.background='#fff'">
+           Xóa dữ liệu & Đăng xuất
+        </button>
+        
+        <button id="so-cancel-btn" style="width:100%;padding:12px;border-radius:12px;
+          background:#f1f5f9;color:#475569;font-size:13.5px;font-weight:600;
+          border:none;cursor:pointer;transition:all 0.2s;"
+          onmouseenter="this.style.background='#e2e8f0'" onmouseleave="this.style.background='#f1f5f9'">
+          ↩ Quay lại
+        </button>
+        
+        <button id="so-close-btn" style="position:absolute;top:16px;right:16px;background:none;
+          border:none;cursor:pointer;font-size:20px;color:#94a3b8;">✕</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    this.signOutModal = modal;
+
+    modal.querySelector('#so-keep-btn').onclick = () => {
+      this.hideSignOutModal();
+      this.executeSignOut(false);
+    };
+    modal.querySelector('#so-clear-btn').onclick = () => {
+      if (confirm('Lưu ý: Hành động này sẽ XÓA TOÀN BỘ tiến trình làm bài hiện tại trên trình duyệt này. Bạn vẫn muốn tiếp tục?')) {
+        this.hideSignOutModal();
+        this.executeSignOut(true);
+      }
+    };
+    modal.querySelector('#so-cancel-btn').onclick = () => this.hideSignOutModal();
+    modal.querySelector('#so-close-btn').onclick = () => this.hideSignOutModal();
+    modal.onclick = (e) => { if (e.target === modal) this.hideSignOutModal(); };
   }
 
   // ─── USER MENU KHI ĐÃ ĐĂNG NHẬP ────────────────────────────────────
@@ -324,7 +389,7 @@ export class AuthUI {
     try {
       const { data } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
       if (data?.full_name) displayName = data.full_name;
-    } catch {}
+    } catch { }
 
     // ── XỬ LÝ OWNER & MIGRATE/SYNC ────────────────────────────────────
     let syncedCount = 0;
@@ -380,7 +445,7 @@ export class AuthUI {
     btn.appendChild(menu);
 
     menu.querySelector('#menu-change-pass').onclick = (e) => { e.stopPropagation(); menu.remove(); this.showChangePassModal(); };
-    menu.querySelector('#menu-sign-out').onclick    = (e) => { e.stopPropagation(); menu.remove(); this.signOut(); };
+    menu.querySelector('#menu-sign-out').onclick = (e) => { e.stopPropagation(); menu.remove(); this.signOut(); };
 
     // Đóng menu khi click ngoài
     setTimeout(() => {
@@ -405,14 +470,16 @@ export class AuthUI {
   }
 
   // ─── HELPERS ────────────────────────────────────────
-  showModal()          { if (this.modal)           this.modal.style.display           = 'flex'; }
-  hideModal()          { if (this.modal)           this.modal.style.display           = 'none'; }
-  showRegisterModal()  { if (this.registerModal)   this.registerModal.style.display   = 'flex'; }
-  hideRegisterModal()  { if (this.registerModal)   this.registerModal.style.display   = 'none'; }
-  showForgotModal()    { if (this.forgotModal)     this.forgotModal.style.display     = 'flex'; }
-  hideForgotModal()    { if (this.forgotModal)     this.forgotModal.style.display     = 'none'; }
-  showChangePassModal(){ if (this.changePassModal) this.changePassModal.style.display = 'flex'; }
-  hideChangePassModal(){ if (this.changePassModal) this.changePassModal.style.display = 'none'; }
+  showModal() { if (this.modal) this.modal.style.display = 'flex'; }
+  hideModal() { if (this.modal) this.modal.style.display = 'none'; }
+  showRegisterModal() { if (this.registerModal) this.registerModal.style.display = 'flex'; }
+  hideRegisterModal() { if (this.registerModal) this.registerModal.style.display = 'none'; }
+  showForgotModal() { if (this.forgotModal) this.forgotModal.style.display = 'flex'; }
+  hideForgotModal() { if (this.forgotModal) this.forgotModal.style.display = 'none'; }
+  showChangePassModal() { if (this.changePassModal) this.changePassModal.style.display = 'flex'; }
+  hideChangePassModal() { if (this.changePassModal) this.changePassModal.style.display = 'none'; }
+  showSignOutModal() { if (this.signOutModal) this.signOutModal.style.display = 'flex'; }
+  hideSignOutModal() { if (this.signOutModal) this.signOutModal.style.display = 'none'; }
 
   showError(form, msg) {
     const map = { login: 'auth-error', reg: 'reg-error', forgot: 'forgot-error', cp: 'cp-error' };
@@ -426,10 +493,10 @@ export class AuthUI {
 
   _translateError(msg) {
     if (msg.includes('Invalid login credentials')) return 'Email hoặc mật khẩu không đúng.';
-    if (msg.includes('Email not confirmed'))       return 'Email chưa được xác nhận. Kiểm tra hộp thư nhé!';
-    if (msg.includes('User already registered'))   return 'Email này đã được đăng ký rồi.';
-    if (msg.includes('Password should be'))        return 'Mật khẩu cần ít nhất 6 ký tự.';
-    if (msg.includes('For security purposes'))     return 'Vui lòng chờ vài phút trước khi thử lại.';
+    if (msg.includes('Email not confirmed')) return 'Email chưa được xác nhận. Kiểm tra hộp thư nhé!';
+    if (msg.includes('User already registered')) return 'Email này đã được đăng ký rồi.';
+    if (msg.includes('Password should be')) return 'Mật khẩu cần ít nhất 6 ký tự.';
+    if (msg.includes('For security purposes')) return 'Vui lòng chờ vài phút trước khi thử lại.';
     return msg;
   }
 }
