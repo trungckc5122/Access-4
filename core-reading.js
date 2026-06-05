@@ -94,8 +94,6 @@ class PETNoteManager {
 
         this.panel = null;
 
-        this.textarea = null;
-
         this.isMinimized = false;
 
         this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
@@ -120,9 +118,9 @@ class PETNoteManager {
 
         this.createPanel();
 
-        this.loadNote();
-
         this.setupEvents();
+
+        this.renderNotesList();
 
         console.log('[Note] Initialized');
 
@@ -144,25 +142,19 @@ class PETNoteManager {
 
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
 
-                    Quick Note
+                    Ghi ch\u00fa
 
                 </div>
 
                 <div class="pet-note-controls">
 
-                    <button class="pet-note-btn clear-btn" title="Xóa toàn bộ">
-
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-
-                    </button>
-
-                    <button class="pet-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
+                    <button class="pet-note-btn minimize-btn" title="Thu nh\u1ecf/M\u1edf r\u1ed9ng">
 
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
 
                     </button>
 
-                    <button class="pet-note-btn close-btn" title="Đóng">
+                    <button class="pet-note-btn close-btn" title="\u0110\u00f3ng">
 
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 
@@ -172,9 +164,17 @@ class PETNoteManager {
 
             </div>
 
-            <div class="pet-note-content">
+            <div class="pet-note-content" style="padding:0;overflow:auto;">
 
-                <textarea class="pet-note-textarea" placeholder="Ghi chú tại đây..."></textarea>
+                <div class="note-list-header">
+
+                    <span>V\u0103n b\u1ea3n g\u1ea1ch ch\u00e2n</span><span>N\u1ed9i dung ghi ch\u00fa</span>
+
+                </div>
+
+                <div class="note-list-body"></div>
+
+                <div class="note-list-empty" style="display:none;">Ch\u01b0a c\u00f3 ghi ch\u00fa n\u00e0o. H\u00e3y t\u00f4 \u0111en v\u0103n b\u1ea3n r\u1ed3i nh\u1ea5n n\u00fat <b>Ghi ch\u00fa</b>.</div>
 
             </div>
 
@@ -185,8 +185,6 @@ class PETNoteManager {
         document.body.appendChild(panel);
 
         this.panel = panel;
-
-        this.textarea = panel.querySelector('.pet-note-textarea');
 
 
 
@@ -205,6 +203,14 @@ class PETNoteManager {
             } catch (e) { }
 
         }
+
+
+
+        // Default size for 2-column layout
+
+        if (!this.panel.style.width) this.panel.style.width = '520px';
+
+        if (!this.panel.style.height) this.panel.style.height = '320px';
 
     }
 
@@ -248,9 +254,9 @@ class PETNoteManager {
 
             const dh = e.clientY - this.resizeData.startY;
 
-            const newW = Math.max(200, this.resizeData.startWidth + dw);
+            const newW = Math.max(300, this.resizeData.startWidth + dw);
 
-            const newH = Math.max(100, this.resizeData.startHeight + dh);
+            const newH = Math.max(150, this.resizeData.startHeight + dh);
 
             this.panel.style.width = `${newW}px`;
 
@@ -362,81 +368,149 @@ class PETNoteManager {
 
         });
 
+    }
 
 
-        this.textarea.addEventListener('input', () => {
 
-            this.saveNote();
+    renderNotesList() {
 
-            this.autoExpand();
+        const body = this.panel.querySelector('.note-list-body');
+
+        const empty = this.panel.querySelector('.note-list-empty');
+
+        if (!body) return;
+
+
+
+        const spans = document.querySelectorAll('.highlight-pink[data-note]');
+
+        body.innerHTML = '';
+
+
+
+        if (spans.length === 0) {
+
+            if (empty) empty.style.display = 'flex';
 
             this.updateBadge();
 
+            return;
+
+        }
+
+        if (empty) empty.style.display = 'none';
+
+
+
+        spans.forEach((span, idx) => {
+
+            const row = document.createElement('div');
+
+            row.className = 'note-list-row';
+
+            row.dataset.idx = idx;
+
+
+
+            const textCell = document.createElement('div');
+
+            textCell.className = 'note-list-text';
+
+            textCell.title = 'Nh\u1ea5n \u0111\u1ec3 cu\u1ed9n \u0111\u1ebfn v\u1ecb tr\u00ed trong v\u0103n b\u1ea3n';
+
+            textCell.textContent = span.textContent;
+
+            textCell.addEventListener('click', () => {
+
+                this.panel.style.display = 'none';
+
+                setTimeout(() => {
+
+                    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    span.classList.add('note-flash');
+
+                    setTimeout(() => span.classList.remove('note-flash'), 1200);
+
+                }, 100);
+
+            });
+
+
+
+            const noteCell = document.createElement('div');
+
+            noteCell.className = 'note-list-note';
+
+
+
+            const noteInput = document.createElement('textarea');
+
+            noteInput.className = 'note-list-input';
+
+            noteInput.value = span.dataset.note || '';
+
+            noteInput.placeholder = 'Ghi ch\u00fa...';
+
+            noteInput.rows = 2;
+
+            noteInput.addEventListener('input', () => {
+
+                span.dataset.note = noteInput.value;
+
+                if (window.readingCore) window.readingCore.saveHighlightDraft();
+
+            });
+
+
+
+            const delBtn = document.createElement('button');
+
+            delBtn.className = 'note-list-del';
+
+            delBtn.title = 'X\u00f3a ghi ch\u00fa n\u00e0y';
+
+            delBtn.innerHTML = '\u00d7';
+
+            delBtn.addEventListener('click', () => {
+
+                if (confirm('X\u00f3a ghi ch\u00fa n\u00e0y?')) {
+
+                    const parent = span.parentNode;
+
+                    if (parent) {
+
+                        while (span.firstChild) parent.insertBefore(span.firstChild, span);
+
+                        parent.removeChild(span);
+
+                    }
+
+                    if (window.readingCore) window.readingCore.saveHighlightDraft();
+
+                    this.renderNotesList();
+
+                }
+
+            });
+
+
+
+            noteCell.appendChild(noteInput);
+
+            noteCell.appendChild(delBtn);
+
+            row.appendChild(textCell);
+
+            row.appendChild(noteCell);
+
+            body.appendChild(row);
+
         });
 
 
 
-        const clearBtn = this.panel.querySelector('.clear-btn');
-
-        clearBtn.addEventListener('click', () => {
-
-            if (this.textarea.value && confirm('Xóa toàn bộ nội dung ghi chú?')) {
-
-                this.textarea.value = '';
-
-                this.saveNote();
-
-                this.autoExpand();
-
-                this.updateBadge();
-
-                console.log('[Note] Content cleared');
-
-            }
-
-        });
-
-    }
-
-
-
-    autoExpand() {
-
-        if (this.isMinimized) return;
-
-        this.textarea.style.height = 'auto';
-
-        this.textarea.style.height = (this.textarea.scrollHeight) + 'px';
-
-        if (this.panel.offsetHeight < this.textarea.scrollHeight + 50) {
-
-            this.panel.style.height = (this.textarea.scrollHeight + 100) + 'px';
-
-        }
-
-    }
-
-
-
-    saveNote() {
-
-        const key = this.getNoteKey();
-
-        const content = {
-
-            text: this.textarea.value,
-
-            timestamp: Date.now()
-
-        };
-
-        localStorage.setItem(key, JSON.stringify(content));
-
-        if (window.CloudStorage) {
-
-            window.CloudStorage.save(key, content);
-
-        }
+        this.updateBadge();
 
     }
 
@@ -444,27 +518,7 @@ class PETNoteManager {
 
     loadNote() {
 
-        const saved = localStorage.getItem(this.getNoteKey());
-
-        if (saved) {
-
-            try {
-
-                const parsed = JSON.parse(saved);
-
-                this.textarea.value = parsed.text || parsed;
-
-            } catch {
-
-                this.textarea.value = saved;
-
-            }
-
-            this.autoExpand();
-
-        }
-
-        this.updateBadge();
+        this.renderNotesList();
 
     }
 
@@ -476,11 +530,9 @@ class PETNoteManager {
 
         if (!toggleBtn) return;
 
+        const count = document.querySelectorAll('.highlight-pink[data-note]').length;
 
-
-        const hasContent = this.textarea.value.trim().length > 0;
-
-        toggleBtn.classList.toggle('has-content', hasContent);
+        toggleBtn.classList.toggle('has-content', count > 0);
 
     }
 
@@ -494,9 +546,9 @@ class PETNoteManager {
 
         } else {
 
-            this.panel.style.display = 'flex';
+            this.renderNotesList();
 
-            this.autoExpand();
+            this.panel.style.display = 'flex';
 
         }
 
@@ -1670,7 +1722,13 @@ class ReadingCore {
 
             '.single-col .reading-card',
 
-            '.reading-passage'
+            '.reading-passage',
+
+            '#leftCol',
+
+            '.left-col',
+
+            '.single-col'
 
         ];
 
@@ -3173,6 +3231,9 @@ class ReadingCore {
 
             if (col) col.classList.remove('show');
 
+            // Khôi phục highlight nếu chưa có (trường hợp DOM bị re-render khi mở split)
+            this.loadHighlightDraft();
+
         });
 
     }
@@ -4389,6 +4450,9 @@ class ReadingCore {
 
                 const vals = this.getUserAnswers();
 
+                // Save highlights BEFORE re-rendering to prevent them being wiped
+                this.saveHighlightDraft();
+
                 this.renderSplitColumn();
 
                 this.attachInputEvents();
@@ -4425,6 +4489,22 @@ class ReadingCore {
 
                 document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'none');
 
+                // Restore personal highlights AFTER restoring values (only affects readingContent, not leftCol)
+                this.loadHighlightDraft().then(() => {
+                    // Re-apply disabled/correct/incorrect after highlight restore may have reset DOM
+                    const qr = this.getQuestionRange();
+                    for (let j = qr.start; j <= qr.end; j++) {
+                        const inp = document.getElementById(`q${j}`);
+                        if (inp) {
+                            inp.disabled = true;
+                            if (!inp.classList.contains('correct') && !inp.classList.contains('incorrect')) {
+                                const ok = this.isAnswerCorrect(j, inp.value);
+                                inp.classList.add(ok ? 'correct' : 'incorrect');
+                            }
+                        }
+                    }
+                });
+
             }
 
         } else {
@@ -4453,6 +4533,9 @@ class ReadingCore {
 
                 const vals = this.getUserAnswers();
 
+                // Save highlights BEFORE re-rendering to prevent them being wiped
+                this.saveHighlightDraft();
+
                 this.renderSplitColumn();
 
                 this.attachInputEvents();
@@ -4480,6 +4563,9 @@ class ReadingCore {
                     }
 
                 }
+
+                // Restore personal highlights AFTER restoring values (only affects readingContent, not leftCol)
+                this.loadHighlightDraft();
 
             }
 
@@ -4605,7 +4691,8 @@ class ReadingCore {
 
         if (explanationPanel) explanationPanel.classList.remove('show');
 
-        this.highlightManager.clearAllHighlights();
+        // Only remove dynamic (answer) highlights, NOT user's personal highlights
+        this.highlightManager.clearDynamicHighlights();
 
     }
 
@@ -4815,6 +4902,9 @@ class ReadingCore {
             this.renderSingleColumn();
 
             this.attachInputEvents();
+
+            // Khôi phục highlight cá nhân sau khi DOM bị tạo lại
+            this.loadHighlightDraft();
 
         } else {
 
@@ -5145,6 +5235,726 @@ class ReadingHighlightManager {
 
         this.setupContextMenu();
 
+        this._injectNoteStyles();
+
+        this._setupTooltip();
+
+        this._patchContextMenuLabel();
+
+    }
+
+
+
+    _injectNoteStyles() {
+
+        if (document.getElementById('reading-note-styles')) return;
+
+        const style = document.createElement('style');
+
+        style.id = 'reading-note-styles';
+
+        style.textContent = `
+
+            .highlight-pink {
+
+                background: none !important;
+
+                text-decoration: underline !important;
+
+                text-decoration-color: #e11d48 !important;
+
+                text-underline-offset: 3px !important;
+
+                text-decoration-thickness: 2px !important;
+
+                color: inherit !important;
+
+                cursor: help;
+
+            }
+
+            .highlight-pink.note-flash {
+
+                animation: noteFlash 0.6s ease 2;
+
+            }
+
+            @keyframes noteFlash {
+
+                0%,100% { background: none; }
+
+                50% { background: rgba(225,29,72,0.2) !important; border-radius: 2px; }
+
+            }
+
+            #reading-note-tooltip {
+
+                position: fixed;
+
+                z-index: 99999;
+
+                background: #1e293b;
+
+                color: #f1f5f9;
+
+                padding: 8px 12px;
+
+                border-radius: 8px;
+
+                font-size: 13px;
+
+                max-width: 280px;
+
+                line-height: 1.5;
+
+                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+
+                pointer-events: none;
+
+                opacity: 0;
+
+                transition: opacity 0.18s ease;
+
+                white-space: pre-wrap;
+
+                border: 1px solid #334155;
+
+            }
+
+            #reading-note-tooltip.visible { opacity: 1; }
+
+            #note-input-overlay {
+
+                position: fixed; inset: 0;
+
+                background: rgba(0,0,0,0.45);
+
+                z-index: 99998;
+
+                display: flex;
+
+                align-items: center;
+
+                justify-content: center;
+
+            }
+
+            #note-input-dialog {
+
+                background: var(--card-bg, #fff);
+
+                border-radius: 14px;
+
+                padding: 22px 26px 18px;
+
+                width: 380px;
+
+                max-width: 92vw;
+
+                box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+
+                display: flex;
+
+                flex-direction: column;
+
+                gap: 12px;
+
+            }
+
+            #note-input-dialog h4 {
+
+                margin: 0;
+
+                font-size: 15px;
+
+                font-weight: 700;
+
+                color: var(--text, #0f172a);
+
+                display: flex;
+
+                align-items: center;
+
+                gap: 6px;
+
+            }
+
+            #note-input-selected {
+
+                font-size: 13px;
+
+                color: #64748b;
+
+                background: #f1f5f9;
+
+                border-radius: 6px;
+
+                padding: 6px 10px;
+
+                max-height: 60px;
+
+                overflow: hidden;
+
+                text-overflow: ellipsis;
+
+                text-decoration: underline;
+
+                text-decoration-color: #e11d48;
+
+            }
+
+            #note-input-textarea {
+
+                border: 1.5px solid #cbd5e1;
+
+                border-radius: 8px;
+
+                padding: 9px 11px;
+
+                font-size: 14px;
+
+                font-family: inherit;
+
+                resize: vertical;
+
+                min-height: 80px;
+
+                outline: none;
+
+                transition: border-color 0.15s;
+
+                color: var(--text, #0f172a);
+
+                background: var(--input-bg, #fff);
+
+            }
+
+            #note-input-textarea:focus { border-color: #0d9488; }
+
+            .note-input-actions {
+
+                display: flex;
+
+                gap: 10px;
+
+                justify-content: flex-end;
+
+            }
+
+            .note-input-actions button {
+
+                border: none;
+
+                border-radius: 8px;
+
+                padding: 8px 18px;
+
+                font-size: 14px;
+
+                font-weight: 600;
+
+                cursor: pointer;
+
+                font-family: inherit;
+
+            }
+
+            #note-cancel-btn { background: #f1f5f9; color: #475569; }
+
+            #note-save-btn { background: #0d9488; color: #fff; }
+
+            #note-save-btn:hover { background: #0f766e; }
+
+            .note-list-header {
+
+                display: grid;
+
+                grid-template-columns: 1fr 1fr;
+
+                background: #f8fafc;
+
+                border-bottom: 1px solid #e2e8f0;
+
+                padding: 6px 10px;
+
+                font-size: 12px;
+
+                font-weight: 700;
+
+                color: #64748b;
+
+                text-transform: uppercase;
+
+                letter-spacing: 0.04em;
+
+                flex-shrink: 0;
+
+            }
+
+            .note-list-body {
+
+                overflow-y: auto;
+
+                flex: 1;
+
+            }
+
+            .note-list-row {
+
+                display: grid;
+
+                grid-template-columns: 1fr 1fr;
+
+                gap: 0;
+
+                border-bottom: 1px solid #f1f5f9;
+
+                align-items: start;
+
+                transition: background 0.15s;
+
+            }
+
+            .note-list-row:hover { background: #f8fafc; }
+
+            .note-list-text {
+
+                padding: 8px 10px;
+
+                font-size: 13px;
+
+                color: #0d9488;
+
+                text-decoration: underline;
+
+                text-decoration-color: #e11d48;
+
+                cursor: pointer;
+
+                border-right: 1px solid #f1f5f9;
+
+                word-break: break-word;
+
+                transition: color 0.15s;
+
+            }
+
+            .note-list-text:hover { color: #0f766e; background: #f0fdfa; }
+
+            .note-list-note {
+
+                padding: 6px 8px;
+
+                display: flex;
+
+                flex-direction: column;
+
+                gap: 4px;
+
+                position: relative;
+
+            }
+
+            .note-list-input {
+
+                border: 1px solid #e2e8f0;
+
+                border-radius: 5px;
+
+                padding: 5px 7px;
+
+                font-size: 12px;
+
+                font-family: inherit;
+
+                resize: none;
+
+                width: 100%;
+
+                box-sizing: border-box;
+
+                color: var(--text, #0f172a);
+
+                background: var(--input-bg, #fff);
+
+                outline: none;
+
+            }
+
+            .note-list-input:focus { border-color: #0d9488; }
+
+            .note-list-del {
+
+                align-self: flex-end;
+
+                background: none;
+
+                border: none;
+
+                color: #94a3b8;
+
+                font-size: 15px;
+
+                cursor: pointer;
+
+                padding: 1px 4px;
+
+                line-height: 1;
+
+                border-radius: 3px;
+
+            }
+
+            .note-list-del:hover { color: #e11d48; background: #fee2e2; }
+
+            .note-list-empty {
+
+                display: flex;
+
+                align-items: center;
+
+                justify-content: center;
+
+                text-align: center;
+
+                padding: 24px 20px;
+
+                font-size: 13px;
+
+                color: #94a3b8;
+
+                line-height: 1.6;
+
+            }
+
+            .pet-note-panel .pet-note-content {
+
+                display: flex;
+
+                flex-direction: column;
+
+                overflow: hidden;
+
+                flex: 1;
+
+            }
+
+        `;
+
+        document.head.appendChild(style);
+
+    }
+
+
+
+    _setupTooltip() {
+
+        if (document.getElementById('reading-note-tooltip')) return;
+
+        const tip = document.createElement('div');
+
+        tip.id = 'reading-note-tooltip';
+
+        document.body.appendChild(tip);
+
+
+
+        document.addEventListener('mouseover', (e) => {
+
+            const span = e.target.closest('.highlight-pink[data-note]');
+
+            if (!span || !span.dataset.note) return;
+
+            tip.textContent = span.dataset.note;
+
+            tip.classList.add('visible');
+
+        });
+
+
+
+        document.addEventListener('mousemove', (e) => {
+
+            if (!tip.classList.contains('visible')) return;
+
+            const span = e.target.closest('.highlight-pink[data-note]');
+
+            if (!span) { tip.classList.remove('visible'); return; }
+
+            let x = e.clientX + 14;
+
+            let y = e.clientY - 10;
+
+            const tw = tip.offsetWidth;
+
+            const th = tip.offsetHeight;
+
+            if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 14;
+
+            if (y + th > window.innerHeight - 10) y = e.clientY - th - 14;
+
+            tip.style.left = x + 'px';
+
+            tip.style.top = y + 'px';
+
+        });
+
+
+
+        document.addEventListener('mouseout', (e) => {
+
+            const span = e.target.closest('.highlight-pink[data-note]');
+
+            if (span) tip.classList.remove('visible');
+
+        });
+
+    }
+
+
+
+    _patchContextMenuLabel() {
+
+        const patch = () => {
+
+            const menu = document.getElementById('contextMenu');
+
+            if (!menu) return;
+
+            menu.querySelectorAll('[onclick]').forEach(el => {
+
+                const attr = el.getAttribute('onclick') || '';
+
+                if (attr.includes("'pink'") || attr.includes('"pink"')) {
+
+                    el.innerHTML = el.innerHTML
+
+                        .replace(/highlight.*?h\u1ed3ng/gi, 'Ghi ch\u00fa')
+
+                        .replace(/h\u1ed3ng/gi, 'Ghi ch\u00fa')
+
+                        .replace(/#[Ff][Ee][Cc][Aa][Cc]|#[Ff][Bb][Cc][Ff]|#[Ff][Ff][0-9a-fA-F]{4}/g, '#e11d48');
+
+                    // Replace circle color to underline icon
+
+                    const circle = el.querySelector('span[style*="background"]');
+
+                    if (circle) circle.style.cssText = 'display:inline-block;width:14px;height:2px;background:#e11d48;border-radius:1px;vertical-align:middle;margin-right:6px;margin-bottom:2px;';
+
+                }
+
+            });
+
+        };
+
+        // Run after DOM ready and each time context menu is shown
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patch);
+
+        else setTimeout(patch, 200);
+
+    }
+
+
+
+    showNoteInput(range) {
+
+        const selectedText = range.toString().trim();
+
+        if (!selectedText) { this.hideContextMenu(); this.selectedRange = null; return; }
+
+
+
+        const overlay = document.createElement('div');
+
+        overlay.id = 'note-input-overlay';
+
+
+
+        overlay.innerHTML = `
+
+            <div id="note-input-dialog">
+
+                <h4>\u270f\ufe0f Ghi ch\u00fa</h4>
+
+                <div id="note-input-selected"></div>
+
+                <textarea id="note-input-textarea" placeholder="Nh\u1eadp n\u1ed9i dung ghi ch\u00fa..."></textarea>
+
+                <div class="note-input-actions">
+
+                    <button id="note-cancel-btn">H\u1ee7y</button>
+
+                    <button id="note-save-btn">L\u01b0u ghi ch\u00fa</button>
+
+                </div>
+
+            </div>
+
+        `;
+
+
+
+        document.body.appendChild(overlay);
+
+        const selectedEl = overlay.querySelector('#note-input-selected');
+
+        selectedEl.textContent = selectedText.length > 120 ? selectedText.slice(0, 120) + '\u2026' : selectedText;
+
+
+
+        const textarea = overlay.querySelector('#note-input-textarea');
+
+        textarea.focus();
+
+
+
+        const saveNote = () => {
+
+            const noteText = textarea.value.trim();
+
+            document.body.removeChild(overlay);
+
+            try {
+
+                this.removeExistingHighlightsInRange(range);
+
+                const isSimple = this.isSimpleRange(range);
+
+                if (isSimple) this._applyNoteSimple(range, noteText);
+
+                else this._applyNoteComplex(range, noteText);
+
+            } catch (e) { console.warn('[Note] Apply error:', e); }
+
+            window.getSelection().removeAllRanges();
+
+            this.selectedRange = null;
+
+            if (window.readingCore) {
+
+                window.readingCore.saveHighlightDraft();
+
+                if (window.readingCore.noteManager) window.readingCore.noteManager.renderNotesList();
+
+            }
+
+        };
+
+
+
+        overlay.querySelector('#note-save-btn').addEventListener('click', saveNote);
+
+        overlay.querySelector('#note-cancel-btn').addEventListener('click', () => {
+
+            document.body.removeChild(overlay);
+
+            window.getSelection().removeAllRanges();
+
+            this.selectedRange = null;
+
+        });
+
+
+
+        textarea.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNote();
+
+            if (e.key === 'Escape') overlay.querySelector('#note-cancel-btn').click();
+
+        });
+
+
+
+        overlay.addEventListener('mousedown', (e) => {
+
+            if (e.target === overlay) overlay.querySelector('#note-cancel-btn').click();
+
+        });
+
+    }
+
+
+
+    _applyNoteSimple(range, noteText) {
+
+        try {
+
+            const span = document.createElement('span');
+
+            span.className = 'highlight-pink';
+
+            if (noteText) span.dataset.note = noteText;
+
+            range.surroundContents(span);
+
+        } catch (e) {
+
+            const fragment = range.extractContents();
+
+            const span = document.createElement('span');
+
+            span.className = 'highlight-pink';
+
+            if (noteText) span.dataset.note = noteText;
+
+            span.appendChild(fragment);
+
+            range.insertNode(span);
+
+        }
+
+    }
+
+
+
+    _applyNoteComplex(range, noteText) {
+
+        const textNodes = this.getTextNodesInRange(range);
+
+        textNodes.forEach(textNode => {
+
+            const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
+
+            const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
+
+            if (startOffset === endOffset) return;
+
+            const subRange = document.createRange();
+
+            subRange.setStart(textNode, startOffset);
+
+            subRange.setEnd(textNode, endOffset);
+
+            try {
+
+                const span = document.createElement('span');
+
+                span.className = 'highlight-pink';
+
+                if (noteText) span.dataset.note = noteText;
+
+                subRange.surroundContents(span);
+
+            } catch (e) {
+
+                const fragment = subRange.extractContents();
+
+                const span = document.createElement('span');
+
+                span.className = 'highlight-pink';
+
+                if (noteText) span.dataset.note = noteText;
+
+                span.appendChild(fragment);
+
+                subRange.insertNode(span);
+
+            }
+
+        });
+
     }
 
 
@@ -5370,9 +6180,47 @@ class ReadingHighlightManager {
 
 
 
+    // Only clears auto-generated answer highlights (dynamic-highlight), preserves user's personal highlights
+
+    clearDynamicHighlights() {
+
+        document.querySelectorAll('.dynamic-highlight').forEach(el => {
+
+            const parent = el.parentNode;
+
+            if (parent) {
+
+                while (el.firstChild) parent.insertBefore(el.firstChild, el);
+
+                parent.removeChild(el);
+
+            }
+
+        });
+
+        document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
+
+    }
+
+
+
     applyHighlight(color) {
 
         if (!this.selectedRange) { this.hideContextMenu(); return; }
+
+        // Intercept pink: show note input dialog instead of highlight
+
+        if (color === 'pink') {
+
+            const range = this.selectedRange.cloneRange();
+
+            this.hideContextMenu();
+
+            this.showNoteInput(range);
+
+            return;
+
+        }
 
         try {
 

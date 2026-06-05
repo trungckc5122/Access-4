@@ -2,7 +2,7 @@
  * CORE READING ENGINE - KET A2 KEY
  * Premium 'Tr' Favicon System
  */
-(function() {
+(function () {
     const faviconUri = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOSIgZmlsbD0iIzBkOTQ4OCIvPjxwYXRoIGQ9Ik02IDEwaDEydjNoLTQuNXYxMWgtM3YtMTFINnYtM3ptMTQgNnY4aC0zdi01YzAtMS41IDEtMi41IDIuNS0yLjVoMi41djNoLTJ6IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iMjYiIGN5PSI2IiByPSIzIiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+";
     const inject = () => {
         if (!document.querySelector('link[rel*="icon"]')) {
@@ -32,7 +32,6 @@ class KETNoteManager {
     constructor(core) {
         this.core = core;
         this.panel = null;
-        this.textarea = null;
         this.isMinimized = false;
         this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
         this.resizeData = { isResizing: false, startWidth: 0, startHeight: 0, startX: 0, startY: 0 };
@@ -45,8 +44,8 @@ class KETNoteManager {
     init() {
         if (document.querySelector('.pet-note-panel')) return;
         this.createPanel();
-        this.loadNote();
         this.setupEvents();
+        this.renderNotesList();
         console.log('[Note] Initialized');
     }
 
@@ -57,28 +56,26 @@ class KETNoteManager {
             <div class="pet-note-header">
                 <div class="pet-note-title">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z"/><path d="M15 3v6h6"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
-                    Quick Note
+                    Ghi ch\u00fa
                 </div>
                 <div class="pet-note-controls">
-                    <button class="pet-note-btn clear-btn" title="Xóa toàn bộ">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    </button>
-                    <button class="pet-note-btn minimize-btn" title="Thu nhỏ/Mở rộng">
+                    <button class="pet-note-btn minimize-btn" title="Thu nh\u1ecf/M\u1edf r\u1ed9ng">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
                     </button>
-                    <button class="pet-note-btn close-btn" title="Đóng">
+                    <button class="pet-note-btn close-btn" title="\u0110\u00f3ng">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
             </div>
-            <div class="pet-note-content">
-                <textarea class="pet-note-textarea" placeholder="Ghi chú tại đây..."></textarea>
+            <div class="pet-note-content" style="padding:0;overflow:auto;">
+                <div class="note-list-header"><span>V\u0103n b\u1ea3n g\u1ea1ch ch\u00e2n</span><span>N\u1ed9i dung ghi ch\u00fa</span></div>
+                <div class="note-list-body"></div>
+                <div class="note-list-empty" style="display:none;">Ch\u01b0a c\u00f3 ghi ch\u00fa n\u00e0o. H\u00e3y t\u00f4 \u0111en v\u0103n b\u1ea3n r\u1ed3i nh\u1ea5n n\u00fat <b>Ghi ch\u00fa</b>.</div>
             </div>
             <div class="pet-note-resize-handle"></div>
         `;
         document.body.appendChild(panel);
         this.panel = panel;
-        this.textarea = panel.querySelector('.pet-note-textarea');
 
         const posStr = localStorage.getItem(this.getNoteKey() + '_pos');
         if (posStr) {
@@ -87,6 +84,8 @@ class KETNoteManager {
                 Object.assign(this.panel.style, pos);
             } catch (e) { }
         }
+        if (!this.panel.style.width) this.panel.style.width = '520px';
+        if (!this.panel.style.height) this.panel.style.height = '320px';
     }
 
     setupEvents() {
@@ -108,8 +107,8 @@ class KETNoteManager {
             if (!this.resizeData.isResizing) return;
             const dw = e.clientX - this.resizeData.startX;
             const dh = e.clientY - this.resizeData.startY;
-            const newW = Math.max(200, this.resizeData.startWidth + dw);
-            const newH = Math.max(100, this.resizeData.startHeight + dh);
+            const newW = Math.max(300, this.resizeData.startWidth + dw);
+            const newH = Math.max(150, this.resizeData.startHeight + dh);
             this.panel.style.width = `${newW}px`;
             this.panel.style.height = `${newH}px`;
         };
@@ -122,7 +121,6 @@ class KETNoteManager {
                 document.removeEventListener('mousemove', onDrag);
                 document.removeEventListener('mousemove', onResize);
                 document.removeEventListener('mouseup', stopActions);
-
                 const rect = this.panel.getBoundingClientRect();
                 localStorage.setItem(this.getNoteKey() + '_pos', JSON.stringify({
                     left: `${rect.left}px`,
@@ -165,72 +163,88 @@ class KETNoteManager {
         closeBtn.addEventListener('click', () => {
             this.panel.style.display = 'none';
         });
+    }
 
-        this.textarea.addEventListener('input', () => {
-            this.saveNote();
-            this.autoExpand();
+    renderNotesList() {
+        const body = this.panel.querySelector('.note-list-body');
+        const empty = this.panel.querySelector('.note-list-empty');
+        if (!body) return;
+        const spans = document.querySelectorAll('.highlight-pink[data-note]');
+        body.innerHTML = '';
+        if (spans.length === 0) {
+            if (empty) empty.style.display = 'flex';
             this.updateBadge();
-        });
-
-        const clearBtn = this.panel.querySelector('.clear-btn');
-        clearBtn.addEventListener('click', () => {
-            if (this.textarea.value && confirm('Bạn có chắc muốn xóa toàn bộ ghi chú?')) {
-                this.textarea.value = '';
-                this.saveNote();
-                this.autoExpand();
-                this.updateBadge();
-                console.log('[Note] Content cleared');
-            }
-        });
-    }
-
-    autoExpand() {
-        if (this.isMinimized) return;
-        this.textarea.style.height = 'auto';
-        this.textarea.style.height = (this.textarea.scrollHeight) + 'px';
-        if (this.panel.offsetHeight < this.textarea.scrollHeight + 50) {
-            this.panel.style.height = (this.textarea.scrollHeight + 100) + 'px';
+            return;
         }
-    }
-
-    saveNote() {
-        const content = {
-            text: this.textarea.value,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(this.getNoteKey(), JSON.stringify(content));
-        if (window.CloudStorage) {
-            window.CloudStorage.save(this.getNoteKey(), content);
-        }
+        if (empty) empty.style.display = 'none';
+        spans.forEach((span, idx) => {
+            const row = document.createElement('div');
+            row.className = 'note-list-row';
+            row.dataset.idx = idx;
+            const textCell = document.createElement('div');
+            textCell.className = 'note-list-text';
+            textCell.title = 'Nh\u1ea5n \u0111\u1ec3 cu\u1ed9n \u0111\u1ebfn v\u1ecb tr\u00ed trong v\u0103n b\u1ea3n';
+            textCell.textContent = span.textContent;
+            textCell.addEventListener('click', () => {
+                this.panel.style.display = 'none';
+                setTimeout(() => {
+                    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    span.classList.add('note-flash');
+                    setTimeout(() => span.classList.remove('note-flash'), 1200);
+                }, 100);
+            });
+            const noteCell = document.createElement('div');
+            noteCell.className = 'note-list-note';
+            const noteInput = document.createElement('textarea');
+            noteInput.className = 'note-list-input';
+            noteInput.value = span.dataset.note || '';
+            noteInput.placeholder = 'Ghi ch\u00fa...';
+            noteInput.rows = 2;
+            noteInput.addEventListener('input', () => {
+                span.dataset.note = noteInput.value;
+                if (window.readingCore) window.readingCore.saveHighlightDraft();
+            });
+            const delBtn = document.createElement('button');
+            delBtn.className = 'note-list-del';
+            delBtn.title = 'X\u00f3a ghi ch\u00fa n\u00e0y';
+            delBtn.innerHTML = '\u00d7';
+            delBtn.addEventListener('click', () => {
+                if (confirm('X\u00f3a ghi ch\u00fa n\u00e0y?')) {
+                    const parent = span.parentNode;
+                    if (parent) {
+                        while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                        parent.removeChild(span);
+                    }
+                    if (window.readingCore) window.readingCore.saveHighlightDraft();
+                    this.renderNotesList();
+                }
+            });
+            noteCell.appendChild(noteInput);
+            noteCell.appendChild(delBtn);
+            row.appendChild(textCell);
+            row.appendChild(noteCell);
+            body.appendChild(row);
+        });
+        this.updateBadge();
     }
 
     loadNote() {
-        const saved = localStorage.getItem(this.getNoteKey());
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                this.textarea.value = parsed.text || parsed;
-            } catch {
-                this.textarea.value = saved;
-            }
-            this.autoExpand();
-        }
-        this.updateBadge();
+        this.renderNotesList();
     }
 
     updateBadge() {
         const toggleBtn = document.querySelector('.note-toggle-btn');
         if (!toggleBtn) return;
-        const hasContent = this.textarea.value.trim().length > 0;
-        toggleBtn.classList.toggle('has-content', hasContent);
+        const count = document.querySelectorAll('.highlight-pink[data-note]').length;
+        toggleBtn.classList.toggle('has-content', count > 0);
     }
 
     toggle() {
         if (this.panel.style.display === 'flex') {
             this.panel.style.display = 'none';
         } else {
+            this.renderNotesList();
             this.panel.style.display = 'flex';
-            this.autoExpand();
         }
     }
 }
@@ -403,10 +417,10 @@ class MiniDashboardManager {
             let dataDraft = localStorage.getItem(keyDraft);
 
             if (!dataCompleted && progressMap[keyCompleted]) {
-                 dataCompleted = JSON.stringify(progressMap[keyCompleted]);
+                dataCompleted = JSON.stringify(progressMap[keyCompleted]);
             }
             if (!dataDraft && progressMap[keyDraft]) {
-                 dataDraft = JSON.stringify(progressMap[keyDraft]);
+                dataDraft = JSON.stringify(progressMap[keyDraft]);
             }
 
             if (dataCompleted) {
@@ -792,16 +806,16 @@ class ReadingCore {
                 const url = new URL(script.src);
                 basePath = url.origin + url.pathname.replace('core-reading-ket.js', '');
             }
-            
+
             // Import supabase, AuthUI, CloudStorage và expose ra window
             const { supabase, getCurrentUser } = await import(basePath + 'js/supabase-client.js');
             const { AuthUI } = await import(basePath + 'js/auth-ui.js');
             const { CloudStorage } = await import(basePath + 'js/cloud-storage.js');
-            
+
             // Expose to window cho non-module scripts
             window._supabase = supabase;
             window.CloudStorage = CloudStorage;
-            
+
             this._authUI = new AuthUI();
             await this._authUI.init({ injectButton: false });
 
@@ -873,7 +887,7 @@ class ReadingCore {
                                 // Thiết bị khác đã reset bài → xóa local và reload
                                 const old = payload.old;
                                 if (old) {
-                                    const exam  = old.exam  || 'pet';
+                                    const exam = old.exam || 'pet';
                                     const baseKey = `${exam}_${old.skill}_book${old.book}_test${old.test}_part${old.part}`;
                                     const myKey = this.getStorageKey(false);
                                     if (baseKey === myKey) {
@@ -893,7 +907,7 @@ class ReadingCore {
 
                             // INSERT hoặc UPDATE
                             await CloudStorage.syncCloudToLocal();
-                             const nowCompleted = await this.isCompleted();
+                            const nowCompleted = await this.isCompleted();
 
                             if (wasCompleted !== nowCompleted) {
                                 console.log('[Realtime] Status changed, reloading...');
@@ -936,14 +950,14 @@ class ReadingCore {
     async isCompleted() {
         if (!this.currentTestData) return false;
         const key = this.getStorageKey(false);
-        
+
         // Kiểm tra Local: Phải có data và phải là trạng thái submitted
         const localVal = localStorage.getItem(key);
         if (localVal) {
             try {
                 const data = JSON.parse(localVal);
                 if (data.submitted) return true;
-            } catch(e) {}
+            } catch (e) { }
         }
 
         // Kiểm tra Cloud
@@ -974,7 +988,10 @@ class ReadingCore {
             '.questions-list',
             '.reading-card',
             '.single-col .reading-card',
-            '.reading-passage'
+            '.reading-passage',
+            '#leftCol',
+            '.left-col',
+            '.single-col'
         ];
 
         let foundData = [];
@@ -1247,7 +1264,7 @@ class ReadingCore {
                 const key = this.getStorageKey(true);
                 this._safeSetStorage(key, JSON.stringify(draft));
                 // Cloud sync (fire-and-forget)
-                if (window.CloudStorage) window.CloudStorage.save(key, draft).catch(() => {});
+                if (window.CloudStorage) window.CloudStorage.save(key, draft).catch(() => { });
             } catch (e) {
                 console.error('[Reading Draft] FAILED to save:', e);
             }
@@ -1309,7 +1326,7 @@ class ReadingCore {
     async loadDraft() {
         const key = this.getStorageKey(true);
         const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
-        
+
         let localDraftJson = localStorage.getItem(key);
         let draft = localDraftJson ? JSON.parse(localDraftJson) : null;
 
@@ -1320,9 +1337,9 @@ class ReadingCore {
                 const cloudData = await window.CloudStorage.load(key);
                 if (cloudData && this.draftHasAnswers(cloudData)) {
                     console.log('%c[Draft] Found valid draft on Cloud, restoring...', 'color: #2ecc71');
-                    
+
                     draft = (typeof cloudData === 'string') ? JSON.parse(cloudData) : cloudData;
-                    
+
                     if (!isCloudOnly) {
                         localStorage.setItem(key, JSON.stringify(draft));
                     }
@@ -1385,7 +1402,7 @@ class ReadingCore {
         const key = this.getStorageKey(true);
         localStorage.removeItem(key);
         // Cloud sync
-        if (window.CloudStorage) window.CloudStorage.remove(key).catch(() => {});
+        if (window.CloudStorage) window.CloudStorage.remove(key).catch(() => { });
     }
 
     setupUI() {
@@ -1765,6 +1782,8 @@ class ReadingCore {
         document.getElementById('closeRightExplain')?.addEventListener('click', () => {
             const col = document.getElementById('rightCol');
             if (col) col.classList.remove('show');
+            // Khôi phục highlight nếu chưa có (trường hợp DOM bị re-render khi mở split)
+            this.loadHighlightDraft();
         });
     }
 
@@ -2389,6 +2408,8 @@ class ReadingCore {
             if (!this.currentSplit) {
                 this.currentSplit = true;
                 const vals = this.getUserAnswers();
+                // Save highlights BEFORE re-rendering to prevent them being wiped
+                this.saveHighlightDraft();
                 this.renderSplitColumn();
                 this.attachInputEvents();
                 const questionRange = this.getQuestionRange();
@@ -2407,6 +2428,8 @@ class ReadingCore {
                 }
                 // Ẩn tất cả badge, chỉ hiện eye-icon
                 document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'none');
+                // Restore personal highlights AFTER restoring values (only affects readingContent, not leftCol)
+                this.loadHighlightDraft();
             }
         } else {
             const explanationPanel = document.getElementById('explanationPanel');
@@ -2421,6 +2444,8 @@ class ReadingCore {
             if (!this.currentSplit) {
                 this.currentSplit = true;
                 const vals = this.getUserAnswers();
+                // Save highlights BEFORE re-rendering to prevent them being wiped
+                this.saveHighlightDraft();
                 this.renderSplitColumn();
                 this.attachInputEvents();
                 const questionRange = this.getQuestionRange();
@@ -2435,6 +2460,8 @@ class ReadingCore {
                         el.classList.add(correct ? 'correct' : 'incorrect');
                     }
                 }
+                // Restore personal highlights AFTER restoring values (only affects readingContent, not leftCol)
+                this.loadHighlightDraft();
             }
             const rightCol = document.getElementById('rightCol');
             if (rightCol) rightCol.classList.add('show');
@@ -2497,7 +2524,8 @@ class ReadingCore {
     closeExplanation() {
         const explanationPanel = document.getElementById('explanationPanel');
         if (explanationPanel) explanationPanel.classList.remove('show');
-        this.highlightManager.clearAllHighlights();
+        // Only remove dynamic (answer) highlights, NOT user's personal highlights
+        this.highlightManager.clearDynamicHighlights();
     }
 
     handleReset() {
@@ -2617,6 +2645,8 @@ class ReadingCore {
         if (this.currentTestData.type === 'split-layout') {
             this.renderSingleColumn();
             this.attachInputEvents();
+            // Khôi phục highlight cá nhân sau khi DOM bị tạo lại
+            this.loadHighlightDraft();
         } else {
             for (let i = questionRange.start; i <= questionRange.end; i++) {
                 if (this.currentTestData.type === 'multiple-choice' || this.currentTestData.type === 'inline-radio') {
@@ -2779,41 +2809,259 @@ class ReadingHighlightManager {
     constructor() {
         this.selectedRange = null;
         this.setupContextMenu();
+        this._injectNoteStyles();
+        this._setupTooltip();
+        this._patchContextMenuLabel();
+    }
+
+    _injectNoteStyles() {
+        if (document.getElementById('reading-note-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'reading-note-styles';
+        style.textContent = `
+            .highlight-pink {
+                background: none !important;
+                text-decoration: underline !important;
+                text-decoration-color: #e11d48 !important;
+                text-underline-offset: 3px !important;
+                text-decoration-thickness: 2px !important;
+                color: inherit !important;
+                cursor: help;
+            }
+            .highlight-pink.note-flash { animation: noteFlash 0.6s ease 2; }
+            @keyframes noteFlash {
+                0%,100% { background: none; }
+                50% { background: rgba(225,29,72,0.2) !important; border-radius: 2px; }
+            }
+            #reading-note-tooltip {
+                position: fixed; z-index: 99999;
+                background: #1e293b; color: #f1f5f9;
+                padding: 8px 12px; border-radius: 8px; font-size: 13px;
+                max-width: 280px; line-height: 1.5;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+                pointer-events: none; opacity: 0;
+                transition: opacity 0.18s ease;
+                white-space: pre-wrap; border: 1px solid #334155;
+            }
+            #reading-note-tooltip.visible { opacity: 1; }
+            #note-input-overlay {
+                position: fixed; inset: 0;
+                background: rgba(0,0,0,0.45);
+                z-index: 99998;
+                display: flex; align-items: center; justify-content: center;
+            }
+            #note-input-dialog {
+                background: var(--card-bg, #fff); border-radius: 14px;
+                padding: 22px 26px 18px; width: 380px; max-width: 92vw;
+                box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+                display: flex; flex-direction: column; gap: 12px;
+            }
+            #note-input-dialog h4 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text, #0f172a); display: flex; align-items: center; gap: 6px; }
+            #note-input-selected { font-size: 13px; color: #64748b; background: #f1f5f9; border-radius: 6px; padding: 6px 10px; max-height: 60px; overflow: hidden; text-decoration: underline; text-decoration-color: #e11d48; }
+            #note-input-textarea { border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 9px 11px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; outline: none; transition: border-color 0.15s; color: var(--text, #0f172a); background: var(--input-bg, #fff); }
+            #note-input-textarea:focus { border-color: #0d9488; }
+            .note-input-actions { display: flex; gap: 10px; justify-content: flex-end; }
+            .note-input-actions button { border: none; border-radius: 8px; padding: 8px 18px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+            #note-cancel-btn { background: #f1f5f9; color: #475569; }
+            #note-save-btn { background: #0d9488; color: #fff; }
+            #note-save-btn:hover { background: #0f766e; }
+            .note-list-header { display: grid; grid-template-columns: 1fr 1fr; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 6px 10px; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+            .note-list-body { overflow-y: auto; flex: 1; }
+            .note-list-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid #f1f5f9; align-items: start; transition: background 0.15s; }
+            .note-list-row:hover { background: #f8fafc; }
+            .note-list-text { padding: 8px 10px; font-size: 13px; color: #0d9488; text-decoration: underline; text-decoration-color: #e11d48; cursor: pointer; border-right: 1px solid #f1f5f9; word-break: break-word; transition: color 0.15s; }
+            .note-list-text:hover { color: #0f766e; background: #f0fdfa; }
+            .note-list-note { padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+            .note-list-input { border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 7px; font-size: 12px; font-family: inherit; resize: none; width: 100%; box-sizing: border-box; color: var(--text, #0f172a); background: var(--input-bg, #fff); outline: none; }
+            .note-list-input:focus { border-color: #0d9488; }
+            .note-list-del { align-self: flex-end; background: none; border: none; color: #94a3b8; font-size: 15px; cursor: pointer; padding: 1px 4px; line-height: 1; border-radius: 3px; }
+            .note-list-del:hover { color: #e11d48; background: #fee2e2; }
+            .note-list-empty { display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px 20px; font-size: 13px; color: #94a3b8; line-height: 1.6; }
+            .pet-note-panel .pet-note-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    _setupTooltip() {
+        if (document.getElementById('reading-note-tooltip')) return;
+        const tip = document.createElement('div');
+        tip.id = 'reading-note-tooltip';
+        document.body.appendChild(tip);
+        document.addEventListener('mouseover', (e) => {
+            const span = e.target.closest('.highlight-pink[data-note]');
+            if (!span || !span.dataset.note) return;
+            tip.textContent = span.dataset.note;
+            tip.classList.add('visible');
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!tip.classList.contains('visible')) return;
+            const span = e.target.closest('.highlight-pink[data-note]');
+            if (!span) { tip.classList.remove('visible'); return; }
+            let x = e.clientX + 14, y = e.clientY - 10;
+            const tw = tip.offsetWidth, th = tip.offsetHeight;
+            if (x + tw > window.innerWidth - 10) x = e.clientX - tw - 14;
+            if (y + th > window.innerHeight - 10) y = e.clientY - th - 14;
+            tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        });
+        document.addEventListener('mouseout', (e) => {
+            const span = e.target.closest('.highlight-pink[data-note]');
+            if (span) tip.classList.remove('visible');
+        });
+    }
+
+    _patchContextMenuLabel() {
+        const patch = () => {
+            const menu = document.getElementById('contextMenu');
+            if (!menu) return;
+            menu.querySelectorAll('[onclick]').forEach(el => {
+                const attr = el.getAttribute('onclick') || '';
+                if (attr.includes("'yellow'") || attr.includes('"yellow"')) {
+                    // "Highlight Yellow" → "Highlight vàng"
+                    el.innerHTML = el.innerHTML
+                        .replace(/Highlight\s+Yellow/gi, 'Highlight v\u00e0ng')
+                        .replace(/\bYellow\b/gi, 'V\u00e0ng');
+                } else if (attr.includes("'green'") || attr.includes('"green"')) {
+                    // "Highlight Green" → "Highlight xanh lá"
+                    el.innerHTML = el.innerHTML
+                        .replace(/Highlight\s+Green/gi, 'Highlight xanh l\u00e1')
+                        .replace(/\bGreen\b/gi, 'Xanh l\u00e1');
+                } else if (attr.includes("'pink'") || attr.includes('"pink"')) {
+                    // "Highlight Pink" → "Ghi chú"
+                    el.innerHTML = el.innerHTML
+                        .replace(/Highlight\s+Pink/gi, 'Ghi ch\u00fa')
+                        .replace(/highlight.*?h\u1ed3ng/gi, 'Ghi ch\u00fa')
+                        .replace(/h\u1ed3ng/gi, 'Ghi ch\u00fa')
+                        .replace(/#[Ff][Ee][Cc][Aa][Cc]|#[Ff][Bb][Cc][Ff]|#[Ff][Ff][0-9a-fA-F]{4}/g, '#e11d48');
+                    const circle = el.querySelector('span[style*="background"]');
+                    if (circle) circle.style.cssText = 'display:inline-block;width:14px;height:2px;background:#e11d48;border-radius:1px;vertical-align:middle;margin-right:6px;margin-bottom:2px;';
+                } else if (attr.includes('removeHighlight') || attr.includes('remove') || attr.toLowerCase().includes('erase')) {
+                    // "Remove Highlight" → "Xóa highlight"
+                    el.innerHTML = el.innerHTML
+                        .replace(/Remove\s+Highlight/gi, 'X\u00f3a highlight')
+                        .replace(/\bRemove\b/gi, 'X\u00f3a');
+                }
+            });
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', patch);
+        else setTimeout(patch, 200);
+        // Also patch whenever the context menu becomes visible (in case of dynamic rendering)
+        const observer = new MutationObserver(() => patch());
+        document.addEventListener('DOMContentLoaded', () => {
+            const menu = document.getElementById('contextMenu');
+            if (menu) observer.observe(menu, { attributes: true, attributeFilter: ['style'] });
+        });
+    }
+
+    showNoteInput(range) {
+        const selectedText = range.toString().trim();
+        if (!selectedText) { this.hideContextMenu(); this.selectedRange = null; return; }
+        const overlay = document.createElement('div');
+        overlay.id = 'note-input-overlay';
+        overlay.innerHTML = `
+            <div id="note-input-dialog">
+                <h4>\u270f\ufe0f Ghi ch\u00fa</h4>
+                <div id="note-input-selected"></div>
+                <textarea id="note-input-textarea" placeholder="Nh\u1eadp n\u1ed9i dung ghi ch\u00fa..."></textarea>
+                <div class="note-input-actions">
+                    <button id="note-cancel-btn">H\u1ee7y</button>
+                    <button id="note-save-btn">L\u01b0u ghi ch\u00fa</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        const selectedEl = overlay.querySelector('#note-input-selected');
+        selectedEl.textContent = selectedText.length > 120 ? selectedText.slice(0, 120) + '\u2026' : selectedText;
+        const textarea = overlay.querySelector('#note-input-textarea');
+        textarea.focus();
+        const saveNote = () => {
+            const noteText = textarea.value.trim();
+            document.body.removeChild(overlay);
+            try {
+                this.removeExistingHighlightsInRange(range);
+                const isSimple = this.isSimpleRange(range);
+                if (isSimple) this._applyNoteSimple(range, noteText);
+                else this._applyNoteComplex(range, noteText);
+            } catch (e) { console.warn('[Note] Apply error:', e); }
+            window.getSelection().removeAllRanges();
+            this.selectedRange = null;
+            if (window.readingCore) {
+                window.readingCore.saveHighlightDraft();
+                if (window.readingCore.noteManager) window.readingCore.noteManager.renderNotesList();
+            }
+        };
+        overlay.querySelector('#note-save-btn').addEventListener('click', saveNote);
+        overlay.querySelector('#note-cancel-btn').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            window.getSelection().removeAllRanges();
+            this.selectedRange = null;
+        });
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNote();
+            if (e.key === 'Escape') overlay.querySelector('#note-cancel-btn').click();
+        });
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) overlay.querySelector('#note-cancel-btn').click();
+        });
+    }
+
+    _applyNoteSimple(range, noteText) {
+        try {
+            const span = document.createElement('span');
+            span.className = 'highlight-pink';
+            if (noteText) span.dataset.note = noteText;
+            range.surroundContents(span);
+        } catch (e) {
+            const fragment = range.extractContents();
+            const span = document.createElement('span');
+            span.className = 'highlight-pink';
+            if (noteText) span.dataset.note = noteText;
+            span.appendChild(fragment);
+            range.insertNode(span);
+        }
+    }
+
+    _applyNoteComplex(range, noteText) {
+        const textNodes = this.getTextNodesInRange(range);
+        textNodes.forEach(textNode => {
+            const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
+            const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
+            if (startOffset === endOffset) return;
+            const subRange = document.createRange();
+            subRange.setStart(textNode, startOffset);
+            subRange.setEnd(textNode, endOffset);
+            try {
+                const span = document.createElement('span');
+                span.className = 'highlight-pink';
+                if (noteText) span.dataset.note = noteText;
+                subRange.surroundContents(span);
+            } catch (e) {
+                const fragment = subRange.extractContents();
+                const span = document.createElement('span');
+                span.className = 'highlight-pink';
+                if (noteText) span.dataset.note = noteText;
+                span.appendChild(fragment);
+                subRange.insertNode(span);
+            }
+        });
     }
 
     setupContextMenu() {
-        // Hiện popup ngay khi thả chuột trái sau khi tô chọn
         document.addEventListener('mouseup', (e) => {
-            // Bỏ qua nếu click vào chính contextMenu
             const contextMenu = document.getElementById('contextMenu');
             if (contextMenu && contextMenu.contains(e.target)) return;
-
             const highlightArea = e.target.closest('.reading-content, .single-col, .left-col, .reading-card, .reading-passage, .questions-panel, #questionsContainer, .question-item, .questions-list');
-            if (!highlightArea) {
-                this.hideContextMenu();
-                return;
-            }
-
-            // Dùng setTimeout để đợi browser hoàn tất cập nhật selection
+            if (!highlightArea) { this.hideContextMenu(); return; }
             setTimeout(() => {
                 const selection = window.getSelection();
-                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) {
-                    this.hideContextMenu();
-                    return;
-                }
+                if (!selection || selection.toString().trim() === '' || selection.rangeCount === 0) { this.hideContextMenu(); return; }
                 this.selectedRange = selection.getRangeAt(0);
                 this.showContextMenu(e.clientX, e.clientY);
             }, 10);
         });
-
-        // Dùng event delegation để tránh lỗi DOM chưa ready khi constructor chạy
         document.addEventListener('mousedown', (e) => {
             const contextMenu = document.getElementById('contextMenu');
-            if (contextMenu && contextMenu.contains(e.target)) {
-                e.preventDefault(); // Giữ selection không bị mất khi click vào menu
-            }
+            if (contextMenu && contextMenu.contains(e.target)) e.preventDefault();
         });
-
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
             if (contextMenu && !contextMenu.contains(e.target)) this.hideContextMenu();
@@ -2823,25 +3071,12 @@ class ReadingHighlightManager {
     showContextMenu(x, y) {
         const contextMenu = document.getElementById('contextMenu');
         if (contextMenu) {
-            // Hiện tạm thời để đo kích thước
             contextMenu.style.display = 'block';
             const rect = contextMenu.getBoundingClientRect();
-
-            // Điều chỉnh vị trí nếu tràn ra ngoài viewport
-            let finalX = x;
-            let finalY = y;
-
-            if (finalX + rect.width > window.innerWidth) {
-                finalX = window.innerWidth - rect.width - 10;
-            }
-            if (finalY + rect.height > window.innerHeight) {
-                finalY = window.innerHeight - rect.height - 10;
-            }
-
-            // Đảm bảo không bị âm
-            finalX = Math.max(10, finalX);
-            finalY = Math.max(10, finalY);
-
+            let finalX = x, finalY = y;
+            if (finalX + rect.width > window.innerWidth) finalX = window.innerWidth - rect.width - 10;
+            if (finalY + rect.height > window.innerHeight) finalY = window.innerHeight - rect.height - 10;
+            finalX = Math.max(10, finalX); finalY = Math.max(10, finalY);
             contextMenu.style.left = finalX + 'px';
             contextMenu.style.top = finalY + 'px';
         }
@@ -2861,10 +3096,8 @@ class ReadingHighlightManager {
         if (info.cardId) card = document.querySelector(`.reading-card[data-text-id="${info.cardId}"]`);
         else if (info.reviewId) card = document.querySelector(`.reading-card[data-review-id="${info.reviewId}"]`);
         if (!card) return;
-
         const qItem = document.getElementById(`question-${questionNum}`);
         if (qItem) qItem.classList.add('highlight-question');
-
         let firstSpan = null;
         const keywords = info.keywords || [];
         keywords.forEach(keyword => {
@@ -2878,10 +3111,7 @@ class ReadingHighlightManager {
                     range.setEnd(node, idx + keyword.length);
                     const span = document.createElement('span');
                     span.className = 'dynamic-highlight';
-                    try {
-                        range.surroundContents(span);
-                        if (!firstSpan) firstSpan = span;
-                    } catch (e) { }
+                    try { range.surroundContents(span); if (!firstSpan) firstSpan = span; } catch (e) { }
                     break;
                 }
             }
@@ -2893,25 +3123,34 @@ class ReadingHighlightManager {
     clearAllHighlights() {
         document.querySelectorAll('.dynamic-highlight').forEach(el => {
             const parent = el.parentNode;
-            if (parent) {
-                while (el.firstChild) parent.insertBefore(el.firstChild, el);
-                parent.removeChild(el);
-            }
+            if (parent) { while (el.firstChild) parent.insertBefore(el.firstChild, el); parent.removeChild(el); }
         });
         document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
-
         const manualHighlights = document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink');
         manualHighlights.forEach(span => {
             const parent = span.parentNode;
-            if (parent) {
-                while (span.firstChild) parent.insertBefore(span.firstChild, span);
-                parent.removeChild(span);
-            }
+            if (parent) { while (span.firstChild) parent.insertBefore(span.firstChild, span); parent.removeChild(span); }
         });
+    }
+
+    // Only clears auto-generated answer highlights (dynamic-highlight), preserves user's personal highlights
+    clearDynamicHighlights() {
+        document.querySelectorAll('.dynamic-highlight').forEach(el => {
+            const parent = el.parentNode;
+            if (parent) { while (el.firstChild) parent.insertBefore(el.firstChild, el); parent.removeChild(el); }
+        });
+        document.querySelectorAll('.question-item.highlight-question').forEach(el => el.classList.remove('highlight-question'));
     }
 
     applyHighlight(color) {
         if (!this.selectedRange) { this.hideContextMenu(); return; }
+        // Intercept pink: show note input dialog instead of highlight
+        if (color === 'pink') {
+            const range = this.selectedRange.cloneRange();
+            this.hideContextMenu();
+            this.showNoteInput(range);
+            return;
+        }
         try {
             const range = this.selectedRange.cloneRange();
             this.removeExistingHighlightsInRange(range);
@@ -3583,7 +3822,7 @@ class ReadingUIManager {
             indicator.style.backgroundColor = bgColor;
             indicator.title = tooltip;
             indicator.innerHTML = badgeText;
-            
+
             return;
         }
 

@@ -2006,7 +2006,8 @@ class ListeningCore {
     showExplanation(questionNum) {
         if (!this.explanationMode && !this.examSubmitted) return;
 
-        this.highlightManager.clearAllHighlights();
+        // Only clear dynamic highlights (transcript/keyword), keep user personal highlights
+        this.highlightManager.clearDynamicHighlights();
         this.highlightManager.highlightQuestion(questionNum);
 
         // Hiện badge đáp án cho câu hỏi được click
@@ -2053,7 +2054,8 @@ class ListeningCore {
     closeExplanation() {
         const explanationPanel = document.getElementById('explanationPanel');
         if (explanationPanel) explanationPanel.classList.remove('show');
-        this.highlightManager.clearAllHighlights();
+        // Only remove transcript/keyword highlights, NOT user's personal highlights
+        this.highlightManager.clearDynamicHighlights();
     }
 
     disableInputs() {
@@ -2204,6 +2206,12 @@ class HighlightManager {
                 parent.removeChild(span);
             }
         });
+    }
+
+    // Only clears auto-generated highlights (transcript/keyword), preserves user's personal highlights
+    clearDynamicHighlights() {
+        document.querySelectorAll('.transcript-highlight').forEach(el => el.classList.remove('transcript-highlight'));
+        document.querySelectorAll('.keyword-highlight').forEach(el => el.classList.remove('keyword-highlight'));
     }
 
     applyHighlight(color) {
