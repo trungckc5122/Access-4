@@ -10,7 +10,7 @@ export class CloudStorage {
   static async save(localStorageKey, data) {
     // 1. Chỉ ghi localStorage khi KHÔNG phải Cloud-Only mode
     if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
-      try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch {}
+      try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch { }
     }
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
@@ -34,7 +34,7 @@ export class CloudStorage {
             isChanged = existingRaw !== (typeof data === 'string' ? data : JSON.stringify(data));
           }
         }
-        
+
         if (isChanged) {
           localStorage.setItem('_local_progress_owner_previous', currentOwner);
           localStorage.setItem('_local_progress_dirty', '1');
@@ -50,9 +50,9 @@ export class CloudStorage {
     const params = parseStorageKey(localStorageKey);
     if (!params) return { synced: false };
 
-    const isDraft     = localStorageKey.endsWith('_draft');
+    const isDraft = localStorageKey.endsWith('_draft');
     const isHighlight = localStorageKey.endsWith('_highlights');
-    const isNote      = localStorageKey.endsWith('_note');
+    const isNote = localStorageKey.endsWith('_note');
     const isSubmitted = localStorageKey.endsWith('_submitted');
 
     const upsertData = {
@@ -61,23 +61,23 @@ export class CloudStorage {
       updated_at: new Date().toISOString()
     };
 
-    if (isDraft)          upsertData.answers = data;
+    if (isDraft) upsertData.answers = data;
     else if (isHighlight) upsertData.highlights = data;
-    else if (isNote)      upsertData.note = typeof data === 'string' ? data : JSON.stringify(data);
+    else if (isNote) upsertData.note = typeof data === 'string' ? data : JSON.stringify(data);
     else if (isSubmitted) {
-      upsertData.status       = 'completed';
+      upsertData.status = 'completed';
       // Lưu toàn bộ object data vào answers để bảo toàn cấu trúc (bao gồm details, correctCount...)
-      upsertData.answers      = data;
-      upsertData.score        = data.score  ?? data.correctCount  ?? null;
-      upsertData.total        = data.total  ?? data.totalQuestions ?? null;
+      upsertData.answers = data;
+      upsertData.score = data.score ?? data.correctCount ?? null;
+      upsertData.total = data.total ?? data.totalQuestions ?? null;
       upsertData.submitted_at = new Date().toISOString();
     }
     else {
       // completed result cũ hoặc result từ dashboard
-      upsertData.status       = 'completed';
-      upsertData.answers      = data;
-      upsertData.score        = data.score  ?? data.correctCount;
-      upsertData.total        = data.total  ?? data.totalQuestions;
+      upsertData.status = 'completed';
+      upsertData.answers = data;
+      upsertData.score = data.score ?? data.correctCount;
+      upsertData.total = data.total ?? data.totalQuestions;
       upsertData.submitted_at = new Date().toISOString();
     }
 
@@ -117,20 +117,20 @@ export class CloudStorage {
           .single();
 
         if (!error && data) {
-          const isDraft     = localStorageKey.endsWith('_draft');
+          const isDraft = localStorageKey.endsWith('_draft');
           const isHighlight = localStorageKey.endsWith('_highlights');
-          const isNote      = localStorageKey.endsWith('_note');
+          const isNote = localStorageKey.endsWith('_note');
 
-          if (isDraft)          return data.answers;
-          if (isHighlight)      return data.highlights;
-          if (isNote)           return data.note;
+          if (isDraft) return data.answers;
+          if (isHighlight) return data.highlights;
+          if (isNote) return data.note;
           return {
-            answers:        data.answers,
-            score:          data.score,
-            total:          data.total,
-            correctCount:   data.score,
+            answers: data.answers,
+            score: data.score,
+            total: data.total,
+            correctCount: data.score,
             totalQuestions: data.total,
-            status:         data.status
+            status: data.status
           };
         }
       }
@@ -165,8 +165,8 @@ export class CloudStorage {
     if (!params) return;
 
     const isHighlight = localStorageKey.endsWith('_highlights');
-    const isNote      = localStorageKey.endsWith('_note');
-    const isDraft     = localStorageKey.endsWith('_draft');
+    const isNote = localStorageKey.endsWith('_note');
+    const isDraft = localStorageKey.endsWith('_draft');
 
     try {
       if (isHighlight) {
@@ -219,6 +219,42 @@ export class CloudStorage {
   // REMOVE ALL — xóa toàn bộ row (dùng khi reset, gọi 1 lần thay vì 3 lần)
   // suppress signal để tab hiện tại không tự reload
   // ─────────────────────────────────────────────
+  // Remove only answer/result data for a part, preserving highlights and notes.
+  static async removeAnswerData(baseKey) {
+    localStorage.removeItem(baseKey);
+    localStorage.removeItem(baseKey + '_draft');
+    localStorage.removeItem(baseKey + '_submitted');
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const params = parseStorageKey(baseKey);
+    if (!params) return;
+
+    window._suppressRealtimeUntil = Date.now() + 3000;
+
+    try {
+      const { error } = await supabase.from('progress')
+        .update({
+          answers: null,
+          status: null,
+          score: null,
+          total: null,
+          submitted_at: null
+        })
+        .eq('user_id', user.id)
+        .eq('exam', params.exam)
+        .eq('skill', params.skill)
+        .eq('book', params.book)
+        .eq('test', params.test)
+        .eq('part', params.part);
+      if (error) console.error('[CloudStorage] removeAnswerData failed:', error);
+      else console.log('[CloudStorage] Answer data removed for:', baseKey);
+    } catch (e) {
+      console.error('[CloudStorage] removeAnswerData exception:', e);
+    }
+  }
+
   static async removeAll(baseKey) {
     localStorage.removeItem(baseKey);
     localStorage.removeItem(baseKey + '_draft');
@@ -239,11 +275,11 @@ export class CloudStorage {
       const { error } = await supabase.from('progress')
         .delete()
         .eq('user_id', user.id)
-        .eq('exam',    params.exam)
-        .eq('skill',   params.skill)
-        .eq('book',    params.book)
-        .eq('test',    params.test)
-        .eq('part',    params.part);
+        .eq('exam', params.exam)
+        .eq('skill', params.skill)
+        .eq('book', params.book)
+        .eq('test', params.test)
+        .eq('part', params.part);
       if (error) console.error('[CloudStorage] removeAll failed:', error);
       else console.log('[CloudStorage] Row deleted for:', baseKey);
     } catch (e) {
@@ -251,7 +287,7 @@ export class CloudStorage {
     }
   }
 
-    // ─────────────────────────────────────────────
+  // ─────────────────────────────────────────────
   // OWNER HELPERS
   // ─────────────────────────────────────────────
 
@@ -279,88 +315,88 @@ export class CloudStorage {
 
     CloudStorage._authSyncPromise = (async () => {
 
-    const owner = localStorage.getItem('_local_progress_owner');
-    const prevOwner = localStorage.getItem('_local_progress_owner_previous');
-    const isDirty = localStorage.getItem('_local_progress_dirty') === '1';
+      const owner = localStorage.getItem('_local_progress_owner');
+      const prevOwner = localStorage.getItem('_local_progress_owner_previous');
+      const isDirty = localStorage.getItem('_local_progress_dirty') === '1';
 
-    const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
-    const hasLocalProgress = Object.keys(localStorage).some(k =>
-      examPrefixes.some(p => k.startsWith(p))
-    );
+      const examPrefixes = ['pet_reading_', 'pet_listening_', 'ket_reading_', 'ket_listening_'];
+      const hasLocalProgress = Object.keys(localStorage).some(k =>
+        examPrefixes.some(p => k.startsWith(p))
+      );
 
-    if (owner === 'guest' && prevOwner === currentUser.id && isDirty && hasLocalProgress) {
-      let shouldUpdate = false;
-      if (window._authUI && typeof window._authUI.showConflictModal === 'function') {
-        shouldUpdate = await window._authUI.showConflictModal(currentUser.email);
-      }
+      if (owner === 'guest' && prevOwner === currentUser.id && isDirty && hasLocalProgress) {
+        let shouldUpdate = false;
+        if (window._authUI && typeof window._authUI.showConflictModal === 'function') {
+          shouldUpdate = await window._authUI.showConflictModal(currentUser.email);
+        }
 
-      localStorage.removeItem('_local_progress_owner_previous');
-      localStorage.removeItem('_local_progress_dirty');
-
-      if (shouldUpdate) {
-        const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
-        localStorage.setItem('_local_progress_owner', currentUser.id);
-        await CloudStorage.syncCloudToLocal();
-        return { syncedCount: 0, migratedCount, action: 'migrated-guest-changes' };
-      } else {
-        CloudStorage.clearLocalProgressKeys();
-        localStorage.setItem('_local_progress_owner', currentUser.id);
-        localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
-        const syncedCount = await CloudStorage.syncCloudToLocal();
-        return { syncedCount, migratedCount: 0, action: 'rejected-guest-changes-and-synced' };
-      }
-    }
-
-    if (!owner || owner === 'guest') {
-      // ── CHẶN LÂY NHIỄM CHÉO: Guest data thuộc về tài khoản KHÁC ─────────
-      // Nếu dữ liệu guest này có nguồn gốc từ một tài khoản khác (không phải user hiện tại),
-      // tuyệt đối không migrate lên cloud — xóa sạch và kéo dữ liệu đúng của user xuống.
-      if (prevOwner && prevOwner !== currentUser.id) {
-        console.warn(`[CloudStorage] Guest progress originated from a different account ("${prevOwner}"). Clearing to prevent cross-account contamination.`);
-        CloudStorage.clearLocalProgressKeys();
         localStorage.removeItem('_local_progress_owner_previous');
         localStorage.removeItem('_local_progress_dirty');
-        localStorage.setItem('_local_progress_owner', currentUser.id);
-        localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
-        const syncedCount = await CloudStorage.syncCloudToLocal();
-        return { syncedCount, migratedCount: 0, action: 'cleared-foreign-guest-and-synced' };
-      }
 
-      if (hasLocalProgress) {
-        const { data: cloudRows } = await supabase
-          .from('progress')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .limit(1);
-
-        if (cloudRows && cloudRows.length > 0) {
-          console.warn('[CloudStorage] Legacy local progress found, but current user already has cloud data. Clearing local progress before sync.');
+        if (shouldUpdate) {
+          const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
+          localStorage.setItem('_local_progress_owner', currentUser.id);
+          await CloudStorage.syncCloudToLocal();
+          return { syncedCount: 0, migratedCount, action: 'migrated-guest-changes' };
+        } else {
           CloudStorage.clearLocalProgressKeys();
           localStorage.setItem('_local_progress_owner', currentUser.id);
           localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
           const syncedCount = await CloudStorage.syncCloudToLocal();
-          return { syncedCount, migratedCount: 0, action: 'cleared-legacy-and-synced' };
+          return { syncedCount, migratedCount: 0, action: 'rejected-guest-changes-and-synced' };
         }
       }
 
-      // Dữ liệu guest hoàn toàn sạch hoặc thuộc chính user này → migrate bình thường
-      const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
+      if (!owner || owner === 'guest') {
+        // ── CHẶN LÂY NHIỄM CHÉO: Guest data thuộc về tài khoản KHÁC ─────────
+        // Nếu dữ liệu guest này có nguồn gốc từ một tài khoản khác (không phải user hiện tại),
+        // tuyệt đối không migrate lên cloud — xóa sạch và kéo dữ liệu đúng của user xuống.
+        if (prevOwner && prevOwner !== currentUser.id) {
+          console.warn(`[CloudStorage] Guest progress originated from a different account ("${prevOwner}"). Clearing to prevent cross-account contamination.`);
+          CloudStorage.clearLocalProgressKeys();
+          localStorage.removeItem('_local_progress_owner_previous');
+          localStorage.removeItem('_local_progress_dirty');
+          localStorage.setItem('_local_progress_owner', currentUser.id);
+          localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+          const syncedCount = await CloudStorage.syncCloudToLocal();
+          return { syncedCount, migratedCount: 0, action: 'cleared-foreign-guest-and-synced' };
+        }
+
+        if (hasLocalProgress) {
+          const { data: cloudRows } = await supabase
+            .from('progress')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .limit(1);
+
+          if (cloudRows && cloudRows.length > 0) {
+            console.warn('[CloudStorage] Legacy local progress found, but current user already has cloud data. Clearing local progress before sync.');
+            CloudStorage.clearLocalProgressKeys();
+            localStorage.setItem('_local_progress_owner', currentUser.id);
+            localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
+            const syncedCount = await CloudStorage.syncCloudToLocal();
+            return { syncedCount, migratedCount: 0, action: 'cleared-legacy-and-synced' };
+          }
+        }
+
+        // Dữ liệu guest hoàn toàn sạch hoặc thuộc chính user này → migrate bình thường
+        const migratedCount = await CloudStorage.migrateLocalStorageToCloud();
+        localStorage.setItem('_local_progress_owner', currentUser.id);
+        await CloudStorage.syncCloudToLocal();
+        return { syncedCount: 0, migratedCount, action: 'migrated' };
+      }
+
+      if (owner === currentUser.id) {
+        const syncedCount = await CloudStorage.syncCloudToLocal();
+        return { syncedCount, migratedCount: 0, action: 'synced' };
+      }
+
+      console.warn('[CloudStorage] Local progress belongs to another user. Clearing local progress before sync.');
+      CloudStorage.clearLocalProgressKeys();
       localStorage.setItem('_local_progress_owner', currentUser.id);
-      await CloudStorage.syncCloudToLocal();
-      return { syncedCount: 0, migratedCount, action: 'migrated' };
-    }
-
-    if (owner === currentUser.id) {
+      localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
       const syncedCount = await CloudStorage.syncCloudToLocal();
-      return { syncedCount, migratedCount: 0, action: 'synced' };
-    }
-
-    console.warn('[CloudStorage] Local progress belongs to another user. Clearing local progress before sync.');
-    CloudStorage.clearLocalProgressKeys();
-    localStorage.setItem('_local_progress_owner', currentUser.id);
-    localStorage.setItem('_cloud_migrated_' + currentUser.id, '1');
-    const syncedCount = await CloudStorage.syncCloudToLocal();
-    return { syncedCount, migratedCount: 0, action: 'cleared-and-synced' };
+      return { syncedCount, migratedCount: 0, action: 'cleared-and-synced' };
     })();
 
     try {
@@ -389,15 +425,15 @@ export class CloudStorage {
         const value = localStorage.getItem(key);
         await CloudStorage.save(key, JSON.parse(value));
         migrated++;
-      } catch {}
+      } catch { }
     }
 
     // Đánh dấu đã migrate
     localStorage.setItem('_cloud_migrated_' + user.id, '1');
     console.log(`[CloudStorage] Migrated ${migrated} items for ${user.email}`);
-    
+
     // Sau khi migrate xong, không tự gọi sync nữa, để nơi gọi kiểm soát đồng bộ
-    
+
     return migrated;
   }
 
@@ -474,43 +510,43 @@ export class CloudStorage {
       } else {
         // Dữ liệu local là guest hoặc đúng user hiện tại → an toàn để upload offline data
 
-      // Scan localStorage tìm dữ liệu mới hơn lastSyncTime mà cloud chưa có
-      // → đây là bài làm khi offline / chưa đăng nhập → đẩy lên cloud trước
-      const offlineKeys = Object.keys(localStorage).filter(k =>
-        examPrefixes.some(p => k.startsWith(p)) && !cloudKeys.has(k)
-      );
-      const uploadPromises = [];
-      for (const localKey of offlineKeys) {
-        const localTimestamp = getLocalDataTimestamp(localKey);
-        if (localTimestamp > lastSyncTime) {
-          try {
-            const raw = localStorage.getItem(localKey);
-            const parsed = JSON.parse(raw);
-            console.log('[CloudStorage] Uploading offline data:', localKey);
-            uploadPromises.push(CloudStorage.save(localKey, parsed));
-          } catch {}
+        // Scan localStorage tìm dữ liệu mới hơn lastSyncTime mà cloud chưa có
+        // → đây là bài làm khi offline / chưa đăng nhập → đẩy lên cloud trước
+        const offlineKeys = Object.keys(localStorage).filter(k =>
+          examPrefixes.some(p => k.startsWith(p)) && !cloudKeys.has(k)
+        );
+        const uploadPromises = [];
+        for (const localKey of offlineKeys) {
+          const localTimestamp = getLocalDataTimestamp(localKey);
+          if (localTimestamp > lastSyncTime) {
+            try {
+              const raw = localStorage.getItem(localKey);
+              const parsed = JSON.parse(raw);
+              console.log('[CloudStorage] Uploading offline data:', localKey);
+              uploadPromises.push(CloudStorage.save(localKey, parsed));
+            } catch { }
+          }
         }
-      }
-      if (uploadPromises.length > 0) {
-        await Promise.allSettled(uploadPromises);
-        // Re-fetch cloudKeys after upload
-        const { data: refreshedData } = await supabase
-          .from('progress')
-          .select('*')
-          .eq('user_id', user.id);
-        if (refreshedData) {
-          refreshedData.forEach(row => {
-            const exam = row.exam || 'pet';
-            const prefix = `${exam}_${row.skill}`;
-            const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
-            cloudKeys.add(baseKey);
-            cloudKeys.add(baseKey + '_submitted');
-            cloudKeys.add(baseKey + '_draft');
-            cloudKeys.add(baseKey + '_highlights');
-            cloudKeys.add(baseKey + '_note');
-          });
+        if (uploadPromises.length > 0) {
+          await Promise.allSettled(uploadPromises);
+          // Re-fetch cloudKeys after upload
+          const { data: refreshedData } = await supabase
+            .from('progress')
+            .select('*')
+            .eq('user_id', user.id);
+          if (refreshedData) {
+            refreshedData.forEach(row => {
+              const exam = row.exam || 'pet';
+              const prefix = `${exam}_${row.skill}`;
+              const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
+              cloudKeys.add(baseKey);
+              cloudKeys.add(baseKey + '_submitted');
+              cloudKeys.add(baseKey + '_draft');
+              cloudKeys.add(baseKey + '_highlights');
+              cloudKeys.add(baseKey + '_note');
+            });
+          }
         }
-      }
 
       } // end else (safe owner)
 
@@ -545,7 +581,7 @@ export class CloudStorage {
 
       let synced = 0;
       data.forEach(row => {
-        const exam = row.exam || 'pet'; 
+        const exam = row.exam || 'pet';
         const prefix = `${exam}_${row.skill}`;
         const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
 
@@ -574,7 +610,7 @@ export class CloudStorage {
             if (row.score !== null && row.score !== undefined) {
               completedData._hasScore = true;
             }
-            
+
             // Luôn ghi completed result vào localStorage (kể cả cloud-only)
             // vì isCompleted(), loadSubmittedState() là sync và đọc từ localStorage.
             // Không có cache này → isCompleted() luôn false → UI bị broken.
@@ -687,7 +723,7 @@ export class CloudStorage {
           const exam = row.exam || 'pet';
           const prefix = `${exam}_${row.skill}`;
           const baseKey = `${prefix}_book${row.book}_test${row.test}_part${row.part}`;
-          
+
           // Lưu kết quả completed (nếu có)
           if (row.status === 'completed' && row.answers) {
             map[baseKey] = {
