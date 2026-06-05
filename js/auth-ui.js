@@ -12,6 +12,15 @@ export class AuthUI {
 
   async init(options = { injectButton: true }) {
     window._authUI = this;
+    window.togglePasswordVisibility = function(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      btn.innerHTML = isPassword
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    };
     this.injectModal();
     this.injectRegisterModal();
     this.injectForgotModal();
@@ -80,9 +89,19 @@ export class AuthUI {
         <input id="auth-email" type="email" placeholder="Email" autocomplete="email"
           style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
           font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none;">
-        <input id="auth-password" type="password" placeholder="Mật khẩu" autocomplete="current-password"
-          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
-          font-size:14px;margin-bottom:4px;box-sizing:border-box;outline:none;">
+        <div style="position:relative;width:100%;margin-bottom:4px;">
+          <input id="auth-password" type="password" placeholder="Mật khẩu" autocomplete="current-password"
+            style="width:100%;padding:10px 40px 10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
+            font-size:14px;box-sizing:border-box;outline:none;">
+          <button type="button" onclick="togglePasswordVisibility('auth-password', this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"
+            title="Hiện/ẩn mật khẩu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
         <p style="text-align:right;margin:4px 0 12px;">
           <span id="auth-forgot-link" style="font-size:12px;color:#0d9488;cursor:pointer;text-decoration:underline;">Quên mật khẩu?</span>
         </p>
@@ -130,9 +149,19 @@ export class AuthUI {
         <input id="reg-email" type="email" placeholder="Email" autocomplete="email"
           style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
           font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none;">
-        <input id="reg-password" type="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" autocomplete="new-password"
-          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
-          font-size:14px;margin-bottom:12px;box-sizing:border-box;outline:none;">
+        <div style="position:relative;width:100%;margin-bottom:12px;">
+          <input id="reg-password" type="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" autocomplete="new-password"
+            style="width:100%;padding:10px 40px 10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
+            font-size:14px;box-sizing:border-box;outline:none;">
+          <button type="button" onclick="togglePasswordVisibility('reg-password', this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"
+            title="Hiện/ẩn mật khẩu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
         <button id="reg-submit-btn" style="width:100%;padding:10px;border-radius:10px;
           background:#0d9488;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;">
           Tạo tài khoản
@@ -211,12 +240,32 @@ export class AuthUI {
         animation:authSlideIn 0.28s cubic-bezier(.22,.68,0,1.2);">
         <h2 style="font-size:20px;font-weight:800;color:#0d9488;margin-bottom:8px;">Đổi mật khẩu</h2>
         <p style="font-size:13px;color:#64748b;margin-bottom:20px;">Nhập mật khẩu mới cho tài khoản của bạn.</p>
-        <input id="cp-new-password" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
-          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
-          font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none;">
-        <input id="cp-confirm-password" type="password" placeholder="Nhập lại mật khẩu mới"
-          style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
-          font-size:14px;margin-bottom:12px;box-sizing:border-box;outline:none;">
+        <div style="position:relative;width:100%;margin-bottom:8px;">
+          <input id="cp-new-password" type="password" placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
+            style="width:100%;padding:10px 40px 10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
+            font-size:14px;box-sizing:border-box;outline:none;">
+          <button type="button" onclick="togglePasswordVisibility('cp-new-password', this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"
+            title="Hiện/ẩn mật khẩu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div style="position:relative;width:100%;margin-bottom:12px;">
+          <input id="cp-confirm-password" type="password" placeholder="Nhập lại mật khẩu mới"
+            style="width:100%;padding:10px 40px 10px 14px;border-radius:10px;border:1.5px solid #e2e8f0;
+            font-size:14px;box-sizing:border-box;outline:none;">
+          <button type="button" onclick="togglePasswordVisibility('cp-confirm-password', this)"
+            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;color:#94a3b8;"
+            title="Hiện/ẩn mật khẩu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
         <button id="cp-submit-btn" style="width:100%;padding:10px;border-radius:10px;
           background:#0d9488;color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;">
           Cập nhật mật khẩu
