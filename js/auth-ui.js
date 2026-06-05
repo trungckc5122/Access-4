@@ -326,13 +326,19 @@ export class AuthUI {
       document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
     }
 
+    // Đợi xoá IndexedDB hoàn tất trước khi reload
     if (window.indexedDB?.databases) {
       try {
         const dbs = await window.indexedDB.databases();
-        dbs.forEach(db => {
-          if (db.name && (db.name.includes('supabase') || db.name.includes('auth')))
-            window.indexedDB.deleteDatabase(db.name);
-        });
+        await Promise.all(dbs
+          .filter(db => db.name && (db.name.includes('supabase') || db.name.includes('auth')))
+          .map(db => new Promise((resolve, reject) => {
+            const req = window.indexedDB.deleteDatabase(db.name);
+            req.onsuccess = resolve;
+            req.onerror = () => reject(req.error);
+            req.onblocked = resolve;
+          }))
+        );
       } catch { }
     }
 
