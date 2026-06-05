@@ -21,15 +21,6 @@ export class AuthUI {
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthUI] Event:', event);
-      if (event === 'PASSWORD_RECOVERY') {
-        // User vừa click link reset password trong email → mở modal đổi mật khẩu
-        this.hideModal();
-        this.hideForgotModal();
-        // Xóa token khỏi URL tránh F5 mở lại modal
-        window.history.replaceState({}, document.title, window.location.pathname);
-        this.showChangePassModal();
-        return;
-      }
       if (event === 'SIGNED_IN') {
         localStorage.removeItem('_user_signed_out');
         this.onSignedIn(session.user);
@@ -276,12 +267,7 @@ export class AuthUI {
     if (error) this.showError('cp', this._translateError(error.message));
     else {
       this.showError('cp', '✓ Đổi mật khẩu thành công!');
-      setTimeout(() => {
-        this.hideChangePassModal();
-        // Xóa field để sạch cho lần sau
-        document.getElementById('cp-new-password').value = '';
-        document.getElementById('cp-confirm-password').value = '';
-      }, 1500);
+      setTimeout(() => this.hideChangePassModal(), 1500);
     }
   }
 
