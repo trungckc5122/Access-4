@@ -591,8 +591,8 @@ export class CloudStorage {
           }
         }
 
-        // 2. Sync Draft — include any status with answers that isn't 'completed'
-        if (row.answers && row.status !== 'completed') {
+        // 2. Sync Draft
+        if (row.answers && row.status === 'draft') {
           const draftKey = baseKey + '_draft';
           const localDraftVal = localStorage.getItem(draftKey);
           const localDraftData = localDraftVal ? JSON.parse(localDraftVal) : null;
@@ -697,8 +697,8 @@ export class CloudStorage {
               status: 'completed'
             };
           }
-          // Draft — include any row with answers that isn't completed
-          if (row.answers && row.status !== 'completed') {
+          // Draft
+          if (row.answers && row.status === 'draft') {
             map[baseKey + '_draft'] = row.answers;
           }
           // Highlights
@@ -710,15 +710,10 @@ export class CloudStorage {
             map[baseKey + '_note'] = row.note;
           }
         });
-        // Merge local into cloud map — cloud WINS (local is secondary fallback)
-        // Use spread so cloud keys take priority over local
+        // Chỉ merge local vào nếu local thuộc đúng user này (tránh dữ liệu user cũ ghi đè cloud)
         const localOwner = localStorage.getItem('_local_progress_owner');
         if (!localOwner || localOwner === 'guest' || localOwner === user.id) {
-          const localMap = readLocalProgress();
-          // Only add local keys that cloud doesn't already have
-          for (const [key, val] of Object.entries(localMap)) {
-            if (!(key in map)) map[key] = val;
-          }
+          Object.assign(map, readLocalProgress());
         }
         return map;
       }
