@@ -2610,7 +2610,10 @@ class ReadingCore {
         if (clearHighlights) localStorage.removeItem(this.getHighlightStorageKey());
         // 2. Xóa Supabase (dùng removeAll để xóa 1 lần + có suppress)
         if (window.CloudStorage) {
-            window.CloudStorage.removeAll(completedKey).catch(() => { });
+            const removePromise = clearHighlights && window.CloudStorage.removeAll
+                ? window.CloudStorage.removeAll(completedKey)
+                : window.CloudStorage.removeAnswerData(completedKey);
+            removePromise?.catch(() => { });
         }
         // XÓA TRẠNG THÁI SUBMITTED
         this.storageManager.clearSubmittedState(this.currentTestData);
@@ -3436,7 +3439,7 @@ class ReadingStorageManager {
         const key = `ket_reading_book${book}_test${test}_part${resolvedPart}_submitted`;
         localStorage.removeItem(key);
         if (window.CloudStorage) {
-            window.CloudStorage.remove(key);
+            window.CloudStorage.removeAnswerData(key.replace(/_submitted$/, '')).catch(() => { });
         }
         console.log('[Storage] Cleared submitted state:', key);
     }
