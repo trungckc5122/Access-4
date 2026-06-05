@@ -44,12 +44,47 @@ export async function handlePasswordRecovery() {
   const hashStr = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
   const hashParams = new URLSearchParams(hashStr);
   const type = params.get('type') || hashParams.get('type');
+  const code = params.get('code');
+  const accessToken = hashParams.get('access_token') || params.get('access_token');
+  const refreshToken = hashParams.get('refresh_token') || params.get('refresh_token');
   if (type !== 'recovery') return { handled: false };
+  localStorage.removeItem('_user_signed_out');
 
-  // Xóa token khỏi URL ngay lập tức tránh F5 loop
+  const waitForSession = async () => {
+    for (let i = 0; i < 20; i++) {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) return { session: null, error };
+      if (session) return { session, error: null };
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return { session: null, error: null };
+  };
+
+  let session = null;
+  let error = null;
+
+  if (accessToken && refreshToken) {
+    const result = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+    session = result.data?.session || null;
+    error = result.error || null;
+  } else if (code) {
+    const result = await supabase.auth.exchangeCodeForSession(code);
+    session = result.data?.session || null;
+    error = result.error || null;
+  }
+
+  if (!session) {
+    const result = await waitForSession();
+    session = result.session;
+    error = error || result.error;
+  }
+
+  // Chỉ xóa token khỏi URL sau khi Supabase đã tạo recovery session.
   window.history.replaceState({}, document.title, window.location.pathname);
 
-  const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session) {
     return { handled: true, success: false, message: 'Link có thể đã hết hạn.' };
   }

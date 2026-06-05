@@ -23,6 +23,7 @@ export class AuthUI {
       console.log('[AuthUI] Event:', event);
       if (event === 'PASSWORD_RECOVERY') {
         // User vừa click link reset password trong email → mở modal đổi mật khẩu
+        localStorage.removeItem('_user_signed_out');
         this.hideModal();
         this.hideForgotModal();
         // Xóa token khỏi URL tránh F5 mở lại modal
@@ -573,4 +574,3 @@ export class AuthUI {
     return msg;
   }
 }
-
