@@ -20,6 +20,42 @@ export async function getCurrentUser() {
   return user;
 }
 
+// ─── QUÊN MẬT KHẨU ────────────────────────────────────────────────
+
+// Gửi email reset password (wrapper tiện dụng)
+export async function sendPasswordResetEmail(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if (error) return { success: false, message: error.message };
+  return { success: true };
+}
+
+// Tạo mật khẩu ngẫu nhiên (backup nếu cần)
+export function generateRandomPassword(length = 6) {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(length)))
+    .map(b => chars[b % chars.length]).join('');
+}
+
+// Bắt link recovery trong URL — gọi khi DOMContentLoaded
+export async function handlePasswordRecovery() {
+  const params = new URLSearchParams(window.location.search);
+  const hashStr = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+  const hashParams = new URLSearchParams(hashStr);
+  const type = params.get('type') || hashParams.get('type');
+  if (type !== 'recovery') return { handled: false };
+
+  // Xóa token khỏi URL ngay lập tức tránh F5 loop
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) {
+    return { handled: true, success: false, message: 'Link có thể đã hết hạn.' };
+  }
+  return { handled: true, success: true };
+}
+
 // Helper: convert localStorage key cũ → object params
 // 'pet_reading_book1_test1_part1' → { exam:'pet', skill:'reading', book:1, test:1, part:1 }
 export function parseStorageKey(key) {
