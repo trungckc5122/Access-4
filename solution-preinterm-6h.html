@@ -455,6 +455,53 @@
             font-weight: 700;
             flex-shrink: 0;
         }
+
+        .match-input {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 26px;
+            background: rgba(13, 148, 136, 0.05);
+            border: none;
+            border-bottom: 2px solid var(--primary, #0d9488);
+            border-radius: 4px 4px 0 0;
+            font-weight: 700;
+            font-size: 0.93rem;
+            color: var(--primary-dark, #0f766e);
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            cursor: text;
+            vertical-align: middle;
+            margin: 0 4px 0 6px;
+        }
+
+        .match-input.correct {
+            background: #dcfce7;
+            border-bottom-color: #16a34a;
+            color: #166534;
+        }
+
+        .match-input.incorrect {
+            background: #fee2e2;
+            border-bottom-color: #dc2626;
+            color: #991b1b;
+        }
+
+        /* ---- Title & Global Check ---- */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
     </style>
 </head>
 
@@ -492,9 +539,8 @@
         <!-- TASK 2: Collocation matching -->
         <div class="exercise-card" id="card-t2">
             <div class="writing-section-title">Task 2 – Collocation Matching</div>
-            <p style="font-size:0.97rem;margin-bottom:14px;font-style:italic;">Match the phrase with its meaning. Drag
+            <p style="font-size:0.97rem;margin-bottom:14px;font-style:italic;">Match the phrase with its meaning. Write
                 the correct letter into each row.</p>
-            <div class="word-bank" id="bank-t2"></div>
             <table class="match-table">
                 <thead>
                     <tr>
@@ -527,7 +573,6 @@
         <div class="exercise-card" id="card-t4">
             <div class="writing-section-title">Task 4 – Holiday Types</div>
             <p style="font-size:0.97rem;margin-bottom:14px;">Match the type of holiday with its definition.</p>
-            <div class="word-bank" id="bank-t4"></div>
             <table class="match-table">
                 <thead>
                     <tr>
@@ -908,7 +953,6 @@
         const t2Letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
         function buildT2() {
-            buildBank('bank-t2', shuffle([...t2Letters]));
             // Fix definitions to be in A-G order
             rebuildT2Rows();
         }
@@ -923,13 +967,11 @@
         <tr>
             <td class="col-left">
                 ${i + 1}. ${row.phrase}
-                <span class="drop-slot" id="t2-slot-${i}" data-ans="${row.ans}" data-bank="bank-t2"
-                    ondragover="event.preventDefault();this.classList.add('drag-over')"
-                    ondragleave="this.classList.remove('drag-over')"
-                    ondrop="tableSlotDrop(event,'t2-slot-${i}')"
-                    onclick="tableSlotClick('t2-slot-${i}')"></span>
+                <input class="match-input" id="t2-slot-${i}" data-ans="${row.ans}"
+                    maxlength="1" type="text" autocomplete="off"
+                    oninput="letterInput('t2-slot-${i}')" />
                 <span class="row-btns-inline">
-                    <button class="eye-btn" onclick="tableSlotEye('t2-slot-${i}')">👁️</button>
+                    <button class="eye-btn" onclick="letterEye('t2-slot-${i}')">👁️</button>
                 </span>
             </td>
             <td class="col-def">${String.fromCharCode(65 + i)}. ${letterDef}</td>
@@ -968,19 +1010,16 @@
         const t4DefMap = { A: 'Walking long distances in the mountains or countryside', B: 'Visiting many different cities', C: 'Relaxing and swimming by the sea', D: 'Learning about art, history, and traditions', E: 'Doing exciting activities like climbing or kayaking' };
 
         function buildT4() {
-            buildBank('bank-t4', shuffle([...t4Letters]));
             const tbody = document.getElementById('t4-tbody');
             tbody.innerHTML = t4Data.map((row, i) => `
         <tr>
             <td class="col-left">
                 ${i + 1}. ${row.type}
-                <span class="drop-slot" id="t4-slot-${i}" data-ans="${row.ans}" data-bank="bank-t4"
-                    ondragover="event.preventDefault();this.classList.add('drag-over')"
-                    ondragleave="this.classList.remove('drag-over')"
-                    ondrop="tableSlotDrop(event,'t4-slot-${i}')"
-                    onclick="tableSlotClick('t4-slot-${i}')"></span>
+                <input class="match-input" id="t4-slot-${i}" data-ans="${row.ans}"
+                    maxlength="1" type="text" autocomplete="off"
+                    oninput="letterInput('t4-slot-${i}')" />
                 <span class="row-btns-inline">
-                    <button class="eye-btn" onclick="tableSlotEye('t4-slot-${i}')">👁️</button>
+                    <button class="eye-btn" onclick="letterEye('t4-slot-${i}')">👁️</button>
                 </span>
             </td>
             <td class="col-def">${String.fromCharCode(65 + i)}. ${t4DefMap[String.fromCharCode(65 + i)]}</td>
@@ -1075,10 +1114,61 @@
                 }
             }
         }
-        function showAllT2() { showAllTable('t2-slot-', 7); }
-        function resetT2() { resetTable('t2-slot-', 7); }
-        function showAllT4() { showAllTable('t4-slot-', 5); }
-        function resetT4() { resetTable('t4-slot-', 5); }
+        function letterInput(id) {
+            const inp = document.getElementById(id);
+            inp.value = inp.value.toUpperCase();
+            inp.classList.remove('correct', 'incorrect');
+        }
+        function letterEye(id) {
+            const inp = document.getElementById(id);
+            const ans = inp.dataset.ans;
+            if (inp.classList.contains('correct')) {
+                inp.value = '';
+                inp.classList.remove('correct');
+            } else {
+                inp.value = ans;
+                inp.classList.add('correct');
+                inp.classList.remove('incorrect');
+            }
+        }
+        function showAllT2() {
+            for (let i = 0; i < 7; i++) {
+                const inp = document.getElementById(`t2-slot-${i}`);
+                if (inp && !inp.classList.contains('correct')) {
+                    inp.value = inp.dataset.ans;
+                    inp.classList.add('correct');
+                    inp.classList.remove('incorrect');
+                }
+            }
+        }
+        function resetT2() {
+            for (let i = 0; i < 7; i++) {
+                const inp = document.getElementById(`t2-slot-${i}`);
+                if (inp) {
+                    inp.value = '';
+                    inp.classList.remove('correct', 'incorrect');
+                }
+            }
+        }
+        function showAllT4() {
+            for (let i = 0; i < 5; i++) {
+                const inp = document.getElementById(`t4-slot-${i}`);
+                if (inp && !inp.classList.contains('correct')) {
+                    inp.value = inp.dataset.ans;
+                    inp.classList.add('correct');
+                    inp.classList.remove('incorrect');
+                }
+            }
+        }
+        function resetT4() {
+            for (let i = 0; i < 5; i++) {
+                const inp = document.getElementById(`t4-slot-${i}`);
+                if (inp) {
+                    inp.value = '';
+                    inp.classList.remove('correct', 'incorrect');
+                }
+            }
+        }
 
         // ══════════════════════════════════════
         // INIT
