@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 1A Ages and Stages</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Layout: Split Screen for Transcript (Sticky) */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 40%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Exercise 1 Layout: Image Left, Labels Right */
+        .ex1-sub-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 40px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .ex1-image-box {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+
+        .ex1-image-box img {
+            width: 50%;
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .ex1-labels-box {
+            flex: 1;
+            min-width: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Standardized Components */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            border-radius: 4px;
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px 18px;
+            margin-top: 8px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.65;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: none !important;
+        }
+
+        /* Absolute (floating) hint for Ex1 */
+        .hint-box.absolute {
+            position: absolute;
+            top: 105%;
+            left: 0;
+            min-width: 280px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 1000;
+            white-space: normal;
+        }
+
+        .hint-box strong {
+            color: var(--primary-dark);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        .key-word {
+            color: var(--primary);
+            font-weight: bold;
+            background: var(--primary-light);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .ex1-sub-container {
+                flex-direction: column;
+            }
+
+            .ex1-labels-box {
+                flex: 1;
+                width: 100%;
+            }
+
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+
+            .reading-split-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Custom Vocabulary Reference - Complete Bypass */
+        .custom-landscape-container {
+            margin-bottom: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+            display: block;
+        }
+
+        .custom-landscape-header {
+            background: var(--primary-light);
+            padding: 18px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-landscape-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .custom-landscape-content {
+            display: none;
+            padding: 25px;
+            position: relative;
+            background: var(--bg);
+        }
+
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .vocab-item {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: 200px;
+            padding: 12px 15px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+            font-size: 1.05rem;
+        }
+
+        [data-theme="dark"] .vocab-item {
+            background: var(--card-bg);
+            border-color: var(--glass-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="dark"] .custom-landscape-container {
+            background: var(--card-bg);
+        }
+
+        .ex1-prefix {
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Exercise 1 - static word reference list (not interactive) */
+        .ex1-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            font-size: 0.92rem;
+            color: var(--primary-dark);
+        }
+
+        .ex1-bank span {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 2px 10px;
+            font-weight: 600;
+        }
+
+        /* Exercise 1 label rows – same style as 6a */
+        .ex1-label-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .inline-input-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        /* Row buttons */
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        /* Exercise 2 - Reusable Drag & Drop word bank */
+        .ex2-group-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin: 18px 0 10px;
+            font-size: 1.02rem;
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--glass-border);
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            justify-content: center;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+            height: 36px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* question-row for Ex2 – vertical layout like 6a */
+        .question-row {
+            margin-bottom: 12px;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .question-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        /* Exercise 3 (former ex4) Split Layout - Listening table */
+        .ex4-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 15px;
+            border-bottom: 1px solid var(--glass-border);
+            transition: background 0.2s;
+        }
+
+        .ex4-row:hover {
+            background: var(--primary-light);
+        }
+
+        .ex4-question {
+            flex: 1;
+            font-weight: 500;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .ex4-answer {
+            flex: 0 0 280px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Text inputs */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            text-align: center;
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 80px;
+            field-sizing: content;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        @media (max-width: 768px) {
+            .vocab-item {
+                flex: 1 1 100%;
+            }
+
+            .ex4-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .ex4-answer {
+                width: 100%;
+                justify-content: flex-start;
+                margin-top: 10px;
+            }
+        }
+    </style>
+    <script>
+        function toggleCustomVocab() {
+            const content = document.getElementById('vocabContent');
+            const icon = document.getElementById('vocabIcon');
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            } else {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            }
+        }
+    </script>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">1A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary</div>
+                <h1>Ages and Stages</h1>
+                <p class="subtitle">I can talk about the different stages of people's lives.</p>
+            </div>
+        </div>
+
+        <!-- Custom Vocabulary Reference -->
+        <div class="custom-landscape-container">
+            <div class="custom-landscape-header" onclick="toggleCustomVocab()">
+                <h3>Vocabulary Reference: Life Stages</h3>
+                <span id="vocabIcon" style="font-size: 1.2rem;">▼</span>
+            </div>
+            <div class="custom-landscape-content" id="vocabContent">
+                <ul class="vocab-grid">
+                    <li class="vocab-item"><strong>Infant</strong> /ˈɪnfənt/: a baby or very young child (trẻ sơ sinh).
+                    </li>
+                    <li class="vocab-item"><strong>Toddler</strong> /ˈtɒdlə/: a young child who has only recently learnt
+                        to walk (trẻ mới biết đi).</li>
+                    <li class="vocab-item"><strong>Young child</strong>: a child below school age or in early school
+                        years (trẻ nhỏ).</li>
+                    <li class="vocab-item"><strong>In his/her teens</strong>: aged between 13 and 19 (tuổi thiếu niên).
+                    </li>
+                    <li class="vocab-item"><strong>In his/her twenties</strong>: aged between 20 and 29 (tuổi đôi mươi).
+                    </li>
+                    <li class="vocab-item"><strong>Middle-aged</strong> /ˈmɪdl eɪdʒd/: between the ages of about 45 and
+                        65 (trung niên).</li>
+                    <li class="vocab-item"><strong>Elderly</strong> /ˈeldəli/: a polite word for 'old' (người cao tuổi).
+                    </li>
+                    <li class="vocab-item"><strong>Centenarian</strong> /ˌsentɪˈneəriən/: a person who is 100 years old
+                        or older (người trăm tuổi).</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Exercise 1 -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Label the pictures with the life stages below.</div>
+            <div class="ex1-bank" style="margin-bottom: 25px;">
+                <span>centenarian</span><span>elderly</span><span>infant</span><span>in his / her teens</span>
+                <span>in his / her twenties</span><span>middle-aged</span><span>toddler</span><span>young child</span>
+            </div>
+
+            <div class="ex1-sub-container">
+                <div class="ex1-image-box">
+                    <img src="img-int/module 1a-ex1.png" alt="Ages and Stages">
+                </div>
+                <div class="ex1-labels-box">
+
+                    <!-- Q1: toddler -->
+                    <div class="ex1-label-row">
+                        1. <span class="ex1-prefix">She's a</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-1" data-ans="toddler" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-1')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-1')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-1-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">She's a toddler</span><br>
+                                <strong>Giải thích:</strong> <strong>Toddler</strong> /ˈtɒdlə/ chỉ trẻ mới biết đi,
+                                thường trong khoảng 1–3 tuổi — đây là độ tuổi liền sau giai đoạn sơ sinh (infant).
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q2: in his teens -->
+                    <div class="ex1-label-row">
+                        2. <span class="ex1-prefix">He's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-2" data-ans="in his teens" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-2')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-2')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-2-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">He's in his teens</span><br>
+                                <strong>Giải thích:</strong> Cụm <strong>in his/her teens</strong> dùng để chỉ độ tuổi
+                                từ 13 đến 19 (các số đếm có đuôi '-teen').
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q3: middle-aged (key: She's middle-aged.) -->
+                    <div class="ex1-label-row">
+                        3. <span class="ex1-prefix">She's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-3" data-ans="middle-aged" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-3')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-3')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-3-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">She's middle-aged</span><br>
+                                <strong>Giải thích:</strong> <strong>Middle-aged</strong> /ˈmɪdl eɪdʒd/ chỉ người ở độ
+                                tuổi trung niên, khoảng 45–65 tuổi — không còn trẻ nhưng cũng chưa già.
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q4: an infant (key: He/She's an infant.) -->
+                    <div class="ex1-label-row">
+                        4. <span class="ex1-prefix">He/She's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-4" data-ans="an infant" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-4')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-4')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-4-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">He/She's an infant</span><br>
+                                <strong>Giải thích:</strong> <strong>Infant</strong> /ˈɪnfənt/ là từ trang trọng/học
+                                thuật chỉ trẻ sơ sinh hoặc trẻ rất nhỏ chưa biết đi.
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q5: a centenarian (key: He's a centenarian.) -->
+                    <div class="ex1-label-row">
+                        5. <span class="ex1-prefix">He's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-5" data-ans="a centenarian" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-5')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-5')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-5-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">He's a centenarian</span><br>
+                                <strong>Giải thích:</strong> <strong>Centenarian</strong> /ˌsentɪˈneəriən/ chỉ người đã
+                                sống đến 100 tuổi trở lên — gốc từ 'centi-' (trăm).
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q6: elderly (key: She's elderly.) -->
+                    <div class="ex1-label-row">
+                        6. <span class="ex1-prefix">She's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-6" data-ans="elderly" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-6')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-6')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-6-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">She's elderly</span><br>
+                                <strong>Giải thích:</strong> <strong>Elderly</strong> /ˈeldəli/ là cách nói lịch sự,
+                                trang trọng hơn của từ 'old' khi nói về người cao tuổi.
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q7: a young child (key: He/She's a young child.) -->
+                    <div class="ex1-label-row">
+                        7. <span class="ex1-prefix">He/She's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-7" data-ans="a young child" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-7')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-7')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-7-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">He/She's a young child</span><br>
+                                <strong>Giải thích:</strong> <strong>Young child</strong> chỉ trẻ ở độ tuổi mẫu
+                                giáo/tiểu học, lớn hơn toddler nhưng chưa đến tuổi teen.
+                            </div>
+                        </span>
+                    </div>
+
+                    <!-- Q8: in his twenties (key: He's in his twenties.) -->
+                    <div class="ex1-label-row">
+                        8. <span class="ex1-prefix">He's</span>
+                        <span class="inline-input-group">
+                            <input type="text" id="ex1-8" data-ans="in his twenties" class="task5-input"
+                                oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="btn-small" onclick="showSingleAns('ex1-8')">👁️</button>
+                                <button class="info-btn" onclick="toggleHint(event, 'ex1-8')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="ex1-8-hint"><strong>Đáp án:</strong> <span
+                                    class="key-word">He's in his twenties</span><br>
+                                <strong>Giải thích:</strong> Cụm <strong>in his/her twenties</strong> dùng để chỉ độ
+                                tuổi từ 20 đến 29 (lấy theo hàng chục — 'twenties').
+                            </div>
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- Exercise 2 -->
+        <div class="exercise-card" id="card-ex2">
+            <div class="exercise-title">2. Complete the life events with the words below. Use all the words.</div>
+
+            <div class="ex2-group-title">Group A: verbs &amp; auxiliary words</div>
+            <div class="word-bank" id="bank-ex2a"></div>
+            <div id="questions-ex2a">
+                <!-- Rendered by JS -->
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2a')">Show All (Group A)</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2a')">Reset (Group A)</button>
+            </div>
+
+            <div class="ex2-group-title" style="margin-top: 30px;">Group B: nouns &amp; particles</div>
+            <div class="word-bank" id="bank-ex2b"></div>
+            <div id="questions-ex2b">
+                <!-- Rendered by JS -->
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2b')">Show All (Group B)</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2b')">Reset (Group B)</button>
+            </div>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Transcript</h2>
+                <div id="script-1-02" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Track 1.02 (Exercise 3)</h3>
+                    <p class="speaker-line"><strong>Interviewer</strong> In your opinion, when is the best age for
+                        young people to leave home?</p>
+                    <p class="speaker-line"><strong>Woman</strong> Well, it obviously depends on the circumstances.
+                        But I wouldn't advise young people to be in a hurry to leave home. The advantage of living
+                        with your parents, even when you're working, is that you can save money. It can benefit your
+                        parents too, as you can pay them rent and also help out with housework, and so on. But I
+                        would say that <span class="highlightable" id="text-ex3-1">your late twenties would be a good
+                            time to leave home</span>.</p>
+                    <p class="speaker-line"><strong>Interviewer</strong> What's the best age to learn to drive, do you
+                        think?</p>
+                    <p class="speaker-line"><strong>Girl</strong> Well, my brother learned to drive as soon as he
+                        could, at the age of seventeen. But he couldn't afford a car until he was 21. When he finally
+                        bought one, he'd forgotten a lot of what he'd been taught and had to have more lessons before
+                        he felt confident to drive. So, I'd say wait till <span class="highlightable"
+                            id="text-ex3-2">you
+                            are in your early twenties, when you can afford a car</span>.</p>
+                    <p class="speaker-line"><strong>Interviewer</strong> What's the best age to start a family, in
+                        your opinion?</p>
+                    <p class="speaker-line"><strong>Boy</strong> I think most couples wait a few years before they
+                        start a family, and I think that's quite sensible – it's important to settle down first and
+                        have a nice home. And most people find themselves in the situation when they're <span
+                            class="highlightable" id="text-ex3-3">between about 30 and 35</span>.</p>
+                    <p class="speaker-line"><strong>Interviewer</strong> In your opinion, what's the best age to buy
+                        a house or flat?</p>
+                    <p class="speaker-line"><strong>Girl</strong> Most young couples in the UK want to own their own
+                        home and they usually try to do this when they are <span class="highlightable"
+                            id="text-ex3-4">about 30 or so, and they are settled in their careers</span>. And I think
+                        that's about the right age. Before that, they don't usually have enough money.</p>
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Ex 3 -->
+            <div class="main-exercise-panel">
+
+                <!-- Exercise 3 (former Exercise 4) -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. 🎧 1.02 Listen to a teenage girl asking people in the street about
+                        the best age to do certain things in life. Complete the table.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.02')">📜 Show Transcript
+                        1.02</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_02.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex3">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        const ex1Answers = {
+            'ex1-1': 'toddler',
+            'ex1-2': 'in his teens',
+            'ex1-3': 'middle-aged',
+            'ex1-4': 'an infant',
+            'ex1-5': 'a centenarian',
+            'ex1-6': 'elderly',
+            'ex1-7': 'a young child',
+            'ex1-8': 'in his twenties'
+        };
+
+        // ── Exercise 2 data (corrected per answer key) ──────────────────────
+        // Group A: verbs (1–12)
+        const ex2aData = [
+            { num: 1, q: "________ born", ans: "be", hint: "<strong>be born</strong>: được sinh ra." },
+            { num: 2, q: "________ a business", ans: "start", hint: "<strong>start a business</strong>: khởi nghiệp, bắt đầu kinh doanh." },
+            { num: 3, q: "________ in love", ans: "fall", hint: "<strong>fall in love</strong>: phải lòng, yêu ai đó." },
+            { num: 4, q: "________ (money, etc.)", ans: "inherit", hint: "<strong>inherit (money)</strong>: thừa kế (tiền bạc, tài sản) từ người thân." },
+            { num: 5, q: "________ to drive", ans: "learn", hint: "<strong>learn to drive</strong>: học lái xe." },
+            { num: 6, q: "________ up", ans: "split", hint: "<strong>split up</strong>: chia tay, tan vỡ (mối quan hệ)." },
+            { num: 7, q: "________ to university", ans: "go", hint: "<strong>go to university</strong>: vào đại học." },
+            { num: 8, q: "________ house", ans: "move", hint: "<strong>move house</strong>: chuyển nhà." },
+            { num: 9, q: "________ your first job", ans: "get", hint: "<strong>get your first job</strong>: có công việc đầu tiên." },
+            { num: 10, q: "________ engaged", ans: "get", hint: "<strong>get engaged</strong>: đính hôn." },
+            { num: 11, q: "________ brought up (by)", ans: "be", hint: "<strong>be brought up (by)</strong>: được nuôi dạy bởi ai đó." },
+            { num: 12, q: "________ from abroad", ans: "emigrate", hint: "<strong>emigrate (from abroad)</strong>: di cư, rời khỏi đất nước để sống ở nước khác." }
+        ];
+
+        // Group B: nouns & particles (13–25)
+        const ex2bData = [
+            { num: 13, q: "get ________", ans: "married", hint: "<strong>get married</strong>: kết hôn." },
+            { num: 14, q: "leave ________", ans: "home", hint: "<strong>leave home</strong>: rời khỏi nhà (ra ở riêng). Cũng có thể là <em>leave school</em>." },
+            { num: 15, q: "start ________", ans: "a family", hint: "<strong>start a family</strong>: lập gia đình, có con đầu lòng. Cũng có thể là <em>start school</em>." },
+            { num: 16, q: "settle ________", ans: "down", hint: "<strong>settle down</strong>: ổn định cuộc sống." },
+            { num: 17, q: "leave ________", ans: "school", hint: "<strong>leave school</strong>: nghỉ học, tốt nghiệp phổ thông. Cũng có thể là <em>leave home</em>." },
+            { num: 18, q: "start ________", ans: "school", hint: "<strong>start school</strong>: bắt đầu đi học. Cũng có thể là <em>start a family</em>." },
+            { num: 19, q: "have ________", ans: "a change of career", hint: "<strong>have a change of career</strong>: thay đổi nghề nghiệp." },
+            { num: 20, q: "become ________", ans: "a grandparent", hint: "<strong>become a grandparent</strong>: trở thành ông/bà." },
+            { num: 21, q: "grow ________", ans: "up", hint: "<strong>grow up</strong>: lớn lên, trưởng thành." },
+            { num: 22, q: "pass ________", ans: "away", hint: "<strong>pass away</strong>: qua đời (cách nói lịch sự của 'die')." },
+            { num: 23, q: "buy ________", ans: "a house or flat", hint: "<strong>buy a house or flat</strong>: mua nhà hoặc căn hộ." },
+            { num: 24, q: "get ________", ans: "divorced", hint: "<strong>get divorced</strong>: ly hôn." },
+            { num: 25, q: "retire ________", ans: "from work", hint: "<strong>retire (from work)</strong>: nghỉ hưu." }
+        ];
+
+        const ex3Data = [
+            {
+                group: "Best age to leave home:", speaker: "1 Woman", ans: "late twenties", target: "text-ex3-1",
+                hint: "<strong>Đáp án:</strong> <span class='key-word'>late twenties</span><br><br><strong>Bằng chứng:</strong> <em>\"your late twenties would be a good time to leave home\"</em><br><br><strong>Giải thích:</strong> Người phụ nữ nói rằng sống với bố mẹ khi còn đi làm có thể tiết kiệm tiền; cô ấy gợi ý <strong>cuối tuổi hai mươi</strong> (late twenties) là thời điểm tốt để rời nhà."
+            },
+            {
+                group: "Best age to learn to drive:", speaker: "2 Girl", ans: "early twenties", target: "text-ex3-2",
+                hint: "<strong>Đáp án:</strong> <span class='key-word'>early twenties</span><br><br><strong>Bằng chứng:</strong> <em>\"wait till you are in your early twenties, when you can afford a car\"</em><br><br><strong>Giải thích:</strong> Cô gái kể anh trai học lái xe lúc 17 tuổi nhưng không có xe cho đến năm 21 tuổi — và đã quên hết. Cô ấy gợi ý nên chờ đến <strong>đầu tuổi hai mươi</strong> (early twenties) khi có thể mua xe."
+            },
+            {
+                group: "Best age to start a family:", speaker: "3 Boy", ans: "30–35", target: "text-ex3-3",
+                hint: "<strong>Đáp án:</strong> <span class='key-word'>30–35</span><br><br><strong>Bằng chứng:</strong> <em>\"most people find themselves in the situation when they're between about 30 and 35\"</em><br><br><strong>Giải thích:</strong> Chàng trai cho rằng nên ổn định trước khi có con — hầu hết mọi người bắt đầu gia đình khi ở độ tuổi <strong>30–35</strong>."
+            },
+            {
+                group: "Best age to buy a house or flat:", speaker: "4 Girl", ans: "30 (or so)", target: "text-ex3-4",
+                hint: "<strong>Đáp án:</strong> <span class='key-word'>30 (or so)</span><br><br><strong>Bằng chứng:</strong> <em>\"they usually try to do this when they are about 30 or so\"</em><br><br><strong>Giải thích:</strong> Cô gái nói hầu hết các cặp đôi trẻ ở Anh cố gắng mua nhà khi khoảng <strong>30 tuổi</strong> — lúc đó đã ổn định sự nghiệp và có đủ tiền."
+            }
+        ];
+
+        // ── Word bank: reusable (each word stays visible, copy on drop) ────
+        let dragWord = null;
+        let activeWord = null, activeBank = null;
+
+        function buildWordBank(bankId, words) {
+            const bank = document.getElementById(bankId);
+            bank.innerHTML = "";
+            // Deduplicate unique words for display; allow multiple drops
+            const unique = [...new Set(words)];
+            unique.forEach((w, idx) => {
+                const div = document.createElement('div');
+                div.className = 'word-item';
+                div.draggable = true;
+                div.id = `${bankId}-word-${idx}`;
+                div.dataset.word = w;
+                div.textContent = w;
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('click', () => handleWordClick(div, bankId));
+                bank.appendChild(div);
+            });
+        }
+
+        function handleDragStart(e) {
+            dragWord = e.target.dataset.word;
+            activeWord = dragWord;
+            activeBank = e.target.closest('.word-bank')?.id || null;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', dragWord);
+        }
+
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.target.classList.add('over'); }
+        function handleDragLeave(e) { e.target.classList.remove('over'); }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot) return;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+            placeWord(slot.id, word, slot.dataset.bank);
+            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
+            dragWord = null;
+        }
+
+        function handleWordClick(el, bankId) {
+            // Toggle active word for click-to-fill
+            if (el.classList.contains('active-word')) {
+                el.classList.remove('active-word');
+                activeWord = null; activeBank = null;
+            } else {
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                el.classList.add('active-word');
+                activeWord = el.dataset.word;
+                activeBank = bankId;
+            }
+        }
+
+        // Reusable: words are NEVER hidden. Each slot just stores its value.
+        function placeWord(slotId, word, bankId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            slot.textContent = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked', 'over');
+        }
+
+        function removeWord(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+        }
+
+        function handleSlotClick(slotId, bankId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            if (activeWord && activeBank === bankId) {
+                placeWord(slotId, activeWord, bankId);
+                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
+                activeWord = null; activeBank = null;
+            } else if (slot.textContent.trim()) {
+                removeWord(slotId);
+            }
+        }
+
+        function revealDropAns(qid) {
+            const slot = document.getElementById(qid);
+            const correctAns = slot.dataset.ans;
+            if (slot.textContent.trim() === correctAns) {
+                removeWord(qid);
+            } else {
+                placeWord(qid, correctAns, slot.dataset.bank);
+                slot.classList.add('correct');
+            }
+        }
+
+        function renderEx2a() {
+            const container = document.getElementById('questions-ex2a');
+            container.innerHTML = "";
+            ex2aData.forEach((it) => {
+                const qid = `ex2a-q${it.num}`;
+                const slotHtml = `<span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-bank="bank-ex2a" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="handleSlotClick('${qid}','bank-ex2a')"></span>`;
+                const qHtml = it.q.replace('________', slotHtml);
+                container.innerHTML += `
+                <div class="question-row">
+                    <div class="question-line">
+                        <span style="width:25px;display:inline-block;font-weight:700;">${it.num}</span>
+                        ${qHtml}
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="revealDropAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                        </span>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                </div>`;
+            });
+        }
+
+        function renderEx2b() {
+            const container = document.getElementById('questions-ex2b');
+            container.innerHTML = "";
+            ex2bData.forEach((it) => {
+                const qid = `ex2b-q${it.num}`;
+                const slotHtml = `<span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-bank="bank-ex2b" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="handleSlotClick('${qid}','bank-ex2b')"></span>`;
+                const qHtml = it.q.replace('________', slotHtml);
+                container.innerHTML += `
+                <div class="question-row">
+                    <div class="question-line">
+                        <span style="width:25px;display:inline-block;font-weight:700;">${it.num}</span>
+                        ${qHtml}
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="revealDropAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                        </span>
+                    </div>
+                    <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                </div>`;
+            });
+        }
+
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            ex3Data.forEach((it, i) => {
+                const qid = `ex3-q${i}`;
+                container.innerHTML += `
+                <div class="ex4-row">
+                    <div class="ex4-question"><strong>${it.group}</strong><br><span style="color:var(--text-muted);">${it.speaker}</span></div>
+                    <div class="ex4-answer">
+                        <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="info-btn" onclick="showReadingHint(event, '${it.target}', '${qid}-hint', '1.02')">i</button>
+                    </div>
+                </div>
+                <div class="hint-box" id="${qid}-hint" style="margin:0 15px 10px;">${it.hint}</div>`;
+            });
+        }
+
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            if (forceOpen) { panel.classList.add('active'); return; }
+            panel.classList.toggle('active');
+        }
+
+        function showReadingHint(event, targetId, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            if (!isVisible) {
+                h.style.display = 'block';
+                toggleTranscript(track, true);
+                const textEl = document.getElementById(targetId);
+                if (textEl) {
+                    textEl.classList.add('active-highlight');
+                    setTimeout(() => textEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                }
+            }
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = window.getComputedStyle(h).display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                if (h.classList.contains('absolute')) {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                    const rect = h.getBoundingClientRect();
+                    const container = h.closest('.ex1-labels-box') || h.closest('.exercise-card');
+                    if (container) {
+                        const containerRect = container.getBoundingClientRect();
+                        if (rect.right > containerRect.right - 10) {
+                            h.style.left = 'auto';
+                            h.style.right = '0';
+                        }
+                    }
+                }
+            }
+        }
+
+        function adjustWidth(el) { el.style.width = Math.max((el.value || el.placeholder || "").length * 10 + 25, 60) + "px"; }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans;
+            if (el.value.toLowerCase().trim() === ans.toLowerCase().trim()) {
+                el.value = "";
+                el.classList.remove('correct');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+            }
+            adjustWidth(el);
+        }
+
+        function checkAll() {
+            document.querySelectorAll('input[type="text"]').forEach(el => {
+                if (!el.value) return;
+                const isCorrect = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+                el.classList.toggle('correct', isCorrect);
+                el.classList.toggle('incorrect-marked', !isCorrect);
+            });
+
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                if (!slot.textContent.trim()) return;
+                const isCorrect = slot.textContent.toLowerCase().trim() === slot.dataset.ans.toLowerCase().trim();
+                slot.classList.toggle('correct', isCorrect);
+                slot.classList.toggle('incorrect-marked', !isCorrect);
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex2a' || prefix === 'ex2b') {
+                const bankId = prefix === 'ex2a' ? 'bank-ex2a' : 'bank-ex2b';
+                document.querySelectorAll(`.drop-slot[data-bank="${bankId}"]`).forEach(slot => {
+                    placeWord(slot.id, slot.dataset.ans, bankId);
+                    slot.classList.add('correct');
+                });
+                return;
+            }
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                adjustWidth(el);
+            });
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex2a' || prefix === 'ex2b') {
+                const bankId = prefix === 'ex2a' ? 'bank-ex2a' : 'bank-ex2b';
+                document.querySelectorAll(`.drop-slot[data-bank="${bankId}"]`).forEach(slot => removeWord(slot.id));
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+                return;
+            }
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = "";
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+        }
+
+        window.onload = () => {
+            buildWordBank('bank-ex2a', ex2aData.map(it => it.ans));
+            buildWordBank('bank-ex2b', ex2bData.map(it => it.ans));
+            renderEx2a(); renderEx2b(); renderEx3();
+            document.querySelectorAll('input').forEach(adjustWidth);
+
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.onclick = () => {
+                const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                themeToggle.innerText = theme === 'dark' ? '☀️' : '🌙';
+            };
+
+            // Resizer logic
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', () => isResizing = true);
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                let w = (e.clientX / window.innerWidth) * 100;
+                w = Math.min(60, Math.max(15, w));
+                panel.style.flex = `0 0 ${w}%`;
+            });
+            document.addEventListener('mouseup', () => isResizing = false);
+
+            // Close floating hints when clicking outside
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.hint-box.absolute').forEach(el => el.style.display = 'none');
+            });
+
+            // ENTER to check all
+            document.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); checkAll(); } });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
