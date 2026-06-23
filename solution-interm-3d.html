@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 3D: Future continuous and future perfect</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 3D ===== */
+
+        /* Word bank */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Drop slot */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Ex1 & Ex2 & Ex3 input rows */
+        .ex-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+            font-size: 1.05rem;
+        }
+
+        .ex-row .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        /* Inline group */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Hint box absolute */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Input fields */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Ex4 drag-drop layout */
+        .ex4-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .ex4-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex4-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 28px;
+        }
+
+        .ex4-text {
+            flex: 1;
+            color: var(--text);
+        }
+
+        /* Ex5 rows */
+        .ex5-row {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 14px;
+        }
+
+        .ex5-prompt {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1.05rem;
+        }
+
+        .ex5-answers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ex5-answers .inline-group {
+            flex: 1 1 300px;
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Grammar Reference (giống 3B) */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        #reference-content {
+            display: none;
+        }
+
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Ex2 timeline image */
+        .timeline-image {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 18px;
+        }
+
+        /* Ex1 inline sentence */
+        .ex1-sentence {
+            display: inline;
+            font-size: 1.05rem;
+            line-height: 2.2;
+        }
+
+        .ex1-sentence .inline-group {
+            margin: 0 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .word-bank {
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">3D</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Future continuous and future perfect</h1>
+                <p class="subtitle">I can talk about events in the future and when they will happen.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Future continuous &amp; Future perfect</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <!-- Group 1: Future continuous -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. Future continuous (Tương lai tiếp diễn)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <p><strong>Công thức:</strong> <em>will + be + V-ing</em></p>
+                        <div class="detail-item">
+                            <div class="detail-title">Cách dùng chính:</div>
+                            <ul class="grammar-list">
+                                <li>Diễn tả một hành động <strong>đang diễn ra</strong> tại một thời điểm cụ thể trong
+                                    tương lai.<br>
+                                    <em>At 8 pm tonight, I <strong>will be watching</strong> TV.</em>
+                                </li>
+                                <li>Diễn tả một hành động sẽ <strong>kéo dài</strong> trong một khoảng thời gian trong
+                                    tương lai.<br>
+                                    <em>This time next week, I <strong>will be lying</strong> on a beach.</em>
+                                </li>
+                                <li>Diễn tả một hành động trong tương lai đã được <strong>lên kế hoạch</strong> hoặc là
+                                    một phần của thói quen.<br>
+                                    <em>Don't call at 9 am – I <strong>will be driving</strong> to work.</em>
+                                </li>
+                            </ul>
+                            <div class="detail-title" style="margin-top:10px;">Dấu hiệu nhận biết:</div>
+                            <p style="margin-top:4px; color:var(--text-muted);">at this time tomorrow, at 10 am next
+                                Monday, this time next week, while, when (với hành động kéo dài).</p>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>I <strong>won't be working</strong> at 6 pm – I'll be at home.</em><br>
+                            <em>By 2030, we <strong>will be living</strong> in smart cities.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Future perfect -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. Future perfect (Tương lai hoàn thành)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <p><strong>Công thức:</strong> <em>will + have + V<sub>past participle</sub></em></p>
+                        <div class="detail-item">
+                            <div class="detail-title">Cách dùng chính:</div>
+                            <ul class="grammar-list">
+                                <li>Diễn tả một hành động sẽ <strong>hoàn thành</strong> <em>trước</em> một thời điểm
+                                    hoặc một hành động khác trong tương lai.<br>
+                                    <em>By 2025, I <strong>will have graduated</strong> from university.</em>
+                                </li>
+                                <li>Thường dùng với các cụm thời gian như <strong>by + time</strong>, <strong>by the
+                                        time</strong>, <strong>in + time period</strong>.<br>
+                                    <em>In a few years, they <strong>will have built</strong> a new hospital.</em>
+                                </li>
+                            </ul>
+                            <div class="detail-title" style="margin-top:10px;">Dấu hiệu nhận biết:</div>
+                            <p style="margin-top:4px; color:var(--text-muted);">by + thời điểm, by the time, in + khoảng
+                                thời gian, by then, by the end of...</p>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>She <strong>won't have finished</strong> the report by 6 pm.</em><br>
+                            <em>By 2040, scientists <strong>will have found</strong> a cure for many diseases.</em>
+                        </div>
+                        <div class="detail-item"
+                            style="background:rgba(239,68,68,0.07); border-left:4px solid var(--error); padding:10px; border-radius:6px; margin-top:10px;">
+                            <div class="detail-title" style="color:var(--error);">⚠️ Lưu ý phân biệt:</div>
+                            <ul class="grammar-list">
+                                <li><strong>Future continuous</strong> → nhấn mạnh <em>quá trình</em> đang diễn ra.<br>
+                                    <em>At 10 am, I <strong>will be working</strong>. (đang làm việc)</em>
+                                </li>
+                                <li><strong>Future perfect</strong> → nhấn mạnh <em>kết quả hoàn thành</em> trước một
+                                    thời điểm.<br>
+                                    <em>By 11 am, I <strong>will have finished</strong> my work. (xong việc)</em>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: So sánh trực tiếp -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. So sánh Future continuous vs Future perfect</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <table class="vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Tiêu chí</th>
+                                    <th>Future continuous</th>
+                                    <th>Future perfect</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Trọng tâm</td>
+                                    <td>Hành động đang diễn ra / kéo dài</td>
+                                    <td>Hành động đã hoàn thành</td>
+                                </tr>
+                                <tr>
+                                    <td>Công thức</td>
+                                    <td><strong>will be + V-ing</strong></td>
+                                    <td><strong>will have + V3/ed</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Thường với</td>
+                                    <td>at this time, while, when (hành động khác)</td>
+                                    <td>by + time, by the end of, in + khoảng thời gian</td>
+                                </tr>
+                                <tr>
+                                    <td>Ví dụ</td>
+                                    <td><em>At 8 am, I <strong>will be having</strong> breakfast.</em></td>
+                                    <td><em>By 9 am, I <strong>will have had</strong> breakfast.</em></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Group 4: Lỗi thường gặp -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>4. Lỗi thường gặp (Common Mistakes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <ul class="grammar-list">
+                            <li>❌ <em>By 2025, I will be finished my studies.</em> → ✅ <em>By 2025, I <strong>will have
+                                        finished</strong> my studies.</em><br>
+                                <small>Dùng <strong>future perfect</strong> để chỉ sự hoàn thành trước một mốc thời
+                                    gian.</small>
+                            </li>
+                            <li>❌ <em>At 10 pm tomorrow, I will have watched TV.</em> → ✅ <em>At 10 pm tomorrow, I
+                                    <strong>will be watching</strong> TV.</em><br>
+                                <small>Dùng <strong>future continuous</strong> để chỉ hành động đang diễn ra tại thời
+                                    điểm đó.</small>
+                            </li>
+                            <li>❌ <em>I will have work here for 10 years by 2030.</em> → ✅ <em>I will have
+                                    <strong>worked</strong> here for 10 years by 2030.</em><br>
+                                <small>Sau <strong>will have</strong> cần dùng <strong>past participle</strong>
+                                    (V3/ed).</small>
+                            </li>
+                            <li>❌ <em>By the end of the year, we will be finishing the project.</em> → ✅ <em>... we will
+                                    have finished the project.</em><br>
+                                <small>Cụm "by the end of" thường đi với <strong>future perfect</strong>.</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: English Grammar in Use – Cambridge, Unit 24)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 (ĐÃ SỬA: input nằm ngay vị trí ______) ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Make predictions about your future. Use the future
+                continuous, affirmative or negative form of the verbs in brackets.</div>
+            <div style="font-style:italic; color:var(--text-muted); margin-bottom:16px; font-size:1.05rem;">When I'm
+                thirty years old,</div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Look at the timeline for a new medical school. Write
+                sentences using the affirmative or negative form of the future perfect and the prompts below.</div>
+            <img src="img-int/module 3d-ex2.png" alt="Timeline for a new medical school" class="timeline-image"
+                style="max-width:100%; border-radius:12px; border:1px solid var(--glass-border); margin-bottom:18px;">
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Complete the text with the future continuous or future
+                perfect form of the verbs in brackets.</div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the future time phrases with the words below.</div>
+            <div class="word-bank" id="ex4-bank"></div>
+            <div class="ex4-items" id="ex4-items"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 5 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Write your own predictions for the future using the prompts
+                below. Use the future continuous or future perfect form and time phrases from exercise 4.</div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1 — giữ nguyên prompt với dấu gạch dưới, JS sẽ thay thế bằng input
+        const ex1Data = [
+            { num: 2, prompt: "I ______ (work) for a large company.", ans: "'ll be working|will be working|won't be working|will not be working", hint: "<strong>Đáp án:</strong> 'll be working / won't be working<br><strong>Bằng chứng:</strong> Dự đoán về tương lai (khi 30 tuổi).<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> để diễn tả hành động đang diễn ra tại thời điểm đó." },
+            { num: 3, prompt: "I ______ (earn) a lot of money.", ans: "'ll be earning|will be earning|won't be earning|will not be earning", hint: "<strong>Đáp án:</strong> 'll be earning / won't be earning<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> để diễn tả trạng thái/hành động kéo dài." },
+            { num: 4, prompt: "I ______ (spend) a lot of time doing hobbies.", ans: "'ll be spending|will be spending|won't be spending|will not be spending", hint: "<strong>Đáp án:</strong> 'll be spending / won't be spending<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Hành động sẽ kéo dài trong tương lai → future continuous." },
+            { num: 5, prompt: "I ______ (drive) an expensive car.", ans: "'ll be driving|will be driving|won't be driving|will not be driving", hint: "<strong>Đáp án:</strong> 'll be driving / won't be driving<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Hành động đang diễn ra tại thời điểm đó." },
+            { num: 6, prompt: "I ______ (live) with friends.", ans: "'ll be living|will be living|won't be living|will not be living", hint: "<strong>Đáp án:</strong> 'll be living / won't be living<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Hành động kéo dài → future continuous." },
+            { num: 7, prompt: "I ______ (travel) a lot for work and pleasure.", ans: "'ll be travelling|will be travelling|won't be travelling|will not be travelling", hint: "<strong>Đáp án:</strong> 'll be travelling / won't be travelling<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Hành động đang diễn ra → future continuous." },
+            { num: 8, prompt: "I ______ (see) the same people I see now.", ans: "'ll be seeing|will be seeing|won't be seeing|will not be seeing", hint: "<strong>Đáp án:</strong> 'll be seeing / won't be seeing<br><strong>Bằng chứng:</strong> Dự đoán về tương lai.<br><strong>Giải thích:</strong> Hành động kéo dài → future continuous." }
+        ];
+
+        // Ex2
+        const ex2Data = [
+            { num: 2, prompt: "by 2019 / architects / complete / the plans", ans: "By 2019, the architects will have completed the plans.|By 2019, the architects won't have completed the plans.", hint: "<strong>Đáp án:</strong> By 2019, the architects will have completed the plans.<br><strong>Bằng chứng:</strong> Năm 2018 hoàn thành kế hoạch → đến 2019 đã hoàn thành.<br><strong>Giải thích:</strong> Dùng <strong>future perfect</strong> với mốc thời gian 'by 2019'." },
+            { num: 3, prompt: "by 2019 / building work / begin", ans: "By 2019, building work will have begun.|By 2019, building work won't have begun.", hint: "<strong>Đáp án:</strong> By 2019, building work will have begun.<br><strong>Bằng chứng:</strong> Công trình bắt đầu năm 2020 → đến 2019 chưa bắt đầu.<br><strong>Giải thích:</strong> Dùng <strong>won't have begun</strong> vì 2020 > 2019." },
+            { num: 4, prompt: "by 2023 / building work / finish", ans: "By 2023, building work will have finished.|By 2023, building work won't have finished.", hint: "<strong>Đáp án:</strong> By 2023, building work won't have finished.<br><strong>Bằng chứng:</strong> Công trình hoàn thành năm 2024 → đến 2023 chưa xong.<br><strong>Giải thích:</strong> Dùng <strong>won't have finished</strong> vì 2024 > 2023." },
+            { num: 5, prompt: "by 2025 / the first students / arrive", ans: "By 2025, the first students will have arrived.|By 2025, the first students won't have arrived.", hint: "<strong>Đáp án:</strong> By 2025, the first students will have arrived.<br><strong>Bằng chứng:</strong> Sinh viên đến năm 2024 → đến 2025 đã đến.<br><strong>Giải thích:</strong> Dùng <strong>will have arrived</strong>." },
+            { num: 6, prompt: "by 2027 / the first students / graduate", ans: "By 2027, the first students will have graduated.|By 2027, the first students won't have graduated.", hint: "<strong>Đáp án:</strong> By 2027, the first students won't have graduated.<br><strong>Bằng chứng:</strong> Tốt nghiệp năm 2028 → đến 2027 chưa tốt nghiệp.<br><strong>Giải thích:</strong> Dùng <strong>won't have graduated</strong>." },
+            { num: 7, prompt: "by 2029 / the first students / graduate", ans: "By 2029, the first students will have graduated.|By 2029, the first students won't have graduated.", hint: "<strong>Đáp án:</strong> By 2029, the first students will have graduated.<br><strong>Bằng chứng:</strong> Tốt nghiệp năm 2028 → đến 2029 đã tốt nghiệp.<br><strong>Giải thích:</strong> Dùng <strong>will have graduated</strong>." }
+        ];
+
+        // Ex3
+        const ex3Data = [
+            { num: 1, prompt: "According to researcher Cadell Last from the Global Brain Institute, a completely new type of human ¹ ______ (evolve) by 2050.", ans: "will have evolved", hint: "<strong>Đáp án:</strong> will have evolved<br><strong>Bằng chứng:</strong> 'by 2050' → mốc thời gian trong tương lai.<br><strong>Giải thích:</strong> Hành động sẽ hoàn thành trước năm 2050 → <strong>future perfect</strong>." },
+            { num: 2, prompt: "We ² ______ (live) much longer on average – perhaps to the age of 120.", ans: "will be living", hint: "<strong>Đáp án:</strong> will be living<br><strong>Bằng chứng:</strong> Hành động kéo dài trong tương lai.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> cho hành động đang diễn ra." },
+            { num: 3, prompt: "And we ³ ______ (enjoy) our old age much more because even when we are 90 or 100, we ⁴ ______ (lead) active lives.", ans: "will be enjoying", hint: "<strong>Đáp án:</strong> will be enjoying<br><strong>Bằng chứng:</strong> Hành động sẽ kéo dài trong tương lai.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong>." },
+            { num: 4, prompt: "And we ³ ______ (enjoy) our old age much more because even when we are 90 or 100, we ⁴ ______ (lead) active lives.", ans: "will be leading", hint: "<strong>Đáp án:</strong> will be leading<br><strong>Bằng chứng:</strong> Hành động kéo dài song song với tuổi già.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong>." },
+            { num: 5, prompt: "Mr Last believes that, by the middle of this century, scientists ⁵ ______ (invent) robots that can do most tasks, so humans ⁶ ______ (not do) boring housework or repetitive jobs.", ans: "will have invented", hint: "<strong>Đáp án:</strong> will have invented<br><strong>Bằng chứng:</strong> 'by the middle of this century' → mốc thời gian.<br><strong>Giải thích:</strong> Hành động hoàn thành trước mốc → <strong>future perfect</strong>." },
+            { num: 6, prompt: "Mr Last believes that, by the middle of this century, scientists ⁵ ______ (invent) robots that can do most tasks, so humans ⁶ ______ (not do) boring housework or repetitive jobs.", ans: "won't be doing|will not be doing", hint: "<strong>Đáp án:</strong> won't be doing<br><strong>Bằng chứng:</strong> Hành động sẽ không diễn ra trong tương lai.<br><strong>Giải thích:</strong> Dùng <strong>future continuous phủ định</strong>." },
+            { num: 7, prompt: "Instead, they ⁷ ______ (spend) more time living in virtual reality.", ans: "will be spending", hint: "<strong>Đáp án:</strong> will be spending<br><strong>Bằng chứng:</strong> Hành động thay thế sẽ diễn ra.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong>." },
+            { num: 8, prompt: "But not everybody agrees with Mr Last's vision. Some scientists think that even by the end of the century, humans ⁸ ______ (not change) very much.", ans: "won't have changed|will not have changed", hint: "<strong>Đáp án:</strong> won't have changed<br><strong>Bằng chứng:</strong> 'by the end of the century' → mốc thời gian.<br><strong>Giải thích:</strong> Hành động sẽ không hoàn thành trước mốc → <strong>future perfect phủ định</strong>." }
+        ];
+
+        // Ex4 - drag-drop
+        const ex4Items = [
+            { num: 1, text: "within 50 years", ans: "within" },
+            { num: 2, text: "about 100 years ______ now", ans: "from" },
+            { num: 3, text: "______ some point in the future", ans: "at" },
+            { num: 4, text: "______ a million years' time", ans: "in" },
+            { num: 5, text: "______ the end of the century / millennium", ans: "by" },
+            { num: 6, text: "a few thousand years ______ the future", ans: "into" }
+        ];
+        const ex4Bank = ["at", "by", "from", "in", "into", "within"];
+
+        // Ex5
+        const ex5Data = [
+            { num: 1, prompt: "humans / live on Mars", ans: "Humans will be living on Mars.|Humans won't be living on Mars.|Humans will have lived on Mars.|Humans won't have lived on Mars.", hint: "<strong>Đáp án:</strong> Humans will be living on Mars / won't be living ...<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> hoặc <strong>future perfect</strong>." },
+            { num: 2, prompt: "scientists / accidentally create a new disease", ans: "Scientists will have accidentally created a new disease.|Scientists won't have accidentally created a new disease.", hint: "<strong>Đáp án:</strong> Scientists will have accidentally created ...<br><strong>Giải thích:</strong> Dùng <strong>future perfect</strong> với 'by then'." },
+            { num: 3, prompt: "all wars / end", ans: "All wars will have ended.|All wars won't have ended.", hint: "<strong>Đáp án:</strong> All wars will have ended / won't have ended.<br><strong>Giải thích:</strong> Dùng <strong>future perfect</strong> để chỉ sự hoàn thành." },
+            { num: 4, prompt: "robots / do most jobs", ans: "Robots will be doing most jobs.|Robots won't be doing most jobs.|Robots will have done most jobs.", hint: "<strong>Đáp án:</strong> Robots will be doing most jobs.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> cho hành động kéo dài." },
+            { num: 5, prompt: "many people / have holidays in space", ans: "Many people will be having holidays in space.|Many people won't be having holidays in space.|Many people will have had holidays in space.|Many people won't have had holidays in space.", hint: "<strong>Đáp án:</strong> Many people will be having holidays in space.<br><strong>Giải thích:</strong> Dùng <strong>future continuous</strong> hoặc <strong>future perfect</strong>." }
+        ];
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 (đã sửa: input nằm ngay vị trí ______) --------
+        function renderEx1() {
+            const container = document.getElementById('ex1-container');
+
+            ex1Data.forEach((item, i) => {
+                const qid = `ex1-q${i}`;
+
+                // Tách prompt thành các phần: trước ______, sau ______
+                const parts = item.prompt.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+
+                // Tạo input inline
+                const inputHtml = `<span class="inline-group">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:120px; text-align:center;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+
+                // Ghép lại thành câu hoàn chỉnh
+                const sentenceHtml = `${before}${inputHtml}${after}`;
+
+                const row = document.createElement('div');
+                row.className = 'ex-row';
+                row.innerHTML = `<span class="q-label">${item.num}.</span><span class="ex1-sentence">${sentenceHtml}</span>`;
+                container.appendChild(row);
+            });
+        }
+
+        // -------- Ex2 --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map((item, i) => {
+                const qid = `ex2-q${i}`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="prompt" style="color:var(--text-muted); font-style:italic; margin-right:6px;">${item.prompt}</span>
+                    <span class="inline-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:300px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex3 --------
+        function renderEx3() {
+            const container = document.getElementById('ex3-container');
+            let fullHtml = `<div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--glass-border); line-height:2.4; font-size:1.05rem;">`;
+
+            const segments = [
+                { num: 1, before: "According to researcher Cadell Last from the Global Brain Institute, a completely new type of human ¹ ", after: " by 2050. " },
+                { num: 2, before: "We ² ", after: " much longer on average – perhaps to the age of 120. " },
+                { num: 3, before: "And we ³ ", after: " our old age much more because even when we are 90 or 100, we ⁴ " },
+                { num: 4, before: "", after: " active lives. " },
+                { num: 5, before: "Mr Last believes that, by the middle of this century, scientists ⁵ ", after: " robots that can do most tasks, so humans ⁶ " },
+                { num: 6, before: "", after: " boring housework or repetitive jobs. " },
+                { num: 7, before: "Instead, they ⁷ ", after: " more time living in virtual reality. " },
+                { num: 8, before: "But not everybody agrees with Mr Last’s vision. Some scientists think that even by the end of the century, humans ⁸ ", after: " very much." }
+            ];
+
+            segments.forEach(seg => {
+                const item = ex3Data.find(d => d.num === seg.num);
+                if (!item) return;
+                const qid = `ex3-q${seg.num}`;
+                const inputHtml = `<span class="inline-group">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:120px; text-align:center;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                fullHtml += seg.before + inputHtml + seg.after;
+            });
+
+            fullHtml += `</div>`;
+            container.innerHTML = fullHtml;
+        }
+
+        // -------- Ex4 (Drag-Drop) --------
+        let ex4State = {};
+        let ex4Dragging = null;
+
+        function renderEx4() {
+            const bank = document.getElementById('ex4-bank');
+            bank.innerHTML = ex4Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex4DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+
+            const items = document.getElementById('ex4-items');
+            items.innerHTML = ex4Items.map(item => {
+                const slotId = `ex4-slot-${item.num}`;
+                let textHtml = item.text;
+                if (textHtml.includes('______')) {
+                    const parts = textHtml.split('______');
+                    textHtml = parts[0] + `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex4Drop(event, '${slotId}')"
+                          onclick="ex4RemoveSlot('${slotId}')"></span>` + parts[1];
+                } else {
+                    textHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex4Drop(event, '${slotId}')"
+                          onclick="ex4RemoveSlot('${slotId}')"></span> ` + textHtml;
+                }
+                return `<div class="ex4-item">
+                    <span class="ex4-num">${item.num}.</span>
+                    <span class="ex4-text">${textHtml}</span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex4ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">
+                        <strong>Đáp án:</strong> ${item.ans}<br>
+                        <strong>Giải thích:</strong> Cụm từ thời gian thường dùng với future perfect.
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex4DragStart(e) {
+            ex4Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex4Dragging);
+        }
+
+        function ex4Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex4Dragging) return;
+            for (let key in ex4State) {
+                if (ex4State[key] === ex4Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+            }
+            slot.textContent = ex4Dragging;
+            slot.classList.add('filled');
+            ex4State[slotId] = ex4Dragging;
+            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                if (el.dataset.word === ex4Dragging) el.classList.add('used');
+            });
+            ex4Dragging = null;
+        }
+
+        function ex4RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const word = slot.textContent.trim();
+            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                if (el.dataset.word === word) el.classList.remove('used');
+            });
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex4State[slotId];
+        }
+
+        function ex4ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex4RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex4State) {
+                if (ex4State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+            }
+            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.remove('used');
+            });
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex4State[slotId] = ans;
+            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.add('used');
+            });
+        }
+
+        // -------- Ex5 --------
+        function renderEx5() {
+            const container = document.getElementById('ex5-container');
+            container.innerHTML = ex5Data.map((item, i) => {
+                const qid = `ex5-q${i}`;
+                return `<div class="ex5-row">
+                    <div class="ex5-prompt">${item.num}. ${item.prompt}</div>
+                    <div class="ex5-answers">
+                        <span class="inline-group">
+                            <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:300px; text-align:left;" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                        </span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        /* ================================================================
+           HELPERS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Data.forEach((item, i) => {
+                    const el = document.getElementById(`ex1-q${i}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach((item, i) => {
+                    const el = document.getElementById(`ex2-q${i}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex3') {
+                ex3Data.forEach((item) => {
+                    const el = document.getElementById(`ex3-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex4') {
+                ex4Items.forEach((item) => {
+                    const slotId = `ex4-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex4State) {
+                        if (ex4State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex4State[key];
+                        }
+                    }
+                    document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.remove('used');
+                    });
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex4State[slotId] = ans;
+                    document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.add('used');
+                    });
+                });
+            } else if (prefix === 'ex5') {
+                ex5Data.forEach((item, i) => {
+                    const el = document.getElementById(`ex5-q${i}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex1-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#ex2-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex2-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#ex3-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex3-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex4') {
+                for (let key in ex4State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+                document.querySelectorAll('#ex4-bank .word-item').forEach(el => el.classList.remove('used'));
+                document.querySelectorAll('#ex4-items .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex5') {
+                document.querySelectorAll('#ex5-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex5-container .hint-box').forEach(h => h.style.display = 'none');
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            document.querySelectorAll('#ex4-items .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT
+           ================================================================ */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex4Drop = ex4Drop;
+        window.ex4RemoveSlot = ex4RemoveSlot;
+        window.ex4ShowSlot = ex4ShowSlot;
+        window.ex4DragStart = ex4DragStart;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>

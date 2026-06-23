@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 3B: Speculating and predicting</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 3B (không trùng với access-theme.css) ===== */
+
+        /* Layout cho Exercise 3 & 4 */
+        .ex3-left,
+        .ex4-left {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Exercise 3 & 4 Items */
+        .ex3-item,
+        .ex4-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative; /* Crucial for absolute hint positioning */
+        }
+        .ex4-item {
+            line-height: 2.2;
+            font-size: 1.05rem;
+        }
+        .ex3-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 28px;
+        }
+        .ex3-text {
+            flex: 0 0 auto;
+            color: var(--text);
+        }
+
+        /* Drop slot dùng chung cho ex3 và ex4 */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Word bank cho ex3 và ex4 */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+        }
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+        .word-item.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Exercise 5: Tick / Rewrite */
+        .ex5-row {
+            margin-bottom: 16px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: var(--card-bg);
+            transition: border-color 0.3s;
+        }
+        .ex5-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .ex5-sentence {
+            flex: 1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+        .ex5-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .ex5-tick-btn {
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+            background: var(--card-bg);
+            transition: all 0.2s;
+        }
+        .ex5-tick-btn.correct-btn {
+            border-color: #16a34a;
+            color: #16a34a;
+        }
+        .ex5-tick-btn.correct-btn.active {
+            background: #16a34a;
+            color: #fff;
+        }
+        .ex5-tick-btn.wrong-btn {
+            border-color: #dc2626;
+            color: #dc2626;
+        }
+        .ex5-tick-btn.wrong-btn.active {
+            background: #dc2626;
+            color: #fff;
+        }
+        .ex5-rewrite {
+            margin-top: 10px;
+            display: none;
+        }
+        .ex5-rewrite-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .ex5-rewrite-input {
+            border: none;
+            border-bottom: 2px solid var(--border, #ccc);
+            padding: 4px 8px;
+            font-size: 1rem;
+            color: var(--secondary, #27ae60);
+            font-weight: bold;
+            background: transparent;
+            width: auto;
+            min-width: 220px;
+            max-width: 100%;
+            text-align: left;
+            field-sizing: content;
+            transition: all 0.2s;
+        }
+        .ex5-rewrite-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary);
+        }
+        .ex5-rewrite-input.correct {
+            color: var(--secondary);
+            border-bottom-color: var(--secondary);
+        }
+        .ex5-rewrite-input.incorrect-marked {
+            color: #e74c3c;
+            border-bottom-color: #e74c3c;
+        }
+
+        /* Sticky word banks at the top */
+        .exercise-card .word-bank {
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Đảm bảo hint box không bị tràn */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Các ô input trong ex1/ex2 */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Định dạng dòng ex1/ex2 */
+        .ex1-row,
+        .ex2-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .ex1-row .q-label,
+        .ex2-row .q-label {
+            font-weight: 700;
+            color: var(--text);
+            min-width: 24px;
+        }
+        .ex1-row .prompt,
+        .ex2-row .prompt {
+            color: var(--text-muted);
+            font-style: italic;
+            margin-right: 6px;
+        }
+
+        /* Grammar Reference (đã có trong access-theme.css, nhưng cần override một vài thứ) */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+        #reference-content {
+            display: none;
+        }
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Control buttons */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #64748b;
+        }
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        /* Màu sắc cho mức độ dự đoán (bảng) */
+        .level-table {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+        .level-table .level-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .level-table .level-pct {
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .level-table .level-expr {
+            font-weight: 600;
+            color: var(--text);
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">3B</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Speculating and predicting</h1>
+                <p class="subtitle">I can speculate and make predictions about the future.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Động từ khuyết thiếu dự đoán (Speculating and predicting)</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <!-- Group 1 -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. Các mức độ chắc chắn (Certainty levels)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <table class="vocab-table">
+                            <thead><tr><th>Mức độ</th><th>Động từ khuyết thiếu</th></tr></thead>
+                            <tbody>
+                                <tr><td>100% (chắc chắn)</td><td><strong>will definitely</strong></td></tr>
+                                <tr><td>90% (rất có thể)</td><td><strong>will probably / probably will</strong></td></tr>
+                                <tr><td>70% (có thể)</td><td><strong>could / may / might</strong></td></tr>
+                                <tr><td>40% (có thể không)</td><td><strong>may not / might not</strong></td></tr>
+                                <tr><td>10% (hầu như không)</td><td><strong>probably won't</strong></td></tr>
+                                <tr><td>0% (chắc chắn không)</td><td><strong>definitely won't</strong></td></tr>
+                            </tbody>
+                        </table>
+                        <div class="example-box-detail">
+                            <em>It will definitely rain tomorrow. (100%)</em><br>
+                            <em>She might be late. (70%)</em><br>
+                            <em>They probably won't come. (10%)</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: First Conditional -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. Câu điều kiện loại 1 (First Conditional)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <p><strong>Công thức:</strong> <em>If + S + V<sub>hiện tại đơn</sub>, S + will/won't + V<sub>nguyên thể</sub></em></p>
+                        <div class="example-box-detail">
+                            <em>If you heat water, it boils. (truth)</em><br>
+                            <em>If it rains, I will stay at home. (future prediction)</em>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Lưu ý:</div>
+                            <ul class="grammar-list">
+                                <li>Mệnh đề if chia ở thì hiện tại đơn, không dùng <strong>will</strong> trong mệnh đề if.</li>
+                                <li>Có thể dùng <strong>may/might/could</strong> thay cho <strong>will</strong> để thể hiện khả năng thấp hơn.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Common Mistakes -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. Lỗi thường gặp (Common Mistakes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <ul class="grammar-list">
+                            <li>❌ <em>If you go to the cinema, I might to go too.</em> → ✅ <em>... I might go too.</em><br><small>Sau <strong>might</strong> dùng nguyên thể không "to".</small></li>
+                            <li>❌ <em>The weather could not be very good tomorrow.</em> → ✅ <em>... may not / might not be ...</em><br><small><strong>Could not</strong> thường dùng cho khả năng trong quá khứ hoặc phép lịch sự, không dùng để dự đoán tương lai.</small></li>
+                            <li>❌ <em>Sam won't probably be at home.</em> → ✅ <em>Sam probably won't be ...</em><br><small>Vị trí của <strong>probably</strong> là sau <strong>will</strong> (<em>will probably</em>) hoặc trước <strong>won't</strong> (<em>probably won't</em>).</small></li>
+                            <li>❌ <em>I'll go if tickets will be cheap.</em> → ✅ <em>... if tickets are cheap.</em><br><small>Trong mệnh đề if không dùng <strong>will</strong>.</small></li>
+                        </ul>
+                    </div>
+                </div>
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: English Grammar in Use – Cambridge, Unit 11 & 25)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Look at the table. Then write sentences using the prompts.</div>
+            <div class="level-table">
+                <span class="level-item"><span class="level-pct">100%</span> <span class="level-expr">will definitely</span></span>
+                <span class="level-item"><span class="level-pct">90%</span> <span class="level-expr">will probably</span></span>
+                <span class="level-item"><span class="level-pct">70%</span> <span class="level-expr">could / may / might</span></span>
+                <span class="level-item"><span class="level-pct">40%</span> <span class="level-expr">may not / might not</span></span>
+                <span class="level-item"><span class="level-pct">10%</span> <span class="level-expr">probably won't</span></span>
+                <span class="level-item"><span class="level-pct">0%</span> <span class="level-expr">definitely won't</span></span>
+            </div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> USE OF ENGLISH Rewrite the sentence so that it has a similar meaning using the words in brackets.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Match 1–6 with a–f to make predictions.</div>
+            <div class="word-bank" id="ex3-bank"></div>
+            <div class="ex3-left" id="ex3-left"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the first conditional sentences with the verbs below. Use the present simple form and will / won’t + base form.</div>
+            <div class="word-bank" id="ex4-bank"></div>
+            <p style="margin-top:8px; margin-bottom:15px; font-size:0.9rem; color:var(--text-muted); font-style:italic; text-align:center;">Mỗi từ có thể dùng nhiều lần.</p>
+            <div class="ex4-left" id="ex4-left"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 5 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Some of the sentences are incorrect. Rewrite them correctly. Tick the correct sentences.</div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1
+        const ex1Data = [
+            { num: 1, prompt: "It / rain / tomorrow (70%)", ans: "It might rain tomorrow.|It may rain tomorrow.|It could rain tomorrow.",
+                hint: "<strong>Đáp án:</strong> It might rain tomorrow.<br><strong>Bằng chứng:</strong> (70%) → mức độ chắc chắn trung bình.<br><strong>Giải thích:</strong> Dùng <strong>might/may/could</strong> để diễn tả khả năng xảy ra khoảng 70%." },
+            { num: 2, prompt: "I / go to bed late tonight (0%)", ans: "I definitely won't go to bed late tonight.",
+                hint: "<strong>Đáp án:</strong> I definitely won't go to bed late tonight.<br><strong>Bằng chứng:</strong> (0%) → chắc chắn không xảy ra.<br><strong>Giải thích:</strong> Dùng <strong>definitely won't</strong> cho xác suất 0%." },
+            { num: 3, prompt: "Tom / pass all his exams (100%)", ans: "Tom will definitely pass all his exams.",
+                hint: "<strong>Đáp án:</strong> Tom will definitely pass all his exams.<br><strong>Bằng chứng:</strong> (100%) → chắc chắn xảy ra.<br><strong>Giải thích:</strong> Dùng <strong>will definitely</strong> cho xác suất 100%." },
+            { num: 4, prompt: "Lisa / go to the doctor's tomorrow (70%)", ans: "Lisa might go to the doctor's tomorrow.|Lisa may go to the doctor's tomorrow.|Lisa could go to the doctor's tomorrow.",
+                hint: "<strong>Đáp án:</strong> Lisa might go to the doctor's tomorrow.<br><strong>Bằng chứng:</strong> (70%) → khả năng khá cao.<br><strong>Giải thích:</strong> Dùng <strong>might/may/could</strong> cho khả năng 70%." },
+            { num: 5, prompt: "I / get the answer right (40%)", ans: "I may not get the answer right.|I might not get the answer right.",
+                hint: "<strong>Đáp án:</strong> I may not get the answer right.<br><strong>Bằng chứng:</strong> (40%) → khả năng thấp hơn không.<br><strong>Giải thích:</strong> Dùng <strong>may not / might not</strong> cho xác suất 40%." },
+            { num: 6, prompt: "Fred / see his girlfriend this weekend (90%)", ans: "Fred will probably see his girlfriend this weekend.",
+                hint: "<strong>Đáp án:</strong> Fred will probably see his girlfriend this weekend.<br><strong>Bằng chứng:</strong> (90%) → rất có thể.<br><strong>Giải thích:</strong> Dùng <strong>will probably</strong> cho xác suất 90%." },
+            { num: 7, prompt: "Jade / play computer games this evening (10%)", ans: "Jade probably won't play computer games this evening.",
+                hint: "<strong>Đáp án:</strong> Jade probably won't play computer games this evening.<br><strong>Bằng chứng:</strong> (10%) → rất khó xảy ra.<br><strong>Giải thích:</strong> Dùng <strong>probably won't</strong> cho xác suất 10%." }
+        ];
+
+        // Ex2
+        const ex2Data = [
+            { num: 1, prompt: "I doubt scientists will find a cure for cancer in the near future. (probably)", ans: "Scientists probably won't find a cure for cancer in the near future.",
+                hint: "<strong>Đáp án:</strong> Scientists probably won't find a cure...<br><strong>Bằng chứng:</strong> 'doubt' = nghi ngờ → khả năng thấp.<br><strong>Giải thích:</strong> Diễn đạt lại bằng <strong>probably won't</strong> để thể hiện sự hoài nghi." },
+            { num: 2, prompt: "I'm certain that doctors won't find a cure for the common cold. (definitely)", ans: "Doctors definitely won't find a cure for the common cold.",
+                hint: "<strong>Đáp án:</strong> Doctors definitely won't find a cure...<br><strong>Bằng chứng:</strong> 'certain that... won't' → chắc chắn không.<br><strong>Giải thích:</strong> Dùng <strong>definitely won't</strong> để nhấn mạnh sự chắc chắn." },
+            { num: 3, prompt: "It's possible that millions of people will get ill from the flu virus this winter. (may)", ans: "Millions of people may get ill from the flu virus this winter.",
+                hint: "<strong>Đáp án:</strong> Millions of people may get ill...<br><strong>Bằng chứng:</strong> 'possible' → khả năng xảy ra.<br><strong>Giải thích:</strong> Dùng <strong>may</strong> để diễn tả khả năng." },
+            { num: 4, prompt: "I'm sure bio-printing of organs will become a reality. (definitely)", ans: "Bio-printing of organs will definitely become a reality.",
+                hint: "<strong>Đáp án:</strong> Bio-printing of organs will definitely become a reality.<br><strong>Bằng chứng:</strong> 'sure' → chắc chắn.<br><strong>Giải thích:</strong> Dùng <strong>will definitely</strong> để nhấn mạnh sự chắc chắn." },
+            { num: 5, prompt: "I'm fairly sure people will be healthier in the future. (probably)", ans: "People will probably be healthier in the future.",
+                hint: "<strong>Đáp án:</strong> People will probably be healthier in the future.<br><strong>Bằng chứng:</strong> 'fairly sure' → khá chắc chắn.<br><strong>Giải thích:</strong> Dùng <strong>will probably</strong> để thể hiện mức độ khá chắc chắn." },
+            { num: 6, prompt: "It's possible that antibiotics won't be effective in the future. (might)", ans: "Antibiotics might not be effective in the future.",
+                hint: "<strong>Đáp án:</strong> Antibiotics might not be effective in the future.<br><strong>Bằng chứng:</strong> 'possible' → khả năng, nhưng không chắc.<br><strong>Giải thích:</strong> Dùng <strong>might not</strong> để diễn tả khả năng không xảy ra." }
+        ];
+
+        // Ex3
+        const ex3Left = [
+            { num: 1, text: "If you touch that hot saucepan,", ans: "d" },
+            { num: 2, text: "If you take painkillers,", ans: "f" },
+            { num: 3, text: "If you twist your ankle,", ans: "a" },
+            { num: 4, text: "If you break your arm,", ans: "b" },
+            { num: 5, text: "If you aren't careful with that knife,", ans: "c" },
+            { num: 6, text: "If you have a bad nosebleed,", ans: "e" }
+        ];
+        const ex3Right = [
+            { letter: "a", text: "you won't be able to walk." },
+            { letter: "b", text: "you'll have to go to hospital." },
+            { letter: "c", text: "you might cut yourself." },
+            { letter: "d", text: "you'll burn yourself." },
+            { letter: "e", text: "you could lose a lot of blood." },
+            { letter: "f", text: "your headache will disappear." }
+        ];
+        // Hint cho từng câu ex3 dựa trên nghĩa
+        const ex3Hints = {
+            1: "<strong>Đáp án: d</strong> – you'll burn yourself.<br><strong>Bằng chứng:</strong> Nếu chạm vào chảo nóng → bị bỏng.<br><strong>Giải thích:</strong> Mệnh đề if diễn tả hành động, mệnh đề chính là kết quả tất yếu.",
+            2: "<strong>Đáp án: f</strong> – your headache will disappear.<br><strong>Bằng chứng:</strong> Uống thuốc giảm đau → hết đau đầu.<br><strong>Giải thích:</strong> Kết quả hợp lý theo kinh nghiệm.",
+            3: "<strong>Đáp án: a</strong> – you won't be able to walk.<br><strong>Bằng chứng:</strong> Vặn mắt cá chân → không thể đi lại.<br><strong>Giải thích:</strong> Hành động trong mệnh đề if dẫn đến kết quả tất yếu.",
+            4: "<strong>Đáp án: b</strong> – you'll have to go to hospital.<br><strong>Bằng chứng:</strong> Gãy tay → phải đến bệnh viện.<br><strong>Giải thích:</strong> Kết quả logic của một chấn thương nghiêm trọng.",
+            5: "<strong>Đáp án: c</strong> – you might cut yourself.<br><strong>Bằng chứng:</strong> Không cẩn thận với dao → có thể bị đứt tay.<br><strong>Giải thích:</strong> Dùng <strong>might</strong> để diễn tả khả năng xảy ra.",
+            6: "<strong>Đáp án: e</strong> – you could lose a lot of blood.<br><strong>Bằng chứng:</strong> Chảy máu mũi nặng → có thể mất nhiều máu.<br><strong>Giải thích:</strong> Dùng <strong>could</strong> để diễn tả khả năng tiềm ẩn."
+        };
+
+        // Ex4
+        const ex4Data = [
+            { num: 1, before: "If scientists", mid: "cures for most diseases, people", after: "much longer." },
+            { num: 2, before: "If the climate", mid: "warmer, sea levels", after: "." },
+            { num: 3, before: "Many endangered species", mid: "if we don't", after: "them." },
+            { num: 4, before: "We", mid: "stop climate change if we", after: "less fossil fuels." },
+            { num: 5, before: "If we", mid: "the rainforests, there", after: "more carbon dioxide in the atmosphere." },
+            { num: 6, before: "If we", mid: "nuclear weapons, I think the world", after: "a much safer place." }
+        ];
+        const ex4Answers = [
+            ["find", "will live"],
+            ["gets", "will rise"],
+            ["will die out", "protect"],
+            ["won't be able to", "don't use"],
+            ["cut down", "will be"],
+            ["get rid of", "will be"]
+        ];
+        const ex4Bank = ["be", "be not able to", "cut down", "die out", "find", "get", "get rid of", "live", "protect", "rise",
+            "not use"
+        ];
+        const ex4Hints = [
+            "<strong>Đáp án:</strong> find / will live<br><strong>Bằng chứng:</strong> Nếu các nhà khoa học tìm ra cách chữa bệnh → con người sống lâu hơn.<br><strong>Giải thích:</strong> Mệnh đề if (hiện tại đơn) → kết quả (will + V).",
+            "<strong>Đáp án:</strong> gets / will rise<br><strong>Bằng chứng:</strong> Nếu khí hậu ấm lên → mực nước biển dâng.<br><strong>Giải thích:</strong> Quan hệ nguyên nhân – kết quả rõ ràng.",
+            "<strong>Đáp án:</strong> will die out / protect<br><strong>Bằng chứng:</strong> Nhiều loài nguy cấp sẽ tuyệt chủng nếu không được bảo vệ.<br><strong>Giải thích:</strong> Mệnh đề if phủ định → kết quả tiêu cực.",
+            "<strong>Đáp án:</strong> won't be able to / don't use<br><strong>Bằng chứng:</strong> Chúng ta sẽ không thể ngăn biến đổi khí hậu nếu không giảm nhiên liệu hóa thạch.<br><strong>Giải thích:</strong> Cấu trúc phủ định trong cả hai mệnh đề.",
+            "<strong>Đáp án:</strong> cut down / will be<br><strong>Bằng chứng:</strong> Nếu chặt phá rừng → sẽ có nhiều CO₂ hơn.<br><strong>Giải thích:</strong> Hành động trong mệnh đề if dẫn đến hậu quả.",
+            "<strong>Đáp án:</strong> get rid of / will be<br><strong>Bằng chứng:</strong> Nếu loại bỏ vũ khí hạt nhân → thế giới an toàn hơn.<br><strong>Giải thích:</strong> Kết quả tích cực từ hành động tích cực."
+        ];
+
+        // Ex5
+        const ex5Data = [
+            { sentence: 'If you go to the cinema, I might to go too.', correct: false, rewrite: 'If you go to the cinema, I might go too.',
+                hint: "<strong>Đáp án:</strong> If you go to the cinema, I might go too.<br><strong>Lỗi:</strong> Sau <strong>might</strong> dùng nguyên thể không 'to'.<br><strong>Giải thích:</strong> Động từ khuyết thiếu (might) luôn đi với V nguyên thể." },
+            { sentence: 'The weather could not be very good tomorrow.', correct: false, rewrite: 'The weather may not be very good tomorrow.|The weather might not be very good tomorrow.',
+                hint: "<strong>Đáp án:</strong> The weather may not be very good tomorrow.<br><strong>Lỗi:</strong> 'could not' không dùng để dự đoán tương lai.<br><strong>Giải thích:</strong> Dùng <strong>may not / might not</strong> để diễn tả khả năng không xảy ra." },
+            { sentence: "I'll probably get up early tomorrow.", correct: true, rewrite: '',
+                hint: "<strong>Câu đúng.</strong><br><strong>Giải thích:</strong> Vị trí của <strong>probably</strong> sau <strong>will</strong> là đúng." },
+            { sentence: "Sam won't probably be at home this evening.", correct: false, rewrite: "Sam probably won't be at home this evening.",
+                hint: "<strong>Đáp án:</strong> Sam probably won't be at home this evening.<br><strong>Lỗi:</strong> Sai vị trí của <strong>probably</strong>.<br><strong>Giải thích:</strong> <strong>Probably</strong> đứng trước <strong>won't</strong> (not sau won't)." },
+            { sentence: "You could be right.", correct: true, rewrite: '',
+                hint: "<strong>Câu đúng.</strong><br><strong>Giải thích:</strong> 'could' dùng để diễn tả khả năng, đúng ngữ pháp." },
+            { sentence: "I'll go to the concert if the tickets will be cheap.", correct: false, rewrite: "I'll go to the concert if the tickets are cheap.",
+                hint: "<strong>Đáp án:</strong> I'll go to the concert if the tickets are cheap.<br><strong>Lỗi:</strong> Không dùng <strong>will</strong> trong mệnh đề if.<br><strong>Giải thích:</strong> Mệnh đề if chia ở hiện tại đơn." }
+        ];
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 --------
+        function renderEx1() {
+            const container = document.getElementById('ex1-container');
+            container.innerHTML = ex1Data.map((item, i) => {
+                const qid = `ex1-q${i}`;
+                return `<div class="ex1-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="prompt">${item.prompt}</span>
+                    <span class="inline-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:200px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex2 --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map((item, i) => {
+                const qid = `ex2-q${i}`;
+                return `<div class="ex2-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="prompt">${item.prompt}</span>
+                    <span class="inline-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:300px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex3 (Matching Drag-Drop) --------
+        let ex3State = {};
+        let ex3Dragging = null;
+
+        function renderEx3() {
+            const left = document.getElementById('ex3-left');
+            left.innerHTML = ex3Left.map(item => {
+                const slotId = `ex3-slot-${item.num}`;
+                return `<div class="ex3-item">
+                    <span class="ex3-num">${item.num}.</span>
+                    <span class="ex3-text">${item.text}</span>
+                    <span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-num="${item.num}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex3Drop(event, '${slotId}')"
+                          onclick="ex3RemoveSlot('${slotId}')"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex3ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">${ex3Hints[item.num]}</div>
+                </div>`;
+            }).join('');
+
+            const bank = document.getElementById('ex3-bank');
+            bank.innerHTML = ex3Right.map(item => {
+                return `<div class="word-item" draggable="true" data-letter="${item.letter}" 
+                          ondragstart="ex3DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${item.letter}. ${item.text}</div>`;
+            }).join('');
+        }
+
+        function ex3DragStart(e) {
+            ex3Dragging = e.target.dataset.letter;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex3Dragging);
+        }
+
+        function ex3Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex3Dragging) return;
+            // Remove from any other slot
+            for (let key in ex3State) {
+                if (ex3State[key] === ex3Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                    break;
+                }
+            }
+            const letter = ex3Dragging;
+            slot.textContent = letter;
+            slot.classList.add('filled');
+            ex3State[slotId] = letter;
+            // mark used
+            document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                if (el.dataset.letter === letter) el.classList.add('used');
+            });
+            ex3Dragging = null;
+        }
+
+        function ex3RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const letter = slot.textContent.trim();
+            document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                if (el.dataset.letter === letter) el.classList.remove('used');
+            });
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex3State[slotId];
+        }
+
+        function ex3ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex3RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex3State) {
+                if (ex3State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                }
+            }
+            document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                if (el.dataset.letter === ans) el.classList.remove('used');
+            });
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex3State[slotId] = ans;
+            document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                if (el.dataset.letter === ans) el.classList.add('used');
+            });
+        }
+
+        // -------- Ex4 (Unlimited Drag-Drop) --------
+        let ex4Dragging = null;
+        let ex4State = {};
+
+        function renderEx4() {
+            const left = document.getElementById('ex4-left');
+            left.innerHTML = ex4Data.map((item, i) => {
+                const slot1 = `ex4-slot-${i+1}-1`;
+                const slot2 = `ex4-slot-${i+1}-2`;
+                const ans1 = ex4Answers[i][0];
+                const ans2 = ex4Answers[i][1];
+                return `<div class="ex4-item">
+                    <span class="ex4-num">${i+1}.</span>
+                    ${item.before} 
+                    <span class="drop-slot" id="${slot1}" data-ans="${ans1}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex4Drop(event, '${slot1}')"
+                          onclick="ex4RemoveSlot('${slot1}')"></span>
+                    ${item.mid}
+                    <span class="drop-slot" id="${slot2}" data-ans="${ans2}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex4Drop(event, '${slot2}')"
+                          onclick="ex4RemoveSlot('${slot2}')"></span>
+                    ${item.after}
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex4ShowSlot('${slot1}'); ex4ShowSlot('${slot2}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'ex4-hint-${i+1}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="ex4-hint-${i+1}-hint">${ex4Hints[i]}</div>
+                </div>`;
+            }).join('');
+
+            const bank = document.getElementById('ex4-bank');
+            bank.innerHTML = ex4Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex4DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+        }
+
+        function ex4DragStart(e) {
+            ex4Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex4Dragging);
+        }
+
+        function ex4Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex4Dragging) return;
+            slot.textContent = ex4Dragging;
+            slot.classList.add('filled');
+            ex4State[slotId] = ex4Dragging;
+            ex4Dragging = null;
+        }
+
+        function ex4RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex4State[slotId];
+        }
+
+        function ex4ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex4RemoveSlot(slotId);
+                return;
+            }
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex4State[slotId] = ans;
+        }
+
+        // -------- Ex5 (Tick/Rewrite) --------
+        let ex5State = {};
+
+        function renderEx5() {
+            const container = document.getElementById('ex5-container');
+            container.innerHTML = ex5Data.map((item, i) => {
+                const n = i + 1;
+                return `<div class="ex5-row" id="ex5-row-${n}">
+                    <div class="ex5-top">
+                        <span class="ex5-sentence"><strong>${n}.</strong> ${item.sentence}</span>
+                        <div class="ex5-controls">
+                            <button class="ex5-tick-btn correct-btn" id="ex5-correct-${n}" onclick="ex5Tick(${n}, true)" title="Câu đúng">✓ Đúng</button>
+                            <button class="ex5-tick-btn wrong-btn" id="ex5-wrong-${n}" onclick="ex5Tick(${n}, false)" title="Câu sai">✗ Sai</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-hint-${n}')" style="transform:scale(0.9);">i</button>
+                        </div>
+                    </div>
+                    <div class="hint-box" id="ex5-hint-${n}-hint" style="margin-top:8px;">${item.hint}</div>
+                    <div class="ex5-rewrite" id="ex5-rewrite-${n}">
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <span class="ex5-rewrite-label">Rewrite:</span>
+                            <input type="text" id="ex5-input-${n}" data-ans="${item.rewrite}" class="ex5-rewrite-input" oninput="adjustWidth(this)">
+                            <button class="eye-btn" onclick="ex5ShowRewriteAns(${n})" style="transform:scale(0.85);">👁️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex5Tick(n, isCorrect) {
+            const correctBtn = document.getElementById(`ex5-correct-${n}`);
+            const wrongBtn = document.getElementById(`ex5-wrong-${n}`);
+            const rewriteDiv = document.getElementById(`ex5-rewrite-${n}`);
+            const row = document.getElementById(`ex5-row-${n}`);
+
+            correctBtn.classList.remove('active');
+            wrongBtn.classList.remove('active');
+            if (isCorrect) {
+                correctBtn.classList.add('active');
+                ex5State[n] = 'correct';
+                rewriteDiv.style.display = 'none';
+            } else {
+                wrongBtn.classList.add('active');
+                ex5State[n] = 'wrong';
+                rewriteDiv.style.display = 'block';
+            }
+            // Update border
+            if (ex5State[n]) {
+                const isRight = (ex5State[n] === 'correct') === ex5Data[n - 1].correct;
+                row.style.borderColor = isRight ? '#16a34a' : '#dc2626';
+            } else {
+                row.style.borderColor = '';
+            }
+        }
+
+        function ex5ShowRewriteAns(n) {
+            const inp = document.getElementById(`ex5-input-${n}`);
+            if (!inp) return;
+            const ans = inp.dataset.ans;
+            if (inp.value.trim().toLowerCase() === ans.toLowerCase()) {
+                inp.value = '';
+                inp.classList.remove('correct', 'incorrect-marked');
+            } else {
+                inp.value = ans;
+                inp.classList.add('correct');
+                inp.classList.remove('incorrect-marked');
+            }
+            adjustWidth(inp);
+        }
+
+        /* ================================================================
+           HELPER FUNCTIONS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Data.forEach((item, i) => {
+                    const el = document.getElementById(`ex1-q${i}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach((item, i) => {
+                    const el = document.getElementById(`ex2-q${i}`);
+                    if (!el) return;
+                    const ans = item.ans.trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex3') {
+                ex3Left.forEach((item) => {
+                    const slotId = `ex3-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex3State) {
+                        if (ex3State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex3State[key];
+                        }
+                    }
+                    document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                        if (el.dataset.letter === ans) el.classList.remove('used');
+                    });
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex3State[slotId] = ans;
+                    document.querySelectorAll('#ex3-bank .word-item').forEach(el => {
+                        if (el.dataset.letter === ans) el.classList.add('used');
+                    });
+                });
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach((item, i) => {
+                    const slot1 = `ex4-slot-${i+1}-1`;
+                    const slot2 = `ex4-slot-${i+1}-2`;
+                    const ans1 = ex4Answers[i][0];
+                    const ans2 = ex4Answers[i][1];
+                    const s1 = document.getElementById(slot1);
+                    const s2 = document.getElementById(slot2);
+                    if (s1) { s1.textContent = ans1;
+                        s1.classList.add('filled', 'correct');
+                        ex4State[slot1] = ans1; }
+                    if (s2) { s2.textContent = ans2;
+                        s2.classList.add('filled', 'correct');
+                        ex4State[slot2] = ans2; }
+                });
+            } else if (prefix === 'ex5') {
+                ex5Data.forEach((item, i) => {
+                    const n = i + 1;
+                    const correctBtn = document.getElementById(`ex5-correct-${n}`);
+                    const wrongBtn = document.getElementById(`ex5-wrong-${n}`);
+                    const rewriteDiv = document.getElementById(`ex5-rewrite-${n}`);
+                    const inp = document.getElementById(`ex5-input-${n}`);
+                    const row = document.getElementById(`ex5-row-${n}`);
+
+                    correctBtn.classList.remove('active');
+                    wrongBtn.classList.remove('active');
+                    if (item.correct) {
+                        correctBtn.classList.add('active');
+                        ex5State[n] = 'correct';
+                        rewriteDiv.style.display = 'none';
+                        row.style.borderColor = '#16a34a';
+                    } else {
+                        wrongBtn.classList.add('active');
+                        ex5State[n] = 'wrong';
+                        rewriteDiv.style.display = 'block';
+                        if (inp) {
+                            const ans = item.rewrite.split('|')[0].trim();
+                            if (inp.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                                inp.value = ans;
+                                inp.classList.add('correct');
+                                inp.classList.remove('incorrect-marked');
+                                adjustWidth(inp);
+                            }
+                        }
+                        row.style.borderColor = '#dc2626';
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#ex2-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex3') {
+                for (let key in ex3State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                }
+                document.querySelectorAll('#ex3-bank .word-item').forEach(el => el.classList.remove('used'));
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex4') {
+                for (let key in ex4State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex5') {
+                ex5Data.forEach((item, i) => {
+                    const n = i + 1;
+                    document.getElementById(`ex5-correct-${n}`).classList.remove('active');
+                    document.getElementById(`ex5-wrong-${n}`).classList.remove('active');
+                    document.getElementById(`ex5-rewrite-${n}`).style.display = 'none';
+                    const row = document.getElementById(`ex5-row-${n}`);
+                    if (row) row.style.borderColor = '';
+                    const inp = document.getElementById(`ex5-input-${n}`);
+                    if (inp) { inp.value = '';
+                        inp.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(inp); }
+                    delete ex5State[n];
+                });
+                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            // Grade text inputs (ex1, ex2, ex5 rewrite)
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            // Grade ex3 slots
+            document.querySelectorAll('#ex3-left .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            // Grade ex4 slots
+            document.querySelectorAll('#ex4-left .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            // Grade ex5 tick/rewrite
+            ex5Data.forEach((item, i) => {
+                const n = i + 1;
+                const row = document.getElementById(`ex5-row-${n}`);
+                const correctActive = document.getElementById(`ex5-correct-${n}`).classList.contains('active');
+                const wrongActive = document.getElementById(`ex5-wrong-${n}`).classList.contains('active');
+                if (!correctActive && !wrongActive) {
+                    row.style.borderColor = '';
+                    return;
+                }
+                const tickedCorrect = correctActive;
+                const isTickRight = (tickedCorrect === item.correct);
+                row.style.borderColor = isTickRight ? '#16a34a' : '#dc2626';
+                if (!item.correct && wrongActive) {
+                    const inp = document.getElementById(`ex5-input-${n}`);
+                    if (inp && inp.value.trim() !== '') {
+                        const allowed = inp.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                        const userVal = inp.value.trim().toLowerCase();
+                        if (allowed.includes(userVal)) {
+                            inp.classList.add('correct');
+                            inp.classList.remove('incorrect-marked');
+                        } else {
+                            inp.classList.add('incorrect-marked');
+                            inp.classList.remove('correct');
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT
+           ================================================================ */
+
+        window.onload = function() {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        // Expose for access-core.js
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex3Drop = ex3Drop;
+        window.ex3RemoveSlot = ex3RemoveSlot;
+        window.ex3ShowSlot = ex3ShowSlot;
+        window.ex3DragStart = ex3DragStart;
+        window.ex4Drop = ex4Drop;
+        window.ex4RemoveSlot = ex4RemoveSlot;
+        window.ex4ShowSlot = ex4ShowSlot;
+        window.ex4DragStart = ex4DragStart;
+        window.ex5Tick = ex5Tick;
+        window.ex5ShowRewriteAns = ex5ShowRewriteAns;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
