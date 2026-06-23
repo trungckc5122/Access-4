@@ -722,15 +722,41 @@
                     el.value = '';
                     el.classList.remove('correct', 'incorrect-marked');
                 } else {
-                    el.value = f.ans;
-                    el.classList.add('correct');
-                    el.classList.remove('incorrect-marked');
+                    // Chỉ điền nếu đang trống hoặc sai, không ghi đè đáp án đúng
+                    const currentVal = el.value.trim().toLowerCase();
+                    const correctAns = f.ans.toLowerCase();
+                    if (currentVal === '' || currentVal !== correctAns) {
+                        el.value = f.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    }
                 }
                 adjustWidth(el);
             });
         }
 
-        function ex1ShowAll() { ex1Data.forEach((_, i) => ex1ShowRow(i + 1)); }
+        function ex1ShowAll() {
+            ex1Data.forEach((row, i) => {
+                const n = i + 1;
+                const fields = [
+                    { id: `ex1-${n}-ing`, ans: row.ing },
+                    { id: `ex1-${n}-ps`, ans: row.ps },
+                    { id: `ex1-${n}-pp`, ans: row.pp }
+                ];
+                fields.forEach(f => {
+                    const el = document.getElementById(f.id);
+                    if (!el) return;
+                    const currentVal = el.value.trim().toLowerCase();
+                    const correctAns = f.ans.toLowerCase();
+                    if (currentVal === '' || currentVal !== correctAns) {
+                        el.value = f.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    }
+                    adjustWidth(el);
+                });
+            });
+        }
 
         function ex1Reset() {
             document.querySelectorAll('[id^="ex1-"]').forEach(el => {
@@ -743,7 +769,6 @@
         }
 
         /* ===================== EXERCISE 2 ===================== */
-        // Each item: id, sentence HTML with [GAP] placeholder, options array [opt1, opt2], correct value
         const ex2Items = [
             {
                 id: 'ex2-1',
@@ -819,7 +844,6 @@
             }
         ];
 
-        // Group sentences that belong together (multi-gap per sentence)
         const ex2Sentences = [
             { num: 1, parts: ['ex2-1'] },
             { num: 2, parts: ['ex2-2'] },
@@ -832,7 +856,6 @@
 
         function renderEx2() {
             const container = document.getElementById('ex2-container');
-            // Build a lookup map
             const itemMap = {};
             ex2Items.forEach(it => { itemMap[it.id] = it; });
 
@@ -874,7 +897,6 @@
             const choices = gap.querySelectorAll('.word-choice');
             const already = Array.from(choices).find(c => c.classList.contains('correct-select'));
             if (already) {
-                // toggle off
                 choices.forEach(c => c.classList.remove('correct-select', 'incorrect-select', 'selected'));
                 return;
             }
@@ -885,7 +907,16 @@
         }
 
         function ex2ShowAll() {
-            ex2Items.forEach(it => showChoiceAns(it.id));
+            ex2Items.forEach(it => {
+                const gap = document.getElementById(it.id);
+                if (!gap) return;
+                // Nếu đã có lựa chọn được chọn → giữ nguyên, không ghi đè
+                if (gap.querySelector('.word-choice.selected')) return;
+                gap.querySelectorAll('.word-choice').forEach(c => c.classList.remove('correct-select', 'incorrect-select'));
+                const correctChoice = Array.from(gap.querySelectorAll('.word-choice'))
+                    .find(c => c.textContent.trim() === it.ans);
+                if (correctChoice) correctChoice.classList.add('correct-select');
+            });
         }
 
         function ex2Reset() {
@@ -990,7 +1021,6 @@
             const wrongBtn = document.getElementById(`ex3-wrong-${n}`);
             const rewriteDiv = document.getElementById(`ex3-rewrite-${n}`);
 
-            // toggle off if clicking same active button
             const correctActive = correctBtn.classList.contains('active');
             const wrongActive = wrongBtn.classList.contains('active');
 
@@ -1017,15 +1047,39 @@
                 const wrongBtn = document.getElementById(`ex3-wrong-${n}`);
                 const rewriteDiv = document.getElementById(`ex3-rewrite-${n}`);
                 const inp = document.getElementById(`ex3-input-${n}`);
-                correctBtn.classList.remove('active');
-                wrongBtn.classList.remove('active');
-                if (item.correct) {
-                    correctBtn.classList.add('active');
-                    rewriteDiv.style.display = 'none';
+
+                // Nếu chưa có lựa chọn nào được active, mới hiển thị đáp án
+                const hasActive = correctBtn.classList.contains('active') || wrongBtn.classList.contains('active');
+                if (!hasActive) {
+                    correctBtn.classList.remove('active');
+                    wrongBtn.classList.remove('active');
+                    if (item.correct) {
+                        correctBtn.classList.add('active');
+                        rewriteDiv.style.display = 'none';
+                    } else {
+                        wrongBtn.classList.add('active');
+                        rewriteDiv.style.display = 'block';
+                        if (inp) {
+                            const currentVal = inp.value.trim().toLowerCase();
+                            const correctAns = item.rewriteAns.toLowerCase();
+                            if (currentVal === '' || currentVal !== correctAns) {
+                                inp.value = item.rewriteAns;
+                                inp.classList.add('correct');
+                                inp.classList.remove('incorrect-marked');
+                            }
+                        }
+                    }
                 } else {
-                    wrongBtn.classList.add('active');
-                    rewriteDiv.style.display = 'block';
-                    if (inp) { inp.value = item.rewriteAns; inp.classList.add('correct'); inp.classList.remove('incorrect-marked'); }
+                    // Nếu đã có lựa chọn và là câu sai, chỉ điền rewrite nếu trống
+                    if (wrongBtn.classList.contains('active') && inp) {
+                        const currentVal = inp.value.trim().toLowerCase();
+                        const correctAns = item.rewriteAns.toLowerCase();
+                        if (currentVal === '' || currentVal !== correctAns) {
+                            inp.value = item.rewriteAns;
+                            inp.classList.add('correct');
+                            inp.classList.remove('incorrect-marked');
+                        }
+                    }
                 }
             });
         }
@@ -1072,7 +1126,6 @@
         function renderEx4() {
             const container = document.getElementById('ex4-container');
 
-            // Example
             container.innerHTML = `
     <div style="margin-bottom:18px; padding:14px 16px; background:var(--primary-light); border-radius:10px; border-left:4px solid var(--primary);">
         <div style="font-weight:600; color:var(--primary-dark); margin-bottom:6px;">Ví dụ:</div>
@@ -1210,12 +1263,18 @@
             hint.style.display = isVisible ? 'none' : 'block';
         }
 
+        // ========== SHOW ANSWERS (ĐÃ SỬA: không xóa đáp án đúng) ==========
         function showAnswers(prefix) {
             document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                 if (!el.getAttribute('data-ans')) return;
-                el.value = el.getAttribute('data-ans').split('|')[0].trim();
-                el.classList.add('correct');
-                el.classList.remove('incorrect-marked');
+                const currentVal = el.value.trim().toLowerCase();
+                const allowed = el.getAttribute('data-ans').toLowerCase().split('|').map(x => x.trim());
+                // Chỉ điền đáp án nếu ô đang trống hoặc đang sai
+                if (currentVal === '' || !allowed.includes(currentVal)) {
+                    el.value = el.getAttribute('data-ans').split('|')[0].trim();
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                }
                 adjustWidth(el);
             });
         }
@@ -1273,7 +1332,7 @@
             });
         }
 
-        /* ===================== GRAMMAR ACCORDION (đã sửa) ===================== */
+        /* ===================== GRAMMAR ACCORDION ===================== */
         function toggleGrammarSection(section) {
             const content = document.getElementById('content' + section);
             const icon = document.getElementById('icon' + section);
@@ -1287,7 +1346,6 @@
             }
         }
 
-        // Gắn sự kiện cho các header grammar (thay cho onclick inline)
         function initGrammarAccordion() {
             const headers = document.querySelectorAll('.grammar-header-orig');
             headers.forEach(header => {
@@ -1301,16 +1359,13 @@
             });
         }
 
-        // Khởi tạo khi DOM sẵn sàng
         document.addEventListener('DOMContentLoaded', () => {
-            // Đảm bảo tất cả grammar content ban đầu đều ẩn
             document.querySelectorAll('.grammar-content').forEach(el => {
                 el.classList.remove('active');
-                el.style.display = ''; // để class điều khiển
+                el.style.display = '';
             });
             initGrammarAccordion();
 
-            // Render các bài tập
             renderEx1();
             renderEx2();
             renderEx3();

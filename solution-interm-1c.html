@@ -795,13 +795,15 @@
             const el = document.getElementById(id);
             if (!el) return;
             if (el.tagName === 'INPUT') {
-                if (el.value === el.dataset.ans) { el.value = ""; el.classList.remove('correct'); }
-                else { el.value = el.dataset.ans; el.classList.add('correct'); }
+                if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
+                    el.value = ""; el.classList.remove('correct');
+                } else {
+                    el.value = el.dataset.ans; el.classList.add('correct');
+                }
                 adjustWidth(el);
             } else if (el.classList.contains('drop-slot')) {
                 const ans = el.dataset.ans;
                 if (el.classList.contains('filled') && el.innerText === ans) {
-                    // đúng thì xóa
                     const word = el.innerText;
                     el.innerText = "";
                     el.classList.remove('filled', 'correct');
@@ -913,22 +915,68 @@
             });
         }
 
+        // ========== SHOW ANSWERS (ĐÃ SỬA: không xóa đáp án đúng) ==========
         function showAnswers(prefix) {
             if (prefix === 'ex1' || prefix === 'ex2' || prefix === 'ex5') {
                 const dataMap = { ex1: ex1Data, ex2: ex2Data, ex5: ex5Data };
                 const arr = dataMap[prefix];
-                arr.forEach((_, i) => showSingleAnsChoice(`${prefix}-q${i}`));
+                arr.forEach((it, i) => {
+                    const qid = `${prefix}-q${i}`;
+                    const gap = document.getElementById(qid);
+                    if (!gap) return;
+                    // Nếu chưa có lựa chọn nào được chọn → hiển thị đáp án
+                    if (!gap.querySelector('.word-choice.selected')) {
+                        gap.querySelectorAll('.word-choice').forEach(c => c.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                        const correctChoice = Array.from(gap.querySelectorAll('.word-choice'))
+                            .find(c => c.dataset.ans === c.textContent.trim());
+                        if (correctChoice) correctChoice.classList.add('selected', 'correct-select');
+                    }
+                });
             } else if (prefix === 'ex4') {
-                ex4Data.forEach((_, i) => showSingleAns(`ex4-q${i}`));
+                ex4Data.forEach((it, i) => {
+                    const slot = document.getElementById(`ex4-q${i}`);
+                    if (!slot) return;
+                    const ans = slot.dataset.ans;
+                    // Nếu slot đã có đáp án đúng → giữ nguyên
+                    if (slot.classList.contains('filled') && slot.innerText === ans) return;
+                    // Nếu slot đang có đáp án sai → trả từ về bank trước
+                    if (slot.classList.contains('filled')) {
+                        const oldWord = slot.innerText;
+                        const bankItems = document.querySelectorAll('#ex4-word-bank .word-item');
+                        bankItems.forEach(item => { if (item.innerText === oldWord) item.classList.remove('used'); });
+                    }
+                    // Đặt đáp án đúng vào slot
+                    slot.innerText = ans;
+                    slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
+                    const bankItems = document.querySelectorAll('#ex4-word-bank .word-item');
+                    bankItems.forEach(item => { if (item.innerText === ans) item.classList.add('used'); });
+                });
             } else if (prefix === 'ex6') {
-                ex6Data.forEach((_, i) => {
+                ex6Data.forEach((it, i) => {
                     const el = document.getElementById(`ex6-q${i}`);
-                    if (el) { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); }
+                    if (!el || !el.dataset.ans) return;
+                    const currentVal = el.value.toLowerCase().trim();
+                    const correctAns = el.dataset.ans.toLowerCase().trim();
+                    if (currentVal === '' || currentVal !== correctAns) {
+                        el.value = el.dataset.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    }
+                    adjustWidth(el);
                 });
             } else if (prefix === 'ex7') {
-                ex7Data.forEach((_, i) => {
+                ex7Data.forEach((it, i) => {
                     const el = document.getElementById(`ex7-q${i}`);
-                    if (el) { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); }
+                    if (!el || !el.dataset.ans) return;
+                    const currentVal = el.value.toLowerCase().trim();
+                    const correctAns = el.dataset.ans.toLowerCase().trim();
+                    if (currentVal === '' || currentVal !== correctAns) {
+                        el.value = el.dataset.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    }
+                    adjustWidth(el);
                 });
             }
         }
