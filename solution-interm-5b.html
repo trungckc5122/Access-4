@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 5B: Quantifiers</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 5B ===== */
+
+        /* Header đúng chuẩn */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Word bank chung */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Drop slot */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Inline group */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Hint box absolute */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Input fields */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Ex rows */
+        .ex-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .ex-row .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex-sentence {
+            display: inline;
+            font-size: 1.05rem;
+            line-height: 2.2;
+        }
+
+        .ex-sentence .inline-group {
+            margin: 0 4px;
+        }
+
+        /* Exercise 1 layout */
+        .ex1-rules {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .ex1-rule {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex1-rule .rule-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 20px;
+        }
+
+        .ex1-rule .rule-text {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .ex1-rule .drop-slot {
+            min-width: 180px;
+        }
+
+        /* MCQ option cards (Exercise 2) */
+        .mcq-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 4px 0;
+            align-items: center;
+        }
+
+        .mcq-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border: 2px solid var(--glass-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--card-bg);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .mcq-option:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .mcq-option.selected {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .mcq-option.correct-option {
+            border-color: #16a34a !important;
+            background: #dcfce7 !important;
+            color: #166534 !important;
+        }
+
+        .mcq-option.incorrect-option {
+            border-color: #dc2626 !important;
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        .mcq-option .opt-letter {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 20px;
+        }
+
+        .mcq-option.selected .opt-letter {
+            color: white;
+        }
+
+        /* Exercise 3: Tick / Rewrite */
+        .ex3-row {
+            margin-bottom: 16px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            background: var(--card-bg);
+            transition: border-color 0.3s;
+        }
+
+        .ex3-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ex3-sentence {
+            flex: 1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .ex3-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .ex3-tick-btn {
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+            background: var(--card-bg);
+            transition: all 0.2s;
+        }
+
+        .ex3-tick-btn.correct-btn {
+            border-color: #16a34a;
+            color: #16a34a;
+        }
+
+        .ex3-tick-btn.correct-btn.active {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        .ex3-tick-btn.wrong-btn {
+            border-color: #dc2626;
+            color: #dc2626;
+        }
+
+        .ex3-tick-btn.wrong-btn.active {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .ex3-rewrite {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .ex3-rewrite-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .ex3-rewrite-input {
+            border: none;
+            border-bottom: 2px solid var(--border, #ccc);
+            padding: 4px 8px;
+            font-size: 1rem;
+            color: var(--secondary, #27ae60);
+            font-weight: bold;
+            background: transparent;
+            width: auto;
+            min-width: 220px;
+            max-width: 100%;
+            text-align: left;
+            field-sizing: content;
+            transition: all 0.2s;
+        }
+
+        .ex3-rewrite-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary);
+        }
+
+        .ex3-rewrite-input.correct {
+            color: var(--secondary);
+            border-bottom-color: var(--secondary);
+        }
+
+        .ex3-rewrite-input.incorrect-marked {
+            color: #e74c3c;
+            border-bottom-color: #e74c3c;
+        }
+
+        /* Exercise 4: drag-drop không giới hạn */
+        .ex4-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .ex4-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex4-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 28px;
+        }
+
+        .ex4-text {
+            flex: 0 0 auto;
+            color: var(--text);
+        }
+
+        /* Exercise 5: bar chart + sentence writing */
+        .ex5-chart {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin-bottom: 18px;
+        }
+
+        .ex5-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .ex5-item .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex5-item .ex5-prompt {
+            color: var(--text-muted);
+            font-style: italic;
+            margin-right: 6px;
+            font-weight: 500;
+        }
+
+        .ex5-item .inline-group {
+            flex: 1;
+            min-width: 350px;
+        }
+
+        .ex5-item .task5-input {
+            width: 100%;
+            min-width: 300px;
+            text-align: left;
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Grammar Reference */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        #reference-content {
+            display: none;
+        }
+
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .word-bank {
+                position: relative;
+                top: 0;
+            }
+
+            .ex5-item .inline-group {
+                min-width: 100%;
+            }
+
+            .ex5-item .task5-input {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">5B</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Quantifiers</h1>
+                <p class="subtitle">I can use quantifiers correctly.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Lượng từ (Quantifiers)</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <!-- Group 1: Quantifiers with countable/uncountable nouns -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. Phân loại lượng từ theo danh từ</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <table class="vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Lượng từ</th>
+                                    <th>Danh từ đếm được số ít</th>
+                                    <th>Danh từ đếm được số nhiều</th>
+                                    <th>Danh từ không đếm được</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>each / every</strong></td>
+                                    <td>✓</td>
+                                    <td>✗</td>
+                                    <td>✗</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>either / neither</strong></td>
+                                    <td>✓</td>
+                                    <td>✗</td>
+                                    <td>✗</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>much / little / a little</strong></td>
+                                    <td>✗</td>
+                                    <td>✗</td>
+                                    <td>✓</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>many / few / a few</strong></td>
+                                    <td>✗</td>
+                                    <td>✓</td>
+                                    <td>✗</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>some / any / no</strong></td>
+                                    <td>✓</td>
+                                    <td>✓</td>
+                                    <td>✓</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>all / most / a lot of</strong></td>
+                                    <td>✓</td>
+                                    <td>✓</td>
+                                    <td>✓</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="example-box-detail">
+                            <em>Every student has a laptop. (đếm được số ít)</em><br>
+                            <em>Much time is needed. (không đếm được)</em><br>
+                            <em>Many people use social media. (đếm được số nhiều)</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Cách dùng cụ thể -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. Cách dùng chi tiết các lượng từ</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">each / every / either / neither + danh từ số ít</div>
+                            <ul class="grammar-list">
+                                <li><strong>each</strong> nhấn mạnh từng cá nhân: <em>Each student has a book.</em></li>
+                                <li><strong>every</strong> nhấn mạnh toàn bộ nhóm: <em>Every student passed.</em></li>
+                                <li><strong>either</strong> một trong hai: <em>Either answer is correct.</em></li>
+                                <li><strong>neither</strong> không cái nào trong hai: <em>Neither option is good.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">much / little / a little + danh từ không đếm được</div>
+                            <ul class="grammar-list">
+                                <li><strong>much</strong> (nhiều) thường dùng trong câu phủ định và câu hỏi: <em>There
+                                        isn't much water.</em></li>
+                                <li><strong>little</strong> (ít, gần như không) mang nghĩa tiêu cực: <em>I have little
+                                        money.</em></li>
+                                <li><strong>a little</strong> (một ít) mang nghĩa tích cực: <em>I have a little
+                                        money.</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">many / few / a few + danh từ đếm được số nhiều</div>
+                            <ul class="grammar-list">
+                                <li><strong>many</strong> (nhiều) dùng trong câu phủ định và câu hỏi: <em>Are there many
+                                        people?</em></li>
+                                <li><strong>few</strong> (ít, không đủ) nghĩa tiêu cực: <em>Few students passed.</em>
+                                </li>
+                                <li><strong>a few</strong> (một vài) nghĩa tích cực: <em>A few students passed.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">some / any / no + cả 3 loại danh từ</div>
+                            <ul class="grammar-list">
+                                <li><strong>some</strong> dùng trong câu khẳng định: <em>I need some help.</em></li>
+                                <li><strong>any</strong> dùng trong câu phủ định và câu hỏi: <em>Do you have any
+                                        questions?</em></li>
+                                <li><strong>no</strong> = not any: <em>There is no time.</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">all / most + of + danh từ</div>
+                            <ul class="grammar-list">
+                                <li><strong>all</strong>: tất cả. <em>All students like it.</em> hoặc <em>All of the
+                                        students like it.</em></li>
+                                <li><strong>most</strong>: hầu hết. <em>Most people agree.</em> hoặc <em>Most of the
+                                        people agree.</em></li>
+                                <li><strong>both</strong>: cả hai (đếm được số nhiều): <em>Both books are good.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>Some of the information is useful.</em><br>
+                            <em>Most of the apps are free.</em><br>
+                            <em>None of the students has finished.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Lỗi thường gặp -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. Lỗi thường gặp (Common Mistakes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <ul class="grammar-list">
+                            <li>❌ <em>No of my classmates did homework.</em> → ✅ <em><strong>None</strong> of my
+                                    classmates did homework.</em><br>
+                                <small><strong>No</strong> + danh từ; <strong>None</strong> + of + danh từ.</small>
+                            </li>
+                            <li>❌ <em>Some of gadgets are difficult.</em> → ✅ <em>Some <strong>of the</strong> gadgets
+                                    are difficult.</em><br>
+                                <small>Sau <strong>some of</strong> cần có mạo từ hoặc đại từ xác định.</small>
+                            </li>
+                            <li>❌ <em>Tom can write with every hand.</em> → ✅ <em>... with <strong>both</strong>
+                                    hands.</em><br>
+                                <small><strong>Every</strong> dùng với số ít; <strong>both</strong> dùng với số nhiều
+                                    (2).</small>
+                            </li>
+                            <li>❌ <em>Jason spends few money.</em> → ✅ <em>... spends <strong>little</strong>
+                                    money.</em><br>
+                                <small><strong>Money</strong> là danh từ không đếm được → dùng
+                                    <strong>little</strong>.</small>
+                            </li>
+                            <li>❌ <em>Kate doesn't like any these apps.</em> → ✅ <em>... any <strong>of</strong> these
+                                    apps.</em><br>
+                                <small>Sau <strong>any</strong> + of + danh từ xác định.</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: British Council LearnEnglish – <a
+                        href="https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/quantifiers"
+                        target="_blank" style="color:var(--primary);">Quantifiers</a>)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete the rules with the headings below.</div>
+            <div class="word-bank" id="ex1-bank"></div>
+            <div class="ex1-rules" id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Circle the correct answers to complete the sentences.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Some of the sentences are incorrect. Rewrite them correctly.
+                Tick the correct sentences.</div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the sentences with <strong>few</strong>, <strong>a
+                    few</strong>, <strong>little</strong>, or <strong>a little</strong>.</div>
+            <div class="word-bank" id="ex4-bank"></div>
+            <div class="ex4-items" id="ex4-items"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 5 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Look at the bar chart. Write a sentence for each activity
+                with the words below. Use the present perfect.</div>
+            <img src="img-int/module 5b.png" alt="Bar chart: Students in the class" class="ex5-chart">
+            <div
+                style="display:flex; flex-wrap:wrap; gap:8px; padding:12px; background:var(--primary-light); border-radius:10px; margin-bottom:16px;">
+                <span style="font-weight:700; color:var(--primary-dark);">all</span>
+                <span style="font-weight:700; color:var(--primary-dark);">almost all</span>
+                <span style="font-weight:700; color:var(--primary-dark);">a few</span>
+                <span style="font-weight:700; color:var(--primary-dark);">most</span>
+                <span style="font-weight:700; color:var(--primary-dark);">none</span>
+                <span style="font-weight:700; color:var(--primary-dark);">some</span>
+                <span style="font-weight:700; color:var(--primary-dark);">very few</span>
+            </div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1 - headings
+        const ex1Headings = ["singular countable noun", "uncountable noun", "plural noun"];
+        const ex1Rules = [
+            { num: 1, text: "every, each, either +", ans: "singular countable noun" },
+            { num: 2, text: "all, most, some, much, little, a little, any, no +", ans: "uncountable noun" },
+            { num: 3, text: "all, most, many, some, a few, few, no, both, any +", ans: "plural noun" }
+        ];
+        const ex1Hints = {
+            1: "<strong>Đáp án:</strong> singular countable noun<br><strong>Bằng chứng:</strong> every, each, either luôn đi với danh từ đếm được số ít.<br><strong>Giải thích:</strong> The word after 'every' is always singular.",
+            2: "<strong>Đáp án:</strong> uncountable noun<br><strong>Bằng chứng:</strong> much, little, a little chỉ dùng với danh từ không đếm được.<br><strong>Giải thích:</strong> We use 'much' and 'little' with uncountable nouns.",
+            3: "<strong>Đáp án:</strong> plural noun<br><strong>Bằng chứng:</strong> many, a few, few, both chỉ dùng với danh từ đếm được số nhiều.<br><strong>Giải thích:</strong> 'Many' and 'few' are used with plural countable nouns."
+        };
+
+        // Ex2 - MCQ
+        const ex2Data = [
+            { num: 1, prompt: "I've only used ___ my pocket money.", opts: ["a. little", "b. a little", "c. a few", "d. a little of"], ans: "d. a little of", hint: "<strong>Đáp án:</strong> d. a little of<br><strong>Bằng chứng:</strong> 'pocket money' là danh từ không đếm được, và cấu trúc 'a little of' + possessive pronoun.<br><strong>Giải thích:</strong> 'a little of' + my pocket money = một ít trong số tiền tiêu vặt của tôi." },
+            { num: 2, prompt: "___ of the computers is broken.", opts: ["a. Each", "b. Both", "c. Every one", "d. Every"], ans: "c. Every one", hint: "<strong>Đáp án:</strong> c. Every one<br><strong>Bằng chứng:</strong> 'is' số ít → chủ ngữ số ít. 'Every one of' + plural noun + singular verb.<br><strong>Giải thích:</strong> 'Every one of' nhấn mạnh từng cái trong nhóm." },
+            { num: 3, prompt: "There isn't ___ time before the film starts.", opts: ["a. many", "b. few", "c. much", "d. little"], ans: "c. much", hint: "<strong>Đáp án:</strong> c. much<br><strong>Bằng chứng:</strong> 'time' là danh từ không đếm được, câu phủ định → dùng 'much'.<br><strong>Giải thích:</strong> 'Much' dùng với uncountable nouns trong câu phủ định và câu hỏi." },
+            { num: 4, prompt: "Nearly ___ this software is out of date.", opts: ["a. every", "b. all of", "c. each of", "d. every one of"], ans: "b. all of", hint: "<strong>Đáp án:</strong> b. all of<br><strong>Bằng chứng:</strong> 'this software' là danh từ không đếm được → 'all of' + uncountable noun.<br><strong>Giải thích:</strong> 'Nearly all of this software' = gần như tất cả phần mềm này." },
+            { num: 5, prompt: "___ of the information is correct.", opts: ["a. No", "b. None", "c. Any", "d. Either"], ans: "b. None", hint: "<strong>Đáp án:</strong> b. None<br><strong>Bằng chứng:</strong> 'information' không đếm được, cần 'none of' + singular verb.<br><strong>Giải thích:</strong> 'None of the information is correct' = không có thông tin nào đúng." },
+            { num: 6, prompt: "The computer is very heavy. Pick it up with ___ hands.", opts: ["a. each", "b. all", "c. either", "d. both"], ans: "d. both", hint: "<strong>Đáp án:</strong> d. both<br><strong>Bằng chứng:</strong> Có 2 bàn tay → dùng 'both' + plural noun.<br><strong>Giải thích:</strong> 'Both hands' = cả hai tay." },
+            { num: 7, prompt: "___ teenagers use social networking sites.", opts: ["a. Much", "b. Most", "c. Many of", "d. Most of"], ans: "b. Most", hint: "<strong>Đáp án:</strong> b. Most<br><strong>Bằng chứng:</strong> 'teenagers' là danh từ đếm được số nhiều, không có 'the' → dùng 'most' không có 'of'.<br><strong>Giải thích:</strong> 'Most teenagers' = hầu hết thanh thiếu niên." },
+            { num: 8, prompt: "Have you bought ___ apps recently?", opts: ["a. some", "b. any", "c. no", "d. few"], ans: "b. any", hint: "<strong>Đáp án:</strong> b. any<br><strong>Bằng chứng:</strong> Câu hỏi → dùng 'any' với danh từ đếm được số nhiều.<br><strong>Giải thích:</strong> 'any apps' = có ứng dụng nào không." },
+            { num: 9, prompt: "Joe spends ___ his free time playing games online.", opts: ["a. most", "b. most of", "c. much", "d. the most"], ans: "b. most of", hint: "<strong>Đáp án:</strong> b. most of<br><strong>Bằng chứng:</strong> 'his free time' là danh từ xác định → 'most of' + determiner + noun.<br><strong>Giải thích:</strong> 'most of his free time' = hầu hết thời gian rảnh của anh ấy." }
+        ];
+
+        // Ex3 - Tick/Rewrite
+        const ex3Data = [
+            { sentence: "No of my classmates did their homework.", correct: false, rewrite: "None of my classmates did their homework.", hint: "<strong>Đáp án:</strong> None of my classmates did their homework.<br><strong>Lỗi:</strong> 'No' không đi với 'of'.<br><strong>Giải thích:</strong> Dùng <strong>None</strong> + of + danh từ." },
+            { sentence: "Some of gadgets are difficult to use.", correct: false, rewrite: "Some of the gadgets are difficult to use.", hint: "<strong>Đáp án:</strong> Some of the gadgets are difficult to use.<br><strong>Lỗi:</strong> Thiếu mạo từ 'the' sau 'some of'.<br><strong>Giải thích:</strong> 'Some of' + xác định danh từ." },
+            { sentence: "We had no time to lose.", correct: true, rewrite: "", hint: "<strong>Câu đúng.</strong><br><strong>Giải thích:</strong> 'no time' = không có thời gian, đúng ngữ pháp." },
+            { sentence: "Tom can write with every hand.", correct: false, rewrite: "Tom can write with both hands.", hint: "<strong>Đáp án:</strong> Tom can write with both hands.<br><strong>Lỗi:</strong> 'every' dùng với số ít, nhưng có 2 tay.<br><strong>Giải thích:</strong> Dùng <strong>both</strong> cho 2 vật." },
+            { sentence: "Not much games are easy to program.", correct: false, rewrite: "Not many games are easy to program.", hint: "<strong>Đáp án:</strong> Not many games are easy to program.<br><strong>Lỗi:</strong> 'games' đếm được số nhiều → dùng 'many'.<br><strong>Giải thích:</strong> 'Many' dùng với danh từ đếm được số nhiều." },
+            { sentence: "There's a mistake in each sentence.", correct: true, rewrite: "", hint: "<strong>Câu đúng.</strong><br><strong>Giải thích:</strong> 'each sentence' = mỗi câu, đúng." },
+            { sentence: "Kate doesn't like any these apps.", correct: false, rewrite: "Kate doesn't like any of these apps.", hint: "<strong>Đáp án:</strong> Kate doesn't like any of these apps.<br><strong>Lỗi:</strong> Thiếu 'of' sau 'any'.<br><strong>Giải thích:</strong> 'any of + these apps'." },
+            { sentence: "Jason spends few money on downloading music.", correct: false, rewrite: "Jason spends little money on downloading music.", hint: "<strong>Đáp án:</strong> Jason spends little money on downloading music.<br><strong>Lỗi:</strong> 'money' không đếm được → dùng 'little'.<br><strong>Giải thích:</strong> 'little money' = ít tiền." }
+        ];
+
+        // Ex4 - drag-drop không giới hạn
+        const ex4Bank = ["few", "a few", "little", "a little"];
+        const ex4Items = [
+            { num: 1, text: "___ people went to see the film, so it was only on at the cinema for a couple of weeks.", ans: "Few" },
+            { num: 2, text: "I'm tired because I got very ___ sleep last night.", ans: "little" },
+            { num: 3, text: "I'll only need ___ more minutes to finish my homework.", ans: "a few" },
+            { num: 4, text: "'Is there any milk left?' 'Yes, ___.'", ans: "a little" },
+            { num: 5, text: "I posted that comment ___ days ago.", ans: "a few" },
+            { num: 6, text: "I had ___ subscribers to my video blog, so I removed it from YouTube.", ans: "few" },
+            { num: 7, text: "Unfortunately they have ___ money to spend on holidays.", ans: "little" }
+        ];
+        const ex4Hints = {
+            1: "<strong>Đáp án:</strong> Few<br><strong>Bằng chứng:</strong> 'people' đếm được, nghĩa tiêu cực (ít, không đủ).<br><strong>Giải thích:</strong> 'Few' = ít, gần như không có (mang nghĩa tiêu cực).",
+            2: "<strong>Đáp án:</strong> little<br><strong>Bằng chứng:</strong> 'sleep' không đếm được, nghĩa tiêu cực.<br><strong>Giải thích:</strong> 'little sleep' = ngủ rất ít.",
+            3: "<strong>Đáp án:</strong> a few<br><strong>Bằng chứng:</strong> 'minutes' đếm được, nghĩa tích cực (một vài).<br><strong>Giải thích:</strong> 'a few minutes' = vài phút.",
+            4: "<strong>Đáp án:</strong> a little<br><strong>Bằng chứng:</strong> 'milk' không đếm được, câu khẳng định tích cực.<br><strong>Giải thích:</strong> 'a little milk' = một ít sữa.",
+            5: "<strong>Đáp án:</strong> a few<br><strong>Bằng chứng:</strong> 'days' đếm được số nhiều, nghĩa tích cực.<br><strong>Giải thích:</strong> 'a few days ago' = vài ngày trước.",
+            6: "<strong>Đáp án:</strong> few<br><strong>Bằng chứng:</strong> 'subscribers' đếm được, nghĩa tiêu cực (ít quá).<br><strong>Giải thích:</strong> 'few subscribers' = rất ít người đăng ký.",
+            7: "<strong>Đáp án:</strong> little<br><strong>Bằng chứng:</strong> 'money' không đếm được, nghĩa tiêu cực.<br><strong>Giải thích:</strong> 'little money' = ít tiền."
+        };
+
+        // Ex5 - Bar chart sentences
+        const ex5Data = [
+            { num: 1, prompt: "set up a new email account", ans: "A few of the students have set up a new email account." },
+            { num: 2, prompt: "play a computer game", ans: "All of the students have played a computer game." },
+            { num: 3, prompt: "download music", ans: "Almost all of the students have downloaded music." },
+            { num: 4, prompt: "print a document from their phone", ans: "None of the students have printed a document from their phone." },
+            { num: 5, prompt: "search within a specific website", ans: "Very few of the students have searched within a specific website." },
+            { num: 6, prompt: "install an app on their phone", ans: "Most of the students have installed an app on their phone." },
+            { num: 7, prompt: "update their profile on a social networking site", ans: "Some of the students have updated their profile on a social networking site." }
+        ];
+        const ex5Hints = {
+            1: "<strong>Đáp án:</strong> A few of the students have set up a new email account.<br><strong>Bằng chứng:</strong> Biểu đồ: khoảng 2-3 học sinh.<br><strong>Giải thích:</strong> 'A few' + plural noun + have + V3.",
+            2: "<strong>Đáp án:</strong> All of the students have played a computer game.<br><strong>Bằng chứng:</strong> Biểu đồ: 100% (7/7).<br><strong>Giải thích:</strong> 'All of' + plural noun + have + V3.",
+            3: "<strong>Đáp án:</strong> Almost all of the students have downloaded music.<br><strong>Bằng chứng:</strong> Biểu đồ: 6/7 học sinh.<br><strong>Giải thích:</strong> 'Almost all of' = gần như tất cả.",
+            4: "<strong>Đáp án:</strong> None of the students have printed a document from their phone.<br><strong>Bằng chứng:</strong> Biểu đồ: 0/7 học sinh.<br><strong>Giải thích:</strong> 'None of' + plural noun + have + V3 (không ai).",
+            5: "<strong>Đáp án:</strong> Very few of the students have searched within a specific website.<br><strong>Bằng chứng:</strong> Biểu đồ: 1/7 học sinh.<br><strong>Giải thích:</strong> 'Very few of' + plural noun + have + V3 (rất ít).",
+            6: "<strong>Đáp án:</strong> Most of the students have installed an app on their phone.<br><strong>Bằng chứng:</strong> Biểu đồ: 5/7 học sinh.<br><strong>Giải thích:</strong> 'Most of' + plural noun + have + V3.",
+            7: "<strong>Đáp án:</strong> Some of the students have updated their profile on a social networking site.<br><strong>Bằng chứng:</strong> Biểu đồ: 3/7 học sinh.<br><strong>Giải thích:</strong> 'Some of' + plural noun + have + V3."
+        };
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 (drag-drop headings) --------
+        let ex1Dragging = null;
+        let ex1State = {};
+
+        function renderEx1() {
+            const bank = document.getElementById('ex1-bank');
+            bank.innerHTML = ex1Headings.map(h => {
+                return `<div class="word-item" draggable="true" data-word="${h}" 
+                          ondragstart="ex1DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${h}</div>`;
+            }).join('');
+
+            const container = document.getElementById('ex1-container');
+            container.innerHTML = ex1Rules.map(rule => {
+                const slotId = `ex1-slot-${rule.num}`;
+                return `<div class="ex1-rule">
+                    <span class="rule-num">${rule.num}.</span>
+                    <span class="rule-text">${rule.text}</span>
+                    <span class="drop-slot" id="${slotId}" data-ans="${rule.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex1Drop(event, '${slotId}')"
+                          onclick="ex1RemoveSlot('${slotId}')"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">${ex1Hints[rule.num]}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex1DragStart(e) {
+            ex1Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex1Dragging);
+        }
+
+        function ex1Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex1Dragging) return;
+            for (let key in ex1State) {
+                if (ex1State[key] === ex1Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+            }
+            slot.textContent = ex1Dragging;
+            slot.classList.add('filled');
+            ex1State[slotId] = ex1Dragging;
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ex1Dragging) el.classList.add('used');
+            });
+            ex1Dragging = null;
+        }
+
+        function ex1RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const word = slot.textContent.trim();
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === word) el.classList.remove('used');
+            });
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex1State[slotId];
+        }
+
+        function ex1ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex1RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex1State) {
+                if (ex1State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+            }
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.remove('used');
+            });
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex1State[slotId] = ans;
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.add('used');
+            });
+        }
+
+        // -------- Ex2 (MCQ option cards) --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map(item => {
+                const qid = `ex2-q${item.num}`;
+                // opts already contain the letter prefix (e.g. "a. little"), so use as-is
+                const optHtml = item.opts.map(opt => {
+                    const val = opt.trim();
+                    return `<span class="mcq-option" data-qid="${qid}" data-value="${val}" onclick="selectEx2Option(this)">${val}</span>`;
+                }).join('');
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${item.prompt}</span>
+                    <span class="inline-group" style="position:relative;">
+                        <span class="mcq-group" id="${qid}" data-ans="${item.ans}">${optHtml}</span>
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showEx2Ans('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint" style="display:none;">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        function selectEx2Option(el) {
+            const qid = el.dataset.qid;
+            const group = document.getElementById(qid);
+            group.querySelectorAll('.mcq-option').forEach(opt => {
+                opt.classList.remove('selected', 'correct-option', 'incorrect-option');
+            });
+            el.classList.add('selected');
+        }
+
+        function showEx2Ans(qid) {
+            const group = document.getElementById(qid);
+            const ans = group.dataset.ans;
+            const selected = group.querySelector('.mcq-option.selected');
+            const correctOpt = Array.from(group.querySelectorAll('.mcq-option')).find(opt => opt.dataset.value === ans);
+
+            if (selected && selected.dataset.value === ans && selected.classList.contains('correct-option')) {
+                // Toggle off
+                group.querySelectorAll('.mcq-option').forEach(opt => {
+                    opt.classList.remove('selected', 'correct-option', 'incorrect-option');
+                });
+                return;
+            }
+
+            group.querySelectorAll('.mcq-option').forEach(opt => {
+                opt.classList.remove('selected', 'correct-option', 'incorrect-option');
+            });
+            if (correctOpt) correctOpt.classList.add('selected', 'correct-option');
+        }
+
+        // -------- Ex3 (Tick/Rewrite) --------
+        let ex3State = {};
+
+        function renderEx3() {
+            const container = document.getElementById('ex3-container');
+            container.innerHTML = ex3Data.map((item, i) => {
+                const n = i + 1;
+                const hintId = `ex3-hint-${n}`;
+                return `<div class="ex3-row" id="ex3-row-${n}" style="position:relative;">
+                    <div class="ex3-top">
+                        <span class="ex3-sentence"><strong>${n}.</strong> ${item.sentence}</span>
+                        <div class="ex3-controls">
+                            <button class="ex3-tick-btn correct-btn" id="ex3-correct-${n}" onclick="ex3Tick(${n}, true)" title="Câu đúng">✓ Đúng</button>
+                            <button class="ex3-tick-btn wrong-btn" id="ex3-wrong-${n}" onclick="ex3Tick(${n}, false)" title="Câu sai">✗ Sai</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${hintId}')" style="transform:scale(0.9);">i</button>
+                        </div>
+                    </div>
+                    <div class="hint-box absolute" id="${hintId}-hint" style="display:none; top:auto; left:auto; right:0; margin-top:4px;">${item.hint}</div>
+                    <div class="ex3-rewrite" id="ex3-rewrite-${n}">
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            <span class="ex3-rewrite-label">Rewrite:</span>
+                            <input type="text" id="ex3-input-${n}" data-ans="${item.rewrite}" class="ex3-rewrite-input" oninput="adjustWidth(this)">
+                            <button class="eye-btn" onclick="ex3ShowRewriteAns(${n})" style="transform:scale(0.85);">👁️</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex3Tick(n, isCorrect) {
+            const correctBtn = document.getElementById(`ex3-correct-${n}`);
+            const wrongBtn = document.getElementById(`ex3-wrong-${n}`);
+            const rewriteDiv = document.getElementById(`ex3-rewrite-${n}`);
+            const row = document.getElementById(`ex3-row-${n}`);
+
+            correctBtn.classList.remove('active');
+            wrongBtn.classList.remove('active');
+            if (isCorrect) {
+                correctBtn.classList.add('active');
+                ex3State[n] = 'correct';
+                rewriteDiv.style.display = 'none';
+            } else {
+                wrongBtn.classList.add('active');
+                ex3State[n] = 'wrong';
+                rewriteDiv.style.display = 'block';
+            }
+            if (ex3State[n]) {
+                const isRight = (ex3State[n] === 'correct') === ex3Data[n - 1].correct;
+                row.style.borderColor = isRight ? '#16a34a' : '#dc2626';
+            } else {
+                row.style.borderColor = '';
+            }
+        }
+
+        function ex3ShowRewriteAns(n) {
+            const inp = document.getElementById(`ex3-input-${n}`);
+            if (!inp) return;
+            const ans = inp.dataset.ans;
+            if (inp.value.trim().toLowerCase() === ans.toLowerCase()) {
+                inp.value = '';
+                inp.classList.remove('correct', 'incorrect-marked');
+            } else {
+                inp.value = ans;
+                inp.classList.add('correct');
+                inp.classList.remove('incorrect-marked');
+            }
+            adjustWidth(inp);
+        }
+
+        // -------- Ex4 (drag-drop không giới hạn) --------
+        let ex4Dragging = null;
+        let ex4State = {};
+
+        function renderEx4() {
+            const bank = document.getElementById('ex4-bank');
+            bank.innerHTML = ex4Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex4DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+
+            const items = document.getElementById('ex4-items');
+            items.innerHTML = ex4Items.map(item => {
+                const slotId = `ex4-slot-${item.num}`;
+                const parts = item.text.split('___');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const slotHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex4Drop(event, '${slotId}')"
+                          onclick="ex4RemoveSlot('${slotId}')"></span>`;
+                return `<div class="ex4-item">
+                    <span class="ex4-num">${item.num}.</span>
+                    <span class="ex4-text">${before}${slotHtml}${after}</span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex4ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">${ex4Hints[item.num]}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex4DragStart(e) {
+            ex4Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex4Dragging);
+        }
+
+        function ex4Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex4Dragging) return;
+            for (let key in ex4State) {
+                if (ex4State[key] === ex4Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+            }
+            slot.textContent = ex4Dragging;
+            slot.classList.add('filled');
+            ex4State[slotId] = ex4Dragging;
+            // KHÔNG đánh dấu .used để cho phép kéo thả nhiều lần
+            ex4Dragging = null;
+        }
+
+        function ex4RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const word = slot.textContent.trim();
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex4State[slotId];
+        }
+
+        function ex4ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex4RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex4State) {
+                if (ex4State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+            }
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex4State[slotId] = ans;
+        }
+
+        // -------- Ex5 (sentence writing) --------
+        function renderEx5() {
+            const container = document.getElementById('ex5-container');
+            container.innerHTML = ex5Data.map(item => {
+                const qid = `ex5-q${item.num}`;
+                return `<div class="ex5-item">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex5-prompt">${item.prompt}</span>
+                    <span class="inline-group" style="flex:1; min-width:350px;">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="width:100%; min-width:300px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${ex5Hints[item.num]}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        /* ================================================================
+           HELPERS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Rules.forEach(rule => {
+                    const slotId = `ex1-slot-${rule.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = rule.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex1State) {
+                        if (ex1State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex1State[key];
+                        }
+                    }
+                    document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.remove('used');
+                    });
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex1State[slotId] = ans;
+                    document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.add('used');
+                    });
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach(item => {
+                    const qid = `ex2-q${item.num}`;
+                    showEx2Ans(qid);
+                });
+            } else if (prefix === 'ex3') {
+                ex3Data.forEach((item, i) => {
+                    const n = i + 1;
+                    const correctBtn = document.getElementById(`ex3-correct-${n}`);
+                    const wrongBtn = document.getElementById(`ex3-wrong-${n}`);
+                    const rewriteDiv = document.getElementById(`ex3-rewrite-${n}`);
+                    const inp = document.getElementById(`ex3-input-${n}`);
+                    const row = document.getElementById(`ex3-row-${n}`);
+
+                    correctBtn.classList.remove('active');
+                    wrongBtn.classList.remove('active');
+                    if (item.correct) {
+                        correctBtn.classList.add('active');
+                        ex3State[n] = 'correct';
+                        rewriteDiv.style.display = 'none';
+                        row.style.borderColor = '#16a34a';
+                    } else {
+                        wrongBtn.classList.add('active');
+                        ex3State[n] = 'wrong';
+                        rewriteDiv.style.display = 'block';
+                        if (inp) {
+                            const ans = item.rewrite.split('|')[0].trim();
+                            if (inp.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                                inp.value = ans;
+                                inp.classList.add('correct');
+                                inp.classList.remove('incorrect-marked');
+                                adjustWidth(inp);
+                            }
+                        }
+                        row.style.borderColor = '#dc2626';
+                    }
+                });
+            } else if (prefix === 'ex4') {
+                ex4Items.forEach(item => {
+                    const slotId = `ex4-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex4State) {
+                        if (ex4State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex4State[key];
+                        }
+                    }
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex4State[slotId] = ans;
+                });
+            } else if (prefix === 'ex5') {
+                ex5Data.forEach((item) => {
+                    const el = document.getElementById(`ex5-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                for (let key in ex1State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+                document.querySelectorAll('#ex1-bank .word-item').forEach(el => el.classList.remove('used'));
+                document.querySelectorAll('#ex1-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#ex2-container .mcq-option').forEach(opt => {
+                    opt.classList.remove('selected', 'correct-option', 'incorrect-option');
+                });
+                document.querySelectorAll('#ex2-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex3') {
+                ex3Data.forEach((item, i) => {
+                    const n = i + 1;
+                    document.getElementById(`ex3-correct-${n}`).classList.remove('active');
+                    document.getElementById(`ex3-wrong-${n}`).classList.remove('active');
+                    document.getElementById(`ex3-rewrite-${n}`).style.display = 'none';
+                    const row = document.getElementById(`ex3-row-${n}`);
+                    if (row) row.style.borderColor = '';
+                    const inp = document.getElementById(`ex3-input-${n}`);
+                    if (inp) {
+                        inp.value = '';
+                        inp.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(inp);
+                    }
+                    delete ex3State[n];
+                });
+                document.querySelectorAll('#ex3-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex4') {
+                for (let key in ex4State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex4State[key];
+                }
+                document.querySelectorAll('#ex4-items .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex5') {
+                document.querySelectorAll('#ex5-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex5-container .hint-box').forEach(h => h.style.display = 'none');
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            // Grade text inputs (ex3 rewrite, ex5)
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            // Grade ex1 slots
+            document.querySelectorAll('#ex1-container .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            // Grade ex4 slots
+            document.querySelectorAll('#ex4-items .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            // Grade ex2 MCQ
+            document.querySelectorAll('#ex2-container .mcq-group').forEach(group => {
+                const selected = group.querySelector('.mcq-option.selected');
+                if (!selected) return;
+                const isCorrect = selected.dataset.value === group.dataset.ans;
+                group.querySelectorAll('.mcq-option').forEach(opt => {
+                    opt.classList.remove('correct-option', 'incorrect-option');
+                });
+                selected.classList.add(isCorrect ? 'correct-option' : 'incorrect-option');
+            });
+
+            // Grade ex3 tick/rewrite
+            ex3Data.forEach((item, i) => {
+                const n = i + 1;
+                const row = document.getElementById(`ex3-row-${n}`);
+                const correctActive = document.getElementById(`ex3-correct-${n}`).classList.contains('active');
+                const wrongActive = document.getElementById(`ex3-wrong-${n}`).classList.contains('active');
+                if (!correctActive && !wrongActive) {
+                    row.style.borderColor = '';
+                    return;
+                }
+                const tickedCorrect = correctActive;
+                const isTickRight = (tickedCorrect === item.correct);
+                row.style.borderColor = isTickRight ? '#16a34a' : '#dc2626';
+                if (!item.correct && wrongActive) {
+                    const inp = document.getElementById(`ex3-input-${n}`);
+                    if (inp && inp.value.trim() !== '') {
+                        const allowed = inp.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                        const userVal = inp.value.trim().toLowerCase();
+                        if (allowed.includes(userVal)) {
+                            inp.classList.add('correct');
+                            inp.classList.remove('incorrect-marked');
+                        } else {
+                            inp.classList.add('incorrect-marked');
+                            inp.classList.remove('correct');
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT
+           ================================================================ */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        // Expose
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex1Drop = ex1Drop;
+        window.ex1RemoveSlot = ex1RemoveSlot;
+        window.ex1ShowSlot = ex1ShowSlot;
+        window.ex1DragStart = ex1DragStart;
+        window.ex3Tick = ex3Tick;
+        window.ex3ShowRewriteAns = ex3ShowRewriteAns;
+        window.ex4Drop = ex4Drop;
+        window.ex4RemoveSlot = ex4RemoveSlot;
+        window.ex4ShowSlot = ex4ShowSlot;
+        window.ex4DragStart = ex4DragStart;
+        window.selectEx2Option = selectEx2Option;
+        window.showEx2Ans = showEx2Ans;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 4B: Comparison</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 4B ===== */
+
+        /* ---- Header đúng chuẩn - không khoảng trống ---- */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Word bank */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        /* Drop slot */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Inline group */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Hint box absolute */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Input fields */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Ex rows */
+        .ex-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+            font-size: 1.05rem;
+        }
+
+        .ex-row .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex-sentence {
+            display: inline;
+            font-size: 1.05rem;
+            line-height: 2.2;
+        }
+
+        .ex-sentence .inline-group {
+            margin: 0 4px;
+        }
+
+        /* Ex3 matching layout */
+        .ex3-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .ex3-col-left {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ex3-col-right {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ex3-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex3-item .drop-slot {
+            min-width: 40px;
+            max-width: 60px;
+        }
+
+        /* Ex5 drag-drop layout - SỬA LỖI CÁC NÚT BỊ ĐẨY SANG PHẢI */
+        .ex5-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .ex5-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex5-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 28px;
+            flex-shrink: 0;
+        }
+
+        .ex5-text {
+            flex: 0 0 auto;
+            /* QUAN TRỌNG: không chiếm hết không gian, giữ các nút sát bên cạnh */
+            color: var(--text);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .ex5-item .row-btns {
+            margin-left: 2px;
+            /* giảm khoảng cách so với văn bản */
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Grammar Reference */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        #reference-content {
+            display: none;
+        }
+
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .word-bank {
+                position: relative;
+                top: 0;
+            }
+
+            .ex3-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ex5-text {
+                flex: 0 0 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4B</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Comparison</h1>
+                <p class="subtitle">I can make comparisons using a variety of structures.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Các cấu trúc so sánh (Comparison)</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <!-- Group 1: Comparative & Superlative -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. So sánh hơn &amp; So sánh nhất (Comparative &amp; Superlative)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">Cấu trúc so sánh hơn (Comparative):</div>
+                            <ul class="grammar-list">
+                                <li><strong>Tính từ ngắn:</strong> <em>adjective + -er + than</em><br>
+                                    <em>John is <strong>taller</strong> than Paul.</em>
+                                </li>
+                                <li><strong>Tính từ dài:</strong> <em>more + adjective + than</em><br>
+                                    <em>This book is <strong>more interesting</strong> than that one.</em>
+                                </li>
+                                <li><strong>So sánh hơn với trạng từ:</strong> <em>more + adverb + than</em><br>
+                                    <em>She speaks <strong>more fluently</strong> than her brother.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Cấu trúc so sánh nhất (Superlative):</div>
+                            <ul class="grammar-list">
+                                <li><strong>Tính từ ngắn:</strong> <em>the + adjective + -est</em><br>
+                                    <em>Mount Everest is <strong>the highest</strong> mountain in the world.</em>
+                                </li>
+                                <li><strong>Tính từ dài:</strong> <em>the most + adjective</em><br>
+                                    <em>This is <strong>the most expensive</strong> hotel in the city.</em>
+                                </li>
+                                <li><strong>So sánh nhất với trạng từ:</strong> <em>the most + adverb</em><br>
+                                    <em>Of all the students, she speaks English <strong>the most fluently</strong>.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>This is <strong>the best</strong> book I've ever read. (bất quy tắc)</em><br>
+                            <em>She runs <strong>faster</strong> than me.</em><br>
+                            <em>He's <strong>the most talented</strong> musician in the band.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Double comparative -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. So sánh kép (Double comparative)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">Cấu trúc 1: <strong>more and more / -er and -er</strong> (càng
+                                ngày càng...)</div>
+                            <ul class="grammar-list">
+                                <li>Diễn tả sự thay đổi liên tục.<br>
+                                    <em>It's getting <strong>colder and colder</strong>. (Trời đang ngày càng lạnh
+                                        hơn.)</em>
+                                </li>
+                                <li><em>She is becoming <strong>more and more confident</strong>. (Cô ấy càng ngày càng
+                                        tự tin.)</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Cấu trúc 2: <strong>The + comparative, the + comparative</strong>
+                                (càng...càng...)</div>
+                            <ul class="grammar-list">
+                                <li>Diễn tả mối quan hệ nhân quả giữa hai hành động.<br>
+                                    <em><strong>The harder</strong> you study, <strong>the better</strong> you will
+                                        do.</em>
+                                </li>
+                                <li><em><strong>The more</strong> you practise, <strong>the more confident</strong> you
+                                        become.</em></li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>The weather is getting <strong>worse and worse</strong>.</em><br>
+                            <em><strong>The faster</strong> you drive, <strong>the more likely</strong> you are to have
+                                an accident.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: as...as, less/fewer -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. Các cấu trúc so sánh khác</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">as...as (bằng nhau):</div>
+                            <ul class="grammar-list">
+                                <li><em>She is <strong>as tall as</strong> her sister.</em></li>
+                                <li><em>This area isn't <strong>as popular as</strong> it used to be.</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">less / the least (so sánh về mức độ):</div>
+                            <ul class="grammar-list">
+                                <li><strong>less + adjective + than</strong> (ít hơn)<br>
+                                    <em>My flat is <strong>less spacious</strong> than yours.</em>
+                                </li>
+                                <li><strong>the least + adjective</strong> (ít nhất)<br>
+                                    <em>The kitchen is <strong>the least spacious</strong> room in the house.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">fewer / the fewest (so sánh về số lượng đếm được):</div>
+                            <ul class="grammar-list">
+                                <li><strong>fewer + danh từ đếm được số nhiều + than</strong><br>
+                                    <em>There are <strong>fewer flowers</strong> in the flower bed this year than
+                                        last.</em>
+                                </li>
+                                <li><strong>the fewest + danh từ đếm được số nhiều</strong><br>
+                                    <em>This house has got <strong>the fewest rooms</strong> of the three.</em>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>This area isn't <strong>as popular as</strong> it was five years ago.</em><br>
+                            <em>Wales is <strong>less remote</strong> than the north of Scotland.</em><br>
+                            <em>Which room has got <strong>the fewest</strong> pieces of furniture?</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 4: Common Mistakes -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>4. Lỗi thường gặp (Common Mistakes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <ul class="grammar-list">
+                            <li>❌ <em>This is the most best film.</em> → ✅ <em>This is the best film.</em><br>
+                                <small>Không dùng <strong>most</strong> với tính từ bất quy tắc (best).</small>
+                            </li>
+                            <li>❌ <em>He is more taller than me.</em> → ✅ <em>He is taller than me.</em><br>
+                                <small>Không dùng <strong>more</strong> với tính từ ngắn.</small>
+                            </li>
+                            <li>❌ <em>She sings beautifuler than him.</em> → ✅ <em>She sings more beautifully than
+                                    him.</em><br>
+                                <small>Với trạng từ dài, dùng <strong>more + adverb</strong>.</small>
+                            </li>
+                            <li>❌ <em>The more you eat, the more you fat.</em> → ✅ <em>The more you eat, the fatter you
+                                    get.</em><br>
+                                <small>Sử dụng cấu trúc <strong>the + comparative, the + comparative</strong>
+                                    đúng.</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: British Council LearnEnglish – <a
+                        href="https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/comparative-and-superlative-adjectives"
+                        target="_blank" style="color:var(--primary);">Comparative and superlative adjectives</a>)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete the sentences with a double comparative.</div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Put the words in the correct order.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Complete the sentences with the comparative form of the
+                adjectives and adverbs in brackets. Then match 1–5 with a–e.</div>
+            <div class="ex3-grid">
+                <div class="ex3-col-left" id="ex3-left"></div>
+                <div class="ex3-col-right" id="ex3-right"></div>
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Write superlative sentences with the present perfect.</div>
+            <div id="ex4-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 5 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Complete the sentences with <strong>less</strong>,
+                <strong>the least</strong>, <strong>fewer</strong>, or <strong>the fewest</strong>.</div>
+            <div class="word-bank" id="ex5-bank"></div>
+            <div class="ex5-items" id="ex5-items"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 6 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>6.</strong> Complete the sentences with the comparative and superlative
+                form of the adverbs in brackets.</div>
+            <div id="ex6-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1
+        const ex1Data = [
+            { num: 2, prompt: "This area is becoming ______ (popular)", ans: "more and more popular", hint: "<strong>Đáp án:</strong> more and more popular<br><strong>Bằng chứng:</strong> 'popular' là tính từ dài.<br><strong>Giải thích:</strong> Dùng <strong>more and more + adjective</strong> cho tính từ dài." },
+            { num: 3, prompt: "Jimmy is getting ______ (tall)", ans: "taller and taller", hint: "<strong>Đáp án:</strong> taller and taller<br><strong>Bằng chứng:</strong> 'tall' là tính từ ngắn.<br><strong>Giải thích:</strong> Dùng <strong>adjective + -er and -er</strong> cho tính từ ngắn." },
+            { num: 4, prompt: "Petrol was getting ______ (expensive)", ans: "more and more expensive", hint: "<strong>Đáp án:</strong> more and more expensive<br><strong>Bằng chứng:</strong> 'expensive' là tính từ dài.<br><strong>Giải thích:</strong> Dùng <strong>more and more + adjective</strong>." },
+            { num: 5, prompt: "Maria is becoming ______ (confident)", ans: "more and more confident", hint: "<strong>Đáp án:</strong> more and more confident<br><strong>Bằng chứng:</strong> 'confident' là tính từ dài.<br><strong>Giải thích:</strong> Dùng <strong>more and more + adjective</strong>." },
+            { num: 6, prompt: "The film just got ______ (silly)", ans: "sillier and sillier", hint: "<strong>Đáp án:</strong> sillier and sillier<br><strong>Bằng chứng:</strong> 'silly' có hai âm tiết, kết thúc bằng 'y' → chuyển y thành i + -er.<br><strong>Giải thích:</strong> Dùng <strong>adjective + -er and -er</strong>." }
+        ];
+
+        // Ex2
+        const ex2Data = [
+            { num: 1, prompt: "I thought / longer / The journey was / than", ans: "The journey was longer than I thought.", hint: "<strong>Đáp án:</strong> The journey was longer than I thought.<br><strong>Bằng chứng:</strong> So sánh hơn 'long' → 'longer'.<br><strong>Giải thích:</strong> Sắp xếp theo cấu trúc S + V + comparative + than + S + V." },
+            { num: 2, prompt: "more spacious / The flat was / than / appeared / it", ans: "The flat was more spacious than it appeared.", hint: "<strong>Đáp án:</strong> The flat was more spacious than it appeared.<br><strong>Bằng chứng:</strong> 'spacious' là tính từ dài.<br><strong>Giải thích:</strong> Cấu trúc S + V + more + adjective + than + S + V." },
+            { num: 3, prompt: "in Greece / hotter / it was / The weather here is / than", ans: "The weather here is hotter than it was in Greece.", hint: "<strong>Đáp án:</strong> The weather here is hotter than it was in Greece.<br><strong>Bằng chứng:</strong> So sánh hai nơi.<br><strong>Giải thích:</strong> Cấu trúc so sánh hơn với 'hot' → 'hotter'." },
+            { num: 4, prompt: "much more / it used to be / The house is / dilapidated / than", ans: "The house is much more dilapidated than it used to be.", hint: "<strong>Đáp án:</strong> The house is much more dilapidated than it used to be.<br><strong>Bằng chứng:</strong> 'dilapidated' là tính từ dài.<br><strong>Giải thích:</strong> 'much more' nhấn mạnh mức độ so sánh." },
+            { num: 5, prompt: "than / My grandad is / when he was a young man / shorter now", ans: "My grandad is shorter now than he was as a young man.", hint: "<strong>Đáp án:</strong> My grandad is shorter now than he was as a young man.<br><strong>Bằng chứng:</strong> 'short' → 'shorter'.<br><strong>Giải thích:</strong> Cấu trúc so sánh hơn với 'than'." },
+            { num: 6, prompt: "as popular as / it was / five years ago / This area isn’t", ans: "This area isn't as popular as it was five years ago.", hint: "<strong>Đáp án:</strong> This area isn't as popular as it was five years ago.<br><strong>Bằng chứng:</strong> 'not as...as' dùng để so sánh không bằng.<br><strong>Giải thích:</strong> Cấu trúc phủ định của as...as." }
+        ];
+
+        // Ex3
+        const ex3Left = [
+            { num: 1, text: "The ______ (long) I work,", ans_word: "longer", ans_match: "e" },
+            { num: 2, text: "The ______ (spacious) the house,", ans_word: "more spacious", ans_match: "a" },
+            { num: 3, text: "The ______ (fast) you drive,", ans_word: "faster", ans_match: "d" },
+            { num: 4, text: "The ______ (carefully) you check your work,", ans_word: "more carefully", ans_match: "c" },
+            { num: 5, text: "The ______ (long) you keep him waiting,", ans_word: "longer", ans_match: "b" }
+        ];
+        const ex3Right = [
+            { letter: "a", text: "the ______ (expensive) it will be.", ans_word: "more expensive" },
+            { letter: "b", text: "the ______ (impatient) he'll become.", ans_word: "more impatient" },
+            { letter: "c", text: "the ______ (few) mistakes you make.", ans_word: "fewer" },
+            { letter: "d", text: "the ______ (likely) you are to have an accident.", ans_word: "more likely" },
+            { letter: "e", text: "the ______ (tired) I feel.", ans_word: "more tired" }
+        ];
+        const ex3Hints = {
+            1: "<strong>Đáp án:</strong> longer / e – more tired<br><strong>Bằng chứng:</strong> Càng làm việc lâu, càng mệt.<br><strong>Giải thích:</strong> Cấu trúc <strong>the + comparative, the + comparative</strong>.",
+            2: "<strong>Đáp án:</strong> more spacious / a – more expensive<br><strong>Bằng chứng:</strong> Nhà càng rộng, càng đắt.<br><strong>Giải thích:</strong> Quan hệ nhân quả giữa hai đặc điểm.",
+            3: "<strong>Đáp án:</strong> faster / d – more likely<br><strong>Bằng chứng:</strong> Lái càng nhanh, càng dễ gặp tai nạn.<br><strong>Giải thích:</strong> Cấu trúc the + comparative, the + comparative.",
+            4: "<strong>Đáp án:</strong> more carefully / c – fewer<br><strong>Bằng chứng:</strong> Kiểm tra càng kỹ, càng ít lỗi.<br><strong>Giải thích:</strong> 'Carefully' là trạng từ dài → 'more carefully'.",
+            5: "<strong>Đáp án:</strong> longer / b – more impatient<br><strong>Bằng chứng:</strong> Để ai chờ càng lâu, họ càng mất kiên nhẫn.<br><strong>Giải thích:</strong> Cấu trúc the + comparative, the + comparative."
+        };
+
+        // Ex4
+        const ex4Data = [
+            { num: 2, prompt: "this / remote / region of the UK / I / ever / visit", ans: "This is the remotest region of the UK I've ever visited.", hint: "<strong>Đáp án:</strong> This is the remotest region of the UK I've ever visited.<br><strong>Bằng chứng:</strong> 'remote' là tính từ ngắn.<br><strong>Giải thích:</strong> Cấu trúc superlative + present perfect: <strong>the + adj-est + S + have/has ever + V3</strong>." },
+            { num: 3, prompt: "those / expensive / jeans / I / ever / buy", ans: "Those are the most expensive jeans I've ever bought.", hint: "<strong>Đáp án:</strong> Those are the most expensive jeans I've ever bought.<br><strong>Bằng chứng:</strong> 'expensive' là tính từ dài.<br><strong>Giải thích:</strong> Dùng <strong>the most + adjective</strong> cho tính từ dài." },
+            { num: 4, prompt: "that / charming / cottage / I / ever / stay in", ans: "That is the most charming cottage I've ever stayed in.", hint: "<strong>Đáp án:</strong> That is the most charming cottage I've ever stayed in.<br><strong>Bằng chứng:</strong> 'charming' là tính từ dài.<br><strong>Giải thích:</strong> Cấu trúc superlative + present perfect." },
+            { num: 5, prompt: "this / lively / area of town / I / ever / live in", ans: "This is the liveliest area of town I've ever lived in.", hint: "<strong>Đáp án:</strong> This is the liveliest area of town I've ever lived in.<br><strong>Bằng chứng:</strong> 'lively' kết thúc bằng 'y' → 'liveliest'.<br><strong>Giải thích:</strong> Đổi y thành i + -est." },
+            { num: 6, prompt: "that / pretty / flower bed / I / ever / see", ans: "That is the prettiest flowerbed I've ever seen.", hint: "<strong>Đáp án:</strong> That is the prettiest flowerbed I've ever seen.<br><strong>Bằng chứng:</strong> 'pretty' → 'prettiest' (y → i + -est).<br><strong>Giải thích:</strong> Cấu trúc superlative + present perfect." }
+        ];
+
+        // Ex5
+        const ex5Items = [
+            { num: 1, text: "The kitchen is ______ spacious room in the house.", ans: "the least" },
+            { num: 2, text: "My flat is ______ conveniently located than yours.", ans: "less" },
+            { num: 3, text: "This house has got ______ rooms of the three we've looked at.", ans: "the fewest" },
+            { num: 4, text: "Which costs ______, the semi-detached house or the terraced house?", ans: "less" },
+            { num: 5, text: "This is ______ popular area of the city.", ans: "the least" },
+            { num: 6, text: "Which room has got ______ furniture, the dining room, living room, or kitchen?", ans: "the least" },
+            { num: 7, text: "There are ______ flowers in the flower bed this year than last.", ans: "fewer" },
+            { num: 8, text: "Wales is ______ remote than the north of Scotland.", ans: "less" }
+        ];
+        const ex5Bank = ["less", "the least", "fewer", "the fewest"];
+        const ex5Hints = {
+            1: "<strong>Đáp án:</strong> the least<br><strong>Bằng chứng:</strong> So sánh nhất với danh từ không đếm được 'space'.<br><strong>Giải thích:</strong> Dùng <strong>the least + adjective</strong> cho so sánh nhất.",
+            2: "<strong>Đáp án:</strong> less<br><strong>Bằng chứng:</strong> So sánh hơn với trạng từ 'conveniently'.<br><strong>Giải thích:</strong> Dùng <strong>less + adjective/adverb + than</strong>.",
+            3: "<strong>Đáp án:</strong> the fewest<br><strong>Bằng chứng:</strong> Danh từ đếm được 'rooms'.<br><strong>Giải thích:</strong> Dùng <strong>the fewest + danh từ đếm được số nhiều</strong> cho so sánh nhất.",
+            4: "<strong>Đáp án:</strong> less<br><strong>Bằng chứng:</strong> 'cost' là động từ, không đếm được.<br><strong>Giải thích:</strong> Dùng <strong>less</strong> để hỏi về chi phí.",
+            5: "<strong>Đáp án:</strong> the least<br><strong>Bằng chứng:</strong> So sánh nhất với 'popular'.<br><strong>Giải thích:</strong> Dùng <strong>the least + adjective</strong>.",
+            6: "<strong>Đáp án:</strong> the least<br><strong>Bằng chứng:</strong> 'furniture' là danh từ không đếm được.<br><strong>Giải thích:</strong> Dùng <strong>the least + danh từ không đếm được</strong>.",
+            7: "<strong>Đáp án:</strong> fewer<br><strong>Bằng chứng:</strong> 'flowers' là danh từ đếm được số nhiều.<br><strong>Giải thích:</strong> Dùng <strong>fewer + danh từ đếm được số nhiều + than</strong>.",
+            8: "<strong>Đáp án:</strong> less<br><strong>Bằng chứng:</strong> 'remote' là tính từ, so sánh hơn.<br><strong>Giải thích:</strong> Dùng <strong>less + adjective + than</strong>."
+        };
+
+        // Ex6
+        const ex6Data = [
+            { num: 1, prompt: "Dan drives ______ than Ed, but Sam drives ______ of all. (slow)", ans: "slower, the slowest", hint: "<strong>Đáp án:</strong> slower / the slowest<br><strong>Bằng chứng:</strong> 'slow' → 'slower' (comparative), 'the slowest' (superlative).<br><strong>Giải thích:</strong> Trạng từ ngắn thêm -er/-est." },
+            { num: 2, prompt: "Amy works ______ than Kate, but Frances works ______. (hard)", ans: "harder, the hardest", hint: "<strong>Đáp án:</strong> harder / the hardest<br><strong>Bằng chứng:</strong> 'hard' → 'harder', 'the hardest'.<br><strong>Giải thích:</strong> Trạng từ ngắn thêm -er/-est." },
+            { num: 3, prompt: "Adam speaks French ______ than Kate, but Chris speaks ______. (fluently)", ans: "more fluently, the most fluently", hint: "<strong>Đáp án:</strong> more fluently / the most fluently<br><strong>Bằng chứng:</strong> 'fluently' là trạng từ dài.<br><strong>Giải thích:</strong> Dùng <strong>more + adverb</strong> và <strong>the most + adverb</strong>." },
+            { num: 4, prompt: "Jed walks ______ than Fred, but Tom walks ______. (fast)", ans: "faster, the fastest", hint: "<strong>Đáp án:</strong> faster / the fastest<br><strong>Bằng chứng:</strong> 'fast' → 'faster', 'the fastest'.<br><strong>Giải thích:</strong> Trạng từ ngắn." },
+            { num: 5, prompt: "Ed writes ______ than Fran, but Susan writes ______. (good)", ans: "better, the best", hint: "<strong>Đáp án:</strong> better / the best<br><strong>Bằng chứng:</strong> 'good' là bất quy tắc.<br><strong>Giải thích:</strong> Dùng <strong>better</strong> và <strong>the best</strong>." }
+        ];
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 --------
+        function renderEx1() {
+            const container = document.getElementById('ex1-container');
+            container.innerHTML = ex1Data.map((item) => {
+                const qid = `ex1-q${item.num}`;
+                const parts = item.prompt.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const inputHtml = `<span class="inline-group">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:160px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${before}${inputHtml}${after}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex2 --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map((item) => {
+                const qid = `ex2-q${item.num}`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="prompt" style="color:var(--text-muted); font-style:italic; margin-right:6px;">${item.prompt}</span>
+                    <span class="inline-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:350px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex3 (matching) --------
+        let ex3State = {};
+        let ex3Dragging = null;
+
+        function renderEx3() {
+            const left = document.getElementById('ex3-left');
+            left.innerHTML = ex3Left.map(item => {
+                const slotId = `ex3-slot-${item.num}`;
+                const parts = item.text.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const wordInput = `<span class="inline-group">
+                    <input type="text" id="${slotId}-word" data-ans="${item.ans_word}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${slotId}-word')">👁️</button>
+                    </span>
+                </span>`;
+                const textHtml = `${before}${wordInput}${after}`;
+                return `<div class="ex3-item" style="position:relative;">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${textHtml}</span>
+                    <span class="drop-slot" id="${slotId}" data-ans="${item.ans_match}" data-num="${item.num}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex3Drop(event, '${slotId}')"
+                          onclick="ex3RemoveSlot('${slotId}')" style="min-width:40px; max-width:60px;"></span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex3ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">${ex3Hints[item.num]}</div>
+                </div>`;
+            }).join('');
+
+            const right = document.getElementById('ex3-right');
+            right.innerHTML = ex3Right.map(item => {
+                const parts = item.text.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const wordInput = `<span class="inline-group">
+                    <input type="text" id="ex3-right-${item.letter}-word" data-ans="${item.ans_word}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('ex3-right-${item.letter}-word')">👁️</button>
+                    </span>
+                </span>`;
+                const textHtml = `${before}${wordInput}${after}`;
+                return `<div class="ex3-item">
+                    <span style="font-weight:700; min-width:24px;">${item.letter}.</span>
+                    <span class="ex-sentence">${textHtml}</span>
+                    <span class="word-item" draggable="true" data-letter="${item.letter}" 
+                          ondragstart="ex3DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')" 
+                          style="cursor:grab; padding:4px 12px; border:1px solid var(--primary); border-radius:12px; background:var(--word-item-bg);">${item.letter}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function ex3DragStart(e) {
+            ex3Dragging = e.target.dataset.letter;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex3Dragging);
+        }
+
+        function ex3Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex3Dragging) return;
+            for (let key in ex3State) {
+                if (ex3State[key] === ex3Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                }
+            }
+            slot.textContent = ex3Dragging;
+            slot.classList.add('filled');
+            ex3State[slotId] = ex3Dragging;
+            ex3Dragging = null;
+        }
+
+        function ex3RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const letter = slot.textContent.trim();
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex3State[slotId];
+        }
+
+        function ex3ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex3RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex3State) {
+                if (ex3State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                }
+            }
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex3State[slotId] = ans;
+        }
+
+        // -------- Ex4 --------
+        function renderEx4() {
+            const container = document.getElementById('ex4-container');
+            container.innerHTML = ex4Data.map((item) => {
+                const qid = `ex4-q${item.num}`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="prompt" style="color:var(--text-muted); font-style:italic; margin-right:6px;">${item.prompt}</span>
+                    <span class="inline-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:350px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex5 (drag-drop - cho phép kéo thả nhiều lần, không dùng .used) --------
+        let ex5Dragging = null;
+        let ex5State = {};
+
+        function renderEx5() {
+            const bank = document.getElementById('ex5-bank');
+            bank.innerHTML = ex5Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex5DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+
+            const items = document.getElementById('ex5-items');
+            items.innerHTML = ex5Items.map(item => {
+                const slotId = `ex5-slot-${item.num}`;
+                const parts = item.text.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const slotHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex5Drop(event, '${slotId}')"
+                          onclick="ex5RemoveSlot('${slotId}')"></span>`;
+                return `<div class="ex5-item">
+                    <span class="ex5-num">${item.num}.</span>
+                    <span class="ex5-text">${before}${slotHtml}${after}</span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="ex5ShowSlot('${slotId}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${slotId}-hint">${ex5Hints[item.num]}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function ex5DragStart(e) {
+            ex5Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex5Dragging);
+        }
+
+        function ex5Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex5Dragging) return;
+            // Xóa từ khỏi slot cũ nếu đang tồn tại ở slot khác
+            for (let key in ex5State) {
+                if (ex5State[key] === ex5Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex5State[key];
+                }
+            }
+            slot.textContent = ex5Dragging;
+            slot.classList.add('filled');
+            ex5State[slotId] = ex5Dragging;
+            // KHÔNG đánh dấu .used để cho phép kéo thả nhiều lần
+            ex5Dragging = null;
+        }
+
+        function ex5RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const word = slot.textContent.trim();
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex5State[slotId];
+        }
+
+        function ex5ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex5RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex5State) {
+                if (ex5State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex5State[key];
+                }
+            }
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex5State[slotId] = ans;
+        }
+
+        // -------- Ex6 (adverb comparison) --------
+        function renderEx6() {
+            const container = document.getElementById('ex6-container');
+            container.innerHTML = ex6Data.map((item) => {
+                const qid1 = `ex6-q${item.num}-1`;
+                const qid2 = `ex6-q${item.num}-2`;
+                const parts = item.prompt.split('______');
+                const before1 = parts[0] || '';
+                const after1 = parts[1] || '';
+                const before2 = parts[2] || '';
+                const after2 = parts[3] || '';
+                const ansParts = item.ans.split(', ');
+                const ans1 = ansParts[0] || '';
+                const ans2 = ansParts[1] || '';
+
+                const input1 = `<span class="inline-group" style="position:relative;">
+                    <input type="text" id="${qid1}" data-ans="${ans1}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid1}')">👁️</button>
+                    </span>
+                </span>`;
+                const input2 = `<span class="inline-group" style="position:relative;">
+                    <input type="text" id="${qid2}" data-ans="${ans2}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid2}')">👁️</button>
+                    </span>
+                </span>`;
+
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">
+                        ${before1}${input1}${after1}${before2}${input2}${after2}
+                    </span>
+                    <span class="inline-group" style="position:relative; margin-left:6px;">
+                        <button class="hint-btn" onclick="toggleHint(event,'ex6-hint-${item.num}')">i</button>
+                        <div class="hint-box absolute" id="ex6-hint-${item.num}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        /* ================================================================
+           HELPERS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Data.forEach((item) => {
+                    const el = document.getElementById(`ex1-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach((item) => {
+                    const el = document.getElementById(`ex2-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex3') {
+                // Show word answers
+                ex3Left.forEach((item) => {
+                    const el = document.getElementById(`ex3-slot-${item.num}-word`);
+                    if (el) {
+                        const ans = item.ans_word;
+                        if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el.value = ans;
+                            el.classList.add('correct');
+                            el.classList.remove('incorrect-marked');
+                            adjustWidth(el);
+                        }
+                    }
+                });
+                ex3Right.forEach((item) => {
+                    const el = document.getElementById(`ex3-right-${item.letter}-word`);
+                    if (el) {
+                        const ans = item.ans_word;
+                        if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el.value = ans;
+                            el.classList.add('correct');
+                            el.classList.remove('incorrect-marked');
+                            adjustWidth(el);
+                        }
+                    }
+                });
+                // Show matching
+                ex3Left.forEach((item) => {
+                    const slotId = `ex3-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans_match;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex3State) {
+                        if (ex3State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex3State[key];
+                        }
+                    }
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex3State[slotId] = ans;
+                });
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach((item) => {
+                    const el = document.getElementById(`ex4-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex5') {
+                ex5Items.forEach((item) => {
+                    const slotId = `ex5-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex5State) {
+                        if (ex5State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex5State[key];
+                        }
+                    }
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex5State[slotId] = ans;
+                });
+            } else if (prefix === 'ex6') {
+                ex6Data.forEach((item) => {
+                    const ansParts = item.ans.split(', ');
+                    const el1 = document.getElementById(`ex6-q${item.num}-1`);
+                    const el2 = document.getElementById(`ex6-q${item.num}-2`);
+                    if (el1) {
+                        const ans = ansParts[0] || '';
+                        if (el1.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el1.value = ans;
+                            el1.classList.add('correct');
+                            el1.classList.remove('incorrect-marked');
+                            adjustWidth(el1);
+                        }
+                    }
+                    if (el2) {
+                        const ans = ansParts[1] || '';
+                        if (el2.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el2.value = ans;
+                            el2.classList.add('correct');
+                            el2.classList.remove('incorrect-marked');
+                            adjustWidth(el2);
+                        }
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex1-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#ex2-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex2-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#ex3-left input, #ex3-right input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                for (let key in ex3State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex3State[key];
+                }
+                document.querySelectorAll('#ex3-left .hint-box, #ex3-right .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#ex4-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex4-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex5') {
+                for (let key in ex5State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex5State[key];
+                }
+                document.querySelectorAll('#ex5-items .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex6') {
+                document.querySelectorAll('#ex6-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex6-container .hint-box').forEach(h => h.style.display = 'none');
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            document.querySelectorAll('#ex3-left .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            document.querySelectorAll('#ex5-items .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT
+           ================================================================ */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            renderEx6();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        // Expose
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex3Drop = ex3Drop;
+        window.ex3RemoveSlot = ex3RemoveSlot;
+        window.ex3ShowSlot = ex3ShowSlot;
+        window.ex3DragStart = ex3DragStart;
+        window.ex5Drop = ex5Drop;
+        window.ex5RemoveSlot = ex5RemoveSlot;
+        window.ex5ShowSlot = ex5ShowSlot;
+        window.ex5DragStart = ex5DragStart;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>

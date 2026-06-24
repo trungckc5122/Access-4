@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 4D: Imaginary situations</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 4D ===== */
+
+        /* ---- Header đúng chuẩn ---- */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Word bank */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Drop slot */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Inline group */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Hint box absolute */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Input fields */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Ex rows */
+        .ex-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .ex-row .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex-sentence {
+            display: inline;
+            font-size: 1.05rem;
+            line-height: 2.2;
+        }
+
+        .ex-sentence .inline-group {
+            margin: 0 4px;
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Grammar Reference */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        #reference-content {
+            display: none;
+        }
+
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .word-bank {
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4D</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Imaginary situations</h1>
+                <p class="subtitle">I can talk about imaginary situations and things I would like to change.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Câu điều kiện loại 2 &amp; Wish / If only</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <!-- Group 1: Second Conditional -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. Câu điều kiện loại 2 (Second Conditional)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">Công thức:</div>
+                            <ul class="grammar-list">
+                                <li><strong>If + S + V<sub>past simple</sub>, S + would / could / might +
+                                        V<sub>base</sub></strong></li>
+                                <li><em>If I <strong>had</strong> a car, I <strong>would drive</strong> to work.</em>
+                                </li>
+                                <li><em>If she <strong>knew</strong> the truth, she <strong>wouldn't be</strong>
+                                        happy.</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Cách dùng:</div>
+                            <ul class="grammar-list">
+                                <li>Diễn tả một tình huống <strong>không có thật</strong> ở hiện tại hoặc tương lai.
+                                </li>
+                                <li>Dùng để <strong>tưởng tượng</strong> hoặc giả định một điều trái ngược với thực tế.
+                                </li>
+                                <li>Thường được dùng để đưa ra <strong>lời khuyên</strong> hoặc <strong>gợi ý</strong>.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>If I <strong>won</strong> the lottery, I <strong>would travel</strong> around the
+                                world.</em><br>
+                            <em>What <strong>would</strong> you <strong>do</strong> if you <strong>lost</strong> your
+                                job?</em><br>
+                            <em>If we <strong>didn't have</strong> to work, we <strong>could</strong> spend more time
+                                together.</em>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Lưu ý về <strong>were</strong>:</div>
+                            <ul class="grammar-list">
+                                <li>Với <strong>I / he / she / it</strong>, thường dùng <strong>were</strong> thay cho
+                                    <strong>was</strong> trong văn viết trang trọng.
+                                </li>
+                                <li><em>If I <strong>were</strong> you, I <strong>would</strong> accept the offer.</em>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Wish & If only -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. Wish &amp; If only (ước muốn trái với thực tế)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <div class="detail-title">Công thức:</div>
+                            <ul class="grammar-list">
+                                <li><strong>I wish / If only + S + V<sub>past simple</sub></strong> (ước ở hiện tại)
+                                </li>
+                                <li><em>I wish I <strong>had</strong> more money. (Thực tế: tôi không có nhiều
+                                        tiền)</em></li>
+                                <li><em>If only it <strong>stopped</strong> raining! (Thực tế: trời đang mưa)</em></li>
+                                <li><strong>I wish / If only + S + would + V<sub>base</sub></strong> (ước ai đó thay đổi
+                                    hành vi)</li>
+                                <li><em>I wish you <strong>would</strong> stop making so much noise.</em></li>
+                                <li><em>If only they <strong>would</strong> listen to me!</em></li>
+                            </ul>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-title">Phân biệt:</div>
+                            <ul class="grammar-list">
+                                <li><strong>I wish + past simple</strong>: ước một điều không có thật ở hiện tại.</li>
+                                <li><strong>I wish + would</strong>: ước ai đó thay đổi thói quen hoặc hành động trong
+                                    tương lai.</li>
+                                <li><strong>If only</strong> mang nghĩa nhấn mạnh hơn <strong>I wish</strong>.</li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>I wish I <strong>were</strong> taller.</em><br>
+                            <em>If only my parents <strong>would</strong> let me stay out later.</em><br>
+                            <em>She wishes she <strong>hadn't said</strong> that. (ước quá khứ — với past perfect)</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Lỗi thường gặp -->
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. Lỗi thường gặp (Common Mistakes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <ul class="grammar-list">
+                            <li>❌ <em>If I will win the lottery, I would travel.</em> → ✅ <em>If I won the lottery, I
+                                    would travel.</em><br>
+                                <small>Trong mệnh đề if của câu điều kiện loại 2, dùng <strong>quá khứ đơn</strong>,
+                                    không dùng <strong>will</strong>.</small>
+                            </li>
+                            <li>❌ <em>If I was you, I would go.</em> → ✅ <em>If I <strong>were</strong> you, I would
+                                    go.</em><br>
+                                <small>Dùng <strong>were</strong> cho tất cả các ngôi trong câu điều kiện loại 2 (trang
+                                    trọng).</small>
+                            </li>
+                            <li>❌ <em>I wish I have a car.</em> → ✅ <em>I wish I <strong>had</strong> a car.</em><br>
+                                <small>Sau <strong>wish</strong> dùng <strong>quá khứ đơn</strong> để diễn tả ước ở hiện
+                                    tại.</small>
+                            </li>
+                            <li>❌ <em>If only she would lives closer.</em> → ✅ <em>If only she <strong>lived</strong>
+                                    closer.</em><br>
+                                <small>Sau <strong>if only</strong> + past simple: ước về một điều hiện tại. Dùng
+                                    <strong>would</strong> khi muốn ai đó thay đổi hành vi.</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: British Council LearnEnglish – <a
+                        href="https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/second-conditional"
+                        target="_blank" style="color:var(--primary);">Second conditional</a> &amp; <a
+                        href="https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/wish-if-only"
+                        target="_blank" style="color:var(--primary);">Wish/If only</a>)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete the second conditional sentences with the correct
+                form of the verbs below.</div>
+            <div class="word-bank" id="ex1-bank"></div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Complete the dialogue with the past simple and <strong>would
+                    + base form</strong>.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Rewrite the sentences. Use the second conditional.</div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the sentences with the past simple or <strong>would
+                    + base form</strong>, depending on the meaning.</div>
+            <div id="ex4-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1 – Word Bank
+        const ex1Bank = ["not believe", "do", "get", "give", "make", "not spend", "work"];
+        const ex1Items = [
+            { num: 1, prompt: "Your exam results would be much better if you ______ a bit harder.", ans: "worked", hint: "<strong>Đáp án:</strong> worked<br><strong>Bằng chứng:</strong> Kết quả thi sẽ tốt hơn nếu làm việc chăm hơn.<br><strong>Giải thích:</strong> Dùng quá khứ đơn trong mệnh đề if của câu điều kiện loại 2." },
+            { num: 2, prompt: "If you moved to a new city, you ______ friends really quickly.", ans: "would make", hint: "<strong>Đáp án:</strong> would make<br><strong>Bằng chứng:</strong> Nếu chuyển đến thành phố mới, sẽ kết bạn nhanh chóng.<br><strong>Giải thích:</strong> Dùng <strong>would + V</strong> trong mệnh đề chính." },
+            { num: 3, prompt: "Homelessness wouldn't be such a big problem if the government ______ more to help.", ans: "did", hint: "<strong>Đáp án:</strong> did<br><strong>Bằng chứng:</strong> Nếu chính phủ làm nhiều hơn để giúp đỡ.<br><strong>Giải thích:</strong> Mệnh đề if dùng quá khứ đơn." },
+            { num: 4, prompt: "I'd finish the housework a lot faster if you ______ me a hand with it!", ans: "gave", hint: "<strong>Đáp án:</strong> gave<br><strong>Bằng chứng:</strong> Nếu bạn giúp tay, tôi sẽ xong việc nhanh hơn.<br><strong>Giải thích:</strong> 'give a hand' = giúp đỡ." },
+            { num: 5, prompt: "Would she remember me if I ______ in touch after so many years?", ans: "got", hint: "<strong>Đáp án:</strong> got<br><strong>Bằng chứng:</strong> Nếu tôi liên lạc sau nhiều năm, cô ấy có nhớ tôi không?<br><strong>Giải thích:</strong> Mệnh đề if dùng quá khứ đơn." },
+            { num: 6, prompt: "You'd have more time for schoolwork if you ______ so long playing computer games.", ans: "didn't spend", hint: "<strong>Đáp án:</strong> didn't spend<br><strong>Bằng chứng:</strong> Nếu không dành quá nhiều thời gian chơi game.<br><strong>Giải thích:</strong> Mệnh đề if phủ định dùng quá khứ đơn." },
+            { num: 7, prompt: "If I told you the truth, you ______ me.", ans: "wouldn't believe", hint: "<strong>Đáp án:</strong> wouldn't believe<br><strong>Bằng chứng:</strong> Nếu tôi nói thật, bạn sẽ không tin.<br><strong>Giải thích:</strong> Mệnh đề chính dùng <strong>wouldn't + V</strong>." }
+        ];
+
+        // Ex2 – Dialogue
+        const ex2Data = [
+            { num: 1, prompt: "If this ______ (be) the right path, we ______ (be) there by now.", ans: "was, would be", hint: "<strong>Đáp án:</strong> was / would be<br><strong>Bằng chứng:</strong> Nếu đúng đường, chúng ta đã đến nơi.<br><strong>Giải thích:</strong> Mệnh đề if dùng quá khứ đơn, mệnh đề chính dùng <strong>would + V</strong>." },
+            { num: 2, prompt: "If I ______ (know) that, we ______ (not be) lost!", ans: "knew, wouldn't be", hint: "<strong>Đáp án:</strong> knew / wouldn't be<br><strong>Bằng chứng:</strong> Nếu biết điều đó, chúng ta đã không bị lạc.<br><strong>Giải thích:</strong> Câu điều kiện loại 2 giả định trái ngược thực tế." },
+            { num: 3, prompt: "If you ______ (have) your phone with you, we ______ (be able to) look at a map.", ans: "had, would be able to", hint: "<strong>Đáp án:</strong> had / would be able to<br><strong>Bằng chứng:</strong> Nếu có điện thoại, có thể xem bản đồ.<br><strong>Giải thích:</strong> 'be able to' dùng với <strong>would</strong>." },
+            { num: 4, prompt: "I ______ (not be) so worried if we ______ (not be) so far from home.", ans: "wouldn't be, weren't", hint: "<strong>Đáp án:</strong> wouldn't be / weren't<br><strong>Bằng chứng:</strong> Sẽ không lo lắng nếu không ở xa nhà.<br><strong>Giải thích:</strong> Mệnh đề if phủ định dùng <strong>weren't</strong>." },
+            { num: 5, prompt: "If you ______ (bring) your phone with you, you ______ (use) it all the time.", ans: "brought, would use", hint: "<strong>Đáp án:</strong> brought / would use<br><strong>Bằng chứng:</strong> Nếu mang điện thoại, bạn sẽ dùng nó suốt.<br><strong>Giải thích:</strong> Giả định về hành động trong tương lai." }
+        ];
+
+        // Ex3 – Rewrite
+        const ex3Items = [
+            { num: 2, prompt: "I don't live in a detached house, so I can't play my music really loud.", ans: "If I lived in a detached house, I could play my music really loud.", hint: "<strong>Đáp án:</strong> If I lived in a detached house, I could play my music really loud.<br><strong>Bằng chứng:</strong> Thực tế không sống ở nhà biệt lập.<br><strong>Giải thích:</strong> Chuyển sang câu điều kiện loại 2: mệnh đề if phủ định → khẳng định, mệnh đề chính dùng <strong>could</strong>." },
+            { num: 3, prompt: "We don't have a nine-bedroom mansion, so we don't invite lots of friends and family to stay.", ans: "If we had a nine-bedroom mansion, we would invite lots of friends and family to stay.", hint: "<strong>Đáp án:</strong> If we had a nine-bedroom mansion, we would invite lots of friends and family to stay.<br><strong>Bằng chứng:</strong> Thực tế không có biệt thự 9 phòng ngủ.<br><strong>Giải thích:</strong> Mệnh đề if dùng quá khứ đơn, mệnh đề chính dùng <strong>would</strong>." },
+            { num: 4, prompt: "Our flat is small, so my parents don't allow me to have a pet.", ans: "If our flat wasn't so small, my parents would allow me to have a pet.", hint: "<strong>Đáp án:</strong> If our flat wasn't so small, my parents would allow me to have a pet.<br><strong>Bằng chứng:</strong> Căn hộ nhỏ thật sự.<br><strong>Giải thích:</strong> Mệnh đề if phủ định dùng <strong>wasn't</strong>." },
+            { num: 5, prompt: "I don't close my bedroom shutters at night, so I wake up early in the morning.", ans: "If I closed my bedroom shutters at night, I wouldn't wake up early in the morning.", hint: "<strong>Đáp án:</strong> If I closed my bedroom shutters at night, I wouldn't wake up early in the morning.<br><strong>Bằng chứng:</strong> Thực tế không đóng cửa chớp.<br><strong>Giải thích:</strong> Mệnh đề chính dùng <strong>wouldn't</strong>." },
+            { num: 6, prompt: "They haven't got a fence. Their dog keeps running away.", ans: "If they had a fence, their dog wouldn't keep running away.", hint: "<strong>Đáp án:</strong> If they had a fence, their dog wouldn't keep running away.<br><strong>Bằng chứng:</strong> Không có hàng rào, chó chạy mất.<br><strong>Giải thích:</strong> 'keep + V-ing' = tiếp tục làm gì." },
+            { num: 7, prompt: "They aren't interested in gardening. Their flower beds are a mess.", ans: "If they were interested in gardening, their flowerbeds wouldn't be a mess.", hint: "<strong>Đáp án:</strong> If they were interested in gardening, their flowerbeds wouldn't be a mess.<br><strong>Bằng chứng:</strong> Không thích làm vườn → bồn hoa bừa bộn.<br><strong>Giải thích:</strong> Dùng <strong>were</strong> cho tất cả ngôi (giả định)." },
+            { num: 8, prompt: "I share a bedroom with my brother. I can't watch TV at night.", ans: "If I didn't share a bedroom with my brother, I could watch TV at night.", hint: "<strong>Đáp án:</strong> If I didn't share a bedroom with my brother, I could watch TV at night.<br><strong>Bằng chứng:</strong> Chia phòng với anh trai → không xem TV được.<br><strong>Giải thích:</strong> Mệnh đề chính dùng <strong>could</strong>." },
+            { num: 9, prompt: "Our house is near an airport. It's noisy in the garden.", ans: "If our house wasn't near an airport, it wouldn't be noisy in the garden.", hint: "<strong>Đáp án:</strong> If our house wasn't near an airport, it wouldn't be noisy in the garden.<br><strong>Bằng chứng:</strong> Nhà gần sân bay → ồn ào.<br><strong>Giải thích:</strong> Mệnh đề if phủ định dùng <strong>wasn't</strong>." }
+        ];
+
+        // Ex4 – Wish / If only
+        const ex4Items = [
+            { num: 1, prompt: "Our neighbours have still got my badminton net. I wish they ______ (give) it back!", ans: "would give", hint: "<strong>Đáp án:</strong> would give<br><strong>Bằng chứng:</strong> Hàng xóm vẫn giữ lưới cầu lông.<br><strong>Giải thích:</strong> <strong>I wish + would</strong> để ước ai đó thay đổi hành vi." },
+            { num: 2, prompt: "I can't work with the TV so loud. I wish you ______ (turn) it down!", ans: "would turn", hint: "<strong>Đáp án:</strong> would turn<br><strong>Bằng chứng:</strong> TV quá to, không làm việc được.<br><strong>Giải thích:</strong> <strong>I wish + would</strong> thể hiện sự mong muốn người khác thay đổi." },
+            { num: 3, prompt: "I love that new phone, but it's really expensive. If only it ______ (be) cheaper!", ans: "were", hint: "<strong>Đáp án:</strong> were<br><strong>Bằng chứng:</strong> Điện thoại đắt tiền.<br><strong>Giải thích:</strong> <strong>If only + past simple</strong> ước một điều không có thật ở hiện tại. Dùng <strong>were</strong> cho 'it'." },
+            { num: 4, prompt: "Unfortunately, I don't see my cousins very often. I wish they ______ (live) closer.", ans: "lived", hint: "<strong>Đáp án:</strong> lived<br><strong>Bằng chứng:</strong> Không thường gặp anh em họ.<br><strong>Giải thích:</strong> <strong>I wish + past simple</strong> ước về một tình huống hiện tại." },
+            { num: 5, prompt: "I want to go to bed, but our guests are still here. If only they ______ (leave)!", ans: "would leave", hint: "<strong>Đáp án:</strong> would leave<br><strong>Bằng chứng:</strong> Khách chưa về, muốn đi ngủ.<br><strong>Giải thích:</strong> <strong>If only + would</strong> thể hiện mong muốn ai đó hành động." },
+            { num: 6, prompt: "I wish it ______ (be) Friday today.", ans: "were", hint: "<strong>Đáp án:</strong> were<br><strong>Bằng chứng:</strong> Hôm nay không phải thứ Sáu.<br><strong>Giải thích:</strong> <strong>I wish + past simple</strong> ước về hiện tại." },
+            { num: 7, prompt: "I really want to go skiing tomorrow. If only it ______ (snow) tonight!", ans: "would snow", hint: "<strong>Đáp án:</strong> would snow<br><strong>Bằng chứng:</strong> Muốn đi trượt tuyết, cần tuyết rơi.<br><strong>Giải thích:</strong> <strong>If only + would</strong> ước một điều xảy ra trong tương lai." }
+        ];
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 (Word Bank Drag-Drop) --------
+        let ex1Dragging = null;
+        let ex1State = {};
+
+        function renderEx1() {
+            const bank = document.getElementById('ex1-bank');
+            bank.innerHTML = ex1Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex1DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+
+            const container = document.getElementById('ex1-container');
+            container.innerHTML = ex1Items.map(item => {
+                const slotId = `ex1-slot-${item.num}`;
+                const parts = item.prompt.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const slotHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                          ondragover="event.preventDefault(); this.classList.add('over')"
+                          ondragleave="this.classList.remove('over')"
+                          ondrop="ex1Drop(event, '${slotId}')"
+                          onclick="ex1RemoveSlot('${slotId}')"></span>`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${before}${slotHtml}${after}</span>
+                    <span class="inline-group">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${slotId}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        function ex1DragStart(e) {
+            ex1Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex1Dragging);
+        }
+
+        function ex1Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex1Dragging) return;
+            // Remove from any other slot
+            for (let key in ex1State) {
+                if (ex1State[key] === ex1Dragging) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+            }
+            slot.textContent = ex1Dragging;
+            slot.classList.add('filled');
+            ex1State[slotId] = ex1Dragging;
+            // mark used
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ex1Dragging) el.classList.add('used');
+            });
+            ex1Dragging = null;
+        }
+
+        function ex1RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            const word = slot.textContent.trim();
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === word) el.classList.remove('used');
+            });
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex1State[slotId];
+        }
+
+        function ex1ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex1RemoveSlot(slotId);
+                return;
+            }
+            for (let key in ex1State) {
+                if (ex1State[key] === ans) {
+                    const oldSlot = document.getElementById(key);
+                    if (oldSlot) {
+                        oldSlot.textContent = '';
+                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+            }
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.remove('used');
+            });
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex1State[slotId] = ans;
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                if (el.dataset.word === ans) el.classList.add('used');
+            });
+        }
+
+        // -------- Ex2 (Inputs) --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map(item => {
+                const qid1 = `ex2-q${item.num}-1`;
+                const qid2 = `ex2-q${item.num}-2`;
+                const parts = item.prompt.split('______');
+                const ansParts = item.ans.split(', ');
+                const ans1 = ansParts[0] || '';
+                const ans2 = ansParts[1] || '';
+                const input1 = `<span class="inline-group">
+                    <input type="text" id="${qid1}" data-ans="${ans1}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid1}')">👁️</button>
+                    </span>
+                </span>`;
+                const input2 = `<span class="inline-group">
+                    <input type="text" id="${qid2}" data-ans="${ans2}" class="task5-input" style="min-width:100px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid2}')">👁️</button>
+                    </span>
+                </span>`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${parts[0]}${input1}${parts[1] || ''}${input2}${parts[2] || ''}</span>
+                    <span class="inline-group">
+                        <span class="row-btns">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-hint-${item.num}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="ex2-hint-${item.num}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex3 (Rewrite - Inputs) --------
+        function renderEx3() {
+            const container = document.getElementById('ex3-container');
+            container.innerHTML = ex3Items.map(item => {
+                const qid = `ex3-q${item.num}`;
+                return `<div class="ex-row" style="flex-direction:column; align-items:flex-start; gap:6px;">
+                    <div style="display:flex; align-items:baseline; gap:6px;">
+                        <span class="q-label">${item.num}.</span>
+                        <span class="prompt" style="color:var(--text-muted); font-style:italic;">${item.prompt}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; padding-left:28px; position:relative;">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:400px; text-align:left;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex4 (Inputs) --------
+        function renderEx4() {
+            const container = document.getElementById('ex4-container');
+            container.innerHTML = ex4Items.map(item => {
+                const qid = `ex4-q${item.num}`;
+                const parts = item.prompt.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const inputHtml = `<span class="inline-group">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:120px; text-align:left;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${before}${inputHtml}${after}</span>
+                </div>`;
+            }).join('');
+        }
+
+        /* ================================================================
+           HELPERS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Items.forEach((item) => {
+                    const slotId = `ex1-slot-${item.num}`;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    const ans = item.ans;
+                    if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
+                    for (let key in ex1State) {
+                        if (ex1State[key] === ans) {
+                            const oldSlot = document.getElementById(key);
+                            if (oldSlot) {
+                                oldSlot.textContent = '';
+                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                            }
+                            delete ex1State[key];
+                        }
+                    }
+                    document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.remove('used');
+                    });
+                    slot.textContent = ans;
+                    slot.classList.add('filled', 'correct');
+                    ex1State[slotId] = ans;
+                    document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                        if (el.dataset.word === ans) el.classList.add('used');
+                    });
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach((item) => {
+                    const ansParts = item.ans.split(', ');
+                    const el1 = document.getElementById(`ex2-q${item.num}-1`);
+                    const el2 = document.getElementById(`ex2-q${item.num}-2`);
+                    if (el1) {
+                        const ans = ansParts[0] || '';
+                        if (el1.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el1.value = ans;
+                            el1.classList.add('correct');
+                            el1.classList.remove('incorrect-marked');
+                            adjustWidth(el1);
+                        }
+                    }
+                    if (el2) {
+                        const ans = ansParts[1] || '';
+                        if (el2.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                            el2.value = ans;
+                            el2.classList.add('correct');
+                            el2.classList.remove('incorrect-marked');
+                            adjustWidth(el2);
+                        }
+                    }
+                });
+            } else if (prefix === 'ex3') {
+                ex3Items.forEach((item) => {
+                    const el = document.getElementById(`ex3-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex4') {
+                ex4Items.forEach((item) => {
+                    const el = document.getElementById(`ex4-q${item.num}`);
+                    if (!el) return;
+                    const ans = item.ans.split('|')[0].trim();
+                    if (el.value.trim().toLowerCase() !== ans.toLowerCase()) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                for (let key in ex1State) {
+                    const slot = document.getElementById(key);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    delete ex1State[key];
+                }
+                document.querySelectorAll('#ex1-bank .word-item').forEach(el => el.classList.remove('used'));
+                document.querySelectorAll('#ex1-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#ex2-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex2-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#ex3-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex3-container .hint-box').forEach(h => h.style.display = 'none');
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#ex4-container input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                document.querySelectorAll('#ex4-container .hint-box').forEach(h => h.style.display = 'none');
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            document.querySelectorAll('#ex1-container .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT
+           ================================================================ */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        // Expose
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex1Drop = ex1Drop;
+        window.ex1RemoveSlot = ex1RemoveSlot;
+        window.ex1ShowSlot = ex1ShowSlot;
+        window.ex1DragStart = ex1DragStart;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
