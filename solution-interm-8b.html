@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 8B: Reported speech</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== CSS ĐẶC THÙ CHO BÀI 8B ===== */
+
+        /* Header đúng chuẩn */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* Word bank drag-drop */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            justify-content: center;
+            min-height: 60px;
+            position: sticky;
+            top: 15px;
+            z-index: 100;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-dark);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Drop slot */
+        .drop-slot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+            min-height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 0 8px;
+            margin: 0 2px;
+            vertical-align: middle;
+            font-size: 0.95rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Input fields */
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-size: 1.05rem;
+            min-width: 60px;
+            text-align: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            field-sizing: content;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+            background: var(--primary-light);
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        /* Rewrite inputs - tự giãn */
+        .ex-rewrite-input {
+            min-width: 280px;
+            text-align: left;
+            flex: 0 1 auto;
+            max-width: none !important;
+            width: auto;
+        }
+
+        /* Inline group */
+        .inline-group {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+            margin: 0 2px;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Hint box */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 400px;
+            width: auto;
+            margin-top: 5px;
+            z-index: 200;
+            white-space: normal;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box {
+            display: none;
+            margin-top: 10px;
+            padding: 14px;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            color: var(--hint-text);
+            border-radius: 0 10px 10px 0;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        /* Ex rows */
+        .ex-row {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+            line-height: 2.2;
+            font-size: 1.05rem;
+            position: relative;
+        }
+
+        .ex-row .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex-sentence {
+            display: inline;
+            font-size: 1.05rem;
+            line-height: 2.2;
+        }
+
+        /* Exercise 1: drag-drop layout */
+        .ex1-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .ex1-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 28px;
+        }
+
+        .ex1-text {
+            flex: 0 0 auto;
+            color: var(--text);
+        }
+
+        .ex1-item .drop-slot {
+            min-width: 120px;
+            max-width: 180px;
+        }
+
+        .ex1-item .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Exercise 5: rewrite */
+        .ex5-item {
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+        }
+
+        .ex5-prompt {
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .ex5-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            position: relative;
+            padding-left: 24px;
+        }
+
+        .ex5-input-group .task5-input {
+            min-width: 200px;
+            /* hoặc bỏ hẳn, để field-sizing tự quyết */
+            text-align: left;
+            /* bỏ max-width: none !important; hoặc giữ nhưng không ảnh hưởng */
+            flex: 0 1 auto;
+            /* không co giãn chiếm hết space */
+            width: auto;
+            /* để field-sizing: content tự giãn */
+        }
+
+        /* Exercise 4: said/told */
+        .ex4-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+            position: relative;
+        }
+
+        .ex4-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex4-text {
+            color: var(--text);
+        }
+
+        .ex4-text .inline-group {
+            margin: 0 4px;
+        }
+
+        /* Exercise 6: Split screen */
+        .ex6-split-container {
+            display: flex;
+            height: 520px;
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin: 10px 0;
+            background: var(--card-bg);
+            position: relative;
+        }
+
+        .ex6-left-panel {
+            flex: 0 0 50%;
+            min-width: 200px;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--reading-bg);
+            border-right: 1px solid var(--glass-border);
+            line-height: 2.2;
+            font-size: 1rem;
+        }
+
+        .ex6-right-panel {
+            flex: 0 0 50%;
+            min-width: 200px;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--card-bg);
+        }
+
+        .ex6-right-panel h3 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            text-align: center;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .ex6-right-panel .ex6-item {
+            margin-bottom: 14px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .ex6-right-panel .ex6-item .q-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex6-right-panel .ex6-item .task5-input {
+            min-width: 200px;
+            text-align: left;
+            flex: 1;
+        }
+
+        /* Resizer */
+        .ex6-resizer {
+            position: relative;
+            width: 10px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            z-index: 10;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .ex6-resizer:hover {
+            background: var(--resizer-hover);
+        }
+
+        .ex6-resizer::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 2px;
+            height: 40px;
+            background: var(--text-muted);
+            border-radius: 1px;
+        }
+
+        /* Exercise 3: time/place changes */
+        .ex3-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+            position: relative;
+        }
+
+        .ex3-num {
+            font-weight: 700;
+            color: var(--primary-dark);
+            min-width: 24px;
+        }
+
+        .ex3-direct {
+            font-weight: 600;
+            color: var(--text);
+            min-width: 100px;
+        }
+
+        .ex3-arrow {
+            color: var(--text-muted);
+            margin: 0 8px;
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #64748b;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        /* Grammar Reference */
+        .reference-section {
+            background: var(--grammar-bg);
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 32px;
+            border: 1px solid var(--glass-border);
+            border-left: 6px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .reference-title {
+            font-weight: 800;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .expand-toggle {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .expand-toggle:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        #reference-content {
+            display: none;
+        }
+
+        .grammar-group {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .grammar-group .grammar-header {
+            background: var(--header-bg);
+            color: var(--text-on-primary);
+            padding: 16px 22px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.05em;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-group .grammar-header:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+        }
+
+        .grammar-group .group-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: var(--text-on-primary);
+            font-weight: 700;
+            transition: transform 0.3s ease;
+        }
+
+        .grammar-group .grammar-details {
+            padding: 0 24px 24px 24px;
+            display: none;
+        }
+
+        .grammar-group.expanded .grammar-details {
+            display: block;
+        }
+
+        .grammar-group.collapsed .grammar-details {
+            display: none;
+        }
+
+        .grammar-group .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .grammar-group .detail-title {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .grammar-group .example-box-detail {
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--success);
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+
+        .grammar-group .grammar-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .grammar-group .grammar-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--grammar-bg);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 10px 10px 0;
+            line-height: 1.6;
+        }
+
+        .vocab-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card-bg);
+        }
+
+        .vocab-table th {
+            background: var(--table-header-bg);
+            padding: 14px 16px;
+            text-align: left;
+            border: 1px solid var(--table-border);
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .vocab-table td {
+            padding: 12px 16px;
+            border: 1px solid var(--table-border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .ex6-split-container {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .ex6-left-panel {
+                flex: 0 0 100% !important;
+                border-right: none;
+                border-bottom: 1px solid var(--glass-border);
+                max-height: 400px;
+            }
+
+            .ex6-right-panel {
+                flex: 0 0 100% !important;
+                max-height: 400px;
+            }
+
+            .ex6-resizer {
+                width: 100%;
+                height: 10px;
+                cursor: row-resize;
+            }
+
+            .ex6-resizer::before {
+                width: 40px;
+                height: 2px;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+
+            .ex5-input-group .task5-input {
+                min-width: 100%;
+                max-width: none !important;
+            }
+
+            .ex1-item .drop-slot {
+                min-width: 80px;
+                max-width: 140px;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <!-- Header -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">8B</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar</div>
+                <h1>Reported speech</h1>
+                <p class="subtitle">I can use reported speech.</p>
+            </div>
+        </div>
+
+        <!-- Grammar Reference -->
+        <div class="reference-section">
+            <div class="reference-title" onclick="toggleReference()">
+                <span>Ngữ pháp: Câu tường thuật (Reported speech)</span>
+                <button class="expand-toggle" id="ref-toggle-btn">▼</button>
+            </div>
+            <div id="reference-content" style="display: none;">
+
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>1. Quy tắc chuyển thì (Tense changes)</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <table class="vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Direct speech</th>
+                                    <th>Reported speech</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>present simple</td>
+                                    <td><strong>past simple</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>present continuous</td>
+                                    <td><strong>past continuous</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>past simple</td>
+                                    <td><strong>past perfect</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>present perfect</td>
+                                    <td><strong>past perfect</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>past perfect</td>
+                                    <td><strong>past perfect</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>can / can't</td>
+                                    <td><strong>could / couldn't</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>will / won't</td>
+                                    <td><strong>would / wouldn't</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>might</td>
+                                    <td><strong>might</strong> (không đổi)</td>
+                                </tr>
+                                <tr>
+                                    <td>should</td>
+                                    <td><strong>should</strong> (không đổi)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="example-box-detail">
+                            <em>"I am tired." → He said (that) he <strong>was</strong> tired.</em><br>
+                            <em>"I have finished." → She said (that) she <strong>had finished</strong>.</em><br>
+                            <em>"I will call you." → He said (that) he <strong>would</strong> call me.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>2. Thay đổi từ chỉ thời gian và nơi chốn</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <table class="vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Direct speech</th>
+                                    <th>Reported speech</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>today</td>
+                                    <td><strong>that day</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>a week ago</td>
+                                    <td><strong>a week earlier</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>yesterday</td>
+                                    <td><strong>the day before</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>last year</td>
+                                    <td><strong>the year before</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>tomorrow</td>
+                                    <td><strong>the next day</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>next month</td>
+                                    <td><strong>the following month</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>here</td>
+                                    <td><strong>there</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="example-box-detail">
+                            <em>"I'll see you <strong>tomorrow</strong>." → He said (that) he would see me <strong>the
+                                    next day</strong>.</em><br>
+                            <em>"I was here <strong>yesterday</strong>." → She said (that) she had been
+                                <strong>there</strong> <strong>the day before</strong>.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grammar-group collapsed">
+                    <div class="grammar-header" onclick="toggleGroup(this)">
+                        <span>3. said vs told</span>
+                        <span class="group-toggle">▼</span>
+                    </div>
+                    <div class="grammar-details">
+                        <div class="detail-item">
+                            <ul class="grammar-list">
+                                <li><strong>said</strong> + (that) + mệnh đề (không cần tân ngữ)<br>
+                                    <em>He <strong>said</strong> (that) he was happy.</em>
+                                </li>
+                                <li><strong>told</strong> + tân ngữ + (that) + mệnh đề<br>
+                                    <em>He <strong>told</strong> me (that) he was happy.</em>
+                                </li>
+                                <li><strong>Không dùng</strong> "said me" hoặc "told that".</li>
+                            </ul>
+                        </div>
+                        <div class="example-box-detail">
+                            <em>She <strong>said</strong> she was leaving.</em><br>
+                            <em>She <strong>told</strong> me she was leaving.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="font-style:italic; color:var(--text-muted); margin-top:10px;">
+                    (Nguồn: British Council LearnEnglish – <a
+                        href="https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/reported-speech"
+                        target="_blank" style="color:var(--primary);">Reported speech</a>)
+                </p>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 1 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Complete 1–5 with the tenses below. Then complete 6–9 with
+                the correct verb forms.</div>
+
+            <!-- Word Bank -->
+            <div class="word-bank" id="ex1-bank"></div>
+
+            <div id="ex1-container"></div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 2 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Circle the correct words.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 3 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> How do these references to time and place change in reported
+                speech?</div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 4 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the text with <strong>said</strong> or
+                <strong>told</strong>.
+            </div>
+            <div id="ex4-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 5 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Rewrite the sentences as reported speech. If necessary,
+                change the pronouns, possessive adjectives and references to time and place.</div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ====== EXERCISE 6 ====== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>6.</strong> Read the reported conversation between two identical twins.
+                Write the direct speech below.</div>
+
+            <div class="ex6-split-container" id="ex6-split-container">
+                <!-- Left Panel: Reported speech -->
+                <div class="ex6-left-panel" id="ex6-left-panel">
+                    <p><strong>Reported conversation</strong></p>
+                    <p>Imo was walking down the road when she slipped and fell. Her twin sister Zoe phoned just
+                        afterwards.</p>
+                    <p>Zoe told Imo that she had fallen over a few moments before. Imo told her that was an amazing
+                        coincidence because she had just done the same! Zoe said her leg was hurting so much that she
+                        couldn't walk. Imo told Zoe that her own leg was OK and that she could easily walk home. But Imo
+                        told Zoe that if she couldn't walk, she should call an ambulance. Zoe said that wouldn't be
+                        necessary and that she could phone their parents.</p>
+                </div>
+
+                <!-- Resizer -->
+                <div class="ex6-resizer" id="ex6-resizer"></div>
+
+                <!-- Right Panel: Direct speech -->
+                <div class="ex6-right-panel" id="ex6-right-panel">
+                    <h3>Direct speech</h3>
+                    <div id="ex6-container"></div>
+                </div>
+            </div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ================================================================
+           DATA
+           ================================================================ */
+
+        // Ex1 - drag-drop + input
+        const ex1Bank = [
+            "past simple",
+            "past continuous",
+            "past perfect"
+        ];
+
+        const ex1Items = [
+            { num: 1, prompt: "present simple →", ans: "past simple", hint: "<strong>Đáp án:</strong> past simple<br><strong>Bằng chứng:</strong> present simple trong câu trực tiếp chuyển thành past simple trong câu tường thuật.<br><strong>Giải thích:</strong> Khi động từ tường thuật ở quá khứ, thì hiện tại đơn lùi về quá khứ đơn." },
+            { num: 2, prompt: "present continuous →", ans: "past continuous", hint: "<strong>Đáp án:</strong> past continuous<br><strong>Bằng chứng:</strong> present continuous trong câu trực tiếp chuyển thành past continuous.<br><strong>Giải thích:</strong> Khi động từ tường thuật ở quá khứ, thì hiện tại tiếp diễn lùi về quá khứ tiếp diễn." },
+            { num: 3, prompt: "past simple →", ans: "past perfect", hint: "<strong>Đáp án:</strong> past perfect<br><strong>Bằng chứng:</strong> past simple trong câu trực tiếp chuyển thành past perfect.<br><strong>Giải thích:</strong> Khi động từ tường thuật ở quá khứ, quá khứ đơn lùi về quá khứ hoàn thành." },
+            { num: 4, prompt: "present perfect →", ans: "past perfect", hint: "<strong>Đáp án:</strong> past perfect<br><strong>Bằng chứng:</strong> present perfect trong câu trực tiếp chuyển thành past perfect.<br><strong>Giải thích:</strong> Khi động từ tường thuật ở quá khứ, hiện tại hoàn thành lùi về quá khứ hoàn thành." },
+            { num: 5, prompt: "past perfect →", ans: "past perfect", hint: "<strong>Đáp án:</strong> past perfect<br><strong>Bằng chứng:</strong> past perfect trong câu trực tiếp giữ nguyên là past perfect.<br><strong>Giải thích:</strong> Quá khứ hoàn thành không lùi thêm khi chuyển sang câu tường thuật." },
+            { num: 6, prompt: "can / can't →", ans: "could / couldn't", isInput: true, hint: "<strong>Đáp án:</strong> could / couldn't<br><strong>Bằng chứng:</strong> can/can't trong câu trực tiếp chuyển thành could/couldn't.<br><strong>Giải thích:</strong> Động từ khiếm khuyết 'can' lùi về 'could' trong câu tường thuật." },
+            { num: 7, prompt: "will / won't →", ans: "would / wouldn't", isInput: true, hint: "<strong>Đáp án:</strong> would / wouldn't<br><strong>Bằng chứng:</strong> will/won't trong câu trực tiếp chuyển thành would/wouldn't.<br><strong>Giải thích:</strong> Động từ khiếm khuyết 'will' lùi về 'would' trong câu tường thuật." },
+            { num: 8, prompt: "might →", ans: "might", isInput: true, hint: "<strong>Đáp án:</strong> might<br><strong>Bằng chứng:</strong> might trong câu trực tiếp giữ nguyên là might.<br><strong>Giải thích:</strong> 'might' không thay đổi trong câu tường thuật." },
+            { num: 9, prompt: "should →", ans: "should", isInput: true, hint: "<strong>Đáp án:</strong> should<br><strong>Bằng chứng:</strong> should trong câu trực tiếp giữ nguyên là should.<br><strong>Giải thích:</strong> 'should' không thay đổi trong câu tường thuật." }
+        ];
+
+        // Ex2 - MCQ
+        const ex2Data = [
+            { num: 1, prompt: "John said he ___ ill.", opts: ["a. is", "b. was"], ans: "b. was", hint: "<strong>Đáp án:</strong> b. was<br><strong>Bằng chứng:</strong> 'said' ở quá khứ → động từ lùi thì.<br><strong>Giải thích:</strong> 'is' (hiện tại) → 'was' (quá khứ) trong câu tường thuật." },
+            { num: 2, prompt: "Maisie said that she ___ buy a new phone.", opts: ["a. would", "b. will"], ans: "a. would", hint: "<strong>Đáp án:</strong> a. would<br><strong>Bằng chứng:</strong> 'said' ở quá khứ → lùi thì.<br><strong>Giải thích:</strong> 'will' → 'would' trong câu tường thuật." },
+            { num: 3, prompt: "Nathan said he ___ looking forward to summer.", opts: ["a. is", "b. was"], ans: "b. was", hint: "<strong>Đáp án:</strong> b. was<br><strong>Bằng chứng:</strong> 'said' ở quá khứ → lùi thì.<br><strong>Giải thích:</strong> 'is looking' (hiện tại tiếp diễn) → 'was looking' (quá khứ tiếp diễn)." },
+            { num: 4, prompt: "Harry said that Kay ___ gone to Italy.", opts: ["a. has", "b. had"], ans: "b. had", hint: "<strong>Đáp án:</strong> b. had<br><strong>Bằng chứng:</strong> 'said' ở quá khứ → lùi thì.<br><strong>Giải thích:</strong> 'has gone' (hiện tại hoàn thành) → 'had gone' (quá khứ hoàn thành)." },
+            { num: 5, prompt: "Emma told me that she ___ find her phone.", opts: ["a. couldn't", "b. can't"], ans: "a. couldn't", hint: "<strong>Đáp án:</strong> a. couldn't<br><strong>Bằng chứng:</strong> 'told' ở quá khứ → lùi thì.<br><strong>Giải thích:</strong> 'can't' → 'couldn't' trong câu tường thuật." },
+            { num: 6, prompt: "Pete told me he ___ go to the party.", opts: ["a. had to", "b. might have"], ans: "a. had to", hint: "<strong>Đáp án:</strong> a. had to<br><strong>Bằng chứng:</strong> 'told' ở quá khứ → lùi thì.<br><strong>Giải thích:</strong> 'must' → 'had to' hoặc 'would' → 'would' nhưng đáp án đúng là 'had to'." }
+        ];
+
+        // Ex3 - Time/place changes
+        const ex3Data = [
+            { num: 1, direct: "today", ans: "that day", hint: "<strong>Đáp án:</strong> that day<br><strong>Bằng chứng:</strong> 'today' trong câu trực tiếp → 'that day' trong câu tường thuật.<br><strong>Giải thích:</strong> Thời gian được tính từ thời điểm nói." },
+            { num: 2, direct: "a week ago", ans: "a week earlier", hint: "<strong>Đáp án:</strong> a week earlier<br><strong>Bằng chứng:</strong> 'a week ago' → 'a week earlier' trong câu tường thuật.<br><strong>Giải thích:</strong> 'ago' lùi về 'earlier'." },
+            { num: 3, direct: "yesterday", ans: "the day before", hint: "<strong>Đáp án:</strong> the day before<br><strong>Bằng chứng:</strong> 'yesterday' → 'the day before' trong câu tường thuật.<br><strong>Giải thích:</strong> 'yesterday' lùi về 'the day before'." },
+            { num: 4, direct: "last year", ans: "the year before", hint: "<strong>Đáp án:</strong> the year before<br><strong>Bằng chứng:</strong> 'last year' → 'the year before' trong câu tường thuật.<br><strong>Giải thích:</strong> 'last year' lùi về 'the year before'." },
+            { num: 5, direct: "tomorrow", ans: "the next day", hint: "<strong>Đáp án:</strong> the next day<br><strong>Bằng chứng:</strong> 'tomorrow' → 'the next day' trong câu tường thuật.<br><strong>Giải thích:</strong> 'tomorrow' lùi về 'the next day'." },
+            { num: 6, direct: "next month", ans: "the following month", hint: "<strong>Đáp án:</strong> the following month<br><strong>Bằng chứng:</strong> 'next month' → 'the following month' trong câu tường thuật.<br><strong>Giải thích:</strong> 'next' lùi về 'the following'." },
+            { num: 7, direct: "here", ans: "there", hint: "<strong>Đáp án:</strong> there<br><strong>Bằng chứng:</strong> 'here' → 'there' trong câu tường thuật.<br><strong>Giải thích:</strong> 'here' lùi về 'there' khi nơi chốn thay đổi." }
+        ];
+
+        // Ex4 - said/told
+        const ex4Data = [
+            { num: 1, text: "Dan ______ Bev that he had bought her a new phone.", ans: "told", hint: "<strong>Đáp án:</strong> told<br><strong>Bằng chứng:</strong> Có tân ngữ 'Bev' → dùng 'told'.<br><strong>Giải thích:</strong> 'told' + tân ngữ (Bev)." },
+            { num: 2, text: "She looked at it and ______ him that it was too big.", ans: "told", hint: "<strong>Đáp án:</strong> told<br><strong>Bằng chứng:</strong> Có tân ngữ 'him' → dùng 'told'.<br><strong>Giải thích:</strong> 'told' + tân ngữ (him)." },
+            { num: 3, text: "He ______ her that they were all that big nowadays.", ans: "told", hint: "<strong>Đáp án:</strong> told<br><strong>Bằng chứng:</strong> Có tân ngữ 'her' → dùng 'told'.<br><strong>Giải thích:</strong> 'told' + tân ngữ (her)." },
+            { num: 4, text: "She ______ she wanted him to change it.", ans: "said", hint: "<strong>Đáp án:</strong> said<br><strong>Bằng chứng:</strong> Không có tân ngữ → dùng 'said'.<br><strong>Giải thích:</strong> 'said' không cần tân ngữ." },
+            { num: 5, text: "He ______ that he couldn't change it and", ans: "said", hint: "<strong>Đáp án:</strong> said<br><strong>Bằng chứng:</strong> Không có tân ngữ → dùng 'said'.<br><strong>Giải thích:</strong> 'said' không cần tân ngữ." },
+            { num: 6, text: "______ her that it had cost a lot of money.", ans: "told", hint: "<strong>Đáp án:</strong> told<br><strong>Bằng chứng:</strong> Có tân ngữ 'her' → dùng 'told'.<br><strong>Giải thích:</strong> 'told' + tân ngữ (her)." },
+            { num: 7, text: "She ______ she didn't care and", ans: "said", hint: "<strong>Đáp án:</strong> said<br><strong>Bằng chứng:</strong> Không có tân ngữ → dùng 'said'.<br><strong>Giải thích:</strong> 'said' không cần tân ngữ." },
+            { num: 8, text: "______ him she wouldn't use it.", ans: "told", hint: "<strong>Đáp án:</strong> told<br><strong>Bằng chứng:</strong> Có tân ngữ 'him' → dùng 'told'.<br><strong>Giải thích:</strong> 'told' + tân ngữ (him)." }
+        ];
+
+        // Ex5 - Rewrite
+        const ex5Data = [
+            { num: 1, prompt: "John to Sue: 'I left a message for you yesterday.'", ans: "John told Sue she had left a message for her the day before.|John told Sue that she had left a message for her the day before.", hint: "<strong>Đáp án:</strong> John told Sue (that) he had left a message for her the day before.<br><strong>Bằng chứng:</strong> 'yesterday' → 'the day before', 'I' → 'he', 'you' → 'her'.<br><strong>Giải thích:</strong> Lùi thì, thay đổi đại từ và thời gian." },
+            { num: 2, prompt: "Mark: 'I'll top up my phone this evening.'", ans: "Mark said he would top up his phone that evening.|Mark said that he would top up his phone that evening.", hint: "<strong>Đáp án:</strong> Mark said (that) he would top up his phone that evening.<br><strong>Bằng chứng:</strong> 'will' → 'would', 'this evening' → 'that evening'.<br><strong>Giải thích:</strong> Lùi thì và thay đổi thời gian." },
+            { num: 3, prompt: "Jenny to Dave: 'I can't hear you.'", ans: "Jenny told Dave she couldn't hear him.|Jenny told Dave that she couldn't hear him.", hint: "<strong>Đáp án:</strong> Jenny told Dave (that) she couldn't hear him.<br><strong>Bằng chứng:</strong> 'can't' → 'couldn't', 'I' → 'she', 'you' → 'him'.<br><strong>Giải thích:</strong> Lùi thì và thay đổi đại từ." },
+            { num: 4, prompt: "Ann: 'I've checked my balance three times this week.'", ans: "Ann said she had checked her balance three times this week.|Ann said that she had checked her balance three times that week.", hint: "<strong>Đáp án:</strong> Ann said (that) she had checked her balance three times that week.<br><strong>Bằng chứng:</strong> 'have checked' → 'had checked', 'this week' → 'that week'.<br><strong>Giải thích:</strong> Lùi thì và thay đổi thời gian." },
+            { num: 5, prompt: "Jo to Si: 'You should turn off data roaming.'", ans: "Jo told Si he should turn off data roaming.|Jo told Si that he should turn off data roaming.", hint: "<strong>Đáp án:</strong> Jo told Si (that) he should turn off data roaming.<br><strong>Bằng chứng:</strong> 'you' → 'he', 'should' không đổi.<br><strong>Giải thích:</strong> 'should' không thay đổi trong câu tường thuật." },
+            { num: 6, prompt: "Kate: 'I had already texted Harry at the weekend.'", ans: "Kate said she had already texted Harry the weekend before.|Kate said that she had already texted Harry the weekend before.", hint: "<strong>Đáp án:</strong> Kate said (that) she had already texted Harry the weekend before.<br><strong>Bằng chứng:</strong> 'at the weekend' → 'the weekend before'.<br><strong>Giải thích:</strong> 'had texted' là past perfect, giữ nguyên." },
+            { num: 7, prompt: "Fran to Fred: 'I called Tom two days ago.'", ans: "Fran told Fred she had called Tom two days earlier.|Fran told Fred that she had called Tom two days earlier.", hint: "<strong>Đáp án:</strong> Fran told Fred (that) she had called Tom two days earlier.<br><strong>Bằng chứng:</strong> 'called' → 'had called', 'two days ago' → 'two days earlier'.<br><strong>Giải thích:</strong> Lùi thì và thay đổi thời gian." }
+        ];
+
+        // Ex6 - Direct speech answers
+        const ex6Data = [
+            { num: 1, prompt: "Zoe:", ans: "I fell over a few moments ago.", hint: "<strong>Đáp án:</strong> I fell over a few moments ago.<br><strong>Bằng chứng:</strong> 'told Imo that she had fallen over a few moments before' → trực tiếp là 'I fell over a few moments ago'.<br><strong>Giải thích:</strong> 'had fallen' (past perfect) → 'fell' (past simple)." },
+            { num: 2, prompt: "Imo:", ans: "That's an amazing coincidence; I've just done the same.", hint: "<strong>Đáp án:</strong> That's an amazing coincidence; I've just done the same.<br><strong>Bằng chứng:</strong> 'told her that was an amazing coincidence because she had just done the same' → trực tiếp là 'That's an amazing coincidence; I've just done the same'.<br><strong>Giải thích:</strong> 'had just done' → 'I've just done'." },
+            { num: 3, prompt: "Zoe:", ans: "My leg's hurting so much that I can't walk.", hint: "<strong>Đáp án:</strong> My leg's hurting so much that I can't walk.<br><strong>Bằng chứng:</strong> 'said her leg was hurting so much that she couldn't walk' → trực tiếp là 'My leg's hurting so much that I can't walk'.<br><strong>Giải thích:</strong> 'was hurting' → 'is hurting', 'couldn't' → 'can't'." },
+            { num: 4, prompt: "Imo:", ans: "My leg is OK and I can easily walk home.", hint: "<strong>Đáp án:</strong> My leg is OK and I can easily walk home.<br><strong>Bằng chứng:</strong> 'told Zoe that her own leg was OK and that she could easily walk home' → trực tiếp là 'My leg is OK and I can easily walk home'.<br><strong>Giải thích:</strong> 'was' → 'is', 'could' → 'can'." },
+            { num: 5, prompt: "Imo: But", ans: "if you can't walk, you should call an ambulance.", hint: "<strong>Đáp án:</strong> if you can't walk, you should call an ambulance.<br><strong>Bằng chứng:</strong> 'told Zoe that if she couldn't walk, she should call an ambulance' → trực tiếp là 'if you can't walk, you should call an ambulance'.<br><strong>Giải thích:</strong> 'couldn't' → 'can't', 'she' → 'you'." },
+            { num: 6, prompt: "Zoe:", ans: "That won't be necessary. I can phone our parents.", hint: "<strong>Đáp án:</strong> That won't be necessary. I can phone our parents.<br><strong>Bằng chứng:</strong> 'said that wouldn't be necessary and that she could phone their parents' → trực tiếp là 'That won't be necessary. I can phone our parents'.<br><strong>Giải thích:</strong> 'wouldn't' → 'won't', 'could' → 'can'." }
+        ];
+
+        /* ================================================================
+           RENDER FUNCTIONS
+           ================================================================ */
+
+        // -------- Ex1 (drag-drop + input) --------
+        let ex1State = {};
+        let ex1Dragging = null;
+
+        function renderEx1() {
+            // Word bank
+            const bank = document.getElementById('ex1-bank');
+            bank.innerHTML = ex1Bank.map(word => {
+                return `<div class="word-item" draggable="true" data-word="${word}" 
+                          ondragstart="ex1DragStart(event)" 
+                          ondragend="this.classList.remove('dragging')">${word}</div>`;
+            }).join('');
+
+            // Items
+            const container = document.getElementById('ex1-container');
+            container.innerHTML = ex1Items.map(item => {
+                const slotId = `ex1-slot-${item.num}`;
+                const qid = `ex1-q${item.num}`;
+
+                if (item.isInput) {
+                    // Dạng input
+                    const inputHtml = `<span class="inline-group" style="position:relative;">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:140px; text-align:center;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>`;
+                    return `<div class="ex1-item">
+                        <span class="ex1-num">${item.num}.</span>
+                        <span class="ex1-text">${item.prompt}</span>
+                        ${inputHtml}
+                    </div>`;
+                } else {
+                    // Dạng drag-drop
+                    const dropHtml = `<span class="inline-group" style="position:relative;">
+                        <span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                              ondragover="event.preventDefault(); this.classList.add('over')"
+                              ondragleave="this.classList.remove('over')"
+                              ondrop="ex1Drop(event, '${slotId}')"
+                              onclick="ex1RemoveSlot('${slotId}')"></span>
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${slotId}-hint">${item.hint}</div>
+                    </span>`;
+                    return `<div class="ex1-item">
+                        <span class="ex1-num">${item.num}.</span>
+                        <span class="ex1-text">${item.prompt}</span>
+                        ${dropHtml}
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function ex1DragStart(e) {
+            ex1Dragging = e.target.dataset.word;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', ex1Dragging);
+        }
+
+        function ex1Drop(e, slotId) {
+            e.preventDefault();
+            const slot = document.getElementById(slotId);
+            slot.classList.remove('over');
+            if (!ex1Dragging) return;
+            // Cho phép kéo thả nhiều lần: không xóa slot cũ có cùng từ
+            slot.textContent = ex1Dragging;
+            slot.classList.add('filled');
+            ex1State[slotId] = ex1Dragging;
+            // Không đánh dấu .used để từ bank có thể dùng nhiều lần
+            ex1Dragging = null;
+        }
+
+        function ex1RemoveSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot || !slot.textContent.trim()) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            delete ex1State[slotId];
+        }
+
+        function ex1ShowSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
+                ex1RemoveSlot(slotId);
+                return;
+            }
+            slot.textContent = ans;
+            slot.classList.add('filled', 'correct');
+            ex1State[slotId] = ans;
+        }
+
+        // -------- Ex2 (MCQ) --------
+        function renderEx2() {
+            const container = document.getElementById('ex2-container');
+            container.innerHTML = ex2Data.map(item => {
+                const qid = `ex2-q${item.num}`;
+                const optHtml = item.opts.map(opt => {
+                    const val = opt.trim();
+                    const letter = val.charAt(0);
+                    const text = val.substring(3);
+                    return `<span class="mcq-option" data-qid="${qid}" data-value="${val}" onclick="selectEx2Option(this)">${letter}. ${text}</span>`;
+                }).join('');
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${item.prompt}</span>
+                    <span class="inline-group" style="position:relative;">
+                        <span class="mcq-group" id="${qid}" data-ans="${item.ans}">${optHtml}</span>
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showEx2Ans('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </span>
+                </div>`;
+            }).join('');
+
+            // CSS cho MCQ
+            const style = document.createElement('style');
+            style.textContent = `
+                .mcq-group {
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    align-items: center;
+                }
+                .mcq-option {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 4px 12px;
+                    border: 2px solid var(--glass-border);
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    background: var(--card-bg);
+                    font-weight: 600;
+                    color: var(--text);
+                    font-size: 0.95rem;
+                }
+                .mcq-option:hover {
+                    border-color: var(--primary);
+                    background: var(--primary-light);
+                }
+                .mcq-option.selected {
+                    border-color: var(--primary);
+                    background: var(--primary);
+                    color: white;
+                }
+                .mcq-option.correct-option {
+                    border-color: #16a34a !important;
+                    background: #dcfce7 !important;
+                    color: #166534 !important;
+                }
+                .mcq-option.incorrect-option {
+                    border-color: #dc2626 !important;
+                    background: #fee2e2 !important;
+                    color: #991b1b !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function selectEx2Option(el) {
+            const qid = el.dataset.qid;
+            const group = document.getElementById(qid);
+            group.querySelectorAll('.mcq-option').forEach(opt => {
+                opt.classList.remove('selected', 'correct-option', 'incorrect-option');
+            });
+            el.classList.add('selected');
+        }
+
+        function showEx2Ans(qid) {
+            const group = document.getElementById(qid);
+            if (!group) return;
+            const ans = group.dataset.ans;
+            const opts = Array.from(group.querySelectorAll('.mcq-option'));
+            const correctOpt = opts.find(opt => opt.dataset.value === ans);
+            const selected = group.querySelector('.mcq-option.selected');
+
+            // Toggle: nếu đã hiện đáp án đúng (và không có selection nào khác) → xóa
+            if (correctOpt && correctOpt.classList.contains('correct-option') && !selected) {
+                group.querySelectorAll('.mcq-option').forEach(opt => {
+                    opt.classList.remove('correct-option', 'incorrect-option');
+                });
+                return;
+            }
+
+            // Nếu người dùng đã chọn: đánh dấu đúng/sai, giữ selection
+            if (selected) {
+                opts.forEach(opt => opt.classList.remove('correct-option', 'incorrect-option'));
+                if (selected.dataset.value === ans) {
+                    selected.classList.add('correct-option');
+                } else {
+                    selected.classList.add('incorrect-option');
+                    if (correctOpt) correctOpt.classList.add('correct-option');
+                }
+                return;
+            }
+
+            // Chưa chọn gì: highlight đáp án đúng
+            opts.forEach(opt => opt.classList.remove('correct-option', 'incorrect-option'));
+            if (correctOpt) {
+                correctOpt.classList.add('selected', 'correct-option');
+            }
+        }
+
+        // -------- Ex3 (input - time/place changes) --------
+        function renderEx3() {
+            const container = document.getElementById('ex3-container');
+            container.innerHTML = ex3Data.map(item => {
+                const qid = `ex3-q${item.num}`;
+                const inputHtml = `<span class="inline-group" style="position:relative;">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:160px; text-align:center;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                return `<div class="ex3-item">
+                    <span class="ex3-num">${item.num}.</span>
+                    <span class="ex3-direct">${item.direct}</span>
+                    <span class="ex3-arrow">→</span>
+                    ${inputHtml}
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex4 (said/told - input) --------
+        function renderEx4() {
+            const container = document.getElementById('ex4-container');
+            container.innerHTML = ex4Data.map(item => {
+                const qid = `ex4-q${item.num}`;
+                const parts = item.text.split('______');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                const inputHtml = `<span class="inline-group" style="position:relative;">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:100px; text-align:center;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                // Nếu có số thứ tự ở đầu
+                return `<div class="ex4-item">
+                    <span class="ex4-num">${item.num}.</span>
+                    <span class="ex4-text">${before}${inputHtml}${after}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex5 (rewrite) --------
+        function renderEx5() {
+            const container = document.getElementById('ex5-container');
+            container.innerHTML = ex5Data.map(item => {
+                const qid = `ex5-q${item.num}`;
+                return `<div class="ex5-item">
+                    <div class="ex5-prompt"><span class="q-label">${item.num}.</span> ${item.prompt}</div>
+                    <div class="ex5-input-group">
+                        <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="width:150px; min-width:150px; text-align:left; max-width:none;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // -------- Ex6 (split screen - direct speech) --------
+        function renderEx6() {
+            const container = document.getElementById('ex6-container');
+            container.innerHTML = ex6Data.map(item => {
+                const qid = `ex6-q${item.num}`;
+                const parts = item.prompt.split(':');
+                const speaker = parts[0] || '';
+                const after = parts[1] || '';
+                const inputHtml = `<span class="inline-group" style="position:relative; flex:1;">
+                    <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:200px; text-align:left; max-width:none; width:100%;" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                </span>`;
+                const label = item.num <= 5 ? `${speaker}:` : `${speaker}:`;
+                return `<div class="ex6-item">
+                    <span class="q-label">${item.num}.</span>
+                    <span style="font-weight:700; color:var(--primary-dark);">${label}</span>
+                    ${inputHtml}
+                </div>`;
+            }).join('');
+        }
+
+        /* ================================================================
+           HELPERS
+           ================================================================ */
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || "";
+            el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) {
+                h.style.display = 'block';
+                const rect = h.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                if (rect.right > vw - 10) {
+                    h.style.left = 'auto';
+                    h.style.right = '0';
+                } else {
+                    h.style.left = '0';
+                    h.style.right = 'auto';
+                }
+            }
+        }
+
+        function showSingleAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0].trim();
+            if (el.value.trim().toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        /* ================================================================
+           SHOW ALL & RESET
+           ================================================================ */
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                // Drag-drop slots
+                ex1Items.forEach(item => {
+                    if (!item.isInput) {
+                        const slotId = `ex1-slot-${item.num}`;
+                        ex1ShowSlot(slotId);
+                    } else {
+                        const el = document.getElementById(`ex1-q${item.num}`);
+                        if (el) {
+                            el.value = item.ans;
+                            el.classList.add('correct');
+                            adjustWidth(el);
+                        }
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                ex2Data.forEach(item => {
+                    const qid = `ex2-q${item.num}`;
+                    showEx2Ans(qid);
+                });
+            } else if (prefix === 'ex3') {
+                ex3Data.forEach(item => {
+                    const el = document.getElementById(`ex3-q${item.num}`);
+                    if (el) {
+                        el.value = item.ans;
+                        el.classList.add('correct');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach(item => {
+                    const el = document.getElementById(`ex4-q${item.num}`);
+                    if (el) {
+                        el.value = item.ans;
+                        el.classList.add('correct');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex5') {
+                ex5Data.forEach(item => {
+                    const el = document.getElementById(`ex5-q${item.num}`);
+                    if (el) {
+                        el.value = item.ans;
+                        el.classList.add('correct');
+                        adjustWidth(el);
+                    }
+                });
+            } else if (prefix === 'ex6') {
+                ex6Data.forEach(item => {
+                    const el = document.getElementById(`ex6-q${item.num}`);
+                    if (el) {
+                        el.value = item.ans;
+                        el.classList.add('correct');
+                        adjustWidth(el);
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            const selector = prefix === 'ex1' ? '#ex1-container' :
+                prefix === 'ex2' ? '#ex2-container' :
+                    prefix === 'ex3' ? '#ex3-container' :
+                        prefix === 'ex4' ? '#ex4-container' :
+                            prefix === 'ex5' ? '#ex5-container' :
+                                prefix === 'ex6' ? '#ex6-container' : '';
+            if (!selector) return;
+
+            // Reset inputs
+            document.querySelectorAll(`${selector} input[data-ans]`).forEach(el => {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+
+            // Reset MCQ options
+            document.querySelectorAll(`${selector} .mcq-option`).forEach(el => {
+                el.classList.remove('selected', 'correct-option', 'incorrect-option');
+            });
+
+            // Reset drop slots
+            document.querySelectorAll(`${selector} .drop-slot`).forEach(slot => {
+                if (slot.id.startsWith('ex1-slot')) {
+                    ex1RemoveSlot(slot.id);
+                }
+            });
+
+            // Hide hints
+            document.querySelectorAll(`${selector} .hint-box, ${selector} .hint-box.absolute`).forEach(h => h.style.display =
+                'none');
+
+            // Reset ex1 bank
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-bank .word-item').forEach(el => el.classList.remove('used'));
+                for (let key in ex1State) delete ex1State[key];
+            }
+        }
+
+        /* ================================================================
+           CHECK ALL
+           ================================================================ */
+
+        function checkAll() {
+            // Grade all text inputs
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const userVal = el.value.trim().toLowerCase();
+                if (userVal === '') {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const allowed = el.dataset.ans.toLowerCase().split('|').map(x => x.trim());
+                if (allowed.includes(userVal)) {
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                } else {
+                    el.classList.add('incorrect-marked');
+                    el.classList.remove('correct');
+                }
+            });
+
+            // Grade ex1 drop slots
+            document.querySelectorAll('#ex1-container .drop-slot').forEach(slot => {
+                const userVal = slot.textContent.trim();
+                if (userVal === '') {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = slot.dataset.ans;
+                slot.classList.toggle('correct', userVal === ans);
+                slot.classList.toggle('incorrect-marked', userVal !== ans);
+            });
+
+            // Grade ex2 MCQ
+            document.querySelectorAll('#ex2-container .mcq-group').forEach(group => {
+                const selected = group.querySelector('.mcq-option.selected');
+                if (!selected) return;
+                const isCorrect = selected.dataset.value === group.dataset.ans;
+                group.querySelectorAll('.mcq-option').forEach(opt => {
+                    opt.classList.remove('correct-option', 'incorrect-option');
+                });
+                selected.classList.add(isCorrect ? 'correct-option' : 'incorrect-option');
+            });
+        }
+
+        /* ================================================================
+           GRAMMAR TOGGLE
+           ================================================================ */
+
+        function toggleReference() {
+            const content = document.getElementById('reference-content');
+            const btn = document.getElementById('ref-toggle-btn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleGroup(header) {
+            const group = header.parentElement;
+            const toggle = header.querySelector('.group-toggle');
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                group.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                group.classList.remove('expanded');
+                group.classList.add('collapsed');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /* ================================================================
+           INIT & RESIZER
+           ================================================================ */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            renderEx6();
+            document.querySelectorAll('input[type="text"]').forEach(adjustWidth);
+
+            // --- Resizer logic cho Ex6 ---
+            const splitContainer = document.getElementById('ex6-split-container');
+            const leftPanel = document.getElementById('ex6-left-panel');
+            const rightPanel = document.getElementById('ex6-right-panel');
+            const resizer = document.getElementById('ex6-resizer');
+
+            if (splitContainer && leftPanel && rightPanel && resizer) {
+                let isResizing = false;
+
+                resizer.addEventListener('mousedown', function (e) {
+                    isResizing = true;
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                });
+
+                document.addEventListener('mousemove', function (e) {
+                    if (!isResizing) return;
+                    const containerRect = splitContainer.getBoundingClientRect();
+                    let newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+                    newWidth = Math.min(85, Math.max(15, newWidth));
+                    leftPanel.style.flex = `0 0 ${newWidth}%`;
+                    rightPanel.style.flex = `0 0 ${100 - newWidth}%`;
+                });
+
+                document.addEventListener('mouseup', function () {
+                    if (isResizing) {
+                        isResizing = false;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+
+                // Touch support
+                resizer.addEventListener('touchstart', function (e) {
+                    isResizing = true;
+                    document.body.style.userSelect = 'none';
+                });
+
+                document.addEventListener('touchmove', function (e) {
+                    if (!isResizing) return;
+                    const containerRect = splitContainer.getBoundingClientRect();
+                    let newWidth = ((e.touches[0].clientX - containerRect.left) / containerRect.width) * 100;
+                    newWidth = Math.min(85, Math.max(15, newWidth));
+                    leftPanel.style.flex = `0 0 ${newWidth}%`;
+                    rightPanel.style.flex = `0 0 ${100 - newWidth}%`;
+                });
+
+                document.addEventListener('touchend', function () {
+                    isResizing = false;
+                    document.body.style.userSelect = '';
+                });
+            }
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAll();
+            }
+        });
+
+        // Expose
+        window.checkAll = checkAll;
+        window.showAnswers = showAnswers;
+        window.resetSection = resetSection;
+        window.toggleHint = toggleHint;
+        window.showSingleAns = showSingleAns;
+        window.adjustWidth = adjustWidth;
+        window.ex1Drop = ex1Drop;
+        window.ex1RemoveSlot = ex1RemoveSlot;
+        window.ex1ShowSlot = ex1ShowSlot;
+        window.ex1DragStart = ex1DragStart;
+        window.selectEx2Option = selectEx2Option;
+        window.showEx2Ans = showEx2Ans;
+        window.toggleReference = toggleReference;
+        window.toggleGroup = toggleGroup;
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
