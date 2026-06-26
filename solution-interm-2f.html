@@ -573,12 +573,14 @@
 
                 <p>
                     <span class="par-num">2</span>
-                    ‘Doorstep Sport’ is what we do – we bring sport close to home in disadvantaged communities, at the
-                    right time, for the right price and in the right style.
+                    <span id="ex2-target-1" class="highlightable">‘Doorstep Sport’ is what we do – we bring sport close
+                        to home in disadvantaged communities, at the
+                        right time, for the right price and in the right style.</span>
                     <span id="text-ex3-2" class="highlightable">Sport is great! It provides fitness, fun and friendship
                         opportunities, and since 2007 we have been using it to improve the lives of countless young
                         people.</span>
-                    It teaches them skills and knowledge which they can then use to make their own way in life.
+                    <span id="ex2-target-2" class="highlightable">It teaches them skills and knowledge which they can
+                        then use to make their own way in life.</span>
                 </p>
                 <div class="bilingual-block">
                     'Thể thao tại cửa nhà' – chúng tôi mang thể thao đến gần nhà ở các cộng đồng khó khăn, đúng thời
@@ -629,8 +631,8 @@
                         (T) or false (F)?</div>
                     <div id="questions-ex2"></div>
                     <div class="controls-row">
-                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
-                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                        <button class="btn btn-show-all" onclick="showEx2All()">Show All</button>
+                        <button class="btn btn-reset" onclick="resetEx2()">Reset</button>
                     </div>
                 </div>
 
@@ -701,12 +703,13 @@
         ];
 
         const ex2Data = [
+
             {
-                q: "This sports organisation brings activities to school for young people.", ans: "F", target: "text-ex2-1",
-                hint: "<strong>F (Sai)</strong><br>Đoạn 1: StreetGames là tổ chức từ thiện, nhưng không nói mang hoạt động đến trường. Họ mang thể thao đến các cộng đồng khó khăn (Doorstep Sport)."
+                q: "This sports organisation brings activities to school for young people.", ans: "F", target: "ex2-target-1",
+                hint: "<strong>F (Sai)</strong><br>Đoạn 2: StreetGames là tổ chức từ thiện, nhưng không nói mang hoạt động đến trường. Họ mang thể thao đến các cộng đồng khó khăn (Doorstep Sport)."
             },
             {
-                q: "The organisation believes that sport helps young people in other areas of their lives.", ans: "T", target: "text-ex2-1",
+                q: "The organisation believes that sport helps young people in other areas of their lives.", ans: "T", target: "ex2-target-2",
                 hint: "<strong>T (Đúng)</strong><br>Đoạn 1: 'changes lives' và đoạn 2: 'It teaches them skills and knowledge which they can then use to make their own way in life.'"
             }
         ];
@@ -955,62 +958,103 @@
         // ============================================================
         // RENDER EXERCISE 2 & 3
         // ============================================================
+        // State manager cho Ex2 T/F
+        const ex2State = {};
+
         function renderEx2() {
             const container = document.getElementById('questions-ex2');
-            container.innerHTML = "";
-            ex2Data.forEach((it, i) => {
-                const qid = `ex2-q${i}`;
-                const row = document.createElement('div');
-                row.className = 'question-row';
-                row.appendChild(document.createTextNode((i + 1) + '. ' + it.q + ' '));
+            container.innerHTML = ex2Data.map((it, idx) => {
+                const qid = `ex2-q${idx + 1}`;
+                return `
+                    <div class="mc-card">
+                        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                            <div class="mc-question">${idx + 1}. ${it.q}</div>
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealEx2Ans('${qid}', '${it.ans}')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>
+                            </span>
+                        </div>
+                        <div class="mc-options" style="flex-direction:row; gap:10px;">
+                            <div class="mc-option" id="${qid}-opt-T" onclick="selectEx2Option('${qid}', 'T')" style="flex:1; justify-content:center;">
+                                <span class="mc-badge">T</span>
+                                <span class="mc-text">True</span>
+                            </div>
+                            <div class="mc-option" id="${qid}-opt-F" onclick="selectEx2Option('${qid}', 'F')" style="flex:1; justify-content:center;">
+                                <span class="mc-badge">F</span>
+                                <span class="mc-text">False</span>
+                            </div>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">
+                            <div class="hint-detail">${it.hint}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = qid;
-                input.dataset.ans = it.ans;
-                input.className = 'task5-input';
-                input.style.minWidth = '40px';
-                input.style.width = '60px';
-                input.style.textAlign = 'center';
-                input.style.textTransform = 'uppercase';
-                input.addEventListener('input', function () { adjustWidth(this); });
-                row.appendChild(input);
+        function selectEx2Option(qid, letter) {
+            document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => opt.classList.remove('selected', 'correct', 'incorrect'));
+            if (ex2State[qid] === letter) {
+                delete ex2State[qid];
+            } else {
+                ex2State[qid] = letter;
+                const chosen = document.getElementById(`${qid}-opt-${letter}`);
+                if (chosen) chosen.classList.add('selected');
+            }
+        }
 
-                const btnGroup = document.createElement('div');
-                btnGroup.className = 'row-btns';
+        function revealEx2Ans(qid, correctLetter) {
+            if (ex2State[qid] === correctLetter) {
+                selectEx2Option(qid, correctLetter);
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            } else {
+                selectEx2Option(qid, correctLetter);
+                const chosen = document.getElementById(`${qid}-opt-${correctLetter}`);
+                if (chosen) chosen.classList.add('correct');
+                const qIdx = parseInt(qid.replace('ex2-q', '')) - 1;
+                const it = ex2Data[qIdx];
+                if (it && it.target) {
+                    const textEl = document.getElementById(it.target);
+                    if (textEl) {
+                        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                        textEl.classList.add('active-highlight');
+                        const panel = document.getElementById('text-panel');
+                        if (panel) {
+                            const offset = textEl.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+                            panel.scrollTo({ top: offset - 80, behavior: 'smooth' });
+                        }
+                    }
+                }
+            }
+        }
 
-                const eyeBtn = document.createElement('button');
-                eyeBtn.className = 'eye-btn';
-                eyeBtn.textContent = '👁️';
-                eyeBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    showSingleAns(qid);
-                });
-                btnGroup.appendChild(eyeBtn);
-
-                const hintBtn = document.createElement('button');
-                hintBtn.className = 'hint-btn';
-                hintBtn.textContent = 'i';
-                const hintBoxId = qid + '-hint';
-                hintBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    showReadingHint(it.target, hintBoxId);
-                });
-                btnGroup.appendChild(hintBtn);
-
-                row.appendChild(btnGroup);
-
-                const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
-                hintBox.id = hintBoxId;
-                const hintDetail = document.createElement('div');
-                hintDetail.className = 'hint-detail';
-                hintDetail.innerHTML = it.hint;
-                hintBox.appendChild(hintDetail);
-                row.appendChild(hintBox);
-
-                container.appendChild(row);
+        function checkEx2Answers() {
+            ex2Data.forEach((it, idx) => {
+                const qid = `ex2-q${idx + 1}`;
+                const userLetter = ex2State[qid];
+                if (!userLetter) return;
+                document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => opt.classList.remove('correct', 'incorrect'));
+                const chosen = document.getElementById(`${qid}-opt-${userLetter}`);
+                if (chosen) chosen.classList.add(userLetter === it.ans ? 'correct' : 'incorrect');
             });
+        }
+
+        function showEx2All() {
+            ex2Data.forEach((it, idx) => {
+                revealEx2Ans(`ex2-q${idx + 1}`, it.ans);
+            });
+        }
+
+        function resetEx2() {
+            ex2Data.forEach((_, idx) => {
+                const qid = `ex2-q${idx + 1}`;
+                delete ex2State[qid];
+                document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => {
+                    opt.classList.remove('selected', 'correct', 'incorrect');
+                });
+            });
+            document.querySelectorAll('#questions-ex2 .hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
         }
 
         function renderEx3() {
@@ -1119,18 +1163,7 @@
                 }
             });
             // Check ex2
-            document.querySelectorAll(`input[id^="ex2-q"]`).forEach(el => {
-                if (!el.value) return;
-                const userVal = el.value.toLowerCase().trim().replace(/[.,!]/g, '');
-                const correctVal = el.dataset.ans.toLowerCase().trim().replace(/[.,!]/g, '');
-                if (userVal === correctVal) {
-                    el.classList.add('correct');
-                    el.classList.remove('incorrect-marked');
-                } else {
-                    el.classList.add('incorrect-marked');
-                    el.classList.remove('correct');
-                }
-            });
+            checkEx2Answers();
             // Check MCQ
             checkMCAnswers();
         }
@@ -1324,6 +1357,10 @@
         window.resetSection = resetSection;
         window.showMCAll = showMCAll;
         window.resetMC = resetMC;
+        window.showEx2All = showEx2All;
+        window.resetEx2 = resetEx2;
+        window.selectEx2Option = selectEx2Option;
+        window.revealEx2Ans = revealEx2Ans;
         window.selectEx3Option = selectEx3Option;
         window.revealEx3Ans = revealEx3Ans;
         window.checkAllEx = checkAllEx;
