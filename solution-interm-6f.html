@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solutions Intermediate - 6F Reading: Out of work</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== GIỮ NGUYÊN CSS GỐC ===== */
+        .container {
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            transition: max-width 0.3s;
+        }
+
+        .exercise-card {
+            width: 100%;
+            margin-bottom: 30px;
+            background: var(--card-bg, #fff);
+            border-radius: 12px;
+            border: 1px solid var(--border, #eee);
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        }
+
+        .exercise-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        [data-theme="dark"] .exercise-title {
+            color: #ecf0f1;
+        }
+
+        .question-row {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--input-border);
+            padding: 2px 8px;
+            font-size: 1rem;
+            color: var(--primary-dark);
+            font-weight: bold;
+            background: var(--input-bg);
+            min-width: 60px;
+            transition: all 0.2s;
+            text-align: center;
+            field-sizing: content;
+            flex-shrink: 0;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .task5-input.correct {
+            color: var(--success);
+            border-bottom-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .task5-input.incorrect-marked {
+            color: var(--error);
+            border-bottom-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: var(--grammar-bg);
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            border: 1px dashed var(--primary);
+        }
+
+        .word-bank.sticky-bank {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
+        }
+
+        .word-item {
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-medium);
+            border-radius: 20px;
+            cursor: grab;
+            user-select: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            color: var(--text);
+        }
+
+        .word-item:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-block;
+            min-width: 80px;
+            height: 32px;
+            border-bottom: 2px solid var(--primary);
+            vertical-align: middle;
+            margin: 0 3px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(52, 152, 219, 0.05);
+            padding: 0 4px;
+        }
+
+        .drop-slot.over {
+            background: var(--grammar-bg);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            border-bottom-style: solid;
+        }
+
+        .drop-slot.correct {
+            color: var(--success);
+            border-bottom-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .drop-slot.incorrect-marked {
+            color: var(--error);
+            border-bottom-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        .reading-split-container {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin-top: 20px;
+            height: 700px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .reading-text-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg);
+            font-size: 1.1rem;
+            line-height: 2.2;
+            text-align: justify;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover,
+        .reading-resizer.active {
+            background: var(--resizer-hover);
+        }
+
+        .reading-questions-panel {
+            flex: 1 1 50%;
+            overflow-y: auto;
+            padding: 25px;
+            background: var(--card-bg);
+        }
+
+        .highlightable {
+            transition: background-color 0.4s, box-shadow 0.4s;
+            border-radius: 3px;
+        }
+
+        .highlight-yellow {
+            background-color: #fef08a;
+            border-radius: 3px;
+        }
+
+        .highlight-green {
+            background-color: #bbf7d0;
+            border-radius: 3px;
+        }
+
+        .highlight-pink {
+            background-color: #fbcfe8;
+            border-radius: 3px;
+        }
+
+        .inline-drop-zone {
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 3px;
+        }
+
+        .inline-drop-slot {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 6px;
+            padding: 2px 8px;
+            background: var(--bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .inline-drop-slot.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .inline-drop-slot.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .inline-drop-slot .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .inline-drop-slot.filled .slot-content {
+            color: var(--success);
+        }
+
+        .inline-drop-slot .remove-chip {
+            display: none;
+        }
+
+        .inline-drop-slot.filled .remove-chip {
+            display: inline;
+            font-size: 0.8rem;
+        }
+
+        .par-num {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--text);
+            font-weight: bold;
+            margin-right: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: var(--text);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--text-muted);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        .bilingual-block {
+            margin-top: 10px;
+            font-style: italic;
+            color: var(--primary-dark);
+            display: none;
+            line-height: 1.8;
+        }
+
+        .bilingual-mode .bilingual-block {
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .context-menu {
+            display: none;
+            position: absolute;
+            background: var(--context-menu-bg);
+            border: 1px solid var(--border-medium);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            z-index: 1000;
+            padding: 5px 0;
+            min-width: 155px;
+        }
+
+        .context-menu div {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu div:hover {
+            background: var(--grammar-bg);
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .sentence-bank {
+            background: var(--grammar-bg);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+
+        .sentence-bank-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .sentence-items {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sentence-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-medium);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: grab;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .sentence-item:hover {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .sentence-item.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+
+        .sentence-item.used {
+            opacity: 0.45;
+            background: var(--grammar-bg);
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .sentence-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 26px;
+            height: 26px;
+            background: var(--primary);
+            color: white;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .sentence-text {
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .drop-row-container {
+            margin-bottom: 16px;
+        }
+
+        .drop-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .drop-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel {
+            flex: 1;
+            min-height: 40px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            background: var(--bg);
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .drop-slot-panel.drag-over {
+            border-color: var(--primary);
+            background: var(--grammar-bg);
+        }
+
+        .drop-slot-panel.filled {
+            border-style: solid;
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .drop-slot-panel.filled-wrong {
+            border-color: var(--error);
+            background: var(--error-bg);
+        }
+
+        .drop-slot-panel .slot-content {
+            font-weight: bold;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+        .drop-slot-panel.filled .slot-content {
+            color: var(--text);
+        }
+
+        [data-theme="dark"] .drop-slot-panel.filled .slot-content {
+            color: var(--text);
+        }
+
+        .remove-chip {
+            display: none;
+            cursor: pointer;
+            color: var(--error);
+            font-weight: bold;
+            font-size: 1.1rem;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .drop-slot-panel.filled .remove-chip {
+            display: inline;
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .hint-box .key-word {
+            font-weight: bold;
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .hint-detail {
+            margin-top: 5px;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 5px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-show-all {
+            background: #16a085;
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            background: #1abc9c;
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+        }
+
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+            width: fit-content;
+            margin: 0 !important;
+            border: none !important;
+            background: none !important;
+            box-shadow: none !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        .strategy-card {
+            background: var(--hint-bg, #f0fdfa);
+            border: 2px dashed var(--primary, #0d9488);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 28px;
+            color: var(--hint-text, #115e59);
+        }
+
+        .strategy-card .strategy-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: var(--primary, #0d9488);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .strategy-card p {
+            font-size: 0.97rem;
+            line-height: 1.7;
+            margin: 0 0 8px 0;
+        }
+
+        #ex3-q1-hint,
+        #ex3-q2-hint,
+        #ex3-q3-hint,
+        #ex3-q4-hint {
+            background: #e3f2fd;
+            border-left-color: #42a5f5;
+        }
+
+        #ex3-q1-hint .key-word,
+        #ex3-q2-hint .key-word,
+        #ex3-q3-hint .key-word,
+        #ex3-q4-hint .key-word {
+            color: #2c3e50;
+        }
+
+        .choice-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-light, #f1f5f9);
+            flex-wrap: wrap;
+        }
+
+        .choice-text {
+            flex: 1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .choice-container {
+            display: inline-flex;
+            gap: 8px;
+            vertical-align: middle;
+        }
+
+        .choice-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 45px;
+            height: 32px;
+            border: 1px solid var(--border-medium, #cbd5e1);
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--card-bg, #fff);
+            color: var(--text, #334155);
+        }
+
+        .choice-badge:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .choice-badge.selected {
+            background: var(--primary, #0d9488);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .choice-badge.correct {
+            background: #22c55e !important;
+            color: white !important;
+            border-color: #22c55e !important;
+        }
+
+        .choice-badge.incorrect {
+            background: #ef4444 !important;
+            color: white !important;
+            border-color: #ef4444 !important;
+        }
+
+        .photo-placeholder {
+            background: var(--grammar-bg, #f0fdfa);
+            border: 2px dashed var(--primary, #0d9488);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .photo-placeholder img {
+            max-width: 100%;
+            max-height: 350px;
+            border-radius: 8px;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .ex1-hint-box {
+            background: #e8f4f8;
+            border-left-color: #3498db;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">6F</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Reading</div>
+                <h1>Out of work</h1>
+                <p class="subtitle">I can understand a text about a young entrepreneur.</p>
+            </div>
+        </div>
+
+        <div class="strategy-card">
+            <div class="strategy-title">📖 Chiến lược Đọc hiểu</div>
+            <p><strong>Khi làm bài tập điền câu vào chỗ trống (gapped-sentence):</strong></p>
+            <p>1. Điền các câu dễ nhất trước.</p>
+            <p>2. Khi bạn đã điền hết các chỗ trống, hãy thử các câu còn lại vào mỗi chỗ trống một lần nữa để đảm bảo
+                chúng không phù hợp.</p>
+            <p>3. Đọc lại toàn bộ văn bản, kiểm tra câu trả lời của bạn.</p>
+        </div>
+
+        <!-- Exercise 1 -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the sentences with a verb and a preposition below. Use the correct
+                form of the verb.</div>
+
+            <div class="word-bank sticky-bank" id="ex1-bank">
+                <div class="word-item" draggable="true" data-word="appeal">appeal</div>
+                <div class="word-item" draggable="true" data-word="arrest">arrest</div>
+                <div class="word-item" draggable="true" data-word="complain">complain</div>
+                <div class="word-item" draggable="true" data-word="employ">employ</div>
+                <div class="word-item" draggable="true" data-word="respond">respond</div>
+                <div class="word-item" draggable="true" data-word="search">search</div>
+                <div class="word-item" draggable="true" data-word="sit">sit</div>
+                <div class="word-item" draggable="true" data-word="spend">spend</div>
+                <div class="word-item" draggable="true" data-word="work">work</div>
+                <div class="word-item" draggable="true" data-word="worry">worry</div>
+                <div class="word-item" draggable="true" data-word="about">about</div>
+                <div class="word-item" draggable="true" data-word="about">about</div>
+                <div class="word-item" draggable="true" data-word="as">as</div>
+                <div class="word-item" draggable="true" data-word="at">at</div>
+                <div class="word-item" draggable="true" data-word="for">for</div>
+                <div class="word-item" draggable="true" data-word="for">for</div>
+                <div class="word-item" draggable="true" data-word="for">for</div>
+                <div class="word-item" draggable="true" data-word="on">on</div>
+                <div class="word-item" draggable="true" data-word="to">to</div>
+                <div class="word-item" draggable="true" data-word="to">to</div>
+            </div>
+
+            <div id="questions-ex1"></div>
+
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showEx1All()">Show All</button>
+                <button class="btn btn-reset" onclick="resetEx1()">Reset</button>
+            </div>
+        </div>
+
+        <!-- Split Screen -->
+        <div class="reading-split-container">
+
+            <!-- LEFT: Reading Text -->
+            <div class="reading-text-panel" id="text-panel">
+                <div class="switch-container">
+                    <span>Dịch Song Ngữ</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bilingual"
+                            onchange="document.getElementById('text-panel').classList.toggle('bilingual-mode')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <h2
+                    style="font-size: 1.8rem; margin-bottom: 20px; font-family: Georgia, serif; color: var(--primary-dark); text-transform: uppercase; text-align: center;">
+                    HOW TO SELL YOURSELF
+                </h2>
+
+                <div id="readingContent">
+                    <p style="font-style: italic; font-size: 1.05rem; text-align: center;">
+                        <span id="ex2-target-1" class="highlightable">WOULD YOU STAND OUTSIDE THE LONDON UNDERGROUND
+                            LOOKING FOR A JOB? THAT IS PRECISELY WHAT 23-YEAR-OLD OMAR BASHIR DID LAST SUMMER.</span>
+                        <span id="ex3-slot1-ctx" class="highlightable"><span class="inline-drop-zone"><span
+                                    class="inline-drop-slot" id="readingSlot1" data-q="1"><span class="slot-content">[ 1
+                                        ]</span><span class="remove-chip">✕</span></span></span>
+                            <span class="evidence-phrase" data-ev-gap="1">HE STAYED THERE FROM 7 A.M</span>. HOLDING UP
+                            A BIG SIGN WHICH READ:</span>
+                    </p>
+
+                    <img src="img-int/module 6f.png" alt="Omar Bashir sign"
+                        style="max-width:350px; width:100%; border-radius:8px; display:block; margin:15px auto;">
+
+                    <p>
+                        <span id="ex2-target-2" class="highlightable">Omar had qualified with a good degree in economics
+                            from City University, London, and had been working in a basic marketing job for some time.
+                            In order to further his career, he had applied for nearly 100 jobs, but without success. He
+                            said, '<span class="evidence-phrase" data-ev-gap="2">The graduate job market is extremely
+                                competitive and good grades are not good enough</span>.'</span>
+                        <span id="ex3-slot2-ctx" class="highlightable"><span class="inline-drop-zone"><span
+                                    class="inline-drop-slot" id="readingSlot2" data-q="2"><span class="slot-content">[ 2
+                                        ]</span><span class="remove-chip">✕</span></span></span></span>
+                    </p>
+
+                    <p>
+                        <span class="highlightable" id="text-p2"><span class="evidence-phrase" data-ev-gap="2">So he
+                                took advice from his father, who he greatly admired.</span> <span
+                                class="evidence-phrase" data-ev-gap="3">His father and uncle used to have market
+                                stalls</span> in Petticoat Lane which sold
+                            women's clothes and mobile phone accessories.</span> <span id="ex3-slot3-ctx"
+                            class="highlightable"><span class="inline-drop-zone"><span class="inline-drop-slot"
+                                    id="readingSlot3" data-q="3"><span class="slot-content">[ 3
+                                        ]</span><span class="remove-chip">✕</span></span></span></span> <span
+                            class="highlightable"><span class="evidence-phrase" data-ev-gap="3">'I picked up a lot of my
+                                selling skills from there,'</span> Omar said. His
+                            father told him, 'You can sell anything.' So then Omar decided that the time had come to
+                            sell himself.</span>
+                    </p>
+
+                    <p>
+                        <span class="highlightable" id="text-p3"><span class="evidence-phrase" data-ev-gap="4">On the
+                                second day, Omar stood outside another
+                                underground station, this time Cannon Street, with the same sign.</span></span> <span
+                            id="ex3-slot4-ctx" class="highlightable"><span class="inline-drop-zone"><span
+                                    class="inline-drop-slot" id="readingSlot4" data-q="4"><span class="slot-content">[ 4
+                                        ]</span><span class="remove-chip">✕</span></span></span></span>
+                        <span id="ex2-target-3" class="highlightable"><span class="evidence-phrase"
+                                data-ev-gap="4">Early on the second day, however, he was noticed
+                                by the CEO of a top insurance firm, who took his CV</span>. He was called in for an
+                            interview that
+                            afternoon, and at the end of the day he had a job.</span> David Ross, who gave Omar the
+                        interview, said, 'Omar's work ethic, inclusive nature, willingness to learn and humility means
+                        that he has fitted straight into the organisation.'
+                    </p>
+
+                    <div class="bilingual-block">
+                        <strong>Bạn có đứng bên ngoài ga tàu điện ngầm London để tìm việc không?</strong> Đó chính xác
+                        là những gì Omar Bashir 23 tuổi đã làm vào mùa hè năm ngoái... (đã lược bớt cho gọn, thực tế để
+                        nguyên bản dịch dài hơn)...
+                    </div>
+                </div>
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- RIGHT: Questions Panel -->
+            <div class="reading-questions-panel" id="questions-panel">
+
+                <!-- Exercise 2 -->
+                <div style="margin-bottom: 40px;">
+                    <div class="exercise-title" style="font-size: 1.1rem; border-bottom: none;">2. Read the newspaper
+                        article. Are the sentences true (T) or false (F)?</div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showEx2All()">Show All</button>
+                        <button class="btn btn-reset" onclick="resetEx2()">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div>
+                    <div class="exercise-title" style="font-size: 1.1rem; line-height: 1.5; border-bottom: none;">
+                        3. Read the Reading Strategy. Then match sentences A–F with gaps 1–4 in the text. There are two
+                        extra sentences.
+                    </div>
+
+                    <div class="sentence-bank">
+                        <div class="sentence-bank-label">Sentence Bank — kéo câu vào ô tương ứng</div>
+                        <div class="sentence-items" id="sentenceItems">
+                            <div class="sentence-item" draggable="true" data-value="A" id="sent-A"><span
+                                    class="sentence-letter">A</span><span class="sentence-text">It's important to do
+                                    something that catches people's attention.</span></div>
+                            <div class="sentence-item" draggable="true" data-value="B" id="sent-B"><span
+                                    class="sentence-letter">B</span><span class="sentence-text">He thought the job offer
+                                    was too good to be true.</span></div>
+                            <div class="sentence-item" draggable="true" data-value="C" id="sent-C"><span
+                                    class="sentence-letter">C</span><span class="sentence-text">He found a place at the
+                                    top of the stairs at Bank Station in the heart of London's financial
+                                    district.</span></div>
+                            <div class="sentence-item" draggable="true" data-value="D" id="sent-D"><span
+                                    class="sentence-letter">D</span><span class="sentence-text">Although the first day
+                                    had resulted in some interesting conversations, nothing had come of them.</span>
+                            </div>
+                            <div class="sentence-item" draggable="true" data-value="E" id="sent-E"><span
+                                    class="sentence-letter">E</span><span class="sentence-text">Omar used to help them
+                                    at weekends.</span></div>
+                            <div class="sentence-item" draggable="true" data-value="F" id="sent-F"><span
+                                    class="sentence-letter">F</span><span class="sentence-text">He was offered £5,000
+                                    more than his current job.</span></div>
+                        </div>
+                    </div>
+
+                    <div id="ex3-drop-rows">
+                        <!-- Gap 1 -->
+                        <div class="drop-row-container">
+                            <div class="drop-row"><span class="drop-label">1</span>
+                                <div class="drop-slot-panel" id="panelSlot1" data-q="1"><span
+                                        class="slot-content"></span><span class="remove-chip"
+                                        onclick="removeSlot(1)">✕</span></div><span class="eye-btn" title="Xem đáp án"
+                                    onclick="revealSlot(1)">👁️</span><button class="hint-btn"
+                                    onclick="showDragHint(event, 1)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q1-hint">
+                                <div class="hint-detail"><strong>Đáp án: C</strong> – <em>"He found a place at the top
+                                        of the stairs at Bank Station in the heart of London's financial district."</em>
+                                    <br><br>
+                                    <strong>Trước ô trống [1]:</strong> Câu trước giới thiệu Omar đã đứng bên ngoài ga
+                                    tàu điện ngầm London để tìm việc.<br><br>
+                                    <strong>Tại sao C đúng:</strong> Câu C cung cấp chi tiết cụ thể về <span
+                                        class="key-word">địa điểm</span> mà Omar đã chọn: "at the top of the stairs at
+                                    Bank Station" – khu tài chính của London.<br><br>
+                                    <strong>Sau ô trống [1]:</strong> Câu tiếp theo nói "HE STAYED THERE FROM 7 A.M" –
+                                    nối tiếp hợp lý sau khi đã mô tả địa điểm.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gap 2 -->
+                        <div class="drop-row-container">
+                            <div class="drop-row"><span class="drop-label">2</span>
+                                <div class="drop-slot-panel" id="panelSlot2" data-q="2"><span
+                                        class="slot-content"></span><span class="remove-chip"
+                                        onclick="removeSlot(2)">✕</span></div><span class="eye-btn" title="Xem đáp án"
+                                    onclick="revealSlot(2)">👁️</span><button class="hint-btn"
+                                    onclick="showDragHint(event, 2)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q2-hint">
+                                <div class="hint-detail"><strong>Đáp án: A</strong> – <em>"It's important to do
+                                        something that catches people's attention."</em><br><br>
+                                    <strong>Trước ô trống [2]:</strong> Omar nói về việc thị trường việc làm cạnh tranh
+                                    và điểm số không đủ.<br><br>
+                                    <strong>Tại sao A đúng:</strong> Câu A đưa ra <span class="key-word">bài học</span>:
+                                    cần làm điều gì đó thu hút sự chú ý. Điều này dẫn dắt đến hành động của Omar ở phần
+                                    tiếp theo.<br><br>
+                                    <strong>Sau ô trống [2]:</strong> Câu sau nói "So he took advice from his father" –
+                                    sự chuyển tiếp logic từ ý tưởng "làm điều gì đó thu hút sự chú ý".
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gap 3 -->
+                        <div class="drop-row-container">
+                            <div class="drop-row"><span class="drop-label">3</span>
+                                <div class="drop-slot-panel" id="panelSlot3" data-q="3"><span
+                                        class="slot-content"></span><span class="remove-chip"
+                                        onclick="removeSlot(3)">✕</span></div><span class="eye-btn" title="Xem đáp án"
+                                    onclick="revealSlot(3)">👁️</span><button class="hint-btn"
+                                    onclick="showDragHint(event, 3)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q3-hint">
+                                <div class="hint-detail"><strong>Đáp án: E</strong> – <em>"Omar used to help them at
+                                        weekends."</em><br><br>
+                                    <strong>Trước ô trống [3]:</strong> Câu trước giới thiệu cha và chú của Omar có
+                                    các quầy hàng ở Petticoat Lane.<br><br>
+                                    <strong>Tại sao E đúng:</strong> Câu E bổ sung <span class="key-word">thông tin về
+                                        mối quan hệ</span> của Omar với họ: anh thường giúp họ vào cuối tuần. Điều này
+                                    giải thích vì sao Omar học được kỹ năng bán hàng.<br><br>
+                                    <strong>Sau ô trống [3]:</strong> Câu sau là lời của Omar: "I picked up a lot of my
+                                    selling skills from there" – trực tiếp tham chiếu đến việc anh đã giúp đỡ họ.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gap 4 -->
+                        <div class="drop-row-container">
+                            <div class="drop-row"><span class="drop-label">4</span>
+                                <div class="drop-slot-panel" id="panelSlot4" data-q="4"><span
+                                        class="slot-content"></span><span class="remove-chip"
+                                        onclick="removeSlot(4)">✕</span></div><span class="eye-btn" title="Xem đáp án"
+                                    onclick="revealSlot(4)">👁️</span><button class="hint-btn"
+                                    onclick="showDragHint(event, 4)">i</button>
+                            </div>
+                            <div class="hint-box" id="ex3-q4-hint">
+                                <div class="hint-detail"><strong>Đáp án: D</strong> – <em>"Although the first day had
+                                        resulted in some interesting conversations, nothing had come of them."</em>
+                                    <br><br>
+                                    <strong>Trước ô trống [4]:</strong> Câu trước nói Omar đứng ở Cannon Street với
+                                    cùng một tấm biển.<br><br>
+                                    <strong>Tại sao D đúng:</strong> Câu D tóm tắt <span class="key-word">kết quả của
+                                        ngày đầu tiên</span>: có một số cuộc trò chuyện thú vị nhưng không có kết quả
+                                    gì. Điều này giải thích vì sao anh ấy phải thử ở Cannon Street.<br><br>
+                                    <strong>Sau ô trống [4]:</strong> Câu tiếp theo nói "Early on the second day,
+                                    however" – cho thấy sự chuyển tiếp từ thất bại ngày đầu sang thành công ngày thứ
+                                    hai.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAllDragAnswers()">Show All</button>
+                        <button class="btn btn-reset" onclick="resetAllSlots()">Reset</button>
+                        <span id="ex3-feedback" style="margin-left: 8px; font-weight: bold;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div onmousedown="applyManualHighlight('yellow', event)">
+            <div class="color-dot" style="background:#fef08a"></div>Highlight vàng
+        </div>
+        <div onmousedown="applyManualHighlight('green', event)">
+            <div class="color-dot" style="background:#bbf7d0"></div>Highlight xanh lá
+        </div>
+        <div onmousedown="applyManualHighlight('pink', event)">
+            <div class="color-dot" style="background:#fbcfe8"></div>Highlight hồng
+        </div>
+        <div onmousedown="removeManualHighlight(event)">
+            <div class="color-dot" style="background:#fff; border: 1px solid #ccc;"></div>Xóa highlight
+        </div>
+    </div>
+
+    <button onclick="checkAll()"
+        style="position:fixed;bottom:20px;right:20px;padding:15px 30px;background:#27ae60;color:#fff;border:none;border-radius:30px;font-weight:bold;font-size:1rem;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.2);z-index:100;">
+        CHECK ALL (ENTER)
+    </button>
+
+    <script>
+        // ================================================================
+        // DATA
+        // ================================================================
+        const ex1Data = [
+            { q: 'I usually ______ my pocket money ______ music downloads.', ans: ['spend', 'on'], hint: '<strong>spend money on</strong>: tiêu tiền vào việc gì.<br><em>Dịch câu:</em> Tôi thường tiêu tiền tiêu vặt vào việc tải nhạc.' },
+            { q: 'All I do is ______ my desk all day. I need to get some exercise!', ans: ['sit', 'at'], hint: '<strong>sit at</strong>: ngồi ở (bàn làm việc).<br><em>Dịch câu:</em> Cả ngày tôi chỉ ngồi lì ở bàn làm việc. Tôi cần tập thể dục!' },
+            { q: 'My dad has his own business, but he used to ______ a big bank.', ans: ['work', 'for'], hint: '<strong>work for</strong>: làm việc cho (ai/công ty nào).<br><em>Dịch câu:</em> Bố tôi có doanh nghiệp riêng, nhưng trước đây ông từng làm cho một ngân hàng lớn.' },
+            { q: 'Working abroad doesn\'t really ______ me. I\'d prefer to stay in this country.', ans: ['appeal', 'to'], hint: '<strong>appeal to</strong>: hấp dẫn, thu hút (ai).<br><em>Dịch câu:</em> Làm việc ở nước ngoài không thực sự hấp dẫn tôi. Tôi muốn ở lại đất nước này hơn.' },
+            { q: 'I ______ my keys, but I couldn\'t find them. I wonder where they are.', ans: ['searched', 'for'], hint: '<strong>search for</strong>: tìm kiếm.<br><em>Dịch câu:</em> Tôi đã tìm chìa khóa nhưng không thấy. Không biết chúng ở đâu.' },
+            { q: 'I ______ all the comments on my Facebook page. I think it\'s impolite to ignore them.', ans: ['respond', 'to'], hint: '<strong>respond to</strong>: phản hồi, trả lời.<br><em>Dịch câu:</em> Tôi phản hồi tất cả bình luận trên trang Facebook của mình. Tôi nghĩ việc phớt lờ chúng là bất lịch sự.' },
+            { q: 'The café manager wants to ______ me ______ a dishwasher, but I want to work as a waiter.', ans: ['employ', 'as'], hint: '<strong>employ as</strong>: thuê (ai) làm (vị trí gì).<br><em>Dịch câu:</em> Quản lý quán cà phê muốn thuê tôi làm nhân viên rửa bát, nhưng tôi muốn làm bồi bàn.' },
+            { q: 'Don\'t ______ your exams. I\'m sure you\'ll pass them.', ans: ['worry', 'about'], hint: '<strong>worry about</strong>: lo lắng về.<br><em>Dịch câu:</em> Đừng lo lắng về kỳ thi. Tôi chắc bạn sẽ đỗ.' },
+            { q: 'Yesterday, the police ______ a teenager ______ shoplifting. They questioned him, but have let him go.', ans: ['arrested', 'for'], hint: '<strong>arrest for</strong>: bắt giữ vì tội gì.<br><em>Dịch câu:</em> Hôm qua, cảnh sát đã bắt một thiếu niên vì tội ăn trộm đồ ở cửa hàng. Họ đã thẩm vấn cậu ta nhưng đã thả ra.' },
+            { q: 'The neighbours always ______ the noise when my little cousins come to stay.', ans: ['complain', 'about'], hint: '<strong>complain about</strong>: phàn nàn về.<br><em>Dịch câu:</em> Hàng xóm luôn phàn nàn về tiếng ồn khi mấy đứa em họ nhỏ của tôi đến chơi.' }
+        ];
+
+        const ex2Data = [
+            { q: 'Omar Bashir is in his twenties.', ans: 'True', target: 'ex2-target-1', keyword: '23-YEAR-OLD OMAR BASHIR', hint: '<strong>True (Đúng)</strong><br><strong>Bằng chứng:</strong> "THAT IS PRECISELY WHAT <span class="key-word">23-YEAR-OLD OMAR BASHIR</span> DID LAST SUMMER."' },
+            { q: 'He doesn\'t have a university qualification.', ans: 'False', target: 'ex2-target-2', keyword: 'Omar had qualified with a good degree', hint: '<strong>False (Sai)</strong><br><strong>Bằng chứng:</strong> "<span class="key-word">Omar had qualified with a good degree in economics from City University</span>".' },
+            { q: 'He finally got a job.', ans: 'True', target: 'ex2-target-3', keyword: 'and at the end of the day he had a job', hint: '<strong>True (Đúng)</strong><br><strong>Bằng chứng:</strong> "<span class="key-word">He was called in for an interview that afternoon, and at the end of the day he had a job</span>".' }
+        ];
+
+        const ex3AnswerKey = { 1: 'C', 2: 'A', 3: 'E', 4: 'D' };
+
+        // ================================================================
+        // STATE
+        // ================================================================
+        const ex1State = {};
+        const ex2State = {};
+        const panelState = { 1: null, 2: null, 3: null, 4: null };
+        let dragValue = null;
+        let dragSourceSlot = null;
+
+        // ================================================================
+        // UTILITIES
+        // ================================================================
+        function removeAllHighlights() {
+            document.querySelectorAll('.highlight-yellow, .highlight-green, .highlight-pink').forEach(span => {
+                span.classList.remove('highlight-yellow', 'highlight-green', 'highlight-pink');
+            });
+        }
+
+        function highlightEx3Evidence(q) {
+            removeAllHighlights();
+            const phrases = document.querySelectorAll(`.evidence-phrase[data-ev-gap="${q}"]`);
+            phrases.forEach(span => span.classList.add('highlight-yellow'));
+            const inlineSlot = document.getElementById(`readingSlot${q}`);
+            if (inlineSlot) {
+                inlineSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (phrases.length > 0) {
+                phrases[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function highlightEx2Evidence(item) {
+            removeAllHighlights();
+            const container = document.getElementById(item.target);
+            if (container && item.keyword) {
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                let textNode;
+                const lowerPhrase = item.keyword.toLowerCase();
+                while (textNode = walker.nextNode()) {
+                    const idx = textNode.nodeValue.toLowerCase().indexOf(lowerPhrase);
+                    if (idx !== -1) {
+                        const range = document.createRange();
+                        range.setStart(textNode, idx);
+                        range.setEnd(textNode, idx + item.keyword.length);
+                        const span = document.createElement('span');
+                        span.className = 'highlight-yellow';
+                        try { range.surroundContents(span); } catch (e) {
+                            const fragment = range.extractContents();
+                            span.appendChild(fragment);
+                            range.insertNode(span);
+                        }
+                        span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                }
+            }
+        }
+
+        // ================================================================
+        // EXERCISE 1
+        // ================================================================
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            container.innerHTML = '';
+            const bank = document.getElementById('ex1-bank');
+            bank.className = 'word-bank sticky-bank';
+            bank.querySelectorAll('.word-item').forEach(item => {
+                const word = item.dataset.word;
+                item.id = `word-${word}-${Math.random().toString(36).substr(2, 5)}`;
+                item.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', word);
+                    item.classList.add('dragging');
+                });
+                item.addEventListener('dragend', () => item.classList.remove('dragging'));
+            });
+
+            ex1Data.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'question-row';
+                row.innerHTML = `<span class="q-number">${idx + 1}. </span>`;
+                const parts = item.q.split('______');
+                const slotId1 = `ex1-slot-${idx}-0`;
+                const slotId2 = `ex1-slot-${idx}-1`;
+                row.appendChild(document.createTextNode(parts[0] || ''));
+
+                const slot1 = document.createElement('span');
+                slot1.className = 'drop-slot';
+                slot1.id = slotId1;
+                slot1.dataset.ans = item.ans[0];
+                slot1.addEventListener('dragover', e => e.preventDefault());
+                slot1.addEventListener('dragenter', () => slot1.classList.add('over'));
+                slot1.addEventListener('dragleave', () => slot1.classList.remove('over'));
+                slot1.addEventListener('drop', e => { e.preventDefault(); slot1.classList.remove('over'); const w = e.dataTransfer.getData('text/plain'); if (w) placeEx1Word(idx, 0, w); });
+                slot1.addEventListener('click', () => removeEx1Word(idx, 0));
+                row.appendChild(slot1);
+
+                if (parts[1]) row.appendChild(document.createTextNode(parts[1]));
+
+                const slot2 = document.createElement('span');
+                slot2.className = 'drop-slot';
+                slot2.id = slotId2;
+                slot2.dataset.ans = item.ans[1];
+                slot2.addEventListener('dragover', e => e.preventDefault());
+                slot2.addEventListener('dragenter', () => slot2.classList.add('over'));
+                slot2.addEventListener('dragleave', () => slot2.classList.remove('over'));
+                slot2.addEventListener('drop', e => { e.preventDefault(); slot2.classList.remove('over'); const w = e.dataTransfer.getData('text/plain'); if (w) placeEx1Word(idx, 1, w); });
+                slot2.addEventListener('click', () => removeEx1Word(idx, 1));
+                row.appendChild(slot2);
+
+                if (parts[2]) row.appendChild(document.createTextNode(parts[2]));
+
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'row-btns';
+                const eyeBtn = document.createElement('button');
+                eyeBtn.className = 'eye-btn';
+                eyeBtn.textContent = '👁️';
+                eyeBtn.onclick = (e) => { e.stopPropagation(); revealEx1Slot(idx); };
+                btnGroup.appendChild(eyeBtn);
+
+                const hintBtn = document.createElement('button');
+                hintBtn.className = 'hint-btn';
+                hintBtn.textContent = 'i';
+                const hintId = `ex1-hint-${idx}`;
+                hintBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const box = document.getElementById(hintId);
+                    if (!box) return;
+                    const isVisible = box.style.display === 'block';
+                    document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+                    removeAllHighlights();
+                    if (!isVisible) box.style.display = 'block';
+                };
+                btnGroup.appendChild(hintBtn);
+                row.appendChild(btnGroup);
+
+                const hintBox = document.createElement('div');
+                hintBox.className = 'hint-box ex1-hint-box';
+                hintBox.id = hintId;
+                hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
+                row.appendChild(hintBox);
+
+                container.appendChild(row);
+                ex1State[`${idx}-0`] = '';
+                ex1State[`${idx}-1`] = '';
+            });
+        }
+
+        function placeEx1Word(idx, sub, word) {
+            const slotId = `ex1-slot-${idx}-${sub}`;
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            for (let key in ex1State) if (ex1State[key] === word && key !== slotId) {
+                const old = document.getElementById(key.replace('ex1-slot-', ''));
+                if (old) { old.textContent = ''; old.classList.remove('filled', 'correct', 'incorrect-marked'); ex1State[key] = ''; }
+            }
+            slot.textContent = word;
+            slot.classList.add('filled');
+            ex1State[slotId] = word;
+            const wordEl = document.querySelector(`#ex1-bank .word-item[data-word="${word}"]:not(.used)`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeEx1Word(idx, sub) {
+            const slotId = `ex1-slot-${idx}-${sub}`;
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.textContent.trim();
+            if (!word) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            ex1State[slotId] = '';
+            const wordEl = document.querySelector(`#ex1-bank .word-item[data-word="${word}"].used`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        function revealEx1Slot(idx) {
+            const s1 = document.getElementById(`ex1-slot-${idx}-0`);
+            const s2 = document.getElementById(`ex1-slot-${idx}-1`);
+            if (s1.textContent.trim() === s1.dataset.ans && s2.textContent.trim() === s2.dataset.ans) {
+                removeEx1Word(idx, 0); removeEx1Word(idx, 1);
+            } else {
+                placeEx1Word(idx, 0, s1.dataset.ans);
+                placeEx1Word(idx, 1, s2.dataset.ans);
+                s1.classList.add('correct'); s2.classList.add('correct');
+            }
+        }
+
+        function showEx1All() {
+            ex1Data.forEach((item, idx) => {
+                placeEx1Word(idx, 0, item.ans[0]);
+                placeEx1Word(idx, 1, item.ans[1]);
+                document.getElementById(`ex1-slot-${idx}-0`).classList.add('correct');
+                document.getElementById(`ex1-slot-${idx}-1`).classList.add('correct');
+            });
+        }
+
+        function resetEx1() {
+            ex1Data.forEach((_, idx) => { removeEx1Word(idx, 0); removeEx1Word(idx, 1); });
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            removeAllHighlights();
+        }
+
+        // ================================================================
+        // EXERCISE 2
+        // ================================================================
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = '';
+            ex2Data.forEach((item, idx) => {
+                const qid = `ex2-q${idx}`;
+                const row = document.createElement('div');
+                row.className = 'choice-row';
+                row.innerHTML = `<div class="choice-text"><strong>${idx + 1}.</strong> ${item.q}</div>`;
+                const rightDiv = document.createElement('div');
+                rightDiv.style.display = 'flex';
+                rightDiv.style.alignItems = 'center';
+                rightDiv.style.gap = '10px';
+                const containerDiv = document.createElement('div');
+                containerDiv.className = 'choice-container';
+                const badgeT = document.createElement('span');
+                badgeT.className = 'choice-badge'; badgeT.id = `${qid}-true`; badgeT.textContent = 'T';
+                badgeT.addEventListener('click', () => selectEx2Choice(qid, 'True'));
+                containerDiv.appendChild(badgeT);
+                const badgeF = document.createElement('span');
+                badgeF.className = 'choice-badge'; badgeF.id = `${qid}-false`; badgeF.textContent = 'F';
+                badgeF.addEventListener('click', () => selectEx2Choice(qid, 'False'));
+                containerDiv.appendChild(badgeF);
+                rightDiv.appendChild(containerDiv);
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'row-btns';
+                const eyeBtn = document.createElement('button');
+                eyeBtn.className = 'eye-btn'; eyeBtn.textContent = '👁️';
+                eyeBtn.addEventListener('click', e => { e.stopPropagation(); revealEx2Ans(qid, item.ans); });
+                btnGroup.appendChild(eyeBtn);
+                const hintBtn = document.createElement('button');
+                hintBtn.className = 'hint-btn'; hintBtn.textContent = 'i';
+                const hintId = `${qid}-hint`;
+                hintBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const h = document.getElementById(hintId);
+                    if (!h) return;
+                    const isVisible = h.style.display === 'block';
+                    document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+                    removeAllHighlights();
+                    if (!isVisible) { h.style.display = 'block'; highlightEx2Evidence(item); }
+                });
+                btnGroup.appendChild(hintBtn);
+                rightDiv.appendChild(btnGroup);
+                row.appendChild(rightDiv);
+                const hintBox = document.createElement('div');
+                hintBox.className = 'hint-box'; hintBox.id = hintId;
+                hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
+                row.appendChild(hintBox);
+                container.appendChild(row);
+            });
+        }
+
+        function selectEx2Choice(qid, choice) {
+            const tb = document.getElementById(`${qid}-true`);
+            const fb = document.getElementById(`${qid}-false`);
+            tb.classList.remove('selected', 'correct', 'incorrect');
+            fb.classList.remove('selected', 'correct', 'incorrect');
+            if (ex2State[qid] === choice) delete ex2State[qid];
+            else { ex2State[qid] = choice; (choice === 'True' ? tb : fb).classList.add('selected'); }
+        }
+
+        function revealEx2Ans(qid, correctAns) {
+            if (ex2State[qid] === correctAns) { selectEx2Choice(qid, correctAns); removeAllHighlights(); }
+            else {
+                selectEx2Choice(qid, correctAns);
+                (correctAns === 'True' ? document.getElementById(`${qid}-true`) : document.getElementById(`${qid}-false`)).classList.add('correct');
+                const item = ex2Data[parseInt(qid.replace('ex2-q', ''))];
+                if (item) highlightEx2Evidence(item);
+            }
+        }
+
+        function showEx2All() {
+            ex2Data.forEach((item, idx) => {
+                selectEx2Choice(`ex2-q${idx}`, item.ans);
+                (item.ans === 'True' ? document.getElementById(`ex2-q${idx}-true`) : document.getElementById(`ex2-q${idx}-false`)).classList.add('correct');
+            });
+        }
+
+        function resetEx2() {
+            ex2Data.forEach((_, idx) => {
+                delete ex2State[`ex2-q${idx}`];
+                document.getElementById(`ex2-q${idx}-true`).className = 'choice-badge';
+                document.getElementById(`ex2-q${idx}-false`).className = 'choice-badge';
+            });
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            removeAllHighlights();
+        }
+
+        // ================================================================
+        // EXERCISE 3
+        // ================================================================
+        function initEx3DragDrop() {
+            document.querySelectorAll('.sentence-item').forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    dragValue = item.dataset.value;
+                    dragSourceSlot = null;
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                item.addEventListener('dragend', () => item.classList.remove('dragging'));
+            });
+            document.querySelectorAll('.drop-slot-panel').forEach(slot => {
+                const q = parseInt(slot.dataset.q);
+                slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+                slot.addEventListener('drop', e => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    if (dragValue) placeSentence(q, dragValue);
+                });
+                slot.addEventListener('dragstart', e => {
+                    if (!panelState[q]) { e.preventDefault(); return; }
+                    dragValue = panelState[q];
+                    dragSourceSlot = q;
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                slot.draggable = true;
+            });
+            document.querySelectorAll('.inline-drop-slot').forEach(slot => {
+                const q = parseInt(slot.dataset.q);
+                slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
+                slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+                slot.addEventListener('drop', e => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    if (dragValue) placeSentence(q, dragValue);
+                });
+            });
+            const bank = document.getElementById('sentenceItems');
+            bank.addEventListener('dragover', e => e.preventDefault());
+            bank.addEventListener('drop', e => {
+                e.preventDefault();
+                if (dragSourceSlot !== null) {
+                    removeSlot(dragSourceSlot);
+                    dragSourceSlot = null;
+                    dragValue = null;
+                }
+            });
+        }
+
+        function placeSentence(q, value) {
+            for (let k in panelState) if (panelState[k] === value && parseInt(k) !== q) removeSlot(parseInt(k));
+            if (panelState[q]) returnToBankFromSlot(q);
+            panelState[q] = value;
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (panelSlot) {
+                const sentEl = document.getElementById(`sent-${value}`);
+                const text = sentEl ? sentEl.querySelector('.sentence-text').textContent : value;
+                panelSlot.querySelector('.slot-content').textContent = `${value} – ${text}`;
+                panelSlot.classList.add('filled');
+            }
+            const inlineSlot = document.getElementById(`readingSlot${q}`);
+            if (inlineSlot) {
+                const sentEl = document.getElementById(`sent-${value}`);
+                const text = sentEl ? sentEl.querySelector('.sentence-text').textContent : value;
+                inlineSlot.querySelector('.slot-content').textContent = text;
+                inlineSlot.classList.add('filled');
+            }
+            document.getElementById(`sent-${value}`).classList.add('used');
+            document.getElementById('ex3-feedback').innerHTML = '';
+        }
+
+        function returnToBankFromSlot(q) {
+            const oldVal = panelState[q];
+            if (oldVal) document.getElementById(`sent-${oldVal}`).classList.remove('used');
+        }
+
+        function removeSlot(q) {
+            if (!panelState[q]) return;
+            returnToBankFromSlot(q);
+            panelState[q] = null;
+            const panelSlot = document.getElementById(`panelSlot${q}`);
+            if (panelSlot) { panelSlot.querySelector('.slot-content').textContent = ''; panelSlot.classList.remove('filled', 'filled-wrong'); }
+            const inlineSlot = document.getElementById(`readingSlot${q}`);
+            if (inlineSlot) { inlineSlot.querySelector('.slot-content').textContent = `[ ${q} ]`; inlineSlot.classList.remove('filled'); }
+            document.getElementById('ex3-feedback').innerHTML = '';
+        }
+
+        function revealSlot(q) {
+            const correct = ex3AnswerKey[q];
+            if (panelState[q] === correct) { removeSlot(q); removeAllHighlights(); }
+            else { placeSentence(q, correct); highlightEx3Evidence(q); }
+        }
+
+        function showDragHint(event, q) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(`ex3-q${q}-hint`);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            removeAllHighlights();
+            if (!isVisible) { h.style.display = 'block'; highlightEx3Evidence(q); }
+        }
+
+        function showAllDragAnswers() {
+            Object.entries(ex3AnswerKey).forEach(([q, val]) => placeSentence(parseInt(q), val));
+            document.querySelectorAll('.drop-slot-panel').forEach(s => s.classList.add('filled'));
+            document.getElementById('ex3-feedback').innerHTML = '<span style="color:#27ae60;">✓ All answers shown.</span>';
+        }
+
+        function resetAllSlots() {
+            [1, 2, 3, 4].forEach(q => removeSlot(q));
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            removeAllHighlights();
+            document.getElementById('ex3-feedback').innerHTML = '';
+        }
+
+        // ================================================================
+        // CHECK ALL
+        // ================================================================
+        function checkAll() {
+            ex1Data.forEach((item, idx) => {
+                const s1 = document.getElementById(`ex1-slot-${idx}-0`);
+                const s2 = document.getElementById(`ex1-slot-${idx}-1`);
+                if (s1.textContent.trim()) {
+                    const u = s1.textContent.trim().toLowerCase();
+                    s1.classList.toggle('correct', u === item.ans[0].toLowerCase());
+                    s1.classList.toggle('incorrect-marked', u !== item.ans[0].toLowerCase());
+                }
+                if (s2.textContent.trim()) {
+                    const u = s2.textContent.trim().toLowerCase();
+                    s2.classList.toggle('correct', u === item.ans[1].toLowerCase());
+                    s2.classList.toggle('incorrect-marked', u !== item.ans[1].toLowerCase());
+                }
+            });
+            ex2Data.forEach((item, idx) => {
+                const qid = `ex2-q${idx}`;
+                const userAns = ex2State[qid];
+                if (!userAns) return;
+                const tb = document.getElementById(`${qid}-true`);
+                const fb = document.getElementById(`${qid}-false`);
+                if (userAns === item.ans) {
+                    (userAns === 'True' ? tb : fb).classList.add('correct');
+                } else {
+                    (userAns === 'True' ? tb : fb).classList.add('incorrect');
+                }
+            });
+            let correct = 0;
+            [1, 2, 3, 4].forEach(q => {
+                const panelSlot = document.getElementById(`panelSlot${q}`);
+                if (!panelState[q]) return;
+                if (panelState[q] === ex3AnswerKey[q]) { correct++; panelSlot.classList.add('filled'); }
+                else panelSlot.classList.add('filled-wrong');
+            });
+            const done = Object.values(panelState).filter(v => v !== null).length;
+            document.getElementById('ex3-feedback').innerHTML = correct === 4 ? '<span style="color:#27ae60;">✓ Perfect! 4/4 correct.</span>' : `<span style="color:#e74c3c;">${correct}/${done} correct (of ${done} answered)</span>`;
+        }
+
+        // ================================================================
+        // RESIZER & MANUAL HIGHLIGHT
+        // ================================================================
+        function initResizer() {
+            const resizer = document.getElementById('reading-resizer');
+            const left = document.getElementById('text-panel');
+            const right = document.getElementById('questions-panel');
+            const container = document.querySelector('.reading-split-container');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', e => { isResizing = true; resizer.classList.add('active'); document.body.style.cursor = 'col-resize'; e.preventDefault(); });
+            document.addEventListener('mousemove', e => {
+                if (!isResizing) return;
+                const rect = container.getBoundingClientRect();
+                let pct = ((e.clientX - rect.left) / rect.width) * 100;
+                pct = Math.min(80, Math.max(20, pct));
+                left.style.flex = `0 0 calc(${pct}% - 4px)`;
+                right.style.flex = `1 1 0`;
+            });
+            document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; resizer.classList.remove('active'); document.body.style.cursor = 'default'; } });
+        }
+
+        let selectedRange = null;
+        document.addEventListener('contextmenu', e => {
+            const area = e.target.closest('#text-panel');
+            if (!area) return;
+            const sel = window.getSelection();
+            if (!sel || sel.toString().trim() === '' || sel.rangeCount === 0) return;
+            e.preventDefault();
+            selectedRange = sel.getRangeAt(0);
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+        });
+        document.addEventListener('click', e => { if (!document.getElementById('contextMenu').contains(e.target)) document.getElementById('contextMenu').style.display = 'none'; });
+        function getTextNodesInRange(range) { const nodes = []; const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, { acceptNode: n => range.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT }); let n; while (n = walker.nextNode()) nodes.push(n); return nodes; }
+        function isSimpleRange(range) { return range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE || (range.startContainer.parentNode === range.endContainer.parentNode && getTextNodesInRange(range).length <= 1); }
+        function removeExistingHighlightsInRange(range) {
+            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, { acceptNode: n => n.classList && ['highlight-yellow', 'highlight-green', 'highlight-pink'].some(c => n.classList.contains(c)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP });
+            const toUnwrap = []; let n; while (n = walker.nextNode()) if (range.intersectsNode(n)) toUnwrap.push(n);
+            toUnwrap.forEach(span => { const p = span.parentNode; while (span.firstChild) p.insertBefore(span.firstChild, span); p.removeChild(span); });
+        }
+        function applyHighlightSimple(range, color) { try { const s = document.createElement('span'); s.className = `highlight-${color}`; range.surroundContents(s); } catch (e) { const f = range.extractContents(); const s = document.createElement('span'); s.className = `highlight-${color}`; s.appendChild(f); range.insertNode(s); } }
+        function applyHighlightComplex(range, color) { getTextNodesInRange(range).forEach(tn => { const s0 = range.startContainer === tn ? range.startOffset : 0; const e0 = range.endContainer === tn ? range.endOffset : tn.length; if (s0 === e0) return; const r = document.createRange(); r.setStart(tn, s0); r.setEnd(tn, e0); try { const sp = document.createElement('span'); sp.className = `highlight-${color}`; r.surroundContents(sp); } catch (e) { const f = r.extractContents(); const sp = document.createElement('span'); sp.className = `highlight-${color}`; sp.appendChild(f); r.insertNode(sp); } }); }
+        function applyManualHighlight(color, e) {
+            e.preventDefault();
+            if (!selectedRange) { document.getElementById('contextMenu').style.display = 'none'; return; }
+            const r = selectedRange.cloneRange();
+            removeExistingHighlightsInRange(r);
+            if (isSimpleRange(r)) applyHighlightSimple(r, color); else applyHighlightComplex(r, color);
+            window.getSelection().removeAllRanges();
+            document.getElementById('contextMenu').style.display = 'none';
+            selectedRange = null;
+        }
+        function removeManualHighlight(e) {
+            e.preventDefault();
+            if (!selectedRange) { document.getElementById('contextMenu').style.display = 'none'; return; }
+            removeExistingHighlightsInRange(selectedRange.cloneRange());
+            window.getSelection().removeAllRanges();
+            document.getElementById('contextMenu').style.display = 'none';
+            selectedRange = null;
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); checkAll(); } });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderEx1();
+            renderEx2();
+            initEx3DragDrop();
+            initResizer();
+        });
+
+        window.checkAll = checkAll; window.showEx1All = showEx1All; window.resetEx1 = resetEx1;
+        window.showEx2All = showEx2All; window.resetEx2 = resetEx2;
+        window.revealSlot = revealSlot; window.showDragHint = showDragHint; window.removeSlot = removeSlot;
+        window.showAllDragAnswers = showAllDragAnswers; window.resetAllSlots = resetAllSlots;
+        window.applyManualHighlight = applyManualHighlight; window.removeManualHighlight = removeManualHighlight;
+    </script>
+
+    <script src="access-core.js"></script>
+</body>
+
+</html>
