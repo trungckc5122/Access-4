@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 3C Listening: The body's limits</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Fix Title & Home Button Alignment (như 1c) */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 12px !important;
+            width: fit-content !important;
+            margin: 0 !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Layout Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: width 0.2s;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .strategy-box h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: default;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box strong {
+            color: var(--primary);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Option card (radio) – hàng ngang */
+        .option-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+            max-width: 600px;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.15) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.15) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        /* Text input inline (phrase-gap) */
+        .phrase-gap-input {
+            border: none;
+            border-bottom: 2px dashed var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            margin: 0 4px;
+            min-width: 80px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: inline;
+            width: auto;
+            field-sizing: content;
+        }
+
+        .phrase-gap-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .phrase-gap-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .phrase-gap-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        /* Exercise 5: summary cards */
+        .summary-card {
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            max-width: 800px;
+        }
+
+        .summary-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .summary-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .summary-card input {
+            display: none;
+        }
+
+        .summary-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.1) !important;
+        }
+
+        .summary-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.1) !important;
+        }
+
+        .incorrect-text {
+            text-decoration: underline wavy #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+
+        /* Exercise 6: True/False buttons */
+        .tf-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0 12px 0;
+        }
+
+        .tf-btn {
+            padding: 6px 20px;
+            border-radius: 20px;
+            border: 2px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .tf-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .tf-btn.selected-true {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .tf-btn.selected-false {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .tf-btn.correct-true {
+            background: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .tf-btn.correct-false {
+            background: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        .tf-btn.incorrect-true {
+            background: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        .tf-btn.incorrect-false {
+            background: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .tf-input-wrapper {
+            margin-top: 6px;
+            padding-left: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .tf-input-wrapper input {
+            width: 90%;
+            max-width: 700px;
+            padding: 6px 12px;
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+
+        .tf-input-wrapper input.correct {
+            border-color: var(--success);
+            background: rgba(var(--success-rgb), 0.1);
+        }
+
+        .tf-input-wrapper input.incorrect-marked {
+            border-color: var(--error);
+            background: rgba(var(--error-rgb), 0.1);
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+        }
+
+        .speaker-name {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .script-section {
+            display: none;
+        }
+
+        .script-section.active {
+            display: block;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .row-btns {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .eye-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .eye-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .hint-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .hint-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .option-card {
+                max-width: 100%;
+            }
+
+            .summary-card {
+                max-width: 100%;
+            }
+
+            .tf-input-wrapper input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">3C</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Listening</div>
+                <h1>The body's limits</h1>
+                <p class="subtitle">I can listen for specific information.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Box -->
+        <div class="strategy-box">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe</h2>
+            <p>Một số bài nghe có thể yêu cầu lắng nghe các con số, ngày tháng và số đo. Hãy đảm bảo bạn biết cách phát âm chúng để có thể nhận diện được thông tin khi nghe.</p>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Scripts</h2>
+
+                <!-- Transcript 1.14 -->
+                <div id="script-1-14" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.14 (Exercise 1)</h3>
+                    <div class="speaker-line">
+                        <span><strong>1.</strong> <span class="highlightable" id="text-ex1-1">150,000</span></span><br>
+                        <span><strong>2.</strong> <span class="highlightable" id="text-ex1-2">3.7
+                                million</span></span><br>
+                        <span><strong>3.</strong> <span class="highlightable" id="text-ex1-3">2.07</span></span><br>
+                        <span><strong>4.</strong> <span class="highlightable" id="text-ex1-4">three
+                                tenths</span></span><br>
+                        <span><strong>5.</strong> <span class="highlightable" id="text-ex1-5">30.5%</span></span><br>
+                        <span><strong>6.</strong> <span class="highlightable" id="text-ex1-6">20–25</span></span><br>
+                        <span><strong>7.</strong> <span class="highlightable" id="text-ex1-7">–25°C</span></span><br>
+                        <span><strong>8.</strong> <span class="highlightable" id="text-ex1-8">1930</span></span>
+                    </div>
+                </div>
+
+                <!-- Transcript 1.15 -->
+                <div id="script-1-15" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.15 (Exercise 3)</h3>
+                    <div class="speaker-line">
+                        <span><strong>1.</strong> <span class="highlightable" id="text-ex3-1">2
+                                million</span></span><br>
+                        <span><strong>2.</strong> <span class="highlightable" id="text-ex3-2">100,000</span></span><br>
+                        <span><strong>3.</strong> <span class="highlightable" id="text-ex3-3a">10%</span>, <span
+                                class="highlightable" id="text-ex3-3b">90%</span></span><br>
+                        <span><strong>4.</strong> <span class="highlightable" id="text-ex3-4a">2%</span>, <span
+                                class="highlightable" id="text-ex3-4b">one fifth</span></span><br>
+                        <span><strong>5.</strong> <span class="highlightable" id="text-ex3-5">0.5°C</span></span><br>
+                        <span><strong>6.</strong> <span class="highlightable" id="text-ex3-6">30,000</span></span><br>
+                        <span><strong>7.</strong> <span class="highlightable" id="text-ex3-7">206</span></span><br>
+                        <span><strong>8.</strong> <span class="highlightable" id="text-ex3-8">1.27</span></span><br>
+                        <span><strong>9.</strong> <span class="highlightable" id="text-ex3-9a">20–22</span>, <span
+                                class="highlightable" id="text-ex3-9b">15–16</span></span>
+                    </div>
+                </div>
+
+                <!-- Transcript 1.16 -->
+                <div id="script-1-16" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.16 (Exercises 5 &amp; 6)</h3>
+                    <div class="speaker-line">
+                        <span><strong>Interviewer:</strong> You have been looking at how the human body copes with very
+                            low temperatures. Is that right?</span><br>
+                        <span><strong>Scientist:</strong> Yes, that's right.</span><br>
+                        <span><strong>I:</strong> And what have you found?</span><br>
+                        <span><strong>S:</strong> Well, it's an interesting question. Of course, freezing temperatures
+                            are bad for the body. You can get frostbite if your skin freezes. And about <span
+                                class="highlightable" id="text-ex6-1">two thirds</span> of people whose body temperature
+                            falls below 28° Celsius actually die. But at the same time, there are some people who have
+                            survived much lower body temperatures – and made a full recovery.</span><br>
+                        <span><strong>I:</strong> Can you give us an example?</span><br>
+                        <span><strong>S:</strong> Yes. There's the famous case of a Swedish doctor called Anna
+                            Bågenholm. She was skiing in the mountains in Norway when she had an accident.</span><br>
+                        <span><strong>I:</strong> How did the accident happen?</span><br>
+                        <span><strong>S:</strong> Well, she went skiing with two colleagues from hospital – Anna was a
+                            doctor, you see, and was studying to become a surgeon. Anyway, the three of them were skiing
+                            down a steep mountain when Anna lost control of her skis. <span class="highlightable" id="text-ex5-b">She fell onto a sheet of ice,
+                            which was actually the surface of a stream</span>. The ice broke and Anna fell headfirst through
+                            the hole, as far as her waist. Beneath the ice was water, freezing cold water.</span><br>
+                        <span><strong>I:</strong> What did her two friends do?</span><br>
+                        <span><strong>S:</strong> Well, they tried to pull her out by her legs – but she was trapped
+                            under the ice. She could breathe, because there was some air between the ice and the water,
+                            but she couldn't move. After trying for <span class="highlightable" id="text-ex6-2">seven
+                                minutes</span> to free her, her two colleagues gave up and phoned for help.</span><br>
+                        <span><strong>I:</strong> And did help arrive quickly?</span><br>
+                        <span><strong>S:</strong> Two rescue teams set off to help Anna, one from the top of the
+                            mountain and one from the bottom. The one from the top arrived first, but they couldn't pull
+                            her out of the ice.</span><br>
+                        <span><strong>I:</strong> What about the second team?</span><br>
+                        <span><strong>S:</strong> The second team managed to get her out by <span class="highlightable"
+                                id="text-ex6-3">cutting a hole in the ice</span>. <span class="highlightable" id="text-ex5-a1">But by the time they got her free, she
+                            had been in the freezing water for 80 minutes</span>. Anna was not breathing and her heart was not
+                            beating. A helicopter took her to hospital. When she arrived, <span class="highlightable" id="text-ex5-c1">her body temperature was <span
+                                class="highlightable" id="text-ex6-4">13.7° Celsius</span></span>. According to the doctor in
+                            charge of the emergency room, Anna was ice cold and looked dead.</span><br>
+                        <span><strong>I:</strong> But I guess she wasn't.</span><br>
+                        <span><strong>S:</strong> Well, no. There's an expression among some doctors: 'You aren't dead
+                            until you're warm and dead.' In other words, sometimes people who are extremely cold can
+                            come back to life when they get warmer. <span class="highlightable" id="text-ex5-a2">Doctors at the hospital worked for nine hours to
+                            save Anna</span>. When her temperature had risen to <span class="highlightable"
+                                id="text-ex6-5">36.4° Celsius</span>, her heart started beating again. <span class="highlightable" id="text-ex5-c2">Gradually, after
+                            days and weeks, Anna made a full recovery</span>.</span><br>
+                        <span><strong>I:</strong> That's amazing.</span><br>
+                        <span><strong>S:</strong> Yes, and in 2009, ten years after the accident, Anna got a job working
+                            as a doctor in the hospital that had saved her life!</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Main Exercise Stack -->
+            <div class="main-exercise-panel" id="main-exercise-panel">
+
+                <!-- Exercise 1 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">1. 🎧 1.14 Read the Listening Strategy. Then listen and circle the
+                        number or measurement you hear.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.14')">📜 Show Transcript
+                        1.14</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_14.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex1"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 (Speaking) -->
+                <div class="exercise-card">
+                    <div class="exercise-title">2. Read aloud all the numbers and measurements in exercise 1.</div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;">
+                        Đây là bài tập nói. Hãy đọc to các con số và đơn vị đo trong bài 1.
+                    </p>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. 🎧 1.15 Listen and complete the facts with the numbers and
+                        measurements you hear.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.15')">📜 Show Transcript
+                        1.15</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_15.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 (Speaking) -->
+                <div class="exercise-card">
+                    <div class="exercise-title">4. 🗣️ Work in pairs. Ask and answer the questions.</div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;">
+                        (Bài tập nói theo cặp – không cần xử lý trong file này)
+                    </p>
+                </div>
+
+                <!-- Exercise 5 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">5. 🎧 1.16 Read the three short texts below about a Swedish woman called
+                        Anna Bågenholm, who had an accident. Then listen to an interview about her and decide which is
+                        the best summary of the accident. Underline the incorrect parts of the other options.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.16')">📜 Show Transcript
+                        1.16</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_16.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex5"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 6 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">6. 🎧 1.16 Listen again. Are the sentences true (T) or false (F)?
+                        Correct the false sentences.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.16')">📜 Show Transcript
+                        1.16</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_16.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex6"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ── DATA ─────────────────────────────────────────────────── */
+
+        // Exercise 1
+        const ex1Data = [
+            { q: "1", opts: ["a 115,000", "b 100,050", "c 150,000"], ans: "c 150,000", targets: ["text-ex1-1"], hint: "<strong>Đáp án: c – 150,000</strong><br>Transcript: <em>150,000</em>" },
+            { q: "2", opts: ["a 3,700,000", "b 37,000,000", "c 3,000,700"], ans: "a 3,700,000", targets: ["text-ex1-2"], hint: "<strong>Đáp án: a – 3,700,000</strong><br>Transcript: <em>3.7 million</em>" },
+            { q: "3", opts: ["a 2.07", "b 0.27", "c 2.70"], ans: "a 2.07", targets: ["text-ex1-3"], hint: "<strong>Đáp án: a – 2.07</strong><br>Transcript: <em>2.07</em>" },
+            { q: "4", opts: ["a 3⅒", "b 1⅒", "c 3⅒"], ans: "c 3⅒", targets: ["text-ex1-4"], hint: "<strong>Đáp án: c – 3⅒</strong><br>Transcript: <em>three tenths</em>" },
+            { q: "5", opts: ["a 35%", "b 30.5%", "c 13%"], ans: "b 30.5%", targets: ["text-ex1-5"], hint: "<strong>Đáp án: b – 30.5%</strong><br>Transcript: <em>30.5%</em>" },
+            { q: "6", opts: ["a 22–25", "b 2–25", "c 20–25"], ans: "c 20–25", targets: ["text-ex1-6"], hint: "<strong>Đáp án: c – 20–25</strong><br>Transcript: <em>20–25</em>" },
+            { q: "7", opts: ["a 25°C", "b -5°C", "c -25°C"], ans: "c -25°C", targets: ["text-ex1-7"], hint: "<strong>Đáp án: c – -25°C</strong><br>Transcript: <em>–25°C</em>" },
+            { q: "8", opts: ["a 1930", "b 1913", "c 913"], ans: "a 1930", targets: ["text-ex1-8"], hint: "<strong>Đáp án: a – 1930</strong><br>Transcript: <em>1930</em>" }
+        ];
+
+        // Exercise 3
+        const ex3Data = [
+            {
+                q: "Your body makes ______ new blood cells every second.",
+                blanks: [
+                    {
+                        ans: "2 million",
+                        targets: ["text-ex3-1"],
+                        hint: "<strong>Đáp án: 2 million</strong><br>Dịch câu: Cơ thể bạn tạo ra 2 triệu tế bào máu mới mỗi giây.<br>Transcript: <em>2 million</em>"
+                    }
+                ]
+            },
+            {
+                q: "There are nearly ______ kilometres of blood vessels in an average adult body.",
+                blanks: [
+                    {
+                        ans: "100,000",
+                        targets: ["text-ex3-2"],
+                        hint: "<strong>Đáp án: 100,000</strong><br>Dịch câu: Có gần 100.000 ki-lô-mét mạch máu trong cơ thể người trưởng thành trung bình.<br>Transcript: <em>100,000</em>"
+                    }
+                ]
+            },
+            {
+                q: "Only ______ of the cells in our body are human; the other ______ are bacteria.",
+                blanks: [
+                    {
+                        ans: "10%",
+                        targets: ["text-ex3-3a"],
+                        hint: "<strong>Đáp án ô 1: 10%</strong><br>Dịch câu: Chỉ 10% tế bào trong cơ thể chúng ta là của con người; 90% còn lại là vi khuẩn.<br>Transcript: <em>10%</em>"
+                    },
+                    {
+                        ans: "90%",
+                        targets: ["text-ex3-3b"],
+                        hint: "<strong>Đáp án ô 2: 90%</strong><br>Dịch câu: Chỉ 10% tế bào trong cơ thể chúng ta là của con người; 90% còn lại là vi khuẩn.<br>Transcript: <em>90%</em>"
+                    }
+                ]
+            },
+            {
+                q: "Your brain is only ______ of your body's weight, but it uses ______ of the oxygen.",
+                blanks: [
+                    {
+                        ans: "2%",
+                        targets: ["text-ex3-4a"],
+                        hint: "<strong>Đáp án ô 1: 2%</strong><br>Dịch câu: Bộ não của bạn chỉ chiếm 2% trọng lượng cơ thể, nhưng nó sử dụng một phần năm lượng oxy.<br>Transcript: <em>2%</em>"
+                    },
+                    {
+                        ans: "one fifth",
+                        targets: ["text-ex3-4b"],
+                        hint: "<strong>Đáp án ô 2: one fifth</strong><br>Dịch câu: Bộ não của bạn chỉ chiếm 2% trọng lượng cơ thể, nhưng nó sử dụng một phần năm lượng oxy.<br>Transcript: <em>one fifth</em>"
+                    }
+                ]
+            },
+            {
+                q: "Your temperature is usually about ______ lower in the morning than in the evening.",
+                blanks: [
+                    {
+                        ans: "0.5°C",
+                        targets: ["text-ex3-5"],
+                        hint: "<strong>Đáp án: 0.5°C</strong><br>Dịch câu: Nhiệt độ cơ thể bạn thường thấp hơn khoảng 0,5°C vào buổi sáng so với buổi tối.<br>Transcript: <em>0.5°C</em>"
+                    }
+                ]
+            },
+            {
+                q: "Blondes have about ______ more hairs on their head than people with black hair.",
+                blanks: [
+                    {
+                        ans: "30,000",
+                        targets: ["text-ex3-6"],
+                        hint: "<strong>Đáp án: 30,000</strong><br>Dịch câu: Người có tóc vàng có nhiều hơn khoảng 30.000 sợi tóc trên đầu so với người có tóc đen.<br>Transcript: <em>30,000</em>"
+                    }
+                ]
+            },
+            {
+                q: "Adult humans have ______ bones, but newborn babies have a lot more.",
+                blanks: [
+                    {
+                        ans: "206",
+                        targets: ["text-ex3-7"],
+                        hint: "<strong>Đáp án: 206</strong><br>Dịch câu: Người trưởng thành có 206 xương, nhưng trẻ sơ sinh có nhiều hơn nhiều.<br>Transcript: <em>206</em>"
+                    }
+                ]
+            },
+            {
+                q: "The smallest muscle in the body is inside the ear; it is only ______ millimetres long.",
+                blanks: [
+                    {
+                        ans: "1.27",
+                        targets: ["text-ex3-8"],
+                        hint: "<strong>Đáp án: 1.27</strong><br>Dịch câu: Cơ nhỏ nhất trong cơ thể nằm bên trong tai; nó chỉ dài 1,27 milimét.<br>Transcript: <em>1.27</em>"
+                    }
+                ]
+            },
+            {
+                q: "Men usually stop growing when they are ______ years old, women when they are ______.",
+                blanks: [
+                    {
+                        ans: "20–22",
+                        targets: ["text-ex3-9a"],
+                        hint: "<strong>Đáp án ô 1: 20–22</strong><br>Dịch câu: Nam giới thường ngừng phát triển khi họ 20–22 tuổi, nữ giới khi họ 15–16 tuổi.<br>Transcript: <em>20–22</em>"
+                    },
+                    {
+                        ans: "15–16",
+                        targets: ["text-ex3-9b"],
+                        hint: "<strong>Đáp án ô 2: 15–16</strong><br>Dịch câu: Nam giới thường ngừng phát triển khi họ 20–22 tuổi, nữ giới khi họ 15–16 tuổi.<br>Transcript: <em>15–16</em>"
+                    }
+                ]
+            }
+        ];
+
+        // Exercise 5
+        const ex5Data = [
+            {
+                label: "a",
+                text: "Anna had an accident while skiing. Nobody found her for several hours and when they did, they believed she was dead. But when she arrived at the hospital, she came back to life.",
+                ans: false,
+                incorrectParts: ["Nobody found her for several hours", "when she arrived at the hospital, she came back to life"],
+                targets: ["text-ex5-a1", "text-ex5-a2"],
+                hint: "<strong>Giải thích:</strong> Trái với thông tin trong câu A, cô ấy được cứu sau 80 phút chứ không phải vài giờ (<em>'But by the time they got her free, she had been in the freezing water for 80 minutes'</em>) và các bác sĩ phải cấp cứu trong 9 giờ chứ không phải cô ấy tự sống lại ngay khi đến bệnh viện (<em>'Doctors at the hospital worked for nine hours to save Anna'</em>)."
+            },
+            {
+                label: "b",
+                text: "Anna tried to rescue a colleague who had an accident in the mountains, but fell into some freezing water. She only survived because a helicopter took her to hospital.",
+                ans: false,
+                incorrectParts: ["Anna tried to rescue a colleague who had an accident in the mountains"],
+                targets: ["text-ex5-b"],
+                hint: "<strong>Giải thích:</strong> Trái với câu B, Anna bị ngã do trượt tuyết cùng đồng nghiệp và mất kiểm soát, chứ không phải đi cứu đồng nghiệp (<em>'She fell onto a sheet of ice, which was actually the surface of a stream'</em>)."
+            },
+            {
+                label: "c",
+                text: "Anna had an accident while skiing. She became so cold that her breathing and heartbeat stopped for hours, but she made a full recovery.",
+                ans: true,
+                incorrectParts: [],
+                targets: ["text-ex5-c1", "text-ex5-c2"],
+                hint: "<strong>Đáp án: C (Đúng)</strong><br><strong>Giải thích:</strong> Nhiệt độ cơ thể giảm sâu xuống 13.7°C (<em>'her body temperature was 13.7° Celsius'</em>) khiến tim và thở ngừng đập nhiều giờ, nhưng sau đó cô ấy đã hồi phục hoàn toàn (<em>'Gradually, after days and weeks, Anna made a full recovery'</em>)."
+            }
+        ];
+
+        // Exercise 6
+        const ex6Data = [
+            {
+                q: "About a third of people whose body temperature drops to below 28°C do not survive.",
+                ans: false,
+                correction: "About two thirds of people whose body temperature drops to below 28°C do not survive.",
+                targets: ["text-ex6-1"],
+                hint: "<strong>Đáp án: False</strong><br>Sửa: <em>About two thirds of people whose body temperature drops to below 28°C do not survive.</em><br>Transcript: <em>two thirds</em>"
+            },
+            {
+                q: "Anna's colleagues called for help seven minutes after the accident.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex6-2"],
+                hint: "<strong>Đáp án: True</strong><br>Transcript: <em>After trying for seven minutes to free her, her two colleagues gave up and phoned for help.</em>"
+            },
+            {
+                q: "The first rescue team cut a hole in the ice and the second team pulled her out.",
+                ans: false,
+                correction: "The second rescue team cut a hole in the ice and pulled her out.",
+                targets: ["text-ex6-3"],
+                hint: "<strong>Đáp án: False</strong><br>Sửa: <em>The second rescue team cut a hole in the ice and pulled her out.</em><br>Transcript: <em>The second team managed to get her out by cutting a hole in the ice.</em>"
+            },
+            {
+                q: "Anna's body temperature was 30.7°C when she arrived at the hospital.",
+                ans: false,
+                correction: "Anna's body temperature was 13.7°C when she arrived at the hospital.",
+                targets: ["text-ex6-4"],
+                hint: "<strong>Đáp án: False</strong><br>Sửa: <em>Anna's body temperature was 13.7°C when she arrived at the hospital.</em><br>Transcript: <em>13.7° Celsius</em>"
+            },
+            {
+                q: "Her heart did not begin beating again until her body temperature reached 36.4°C.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex6-5"],
+                hint: "<strong>Đáp án: True</strong><br>Transcript: <em>When her temperature had risen to 36.4° Celsius, her heart started beating again.</em>"
+            }
+        ];
+
+        /* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+        // ----- Exercise 1 (radio) -----
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            container.innerHTML = '';
+            ex1Data.forEach((it, i) => {
+                const qid = `ex1-q${i}`;
+                let optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`
+                ).join('');
+                // Tạo mảng targets dạng literal
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--glass-border);">
+                        <span style="font-weight:600; margin-right:5px;">${it.q}.</span>
+                        <div class="option-group" style="margin-top:0;">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0; display:flex; gap:5px;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.14')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint" style="width:100%; margin-top:8px;">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 3 (input inline) -----
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = '';
+            ex3Data.forEach((it, i) => {
+                const parts = it.q.split('______');
+                let html = `<span style="font-weight:600; margin-right:8px;">${i + 1}.</span>`;
+                let hintBoxesHtml = '';
+                
+                parts.forEach((part, idx) => {
+                    html += part;
+                    if (idx < parts.length - 1) {
+                        const blankId = `ex3-q${i}-b${idx}`;
+                        const blank = it.blanks[idx];
+                        const targetsStr = "['" + blank.targets.join("','") + "']";
+                        html += `
+                            <span class="inline-blank-wrapper" style="display:inline-flex; align-items:center; gap:4px; margin:0 4px; vertical-align:middle;">
+                                <input type="text" id="${blankId}" data-ans="${blank.ans}" class="phrase-gap-input" autocomplete="off" style="margin:0;">
+                                <button class="eye-btn" style="width:24px; height:24px; font-size:11px;" onclick="showSingleAnsEx3('${blankId}')">👁️</button>
+                                <button class="hint-btn" style="width:20px; height:20px; font-size:10px;" onclick="showReadingHint(event, ${targetsStr}, '${blankId}-hint', '1.15')">i</button>
+                            </span>
+                        `;
+                        hintBoxesHtml += `<div class="hint-box" id="${blankId}-hint">${blank.hint}</div>`;
+                    }
+                });
+
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        <div>${html}</div>
+                        ${hintBoxesHtml}
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 5 (summary cards) -----
+        function renderEx5() {
+            const container = document.getElementById('questions-ex5');
+            container.innerHTML = '';
+            ex5Data.forEach((it, i) => {
+                const qid = `ex5-q${i}`;
+                const letter = it.label.toUpperCase();
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="summary-card" id="${qid}-card" onclick="selectSummary(this, '${qid}')">
+                        <input type="radio" name="ex5-group" value="${letter}" id="${qid}">
+                        <label for="${qid}" style="cursor:pointer; display:block;">
+                            <strong>${letter}.</strong> ${it.text}
+                        </label>
+                        <div class="row-btns" style="margin-top:6px;">
+                            <button class="eye-btn" onclick="event.stopPropagation(); showSingleAnsSummaryIndep('${qid}', ${i})">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.16')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 6 (True/False) -----
+        function renderEx6() {
+            const container = document.getElementById('questions-ex6');
+            container.innerHTML = '';
+            ex6Data.forEach((it, i) => {
+                const qid = `ex6-q${i}`;
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" id="${qid}-row" style="flex-direction:column; align-items:stretch; border-bottom:1px solid var(--glass-border); padding-bottom:12px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                            <span style="font-weight:500; flex:1;">${i + 1}. ${it.q}</span>
+                        </div>
+                        <div class="tf-group">
+                            <button class="tf-btn" data-qid="${qid}" data-value="true" onclick="selectTF(this, '${qid}')">True</button>
+                            <button class="tf-btn" data-qid="${qid}" data-value="false" onclick="selectTF(this, '${qid}')">False</button>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAnsTF('${qid}')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.16')">i</button>
+                            </div>
+                        </div>
+                        <div class="tf-input-wrapper" id="${qid}-input-wrapper" style="display:none;">
+                            <input type="text" id="${qid}-correction" placeholder="Sửa câu sai..." data-ans="${it.correction || ''}">
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
+
+        // Radio (Ex1)
+        function showSingleAnsRadio(qid, ans) {
+            const radio = document.querySelector(`input[name="${qid}"][value="${ans}"]`);
+            if (radio) {
+                const card = radio.closest('.option-card');
+                const group = card.closest('.option-group');
+                group.querySelectorAll('.option-card').forEach(c => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    c.querySelector('input').checked = false;
+                });
+                radio.checked = true;
+                card.classList.add('selected', 'correct-card');
+            }
+        }
+
+        // Input (Ex3)
+        function showSingleAnsEx3(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Summary (Ex5)
+        function selectSummary(card, qid) {
+            const radio = document.getElementById(qid);
+            if (!radio) return;
+            const parent = card.closest('#questions-ex5');
+            parent.querySelectorAll('.summary-card').forEach(c => {
+                c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                c.querySelector('input').checked = false;
+            });
+            radio.checked = true;
+            card.classList.add('selected');
+        }
+
+        // Ex5 eye btn per card (independent)
+        function showSingleAnsSummaryIndep(qid, idx) {
+            const card = document.getElementById(`${qid}-card`);
+            if (!card) return;
+            const data = ex5Data[idx];
+            
+            // Toggle highlight in transcript
+            toggleTranscript('1.16', true);
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            
+            if (data.targets && data.targets.length) {
+                const elements = [];
+                data.targets.forEach(tid => {
+                    const el = document.getElementById(tid);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+
+            // Mark this specific card
+            if (data.ans) {
+                card.classList.add('selected', 'correct-card');
+                card.classList.remove('incorrect-card');
+                card.querySelector('input').checked = true;
+            } else {
+                card.classList.add('incorrect-card');
+                card.classList.remove('selected', 'correct-card');
+                card.querySelector('input').checked = false;
+                
+                // Underline incorrect parts
+                const label = card.querySelector('label');
+                if (label && data.incorrectParts) {
+                    let text = data.text;
+                    data.incorrectParts.forEach(part => {
+                        text = text.replace(part, `<span class="incorrect-text">${part}</span>`);
+                    });
+                    label.innerHTML = `<strong>${data.label.toUpperCase()}.</strong> ${text}`;
+                }
+            }
+        }
+
+        // True/False (Ex6)
+        function selectTF(btn, qid) {
+            const parent = btn.closest('.tf-group');
+            parent.querySelectorAll('.tf-btn').forEach(b => {
+                b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false');
+            });
+            const value = btn.dataset.value;
+            if (value === 'true') {
+                btn.classList.add('selected-true');
+            } else {
+                btn.classList.add('selected-false');
+                // Hiển thị input sửa
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                if (wrapper) wrapper.style.display = 'block';
+            }
+            // Nếu chọn True, ẩn input
+            if (value === 'true') {
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                if (wrapper) {
+                    wrapper.style.display = 'none';
+                    const inp = wrapper.querySelector('input');
+                    if (inp) inp.value = '';
+                }
+            }
+        }
+
+        function showSingleAnsTF(qid) {
+            const data = ex6Data.find((d, i) => `ex6-q${i}` === qid);
+            if (!data) return;
+            const row = document.getElementById(`${qid}-row`);
+            if (!row) return;
+            const group = row.querySelector('.tf-group');
+            const buttons = group.querySelectorAll('.tf-btn');
+            const wrapper = document.getElementById(`${qid}-input-wrapper`);
+            const input = wrapper ? wrapper.querySelector('input') : null;
+            // Reset
+            buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+            if (wrapper) wrapper.style.display = 'none';
+            if (input) input.value = '';
+            // Nếu đáp án đúng là True
+            if (data.ans === true) {
+                const trueBtn = group.querySelector('.tf-btn[data-value="true"]');
+                trueBtn.classList.add('correct-true');
+                // Nếu người dùng đã chọn False thì đánh dấu sai
+                const falseBtn = group.querySelector('.tf-btn[data-value="false"]');
+                if (falseBtn.classList.contains('selected-false')) {
+                    falseBtn.classList.add('incorrect-false');
+                    // Hiển thị input và điền sửa
+                    if (wrapper) {
+                        wrapper.style.display = 'block';
+                        if (input) {
+                            input.value = data.correction || '';
+                            input.classList.add('correct');
+                        }
+                    }
+                }
+            } else { // Đáp án đúng là False
+                const falseBtn = group.querySelector('.tf-btn[data-value="false"]');
+                falseBtn.classList.add('correct-false');
+                // Hiển thị input sửa
+                if (wrapper) {
+                    wrapper.style.display = 'block';
+                    if (input) {
+                        input.value = data.correction || '';
+                        input.classList.add('correct');
+                    }
+                }
+                // Nếu người dùng chọn True thì đánh dấu sai
+                const trueBtn = group.querySelector('.tf-btn[data-value="true"]');
+                if (trueBtn.classList.contains('selected-true')) {
+                    trueBtn.classList.add('incorrect-true');
+                }
+            }
+        }
+
+        // ----- Shared -----
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            const sections = document.querySelectorAll('.script-section');
+            const targetId = `script-${track.replace('.', '-')}`;
+            const targetSection = document.getElementById(targetId);
+
+            if (!forceOpen && panel.classList.contains('active') && targetSection.classList.contains('active')) {
+                panel.classList.remove('active');
+                return;
+            }
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+
+        function showReadingHint(event, targets, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            if (isVisible) {
+                hintBox.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            if (track) {
+                toggleTranscript(track, true);
+            }
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            hintBox.style.display = 'block';
+
+            if (targets && targets.length) {
+                const elements = [];
+                targets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            const w = Math.max(text.length * 12 + 30, 80);
+            el.style.width = w + 'px';
+        }
+
+        function checkAll() {
+            // Ex1 radio
+            document.querySelectorAll('#questions-ex1 .option-group').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex1Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value === correctAns;
+                    grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+
+            // Ex3 input
+            document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex5 summary (chỉ hiển thị đáp án đúng và underline)
+            const parent5 = document.getElementById('questions-ex5');
+            if (parent5) {
+                const correctIdx = ex5Data.findIndex(d => d.ans === true);
+                const cards = parent5.querySelectorAll('.summary-card');
+                cards.forEach((c, idx) => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    c.querySelector('input').checked = false;
+                    const label = c.querySelector('label');
+                    if (label) {
+                        const data = ex5Data[idx];
+                        let text = data.text;
+                        if (!data.ans && data.incorrectParts.length > 0) {
+                            data.incorrectParts.forEach(part => {
+                                text = text.replace(part, `<span class="incorrect-text">${part}</span>`);
+                            });
+                            c.classList.add('incorrect-card');
+                        }
+                        label.innerHTML = `<strong>${data.label.toUpperCase()}.</strong> ${text}`;
+                    }
+                });
+                if (correctIdx !== -1) {
+                    const correctCard = cards[correctIdx];
+                    correctCard.classList.add('selected', 'correct-card');
+                    correctCard.querySelector('input').checked = true;
+                }
+            }
+
+            // Ex6 TF
+            document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                const qid = `ex6-q${idx}`;
+                const data = ex6Data[idx];
+                const group = row.querySelector('.tf-group');
+                const buttons = group.querySelectorAll('.tf-btn');
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                const input = wrapper ? wrapper.querySelector('input') : null;
+                // Reset styling
+                buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                if (wrapper) wrapper.style.display = 'none';
+                if (input) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); }
+
+                const selectedTrue = group.querySelector('.tf-btn[data-value="true"]').classList.contains('selected-true');
+                const selectedFalse = group.querySelector('.tf-btn[data-value="false"]').classList.contains('selected-false');
+
+                if (data.ans === true) {
+                    if (selectedTrue) {
+                        group.querySelector('.tf-btn[data-value="true"]').classList.add('correct-true');
+                    } else if (selectedFalse) {
+                        group.querySelector('.tf-btn[data-value="false"]').classList.add('incorrect-false');
+                        if (wrapper) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction || '';
+                                input.classList.add('correct');
+                            }
+                        }
+                    }
+                } else {
+                    if (selectedFalse) {
+                        group.querySelector('.tf-btn[data-value="false"]').classList.add('correct-false');
+                        if (input && wrapper) {
+                            const userCorrection = input.value.trim().toLowerCase();
+                            const correctAns = data.correction.trim().toLowerCase();
+                            const isCorrect = userCorrection === correctAns;
+                            input.classList.toggle('correct', isCorrect);
+                            input.classList.toggle('incorrect-marked', !isCorrect);
+                        }
+                    } else if (selectedTrue) {
+                        group.querySelector('.tf-btn[data-value="true"]').classList.add('incorrect-true');
+                        if (wrapper) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction || '';
+                                input.classList.add('correct');
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                ex1Data.forEach((it, i) => {
+                    const qid = `ex1-q${i}`;
+                    const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                    if (radio) {
+                        const card = radio.closest('.option-card');
+                        const group = card.closest('.option-group');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        radio.checked = true;
+                        card.classList.add('selected', 'correct-card');
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex5') {
+                // Tương tự checkAll nhưng chỉ hiển thị đáp án
+                const parent5 = document.getElementById('questions-ex5');
+                if (parent5) {
+                    const correctIdx = ex5Data.findIndex(d => d.ans === true);
+                    const cards = parent5.querySelectorAll('.summary-card');
+                    cards.forEach((c, idx) => {
+                        c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                        c.querySelector('input').checked = false;
+                        const label = c.querySelector('label');
+                        if (label) {
+                            const data = ex5Data[idx];
+                            let text = data.text;
+                            if (!data.ans && data.incorrectParts.length > 0) {
+                                data.incorrectParts.forEach(part => {
+                                    text = text.replace(part, `<span class="incorrect-text">${part}</span>`);
+                                });
+                                c.classList.add('incorrect-card');
+                            }
+                            label.innerHTML = `<strong>${data.label.toUpperCase()}.</strong> ${text}`;
+                        }
+                    });
+                    if (correctIdx !== -1) {
+                        const correctCard = cards[correctIdx];
+                        correctCard.classList.add('selected', 'correct-card');
+                        correctCard.querySelector('input').checked = true;
+                    }
+                }
+                return;
+            }
+            if (prefix === 'ex6') {
+                document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                    const qid = `ex6-q${idx}`;
+                    const data = ex6Data[idx];
+                    const group = row.querySelector('.tf-group');
+                    const buttons = group.querySelectorAll('.tf-btn');
+                    const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                    const input = wrapper ? wrapper.querySelector('input') : null;
+                    buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                    if (wrapper) wrapper.style.display = 'none';
+                    if (input) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); }
+
+                    if (data.ans === true) {
+                        const trueBtn = group.querySelector('.tf-btn[data-value="true"]');
+                        trueBtn.classList.add('correct-true');
+                    } else {
+                        const falseBtn = group.querySelector('.tf-btn[data-value="false"]');
+                        falseBtn.classList.add('correct-false');
+                        if (wrapper) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction || '';
+                                input.classList.add('correct');
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex5') {
+                const parent5 = document.getElementById('questions-ex5');
+                if (parent5) {
+                    parent5.querySelectorAll('.summary-card').forEach((c, idx) => {
+                        c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                        c.querySelector('input').checked = false;
+                        const label = c.querySelector('label');
+                        if (label) {
+                            const data = ex5Data[idx];
+                            label.innerHTML = `<strong>${data.label.toUpperCase()}.</strong> ${data.text}`;
+                        }
+                    });
+                }
+            } else if (prefix === 'ex6') {
+                document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                    const qid = `ex6-q${idx}`;
+                    const group = row.querySelector('.tf-group');
+                    const buttons = group.querySelectorAll('.tf-btn');
+                    const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                    const input = wrapper ? wrapper.querySelector('input') : null;
+                    buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                    if (wrapper) wrapper.style.display = 'none';
+                    if (input) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); }
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        /* ── INIT ─────────────────────────────────────────────────── */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx3();
+            renderEx5();
+            renderEx6();
+
+            // Tự động điều chỉnh width cho input
+            document.body.addEventListener('input', function (e) {
+                if (e.target.classList.contains('phrase-gap-input')) {
+                    adjustWidth(e.target);
+                    e.target.classList.remove('correct', 'incorrect-marked');
+                }
+            });
+
+            // Theme toggle
+            const toggle = document.getElementById('theme-toggle');
+            toggle.onclick = function () {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                this.innerText = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+
+            // Enter key triggers checkAll
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') checkAll();
+            });
+
+            // Click on option card selects radio (Ex1)
+            document.body.addEventListener('click', function (e) {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    const r = card.querySelector('input[type="radio"]');
+                    if (r) {
+                        const group = card.closest('.option-group');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        r.checked = true;
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            // Resizer logic
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerWidth = document.querySelector('.reading-split-container').offsetWidth;
+                let newWidth = (e.clientX / containerWidth) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                panel.style.flex = `0 0 ${newWidth}%`;
+            });
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
