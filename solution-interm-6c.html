@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 6C Listening: Margaret Fuller</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 12px !important;
+            width: fit-content !important;
+            margin: 0 !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Layout Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: width 0.2s;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .strategy-box h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: default;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box strong {
+            color: var(--primary);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Exercise 1: Word Bank Drag & Drop */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.15);
+            justify-content: center;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 10px;
+            user-select: none;
+            transition: all 0.25s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: grab;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            text-decoration: line-through;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .word-item:hover:not(.used) {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Exercise 2: choice buttons */
+        .ex2-choice-btn {
+            padding: 8px 18px;
+            border: 2px solid var(--border-medium, #cbd5e1);
+            border-radius: 20px;
+            background: var(--card-bg, #fff);
+            color: var(--text, #1e293b);
+            font-size: 0.97rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-weight: 500;
+        }
+
+        .ex2-choice-btn:hover {
+            border-color: var(--primary, #0d9488);
+            background: var(--primary-light, #f0fdfa);
+            color: var(--primary, #0d9488);
+        }
+
+        .ex2-choice-btn.selected {
+            border-color: var(--primary, #0d9488);
+            background: var(--primary-light, #f0fdfa);
+            color: var(--primary, #0d9488);
+            font-weight: 600;
+        }
+
+        .ex2-choice-btn.correct {
+            border-color: #22c55e;
+            background: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+        }
+
+        .ex2-choice-btn.incorrect {
+            border-color: #ef4444;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .ex2-blank {
+            color: var(--primary, #0d9488);
+            border-bottom: 2px solid var(--primary, #0d9488);
+            padding: 0 4px;
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        /* Exercise 3: Word Bank giống bài 1 */
+        .ex3-word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.15);
+            justify-content: center;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .ex3-word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 10px;
+            user-select: none;
+            transition: all 0.25s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: grab;
+        }
+
+        .ex3-word-item.used {
+            opacity: 0.3;
+            text-decoration: line-through;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .ex3-word-item:hover:not(.used) {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+        }
+
+        .ex3-drop-zone {
+            display: inline-flex;
+            min-width: 220px;
+            height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .ex3-drop-zone.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .ex3-drop-zone.filled {
+            background: var(--primary-light);
+        }
+
+        .ex3-drop-zone.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .ex3-drop-zone.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Exercise 4: option cards dọc */
+        .option-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+            max-width: 700px;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.15) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.15) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        /* Exercise 6: True/False */
+        .tf-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0 12px 0;
+        }
+
+        .tf-btn {
+            padding: 6px 20px;
+            border-radius: 20px;
+            border: 2px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .tf-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .tf-btn.selected-true {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .tf-btn.selected-false {
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
+        }
+
+        .tf-btn.correct-true {
+            background: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .tf-btn.correct-false {
+            background: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .tf-btn.incorrect-true {
+            background: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        .tf-btn.incorrect-false {
+            background: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        .tf-input-wrapper {
+            margin-top: 6px;
+            padding-left: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .tf-input-wrapper input {
+            width: 90%;
+            max-width: 700px;
+            padding: 6px 12px;
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+
+        .tf-input-wrapper input.correct {
+            border-color: var(--success);
+            background: rgba(var(--success-rgb), 0.1);
+        }
+
+        .tf-input-wrapper input.incorrect-marked {
+            border-color: var(--error);
+            background: rgba(var(--error-rgb), 0.1);
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+        }
+
+        .speaker-name {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .script-section {
+            display: none;
+        }
+
+        .script-section.active {
+            display: block;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .row-btns {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .eye-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .eye-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .hint-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .hint-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .option-card {
+                max-width: 100%;
+            }
+
+            .ex3-drop-zone {
+                min-width: 150px;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">6C</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Listening</div>
+                <h1>Margaret Fuller</h1>
+                <p class="subtitle">I can listen for linking words and phrases.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Box -->
+        <div class="strategy-box">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe</h2>
+            <p>Khi nghe một văn bản trang trọng hơn, hãy chú ý đến các từ và cụm từ nối. Chúng cho bạn biết các phần
+                thông tin được kết nối với nhau như thế nào: <strong>sự tương phản (contrast)</strong>, <strong>kết quả
+                    (result)</strong>, <strong>ví dụ (example)</strong>, <strong>nhấn mạnh (emphasis)</strong>, v.v.</p>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Scripts</h2>
+
+                <!-- Transcript 1.27 -->
+                <div id="script-1-27" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.27 (Exercises 5 &amp; 6)</h3>
+                    <div class="speaker-line">
+                        <span><strong>Host:</strong> Last week, we heard about Nellie Bly, one of the first female
+                            journalists to become really famous. This week, we're going to talk about Margaret Fuller.
+                            She was born before Nellie Bly, wasn't she?</span><br>
+                        <span><strong>Guest:</strong> Yes, that's right. Margaret Fuller was born near the start of the
+                            nineteenth century – in 1810.</span><br>
+                        <span><strong>H:</strong> In America?</span><br>
+                        <span><strong>G:</strong> Yes, in America. In Cambridge, which is a city on the East coast of
+                            the USA, near Boston. It's the home of Harvard University, one of the most famous
+                            universities in the world.</span><br>
+                        <span><strong>H:</strong> And did Margaret have a good education?</span><br>
+                        <span><strong>G:</strong> Yes, she did. <span class="highlightable" id="text-ex6-1">Up to the
+                                age of nine, her education was at home, with her father.</span> Margaret was an
+                            excellent student. <span class="highlightable" id="text-ex4-1a">In fact, by the age of six,
+                                she was translating Latin poetry into English.</span></span><br>
+                        <span><strong>H:</strong> Was that unusual at the time?</span><br>
+                        <span><strong>G:</strong> Yes, it was – for a girl. Boys often learned Latin, but <span
+                                class="highlightable" id="text-ex4-2b">girls learned different things: for instance, how
+                                to behave in public.</span> Boys were given great works of literature to read; girls
+                            were given romantic novels.</span><br>
+                        <span><strong>H:</strong> So did she receive all of her education at home?</span><br>
+                        <span><strong>G:</strong> No, she didn't. <span class="highlightable" id="text-ex6-3">By the age
+                                of ten, she was at school. And eventually, she qualified as a teacher.</span> But even
+                            as an adult, her education continued. She taught herself several languages and read great
+                            literature from around the world. <span class="highlightable" id="text-ex4-3b">Indeed, many
+                                people considered her the best-educated person on the East Coast.</span> And that's male
+                            or female!</span><br>
+                        <span><strong>H:</strong> So, she had a hunger for education. What else was different about her?
+                            Why did she become so well known?</span><br>
+                        <span><strong>G:</strong> Well, she had very strong opinions about the role of women, and
+                            particularly about what jobs they could do. At that time, <span class="highlightable"
+                                id="text-ex4-4a">there were certain jobs which people thought of as suitable for women:
+                                for example, being a teacher.</span> Margaret believed that a woman could do any job
+                            that a man could do.</span><br>
+                        <span><strong>H:</strong> And what job did she do?</span><br>
+                        <span><strong>G:</strong> Well, after teaching, she became a journalist. She worked for the New
+                            York Tribune and became its first female editor. She also wrote reviews for it, as she was
+                            well known for having strong opinions about literature. <span class="highlightable"
+                                id="text-ex4-5a">Some of the reviews she wrote were very negative. As a result, she was
+                                not always popular with novelists and poets of her time.</span></span><br>
+                        <span><strong>H:</strong> Did she only write about literature?</span><br>
+                        <span><strong>G:</strong> No, she was interested in many different topics. <span
+                                class="highlightable" id="text-ex6-6">For example, she went into prisons and wrote about
+                                the conditions there. She wanted to make them better. She also wanted to change people's
+                                attitudes to Native Americans and African Americans.</span></span><br>
+                        <span><strong>H:</strong> So, she fought a lot of good causes.</span><br>
+                        <span><strong>G:</strong> Yes, she did. She definitely tried to make the world a better place.
+                            <span class="highlightable" id="text-ex4-6b">Mind you, during her lifetime, she was actually
+                                best known for being bad-tempered!</span></span><br>
+                        <span><strong>H:</strong> Oh dear! Well, I suppose sometimes strong opinions can make you
+                            unpopular.</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Main Exercise Stack -->
+            <div class="main-exercise-panel" id="main-exercise-panel">
+
+                <!-- Exercise 1 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">1. Read the Listening Strategy. Then complete the table with the
+                        headings below.</div>
+                    <div class="word-bank" id="ex1-word-bank">
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">contrast</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">emphasis</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">example</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">result</span>
+                    </div>
+                    <div id="ex1-table"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">2. Choose the correct linking word or phrase in the sentences.</div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. Match sentences 1–6 with endings a–h. Use the linking words to help
+                        you. There are two extra endings.</div>
+                    <div class="ex3-word-bank" id="ex3-word-bank">
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">a.
+                            eventually managed to get in touch.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">b. needed
+                            more time.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">c. phoned
+                            and emailed them.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">d. sent his
+                            CV to all the national newspapers.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">e. left
+                            before the end.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">f.
+                            overslept and was late for school.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">g. was
+                            difficult and exhausting.</span>
+                        <span class="ex3-word-item" draggable="true" ondragstart="handleDragStartEx3(event)">h. only got
+                            two or three interviews.</span>
+                    </div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">4. 🎧 1.27 You are going to listen to a radio interview about Margaret
+                        Fuller. First, read the sentences and circle the correct endings.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.27')">📜 Show Transcript
+                        1.27</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_27.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 5 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">5. 🎧 1.27 Now listen to the interview. Check your answers to exercise
+                        4.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.27')">📜 Show Transcript
+                        1.27</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_27.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <p style="color: var(--text-muted); font-style: italic; margin-top: 10px;">
+                        ✅ Nghe lại và kiểm tra đáp án của bạn ở Bài tập 4.
+                    </p>
+                </div>
+
+                <!-- Exercise 6 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">6. 🎧 1.27 Listen again. Are the sentences true (T) or false (F)?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.27')">📜 Show Transcript
+                        1.27</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_27.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex6"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ── DATA ─────────────────────────────────────────────────── */
+
+        // Exercise 1: Table data - layout 4 cột
+        const ex1Headers = ["emphasis", "contrast", "result", "example"];
+        const ex1Words = {
+            emphasis: ["indeed", "in fact",],
+            contrast: ["however", "mind you", "though"],
+            result: ["as a result", "consequently", "for that reason"],
+            example: ["for example", "for instance",]
+        };
+        const ex1AllWords = ["indeed", "in fact", "however", "mind you", "though", "as a result", "consequently", "for that reason", "for example", "for instance"];
+
+        // Exercise 2
+        const ex2Data = [
+            { q: "She worked hard at school. ______ she did well in her exams.", opts: ["Consequently", "Mind you"], ans: "Consequently", hint: "<strong>Đáp án: Consequently</strong><br>'Consequently' chỉ kết quả (làm việc chăm chỉ → kết quả tốt). 'Mind you' dùng để đưa ra ý kiến trái ngược." },
+            { q: "The town has excellent leisure facilities. ______ there is a new sports centre.", opts: ["For instance", "However"], ans: "For instance", hint: "<strong>Đáp án: For instance</strong><br>'For instance' dùng để đưa ra ví dụ. 'However' dùng để chỉ sự tương phản." },
+            { q: "The journey had been long and tiring. ______ they decided to get an early night.", opts: ["For example", "For that reason"], ans: "For that reason", hint: "<strong>Đáp án: For that reason</strong><br>'For that reason' chỉ kết quả (hành trình dài mệt → quyết định đi ngủ sớm). 'For example' dùng để đưa ra ví dụ." },
+            { q: "The weather was extremely cold. ______ it reached -12°C one night.", opts: ["Indeed", "However"], ans: "Indeed", hint: "<strong>Đáp án: Indeed</strong><br>'Indeed' dùng để nhấn mạnh (thời tiết rất lạnh, thậm chí -12°C). 'However' dùng để tương phản." },
+            { q: "Ellie spent all afternoon at the beach. ______ she got slightly sunburned.", opts: ["As a result", "Mind you"], ans: "As a result", hint: "<strong>Đáp án: As a result</strong><br>'As a result' chỉ kết quả (ở bãi biển cả chiều → bị cháy nắng). 'Mind you' dùng để thêm ý kiến trái ngược." },
+            { q: "The house is in a terrible condition — ______ it would be impossible to live there.", opts: ["in fact", "though"], ans: "in fact", hint: "<strong>Đáp án: in fact</strong><br>'in fact' dùng để nhấn mạnh hoặc bổ sung thông tin. 'though' dùng để chỉ sự tương phản." }
+        ];
+
+        // Exercise 3: Drag & Drop full sentences
+        const ex3Data = [
+            { q: "1. She stayed up all night doing her homework. As a result, she", ans: "f", full: "overslept and was late for school.", hint: "<strong>Đáp án: f – overslept and was late for school.</strong><br>'As a result' chỉ kết quả: thức cả đêm làm bài → ngủ quên và đi học muộn." },
+            { q: "2. He tried very hard to contact his parents. For instance, he", ans: "c", full: "phoned and emailed them.", hint: "<strong>Đáp án: c – phoned and emailed them.</strong><br>'For instance' đưa ra ví dụ về cách anh ấy cố gắng liên lạc." },
+            { q: "3. They climbed the mountain in one day, though it", ans: "g", full: "was difficult and exhausting.", hint: "<strong>Đáp án: g – was difficult and exhausting.</strong><br>'though' chỉ sự tương phản: họ leo núi trong 1 ngày, mặc dù nó khó và mệt." },
+            { q: "4. She really disliked the film. In fact, she", ans: "e", full: "left before the end.", hint: "<strong>Đáp án: e – left before the end.</strong><br>'In fact' nhấn mạnh: cô ấy thực sự không thích phim đến mức rời đi trước khi kết thúc." },
+            { q: "5. He applied for about twenty jobs. However, he", ans: "h", full: "only got two or three interviews.", hint: "<strong>Đáp án: h – only got two or three interviews.</strong><br>'However' chỉ sự tương phản: nộp đơn nhiều nhưng chỉ nhận được vài cuộc phỏng vấn." },
+            { q: "6. He decided he wanted to be a journalist. Consequently, he", ans: "d", full: "sent his CV to all the national newspapers.", hint: "<strong>Đáp án: d – sent his CV to all the national newspapers.</strong><br>'Consequently' chỉ kết quả: quyết định làm nhà báo → gửi CV đến các báo." }
+        ];
+
+        const ex3Endings = [
+            { letter: "a", text: "eventually managed to get in touch." },
+            { letter: "b", text: "needed more time." },
+            { letter: "c", text: "phoned and emailed them." },
+            { letter: "d", text: "sent his CV to all the national newspapers." },
+            { letter: "e", text: "left before the end." },
+            { letter: "f", text: "overslept and was late for school." },
+            { letter: "g", text: "was difficult and exhausting." },
+            { letter: "h", text: "only got two or three interviews." }
+        ];
+
+        // Exercise 4
+        const ex4Data = [
+            { q: "1. Margaret was an excellent student. In fact,", opts: ["a. by the age of six, she was translating Latin poetry into English.", "b. she always found Latin particularly difficult."], ans: "a", targets: ["text-ex4-1a"], hint: "<strong>Đáp án: a</strong><br>Transcript: <em>'In fact, by the age of six, she was translating Latin poetry into English.'</em>" },
+            { q: "2. Boys often learned Latin, but girls learned different things: for instance,", opts: ["a. girls usually started school at a later age.", "b. how to behave in public."], ans: "b", targets: ["text-ex4-2b"], hint: "<strong>Đáp án: b</strong><br>Transcript: <em>'girls learned different things: for instance, how to behave in public.'</em>" },
+            { q: "3. She taught herself several languages and read great literature from around the world. Indeed,", opts: ["a. novels from Germany, France and Italy.", "b. many people considered her the best-educated person on the East Coast."], ans: "b", targets: ["text-ex4-3b"], hint: "<strong>Đáp án: b</strong><br>Transcript: <em>'Indeed, many people considered her the best-educated person on the East Coast.'</em>" },
+            { q: "4. At that time, there were certain jobs which people thought of as suitable for women: for example,", opts: ["a. being a teacher.", "b. Margaret was not interested in these jobs."], ans: "a", targets: ["text-ex4-4a"], hint: "<strong>Đáp án: a</strong><br>Transcript: <em>'for example, being a teacher.'</em>" },
+            { q: "5. Some of the reviews she wrote were very negative. As a result,", opts: ["a. she was not always popular with novelists and poets of her time.", "b. she praised good writing when she came across it."], ans: "a", targets: ["text-ex4-5a"], hint: "<strong>Đáp án: a</strong><br>Transcript: <em>'As a result, she was not always popular with novelists and poets of her time.'</em>" },
+            { q: "6. She definitely tried to make the world a better place. Mind you,", opts: ["a. she particularly wanted to help people who couldn't help themselves.", "b. during her lifetime, she was actually best known for being bad-tempered!"], ans: "b", targets: ["text-ex4-6b"], hint: "<strong>Đáp án: b</strong><br>Transcript: <em>'Mind you, during her lifetime, she was actually best known for being bad-tempered!'</em>" }
+        ];
+
+        // Exercise 6: True/False
+        const ex6Data = [
+            {
+                q: "1. Margaret Fuller was educated both at home and at school.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex6-1"],
+                hint: "<strong>Đáp án: T (True)</strong><br>Transcript: <em>'Up to the age of nine, her education was at home... By the age of ten, she was at school.'</em> → cô ấy được học cả ở nhà và ở trường."
+            },
+            {
+                q: "2. In those days, most girls were expected to read great works of literature.",
+                ans: false,
+                correction: "In those days, most girls were NOT expected to read great works of literature.",
+                targets: ["text-ex4-2b"],
+                hint: "<strong>Đáp án: F (False)</strong><br>Sửa: <em>In those days, most girls were NOT expected to read great works of literature.</em><br>Transcript: <em>'Boys were given great works of literature to read; girls were given romantic novels.'</em>"
+            },
+            {
+                q: "3. She worked as a teacher before she became a journalist.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex6-3"],
+                hint: "<strong>Đáp án: T (True)</strong><br>Transcript: <em>'By the age of ten, she was at school. And eventually, she qualified as a teacher.'</em> → cô ấy đã làm giáo viên trước khi trở thành nhà báo."
+            },
+            {
+                q: "4. She didn't become editor of the New York Tribune because she was a woman.",
+                ans: false,
+                correction: "She BECAME editor of the New York Tribune even though she was a woman.",
+                targets: ["text-ex4-5a"],
+                hint: "<strong>Đáp án: F (False)</strong><br>Sửa: <em>She BECAME editor of the New York Tribune even though she was a woman.</em><br>Transcript: <em>'She worked for the New York Tribune and became its first female editor.'</em>"
+            },
+            {
+                q: "5. She reviewed novels and poetry for the New York Tribune.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex4-5a"],
+                hint: "<strong>Đáp án: T (True)</strong><br>Transcript: <em>'She also wrote reviews for it'</em> → cô ấy viết bài đánh giá (review) cho tờ New York Tribune."
+            },
+            {
+                q: "6. As a journalist, she took an interest in groups of people whose lives were difficult.",
+                ans: true,
+                correction: null,
+                targets: ["text-ex6-6"],
+                hint: "<strong>Đáp án: T (True)</strong><br>Transcript: <em>'she went into prisons and wrote about the conditions there... wanted to change people's attitudes to Native Americans and African Americans.'</em> → cô quan tâm đến những nhóm người có cuộc sống khó khăn."
+            }
+        ];
+
+        /* ── DRAG & DROP HANDLERS (Exercise 1) ── */
+        let draggedWord = null;
+
+        function handleDragStart(e) {
+            draggedWord = e.target;
+            e.dataTransfer.setData('text/plain', e.target.innerText);
+            e.target.classList.add('dragging');
+        }
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWord) draggedWord.classList.remove('dragging');
+        });
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+
+            if (slot.classList.contains('filled')) {
+                const oldWord = slot.innerText;
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === oldWord) item.classList.remove('used');
+                });
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            if (draggedWord) {
+                draggedWord.classList.add('used');
+                draggedWord = null;
+            }
+        }
+
+        function handleSlotClick(slot) {
+            if (!slot.classList.contains('filled')) return;
+            const word = slot.innerText;
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+            bankItems.forEach(item => {
+                if (item.innerText === word) item.classList.remove('used');
+            });
+        }
+
+        /* ── DRAG & DROP HANDLERS (Exercise 3) ── */
+        let draggedWordEx3 = null;
+
+        function handleDragStartEx3(e) {
+            draggedWordEx3 = e.target;
+            e.dataTransfer.setData('text/plain', e.target.innerText);
+            e.target.classList.add('dragging');
+        }
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWordEx3) draggedWordEx3.classList.remove('dragging');
+        });
+
+        function handleDragOverEx3(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('over');
+        }
+
+        function handleDropEx3(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+
+            if (slot.classList.contains('filled')) {
+                const oldWord = slot.innerText;
+                const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === oldWord) item.classList.remove('used');
+                });
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            if (draggedWordEx3) {
+                draggedWordEx3.classList.add('used');
+                draggedWordEx3 = null;
+            }
+        }
+
+        function handleSlotClickEx3(slot) {
+            if (!slot.classList.contains('filled')) return;
+            const word = slot.innerText;
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+            bankItems.forEach(item => {
+                if (item.innerText === word) item.classList.remove('used');
+            });
+        }
+
+        /* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+        // ----- Exercise 1: Layout 4 cột -----
+        function renderEx1() {
+            const cells = [
+                {
+                    num: 1, key: 'emphasis', ans: 'emphasis', words: ['indeed', 'in fact'],
+                    hint: '<strong>1 = emphasis (nhấn mạnh)</strong><br><em>indeed, in fact</em> → dùng để nhấn mạnh hoặc bổ sung thông tin cho ý vừa nói.'
+                },
+                {
+                    num: 2, key: 'contrast', ans: 'contrast', words: ['however', 'mind you', 'though'],
+                    hint: '<strong>2 = contrast (tương phản)</strong><br><em>however, mind you, though</em> → dùng để đưa ra ý kiến trái ngược hoặc bổ sung điều đáng lưu ý.'
+                },
+                {
+                    num: 3, key: 'result', ans: 'result', words: ['as a result', 'consequently', 'for that reason'],
+                    hint: '<strong>3 = result (kết quả)</strong><br><em>as a result, consequently, for that reason</em> → dùng để chỉ kết quả/hệ quả của điều vừa được đề cập.'
+                },
+                {
+                    num: 4, key: 'example', ans: 'example', words: ['for example', 'for instance'],
+                    hint: '<strong>4 = example (ví dụ)</strong><br><em>for example, for instance</em> → dùng để đưa ra ví dụ minh hoạ cho ý vừa nói.'
+                }
+            ];
+
+            const container = document.getElementById('ex1-table');
+            container.innerHTML = `
+                <div style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    border: 2px solid var(--primary, #0d9488);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-top: 14px;
+                    font-size: 0.97rem;
+                ">
+                    ${cells.map((cell, idx) => `
+                        <div style="
+                            border-right: ${idx % 2 === 0 ? '2px solid var(--primary, #0d9488)' : 'none'};
+                            border-bottom: ${idx < 2 ? '2px solid var(--primary, #0d9488)' : 'none'};
+                        ">
+                            <div style="
+                                background: var(--primary, #0d9488);
+                                color: white;
+                                padding: 7px 10px;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                font-weight: 700;
+                                min-height: 38px;
+                            ">
+                                <span style="font-size:1rem; flex-shrink:0;">${cell.num}</span>
+                                <span class="drop-slot" id="ex1-${cell.key}"
+                                    data-ans="${cell.ans}"
+                                    ondragover="handleDragOver(event)"
+                                    ondrop="handleDrop(event)"
+                                    onclick="handleSlotClick(this)"
+                                    style="
+                                        flex: 1;
+                                        min-width: 70px;
+                                        min-height: 24px;
+                                        border: 2px dashed rgba(255,255,255,0.6);
+                                        border-radius: 4px;
+                                        color: white;
+                                        font-size: 0.9rem;
+                                        background: transparent;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        padding: 2px 6px;
+                                        cursor: pointer;
+                                    "
+                                ></span>
+                                <button class="eye-btn" onclick="showSingleAnsEx1('ex1-${cell.key}')"
+                                    style="background:rgba(255,255,255,0.2); color:white; border:none; width:26px; height:26px; border-radius:4px; cursor:pointer; font-size:13px; flex-shrink:0;">👁️</button>
+                                <button class="hint-btn" onclick="showHintOnly('ex1-${cell.key}-hint')"
+                                    style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.4); width:22px; height:22px; border-radius:50%; cursor:pointer; font-size:11px; font-weight:bold; flex-shrink:0;">i</button>
+                            </div>
+                            <div class="hint-box" id="ex1-${cell.key}-hint" style="margin:0; border-radius:0; border-left:none; border-right:none; border-top:1px solid var(--primary);">
+                                <div class="hint-detail">${cell.hint}</div>
+                            </div>
+                            <div style="padding:10px 12px; line-height:2; color:var(--text); background:var(--primary-light, #f0fdfa);">
+                                ${cell.words.map(w => `<div>${w}</div>`).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            window._ex2State = {};
+            container.innerHTML = ex2Data.map((it, i) => {
+                const qid = `ex2-q${i}`;
+                const parts = it.q.split('______');
+                const ansLetter = it.opts[0] === it.ans ? 'a' : 'b';
+
+                const optsHtml = it.opts.map((o, oi) => {
+                    const letter = oi === 0 ? 'a' : 'b';
+                    return `<button
+                        id="${qid}-opt-${letter}"
+                        class="ex2-choice-btn"
+                        data-qid="${qid}"
+                        data-letter="${letter}"
+                        onclick="selectEx2Opt(this)"
+                    >${o}</button>`;
+                }).join('');
+
+                const questionHtml = `${parts[0]}<strong id="${qid}-blank" class="ex2-blank">______</strong>${parts[1] || ''}`;
+
+                return `
+                    <div class="mc-card" style="margin-bottom:16px;">
+                        <div style="font-size:0.97rem; line-height:1.8; margin-bottom:10px;">
+                            ${i + 1}. ${questionHtml}
+                            <span class="row-btns" style="display:inline-flex; vertical-align:middle; margin-left:6px;">
+                                <button class="eye-btn" data-qid="${qid}" data-ans="${ansLetter}" onclick="revealEx2Opt(this)">👁️</button>
+                                <button class="hint-btn" onclick="showHintOnly('${qid}-hint')">i</button>
+                            </span>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            ${optsHtml}
+                        </div>
+                        <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    </div>`;
+            }).join('');
+        }
+
+        function selectEx2Opt(btn) {
+            btn.blur();
+            const qid = btn.dataset.qid;
+            const letter = btn.dataset.letter;
+            const state = window._ex2State || {};
+            const blank = document.getElementById(`${qid}-blank`);
+            const idx = parseInt(qid.replace('ex2-q', ''));
+            document.querySelectorAll(`#questions-ex2 [id^="${qid}-opt-"]`).forEach(b => {
+                b.classList.remove('selected', 'correct', 'incorrect');
+            });
+            if (state[qid] === letter) {
+                delete state[qid];
+                if (blank) blank.textContent = '______';
+            } else {
+                state[qid] = letter;
+                btn.classList.add('selected');
+                const chosen = letter === 'a' ? ex2Data[idx].opts[0] : ex2Data[idx].opts[1];
+                if (blank) blank.textContent = chosen;
+            }
+            window._ex2State = state;
+        }
+
+        function revealEx2ById(qid, ansLetter) {
+            const idx = parseInt(qid.replace('ex2-q', ''));
+            const data = ex2Data[idx];
+            const blank = document.getElementById(`${qid}-blank`);
+            document.querySelectorAll(`#questions-ex2 [id^="${qid}-opt-"]`).forEach(b => {
+                b.classList.remove('selected', 'correct', 'incorrect');
+            });
+            const state = window._ex2State || {};
+            if (state[qid] === ansLetter) {
+                delete state[qid];
+                if (blank) blank.textContent = '______';
+            } else {
+                state[qid] = ansLetter;
+                const el = document.getElementById(`${qid}-opt-${ansLetter}`);
+                if (el) el.classList.add('correct');
+                const ans = ansLetter === 'a' ? data.opts[0] : data.opts[1];
+                if (blank) blank.textContent = ans;
+            }
+            window._ex2State = state;
+        }
+
+        function revealEx2Opt(btn) {
+            const qid = btn.dataset.qid;
+            const ansLetter = btn.dataset.ans;
+            revealEx2ById(qid, ansLetter);
+        }
+
+        // ----- Exercise 3 (Drag & Drop full sentences) -----
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = '';
+            ex3Data.forEach((it, i) => {
+                const qid = `ex3-q${i}`;
+                const slotId = `${qid}-slot`;
+                const ansLetter = it.ans;
+                const ending = ex3Endings.find(e => e.letter === ansLetter);
+                const ansText = ending ? ending.text : '';
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--glass-border);">
+                        <span style="font-weight:500;">${it.q}</span>
+                        <span class="ex3-drop-zone" id="${slotId}" data-ans="${ansText}" ondragover="handleDragOverEx3(event)" ondrop="handleDropEx3(event)" onclick="handleSlotClickEx3(this)" style="min-width:200px;"></span>
+                        <div class="row-btns">
+                            <button class="eye-btn" onclick="showSingleAnsEx3('${slotId}')">👁️</button>
+                            <button class="hint-btn" onclick="showHintOnly('${qid}-hint')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 4 (radio dọc) -----
+        function renderEx4() {
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = '';
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                const optsHtml = it.opts.map((o, oi) => {
+                    const letter = String.fromCharCode(97 + oi);
+                    return `<label class="option-card" data-letter="${letter}"><input type="radio" name="${qid}" value="${letter}"> ${o}</label>`;
+                }).join('');
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem;">${it.q}</div>
+                        <div class="option-group-vertical" data-qid="${qid}">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0;">
+                            <button class="eye-btn" onclick="showSingleAnsRadioEx4('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.27')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 6 (True/False) -----
+        function renderEx6() {
+            const container = document.getElementById('questions-ex6');
+            container.innerHTML = '';
+            ex6Data.forEach((it, i) => {
+                const qid = `ex6-q${i}`;
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" id="${qid}-row" style="flex-direction:column; align-items:stretch; border-bottom:1px solid var(--glass-border); padding-bottom:12px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                            <span style="font-weight:500; flex:1;">${it.q}</span>
+                        </div>
+                        <div class="tf-group">
+                            <button class="tf-btn" data-qid="${qid}" data-value="true" onclick="selectTF(this, '${qid}')">True</button>
+                            <button class="tf-btn" data-qid="${qid}" data-value="false" onclick="selectTF(this, '${qid}')">False</button>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleAnsTF('${qid}')">👁️</button>
+                                <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.27')">i</button>
+                            </div>
+                        </div>
+                        <div class="tf-input-wrapper" id="${qid}-input-wrapper" style="display:none;">
+                            <input type="text" id="${qid}-correction" placeholder="Sửa câu sai..." data-ans="${it.correction || ''}">
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
+
+        // Ex1: show single answer (drop-slot)
+        function showSingleAnsEx1(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.classList.contains('filled') && slot.innerText === ans) {
+                const word = slot.innerText;
+                slot.innerText = "";
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === word) item.classList.remove('used');
+                });
+            } else {
+                if (slot.classList.contains('filled')) {
+                    const oldWord = slot.innerText;
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === oldWord) item.classList.remove('used');
+                    });
+                }
+                slot.innerText = ans;
+                slot.classList.add('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === ans) item.classList.add('used');
+                });
+            }
+        }
+
+        // Ex3: show answer (drop-zone)
+        function showSingleAnsEx3(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.classList.contains('filled') && slot.innerText === ans) {
+                const word = slot.innerText;
+                slot.innerText = "";
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === word) item.classList.remove('used');
+                });
+            } else {
+                if (slot.classList.contains('filled')) {
+                    const oldWord = slot.innerText;
+                    const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === oldWord) item.classList.remove('used');
+                    });
+                }
+                slot.innerText = ans;
+                slot.classList.add('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === ans) item.classList.add('used');
+                });
+            }
+        }
+
+        // Ex4: show single answer (radio)
+        function showSingleAnsRadioEx4(qid, ans) {
+            const group = document.querySelector(`[data-qid="${qid}"]`);
+            if (!group) return;
+            const allCards = group.querySelectorAll('.option-card');
+            const currentCorrect = group.querySelector('.option-card.correct-card');
+            if (currentCorrect && currentCorrect.dataset.letter === ans) {
+                allCards.forEach(c => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    const r = c.querySelector('input[type="radio"]');
+                    if (r) r.checked = false;
+                });
+                return;
+            }
+            allCards.forEach(c => {
+                c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                const r = c.querySelector('input[type="radio"]');
+                if (r) r.checked = false;
+            });
+            const correctCard = group.querySelector(`.option-card[data-letter="${ans}"]`);
+            if (correctCard) {
+                const r = correctCard.querySelector('input[type="radio"]');
+                if (r) r.checked = true;
+                correctCard.classList.add('correct-card');
+            }
+        }
+
+        // Ex6: True/False
+        function selectTF(btn, qid) {
+            btn.blur();
+            const parent = btn.closest('.tf-group');
+            parent.querySelectorAll('.tf-btn').forEach(b => {
+                b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false');
+            });
+            const value = btn.dataset.value;
+            if (value === 'true') {
+                btn.classList.add('selected-true');
+            } else {
+                btn.classList.add('selected-false');
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                if (wrapper) wrapper.style.display = 'block';
+            }
+            if (value === 'true') {
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                if (wrapper) {
+                    wrapper.style.display = 'none';
+                    const inp = wrapper.querySelector('input');
+                    if (inp) inp.value = '';
+                }
+            }
+        }
+
+        function showSingleAnsTF(qid) {
+            const data = ex6Data.find((d, i) => `ex6-q${i}` === qid);
+            if (!data) return;
+            const row = document.getElementById(`${qid}-row`);
+            if (!row) return;
+            const group = row.querySelector('.tf-group');
+            const trueBtn = group.querySelector('.tf-btn[data-value="true"]');
+            const falseBtn = group.querySelector('.tf-btn[data-value="false"]');
+            const wrapper = document.getElementById(`${qid}-input-wrapper`);
+            const input = wrapper ? wrapper.querySelector('input') : null;
+
+            const ansClass = data.ans ? 'correct-true' : 'correct-false';
+            const ansBtn = data.ans ? trueBtn : falseBtn;
+            if (ansBtn.classList.contains(ansClass)) {
+                [trueBtn, falseBtn].forEach(b => b.classList.remove(
+                    'selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'
+                ));
+                if (wrapper) wrapper.style.display = 'none';
+                if (input) { input.value = ''; input.classList.remove('correct'); }
+                return;
+            }
+
+            [trueBtn, falseBtn].forEach(b => b.classList.remove(
+                'selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'
+            ));
+            if (wrapper) wrapper.style.display = 'none';
+            if (input) { input.value = ''; input.classList.remove('correct'); }
+
+            if (data.ans === true) {
+                trueBtn.classList.add('correct-true');
+            } else {
+                falseBtn.classList.add('correct-false');
+                if (wrapper && data.correction) {
+                    wrapper.style.display = 'block';
+                    if (input) {
+                        input.value = data.correction;
+                        input.classList.add('correct');
+                    }
+                }
+            }
+        }
+
+        // ----- Shared -----
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            const sections = document.querySelectorAll('.script-section');
+            const targetId = `script-${track.replace('.', '-')}`;
+            const targetSection = document.getElementById(targetId);
+
+            if (!forceOpen && panel.classList.contains('active') && targetSection && targetSection.classList.contains('active')) {
+                panel.classList.remove('active');
+                return;
+            }
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+
+        function showReadingHint(event, targets, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            if (isVisible) {
+                hintBox.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            if (track) {
+                toggleTranscript(track, true);
+            }
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            hintBox.style.display = 'block';
+
+            if (targets && targets.length) {
+                const elements = [];
+                targets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+        }
+
+        function showHintOnly(hintBoxId) {
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+            }
+        }
+
+        // ── CHECK ALL: chỉ kiểm tra đúng/sai các câu đã làm, KHÔNG show đáp án ──
+        function checkAll() {
+            // Ex1: drop-slots
+            document.querySelectorAll('#ex1-table .drop-slot').forEach(slot => {
+                if (!slot.classList.contains('filled')) {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.trim().toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex2: kiểm tra lựa chọn hiện tại
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                const state = window._ex2State || {};
+                const selectedLetter = state[qid];
+                const ansLetter = it.opts[0] === it.ans ? 'a' : 'b';
+                // Xóa class correct/incorrect trên các nút của câu
+                document.querySelectorAll(`#questions-ex2 [id^="${qid}-opt-"]`).forEach(b => {
+                    b.classList.remove('correct', 'incorrect');
+                });
+                if (selectedLetter) {
+                    const isCorrect = selectedLetter === ansLetter;
+                    const btn = document.getElementById(`${qid}-opt-${selectedLetter}`);
+                    if (btn) {
+                        btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+                    }
+                }
+            });
+
+            // Ex3: drop-zones
+            document.querySelectorAll('#questions-ex3 .ex3-drop-zone').forEach(slot => {
+                if (!slot.classList.contains('filled')) {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.trim().toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex4: radio
+            document.querySelectorAll('#questions-ex4 .option-group-vertical').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex4Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value === correctAns;
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+
+            // Ex6: TF
+            document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                const qid = `ex6-q${idx}`;
+                const data = ex6Data[idx];
+                const group = row.querySelector('.tf-group');
+                const buttons = group.querySelectorAll('.tf-btn');
+                const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                const input = wrapper ? wrapper.querySelector('input') : null;
+
+                // Lưu trạng thái TRƯỚC khi reset
+                const selectedTrue = group.querySelector('.tf-btn[data-value="true"]').classList.contains('selected-true');
+                const selectedFalse = group.querySelector('.tf-btn[data-value="false"]').classList.contains('selected-false');
+
+                // Nếu chưa làm thì bỏ qua
+                if (!selectedTrue && !selectedFalse) return;
+
+                // Reset classes
+                buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                if (wrapper) wrapper.style.display = 'none';
+                if (input) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); }
+
+                const userChoice = selectedTrue ? true : false;
+                const isCorrect = userChoice === data.ans;
+                if (isCorrect) {
+                    if (selectedTrue) group.querySelector('.tf-btn[data-value="true"]').classList.add('correct-true');
+                    else group.querySelector('.tf-btn[data-value="false"]').classList.add('correct-false');
+                } else {
+                    if (selectedTrue) {
+                        group.querySelector('.tf-btn[data-value="true"]').classList.add('incorrect-true');
+                        if (wrapper && data.correction) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction;
+                                input.classList.add('correct');
+                            }
+                        }
+                    } else {
+                        group.querySelector('.tf-btn[data-value="false"]').classList.add('incorrect-false');
+                        if (wrapper && data.correction) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction;
+                                input.classList.add('correct');
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-table .drop-slot').forEach(slot => {
+                    const ans = slot.dataset.ans;
+                    if (slot.classList.contains('filled')) {
+                        const oldWord = slot.innerText;
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === oldWord) item.classList.remove('used');
+                        });
+                    }
+                    slot.innerText = ans;
+                    slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === ans) item.classList.add('used');
+                    });
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                ex2Data.forEach((it, i) => {
+                    const qid = `ex2-q${i}`;
+                    const ansLetter = it.opts[0] === it.ans ? 'a' : 'b';
+                    revealEx2ById(qid, ansLetter);
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .ex3-drop-zone').forEach(slot => {
+                    const ans = slot.dataset.ans;
+                    if (slot.classList.contains('filled')) {
+                        const oldWord = slot.innerText;
+                        const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === oldWord) item.classList.remove('used');
+                        });
+                    }
+                    slot.innerText = ans;
+                    slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
+                    const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === ans) item.classList.add('used');
+                    });
+                });
+                return;
+            }
+            if (prefix === 'ex4') {
+                ex4Data.forEach((it, i) => {
+                    const qid = `ex4-q${i}`;
+                    const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                    if (radio) {
+                        const card = radio.closest('.option-card');
+                        const group = card.closest('.option-group-vertical');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        radio.checked = true;
+                        card.classList.add('selected', 'correct-card');
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex6') {
+                document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                    const qid = `ex6-q${idx}`;
+                    const data = ex6Data[idx];
+                    const group = row.querySelector('.tf-group');
+                    const buttons = group.querySelectorAll('.tf-btn');
+                    const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                    const input = wrapper ? wrapper.querySelector('input') : null;
+                    buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                    if (wrapper) wrapper.style.display = 'none';
+                    if (input) input.value = '';
+                    if (data.ans === true) {
+                        const trueBtn = group.querySelector('.tf-btn[data-value="true"]');
+                        trueBtn.classList.add('correct-true');
+                    } else {
+                        const falseBtn = group.querySelector('.tf-btn[data-value="false"]');
+                        falseBtn.classList.add('correct-false');
+                        if (wrapper) {
+                            wrapper.style.display = 'block';
+                            if (input) {
+                                input.value = data.correction || '';
+                                input.classList.add('correct');
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-table .drop-slot').forEach(slot => {
+                    if (slot.classList.contains('filled')) {
+                        const word = slot.innerText;
+                        slot.innerText = "";
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === word) item.classList.remove('used');
+                        });
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                window._ex2State = {};
+                document.querySelectorAll('#questions-ex2 .ex2-choice-btn').forEach(b => {
+                    b.classList.remove('selected', 'correct', 'incorrect');
+                });
+                ex2Data.forEach((it, i) => {
+                    const blank = document.getElementById(`ex2-q${i}-blank`);
+                    if (blank) blank.textContent = '______';
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .ex3-drop-zone').forEach(slot => {
+                    if (slot.classList.contains('filled')) {
+                        const word = slot.innerText;
+                        slot.innerText = "";
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const bankItems = document.querySelectorAll('#ex3-word-bank .ex3-word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === word) item.classList.remove('used');
+                        });
+                    }
+                });
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            } else if (prefix === 'ex6') {
+                document.querySelectorAll('#questions-ex6 .question-row').forEach((row, idx) => {
+                    const qid = `ex6-q${idx}`;
+                    const group = row.querySelector('.tf-group');
+                    const buttons = group.querySelectorAll('.tf-btn');
+                    const wrapper = document.getElementById(`${qid}-input-wrapper`);
+                    const input = wrapper ? wrapper.querySelector('input') : null;
+                    buttons.forEach(b => b.classList.remove('selected-true', 'selected-false', 'correct-true', 'correct-false', 'incorrect-true', 'incorrect-false'));
+                    if (wrapper) wrapper.style.display = 'none';
+                    if (input) input.value = '';
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        /* ── INIT ─────────────────────────────────────────────────── */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx6();
+
+            window.selectEx2Opt = selectEx2Opt;
+            window.revealEx2Opt = revealEx2Opt;
+            window.revealEx2ById = revealEx2ById;
+
+            // Theme toggle
+            const toggle = document.getElementById('theme-toggle');
+            toggle.onclick = function () {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                this.innerText = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+
+            // Enter key triggers checkAll
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') checkAll();
+            });
+
+            // Click on option card selects radio (Ex4)
+            document.body.addEventListener('click', function (e) {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    const r = card.querySelector('input[type="radio"]');
+                    if (r) {
+                        const group = card.closest('.option-group-vertical');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        r.checked = true;
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            // Resizer logic
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerWidth = document.querySelector('.reading-split-container').offsetWidth;
+                let newWidth = (e.clientX / containerWidth) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                panel.style.flex = `0 0 ${newWidth}%`;
+            });
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
