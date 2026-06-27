@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 4C Listening: Young and homeless</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Fix Title & Home Button Alignment (như 1c, 2c, 3c) */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 12px !important;
+            width: fit-content !important;
+            margin: 0 !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Layout Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: width 0.2s;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .strategy-box h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: default;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box strong {
+            color: var(--primary);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Option card (radio) – hàng ngang */
+        .option-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+            max-width: 600px;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.15) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.15) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        /* Text input inline (phrase-gap) */
+        .phrase-gap-input {
+            border: none;
+            border-bottom: 2px dashed var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            margin: 0 4px;
+            min-width: 60px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: inline;
+            width: auto;
+            field-sizing: content;
+        }
+
+        .phrase-gap-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .phrase-gap-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .phrase-gap-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        /* Exercise 3: Matching input */
+        .matching-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 40px;
+            width: 50px;
+        }
+
+        .matching-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .matching-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .matching-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        /* Exercise 4: inputs */
+        .ex4-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+            width: 120px;
+            max-width: 200px;
+            box-sizing: border-box;
+            transition: width 0.15s;
+        }
+
+        .ex4-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .ex4-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .ex4-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+        }
+
+        .speaker-name {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .script-section {
+            display: none;
+        }
+
+        .script-section.active {
+            display: block;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .row-btns {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .eye-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .eye-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .hint-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .hint-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .option-card {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4C</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Listening</div>
+                <h1>Young and homeless</h1>
+                <p class="subtitle">I can recognise paraphrases of simple verbs in a recording.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Boxes -->
+        <div class="strategy-box">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe 1</h2>
+            <p>Khi nghe một đoạn ghi âm, hãy nhớ rằng nhiều ý tưởng sẽ được diễn đạt <strong>khác đi</strong> so với
+                trong đề bài. Ví dụ, một động từ đơn giản trong đề có thể được diễn đạt bằng một cụm từ trong bài nghe:
+                <em>sleep well → get a good night's sleep.</em>
+            </p>
+        </div>
+
+        <div class="strategy-box" style="margin-top:16px;">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe 2</h2>
+            <p>Hãy chú ý đến ngôn ngữ bạn nghe là <strong>trang trọng (formal)</strong> hay <strong>thân mật
+                    (informal)</strong>. Đây có thể là gợi ý quan trọng để hiểu bối cảnh của đoạn hội thoại.</p>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Scripts</h2>
+
+                <!-- Transcript 1.18 -->
+                <div id="script-1-18" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.18 (Exercise 2)</h3>
+                    <div class="speaker-line">
+                        <span><strong>1.</strong> <span class="highlightable" id="text-ex2-1">I got a new bed two weeks
+                                ago, and to be honest, I don't think I've had a good night's sleep since I got
+                                it!</span></span><br>
+                        <span><strong>2.</strong> <span class="highlightable" id="text-ex2-2">I've got a new next-door
+                                neighbour. I saw him carrying some chairs into his flat last night. I was just going
+                                out, so I didn't have time to have a word with him.</span></span><br>
+                        <span><strong>3.</strong> <span class="highlightable" id="text-ex2-3">I'm sorry, my husband is
+                                on a camping trip in the mountains this weekend. There's no way to get in touch with him
+                                until Monday.</span></span><br>
+                        <span><strong>4.</strong> <span class="highlightable" id="text-ex2-4">I couldn't take part in
+                                the race last weekend. I made a big effort to get fit for it, but I wasn't ready – and
+                                42 km is a long way!</span></span>
+                    </div>
+                </div>
+
+                <!-- Transcript 1.19 -->
+                <div id="script-1-19" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.19 (Exercises 4 &amp; 5)</h3>
+
+                    <div style="font-weight:700; margin:12px 0 8px 0;">Recording 1</div>
+                    <div class="speaker-line">
+                        <span><strong>Woman:</strong> Can I help you?</span><br>
+                        <span><strong>Man:</strong> Yes, <span class="highlightable" id="ex5-kw-1">I'd like an
+                                application form for housing benefit.</span></span><br>
+                        <span><strong>W:</strong> Certainly. This is the form you need.</span><br>
+                        <span><strong>M:</strong> Thank you. Do I return it to you?</span><br>
+                        <span><strong>W:</strong> No, you don't. You need to complete the form and then send it by post
+                            to the local authority. But if you <span class="highlightable" id="text-ex4-1a">require
+                                assistance</span> in completing the form, we can offer that here.</span><br>
+                        <span><strong>M:</strong> Thank you.</span><br>
+                        <span><strong>W:</strong> Is there anything else?</span><br>
+                        <span><strong>M:</strong> Yes, there is one thing. Is there <span class="highlightable"
+                                id="text-ex4-1b">currently</span> a long delay? I need the money quite
+                            urgently.</span><br>
+                        <span><strong>W:</strong> All new applications are treated as <span class="highlightable"
+                                id="text-ex4-1c">a high priority</span>. There shouldn't be a delay of more than a
+                            week.</span><br>
+                        <span><strong>M:</strong> Thank you. You've been very helpful.</span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Recording 2</div>
+                    <div class="speaker-line">
+                        <span><strong>Speaker:</strong> Ladies and gentlemen, thank you for coming to this event
+                            organised by Rooftops, our local charity for homeless people. I know that many of you are
+                            regular supporters of our charity and we are extremely grateful for that support. Without
+                            it, we simply couldn't do the work we need to do. As many of you are aware, there are over a
+                            hundred people who regularly sleep rough in our town centre. You probably give money to some
+                            of them. And I know that many of you also show your support in ways that do not involve
+                            money: for example, talking to them, giving advice, treating them as human beings. But we
+                            all know that there is only one long-term solution to their problem: they need a job. That
+                            is why today, <span class="highlightable" id="ex5-kw-2">I am appealing for money for our
+                                charity's new project called Back to Work.</span> This project has one main aim: to help
+                            homeless people to <span class="highlightable" id="text-ex4-2a">gain employment</span>. But
+                            I'm not here just to ask for money: I'm here to <span class="highlightable"
+                                id="text-ex4-2b">make a proposal</span> – I want you to become our partners.</span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Recording 3</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex5-3">Last year, I took part in the Big Sleep Out
+                                with a group of friends from school. I was quite anxious about it, to be honest. The
+                                weather forecast said the temperature was going to be -4° Celsius that night! In fact, I
+                                was so worried that I almost didn't turn up – but I didn't want to let my friends down.
+                                So I found all my warmest clothes – I had about four jumpers on! And I borrowed my
+                                brother's sleeping bag. And in fact, <span class="highlightable" id="ex5-kw-3">I wasn't
+                                    cold at all. Well, only my face.</span> But it was fine. We had a great time because
+                                there were about fifty people doing the Sleep Out altogether and we knew quite a few of
+                                them. And the fact that it was freezing cold made us feel like we had really achieved
+                                something.</span></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Main Exercise Stack -->
+            <div class="main-exercise-panel" id="main-exercise-panel">
+
+                <!-- Exercise 1 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">1. Complete the paraphrases with the words below.</div>
+                    <div class="word-bank"
+                        style="display:flex; flex-wrap:wrap; gap:8px; padding:12px; background:var(--primary-light); border-radius:10px; margin-bottom:20px; border:1px solid var(--glass-border);">
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">effort</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">eye</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">get</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">give</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">hand</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">have</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">life</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">make</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">time</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">touch</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">turn</span>
+                        <span
+                            style="background:var(--card-bg); padding:4px 12px; border-radius:6px; border:1px solid var(--primary); font-weight:600; color:var(--primary);">word</span>
+                    </div>
+                    <div id="questions-ex1"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">2. 🎧 1.18 Read Listening Strategy 1. Then listen to four people and
+                        circle the correct summaries.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.18')">📜 Show Transcript
+                        1.18</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_18.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. Read Listening Strategy 2. Match the phrases (1–6) with similar
+                        meanings (a–f). Then circle the formal phrase in each pair.</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px;">
+                        <div
+                            style="background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--glass-border);">
+                            <strong>Phrases</strong>
+                            <div style="margin-top:8px; line-height:2;">
+                                <div>1. increase sharply</div>
+                                <div>2. need help</div>
+                                <div>3. find a job</div>
+                                <div>4. currently</div>
+                                <div>5. very important</div>
+                                <div>6. make a proposal</div>
+                            </div>
+                        </div>
+                        <div
+                            style="background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--glass-border);">
+                            <strong>Meanings (a–f)</strong>
+                            <div style="margin-top:8px; line-height:2;">
+                                <div>a. gain employment</div>
+                                <div>b. at the moment</div>
+                                <div>c. a high priority</div>
+                                <div>d. go up a lot</div>
+                                <div>e. suggest something</div>
+                                <div>f. require assistance</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">4. 🎧 1.19 Listen to three recordings. Which two are formal? Which
+                        formal phrases from exercise 3 did they include?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.19')">📜 Show Transcript
+                        1.19</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_19.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 5 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">5. 🎧 1.19 Listen again and circle the correct answers.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.19')">📜 Show Transcript
+                        1.19</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_19.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex5"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ── DATA ─────────────────────────────────────────────────── */
+
+        // Exercise 1: 6 câu, mỗi câu 2 blanks
+        const ex1Data = [
+            { q: "to try hard = to ______ a big ______", blanks: ["make", "effort"], targets: ["text-ex2-4"], hint: "<strong>Đáp án: make, effort</strong><br>Dịch: cố gắng hết sức = to make a big effort<br>Ví dụ trong transcript: <em>'I made a big effort to get fit for it'</em>" },
+            { q: "to contact somebody = to ______ in ______ with somebody", blanks: ["get", "touch"], targets: ["text-ex2-3"], hint: "<strong>Đáp án: get, touch</strong><br>Dịch: liên lạc với ai đó = to get in touch with somebody<br>Ví dụ trong transcript: <em>'There's no way to get in touch with him'</em>" },
+            { q: "to ignore something = to ______ a blind ______ to something", blanks: ["turn", "eye"], targets: [], hint: "<strong>Đáp án: turn, eye</strong><br>Dịch: phớt lờ điều gì đó = to turn a blind eye to something<br>Đây là thành ngữ phổ biến." },
+            { q: "to talk to somebody = to ______ a ______ with somebody", blanks: ["have", "word"], targets: ["text-ex2-2"], hint: "<strong>Đáp án: have, word</strong><br>Dịch: nói chuyện với ai đó = to have a word with somebody<br>Ví dụ trong transcript: <em>'I didn't have time to have a word with him'</em>" },
+            { q: "to enjoy yourself a lot = to have the ______ of your ______", blanks: ["time", "life"], targets: ["text-ex5-3"], hint: "<strong>Đáp án: time, life</strong><br>Dịch: tận hưởng hết mình = to have the time of your life<br>Ví dụ trong transcript: <em>'We had a great time'</em> (paraphrase của cụm này)" },
+            { q: "to help somebody = to ______ somebody a ______", blanks: ["give", "hand"], targets: [], hint: "<strong>Đáp án: give, hand</strong><br>Dịch: giúp đỡ ai đó = to give somebody a hand<br>Đây là cách nói thông dụng trong tiếng Anh." }
+        ];
+
+        // Exercise 2: 4 câu radio
+        const ex2Data = [
+            { q: "1. For the past two weeks, speaker 1 has been ___.", opts: ["a. sleeping well", "b. sleeping badly"], ans: "b. sleeping badly", targets: ["text-ex2-1"], hint: "<strong>Đáp án: b – sleeping badly</strong><br>Transcript: <em>'I don't think I've had a good night's sleep since I got it!'</em> → anh ấy ngủ không ngon." },
+            { q: "2. He's got a new neighbour, but speaker 2 hasn't ___.", opts: ["a. seen him", "b. spoken to him"], ans: "b. spoken to him", targets: ["text-ex2-2"], hint: "<strong>Đáp án: b – spoken to him</strong><br>Transcript: <em>'I didn't have time to have a word with him'</em> → 'have a word' = 'speak to'." },
+            { q: "3. Speaker 3's husband is in the mountains and nobody can ___.", opts: ["a. find him", "b. phone him"], ans: "b. phone him", targets: ["text-ex2-3"], hint: "<strong>Đáp án: b – phone him</strong><br>Transcript: <em>'There's no way to get in touch with him'</em> → 'get in touch' = 'contact' = 'phone'." },
+            { q: "4. Speaker 4 couldn't take part in the race, although he really ___ to be fit for it.", opts: ["a. tried", "b. expected"], ans: "a. tried", targets: ["text-ex2-4"], hint: "<strong>Đáp án: a – tried</strong><br>Transcript: <em>'I made a big effort to get fit for it'</em> → 'made a big effort' = 'tried hard'." }
+        ];
+
+        // Exercise 3: Nối formal-informal (6 câu)
+        const ex3Data = [
+            { q: "1. increase sharply", ans: "d", formal: "d. go up a lot", hint: "<strong>Đáp án: d</strong><br>increase sharply = go up a lot (tăng mạnh)<br>Formal phrase: <em>increase sharply</em>" },
+            { q: "2. need help", ans: "f", formal: "f. require assistance", hint: "<strong>Đáp án: f</strong><br>need help = require assistance (cần trợ giúp)<br>Formal phrase: <em>require assistance</em>" },
+            { q: "3. find a job", ans: "a", formal: "a. gain employment", hint: "<strong>Đáp án: a</strong><br>find a job = gain employment (tìm việc làm)<br>Formal phrase: <em>gain employment</em>" },
+            { q: "4. currently", ans: "b", formal: "b. at the moment", hint: "<strong>Đáp án: b</strong><br>currently = at the moment (hiện tại)<br>Formal phrase: <em>currently</em>" },
+            { q: "5. very important", ans: "c", formal: "c. a high priority", hint: "<strong>Đáp án: c</strong><br>very important = a high priority (ưu tiên cao)<br>Formal phrase: <em>a high priority</em>" },
+            { q: "6. make a proposal", ans: "e", formal: "e. suggest something", hint: "<strong>Đáp án: e</strong><br>make a proposal = suggest something (đề xuất)<br>Formal phrase: <em>make a proposal</em>" }
+        ];
+
+        // Exercise 4: 2 recording formal blocks — recording number + 3 phrases mỗi cái
+        const ex4Data = [
+            {
+                recordingNum: {
+                    id: "ex4-recnum-1", ans: "1",
+                    hint: "<strong>Đáp án: Recording 1</strong><br>Recording 1 là cuộc hội thoại <em>formal</em> giữa nhân viên và khách hàng về thủ tục xin trợ cấp nhà ở. Ngôn ngữ trang trọng, lịch sự."
+                },
+                phrases: [
+                    {
+                        id: "ex4-p1-1", ans: "require assistance", target: "text-ex4-1a",
+                        hint: "<strong>Cụm formal 1: <em>require assistance</em></strong><br>= need help (cần giúp đỡ)<br>Câu trong transcript: <em>'if you require assistance in completing the form, we can offer that here.'</em>"
+                    },
+                    {
+                        id: "ex4-p1-2", ans: "currently", target: "text-ex4-1b",
+                        hint: "<strong>Cụm formal 2: <em>currently</em></strong><br>= at the moment (hiện tại)<br>Câu trong transcript: <em>'Is there currently a long delay?'</em>"
+                    },
+                    {
+                        id: "ex4-p1-3", ans: "a high priority", target: "text-ex4-1c",
+                        hint: "<strong>Cụm formal 3: <em>a high priority</em></strong><br>= very important (ưu tiên cao)<br>Câu trong transcript: <em>'All new applications are treated as a high priority.'</em>"
+                    }
+                ]
+            },
+            {
+                recordingNum: {
+                    id: "ex4-recnum-2", ans: "2",
+                    hint: "<strong>Đáp án: Recording 2</strong><br>Recording 2 là bài phát biểu <em>formal</em> trước công chúng của tổ chức từ thiện. Ngôn ngữ trang trọng, hùng hồn."
+                },
+                phrases: [
+                    {
+                        id: "ex4-p2-1", ans: "gain employment", target: "text-ex4-2a",
+                        hint: "<strong>Cụm formal 1: <em>gain employment</em></strong><br>= find a job (tìm việc làm)<br>Câu trong transcript: <em>'to help homeless people to gain employment.'</em>"
+                    },
+                    {
+                        id: "ex4-p2-2", ans: "make a proposal", target: "text-ex4-2b",
+                        hint: "<strong>Cụm formal 2: <em>make a proposal</em></strong><br>= suggest something (đề xuất)<br>Câu trong transcript: <em>'I'm here to make a proposal – I want you to become our partners.'</em>"
+                    },
+                    {
+                        id: "ex4-p2-3", ans: "", target: "",
+                        hint: ""
+                    }
+                ]
+            }
+        ];
+
+        // Exercise 5: 3 câu radio
+        const ex5Data = [
+            { q: "1. In recording 1, we hear a man", opts: ["a. asking for a form to complete.", "b. asking for help in completing a form.", "c. returning a form that he has completed."], ans: "a. asking for a form to complete.", targets: ["ex5-kw-1"], hint: "<strong>Đáp án: a – asking for a form to complete</strong><br>Transcript: <em>'I'd like an application form for housing benefit.'</em> → người đàn ông đang <em>xin</em> mẫu đơn để điền, không phải trả lại hay nhờ giúp điền." },
+            { q: "2. In recording 2, what is the main intention of the speaker?", opts: ["a. To persuade people to make donations to a charity.", "b. To advise people against giving money to homeless people on the street.", "c. To suggest ways of helping homeless people which do not cost money."], ans: "a. To persuade people to make donations to a charity.", targets: ["ex5-kw-2"], hint: "<strong>Đáp án: a – To persuade people to make donations to a charity</strong><br>Transcript: <em>'I am appealing for money for our charity's new project'</em> → mục đích chính là <em>kêu gọi quyên góp tiền</em> cho tổ chức từ thiện." },
+            { q: "3. In recording 3, when the speaker took part in the Big Sleep Out, she", opts: ["a. felt much colder than she had expected.", "b. did not feel as cold as her friends.", "c. did not feel as cold as she had expected."], ans: "c. did not feel as cold as she had expected.", targets: ["ex5-kw-3"], hint: "<strong>Đáp án: c – did not feel as cold as she had expected</strong><br>Transcript: <em>'I wasn't cold at all. Well, only my face.'</em> → cô không lạnh như <em>bản thân cô đã lo trước đó</em> (not as cold as she had expected), không so với bạn bè." }
+        ];
+
+        /* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+        // ----- Exercise 1 (input với 2 blanks) -----
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            container.innerHTML = '';
+            ex1Data.forEach((it, idx) => {
+                const parts = it.q.split('______');
+                const blankIds = [];
+                let html = `<span style="font-weight:500;">${idx + 1}. </span>`;
+                parts.forEach((part, pIdx) => {
+                    html += part;
+                    if (pIdx < parts.length - 1) {
+                        const bid = `ex1-q${idx}-b${pIdx}`;
+                        blankIds.push(bid);
+                        html += `
+                            <span class="inline-blank-wrapper" style="display:inline-flex; align-items:center; gap:4px; margin:0 4px; vertical-align:middle;">
+                                <input type="text" id="${bid}" data-ans="${it.blanks[pIdx]}" class="phrase-gap-input" autocomplete="off" style="margin:0; min-width:50px;">
+                                <button class="eye-btn" style="width:24px; height:24px; font-size:11px;" onclick="showSingleAnsEx1('${bid}')">👁️</button>
+                            </span>
+                        `;
+                    }
+                });
+                // Tạo hint button riêng cho câu
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+                            ${html}
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, 'ex1-q${idx}-hint', '')">i</button>
+                        </div>
+                        <div class="hint-box" id="ex1-q${idx}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 2 (radio) -----
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = '';
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                let optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`
+                ).join('');
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem; display:flex; align-items:flex-start; gap:8px;">
+                            <span>${it.q}</span>
+                        </div>
+                        <div class="option-group" style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0; display:flex; gap:5px; margin-top:4px;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.18')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint" style="width:100%; margin-top:8px;">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 3 (matching input) -----
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = '';
+            ex3Data.forEach((it, i) => {
+                const qid = `ex3-q${i}`;
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:6px; padding:6px 0; border-bottom:1px solid var(--glass-border);">
+                        <span style="font-weight:500; min-width:180px;">${it.q}</span>
+                        <span style="color:var(--text-muted);">→</span>
+                        <input type="text" id="${qid}" data-ans="${it.ans}" class="matching-input" autocomplete="off" style="text-transform:lowercase;">
+                        <div class="row-btns" style="margin-left:0;">
+                            <button class="eye-btn" onclick="showSingleAnsMatching('${qid}')">👁️</button>
+                            <button class="hint-btn" onclick="showHintOnly('${qid}-hint')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 4 (input list) -----
+        function renderEx4() {
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = ex4Data.map((block, bi) => {
+                const rn = block.recordingNum;
+                const phrasesHtml = block.phrases.filter(ph => ph.ans !== '').map((ph, pi) => `
+                    <div class="question-row" style="align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                        <span style="min-width:1.4em; font-weight:600; flex-shrink:0;">${pi + 1}</span>
+                        <input type="text" id="${ph.id}" data-ans="${ph.ans}"
+                               class="ex4-input" style="margin:0;"
+                               >
+                        <div class="row-btns" style="flex-shrink:0;">
+                            <button class="eye-btn" onclick="showSingleAnsEx4('${ph.id}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHintInline(event,'${ph.id}-hint','${ph.target}','1.19')">i</button>
+                        </div>
+                        <div class="hint-box" id="${ph.id}-hint" style="flex-basis:100%;"><div class="hint-detail">${ph.hint}</div></div>
+                    </div>`).join('');
+
+                return `
+                    <div class="mc-card" style="margin-bottom:20px;">
+                        <div class="question-row" style="align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+                            <span style="font-size:0.97rem;">Recording number</span>
+                            <input type="text" id="${rn.id}" data-ans="${rn.ans}"
+                                   class="ex4-input" style="width:48px; text-align:center; max-width:60px;"
+                                 >
+                            <span style="font-size:0.97rem;">is formal and includes the formal phrases:</span>
+                            <div class="row-btns" style="margin-left:10px; flex-shrink:0;">
+                                <button class="eye-btn" onclick="showSingleAnsEx4('${rn.id}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintInline(event,'${rn.id}-hint','','')">i</button>
+                            </div>
+                            <div class="hint-box" id="${rn.id}-hint" style="flex-basis:100%;"><div class="hint-detail">${rn.hint}</div></div>
+                        </div>
+                        ${phrasesHtml}
+                    </div>`;
+            }).join('');
+        }
+
+        // ----- Exercise 5 (radio) -----
+        function renderEx5() {
+            const container = document.getElementById('questions-ex5');
+            container.innerHTML = '';
+            ex5Data.forEach((it, i) => {
+                const qid = `ex5-q${i}`;
+                let optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`
+                ).join('');
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem; display:flex; align-items:flex-start; gap:8px;">
+                            <span>${it.q}</span>
+                        </div>
+                        <div class="option-group" style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0; display:flex; gap:5px; margin-top:4px;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '1.19')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint" style="width:100%; margin-top:8px;">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
+
+        // Ex1: show single answer
+        function showSingleAnsEx1(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex3: matching
+        function showSingleAnsMatching(qid) {
+            const el = document.getElementById(qid);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim().toLowerCase();
+            if (current === ans) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+        }
+
+        // Ex4: single input
+        function showSingleAnsEx4(qid) {
+            const el = document.getElementById(qid);
+            if (!el) return;
+            const ans = el.dataset.ans.trim().toLowerCase();
+            const current = el.value.trim().toLowerCase();
+            if (current === ans) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex4: show all answers for a record
+        function showSingleAnsEx4Record(recordId, recIdx) {
+            const rec = ex4Data[recIdx];
+            rec.answers.forEach((ans, idx) => {
+                const qid = `${recordId}-${idx}`;
+                const el = document.getElementById(qid);
+                if (el) {
+                    el.value = ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                }
+            });
+        }
+
+        // Radio (Ex2, Ex5)
+        function showSingleAnsRadio(qid, ans) {
+            const radio = document.querySelector(`input[name="${qid}"][value="${ans}"]`);
+            if (radio) {
+                const card = radio.closest('.option-card');
+                const group = card.closest('.option-group');
+                group.querySelectorAll('.option-card').forEach(c => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    c.querySelector('input').checked = false;
+                });
+                radio.checked = true;
+                card.classList.add('selected', 'correct-card');
+            }
+        }
+
+        // Show hint only (no transcript)
+        function showHintOnly(hintBoxId) {
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+            }
+        }
+
+        // ----- Shared -----
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            const sections = document.querySelectorAll('.script-section');
+            const targetId = `script-${track.replace('.', '-')}`;
+            const targetSection = document.getElementById(targetId);
+
+            if (!forceOpen && panel.classList.contains('active') && targetSection && targetSection.classList.contains('active')) {
+                panel.classList.remove('active');
+                return;
+            }
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+
+        function toggleHintInline(event, hintBoxId, targetId, track) {
+            event.stopPropagation();
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const isShowing = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!isShowing) {
+                h.style.display = 'block';
+                if (track) {
+                    toggleTranscript(track, true);
+                }
+                if (targetId) {
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        setTimeout(() => {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 150);
+                    }
+                }
+            }
+        }
+
+        function showReadingHint(event, targets, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            if (isVisible) {
+                hintBox.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            if (track) {
+                toggleTranscript(track, true);
+            }
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            hintBox.style.display = 'block';
+
+            if (targets && targets.length) {
+                const elements = [];
+                targets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            const w = Math.max(text.length * 12 + 30, el.classList.contains('matching-input') ? 50 : 80);
+            el.style.width = w + 'px';
+        }
+
+        function checkAll() {
+            // Ex1 input
+            document.querySelectorAll('#questions-ex1 .phrase-gap-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex2 radio
+            document.querySelectorAll('#questions-ex2 .option-group').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex2Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value === correctAns;
+                    grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+
+            // Ex3 matching
+            document.querySelectorAll('#questions-ex3 .matching-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex4 inputs
+            document.querySelectorAll('#questions-ex4 .ex4-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex5 radio
+            document.querySelectorAll('#questions-ex5 .option-group').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex5Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value === correctAns;
+                    grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .phrase-gap-input').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                ex2Data.forEach((it, i) => {
+                    const qid = `ex2-q${i}`;
+                    const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                    if (radio) {
+                        const card = radio.closest('.option-card');
+                        const group = card.closest('.option-group');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        radio.checked = true;
+                        card.classList.add('selected', 'correct-card');
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .matching-input').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                });
+                return;
+            }
+            if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 input[data-ans]').forEach(el => {
+                    if (el.dataset.ans) {
+                        el.value = el.dataset.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex5') {
+                ex5Data.forEach((it, i) => {
+                    const qid = `ex5-q${i}`;
+                    const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                    if (radio) {
+                        const card = radio.closest('.option-card');
+                        const group = card.closest('.option-group');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        radio.checked = true;
+                        card.classList.add('selected', 'correct-card');
+                    }
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .phrase-gap-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .matching-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                });
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex5') {
+                document.querySelectorAll('#questions-ex5 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        /* ── INIT ─────────────────────────────────────────────────── */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+
+            // Adjust width of all input fields on load
+            document.querySelectorAll('.phrase-gap-input, .ex4-input').forEach(el => {
+                adjustWidth(el);
+            });
+
+            // Tự động điều chỉnh width cho input
+            document.body.addEventListener('input', function (e) {
+                if (e.target.classList.contains('phrase-gap-input') || e.target.classList.contains('ex4-input')) {
+                    adjustWidth(e.target);
+                    e.target.classList.remove('correct', 'incorrect-marked');
+                }
+                if (e.target.classList.contains('matching-input')) {
+                    e.target.classList.remove('correct', 'incorrect-marked');
+                }
+            });
+
+            // Theme toggle
+            const toggle = document.getElementById('theme-toggle');
+            toggle.onclick = function () {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                this.innerText = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+
+            // Enter key triggers checkAll
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') checkAll();
+            });
+
+            // Click on option card selects radio
+            document.body.addEventListener('click', function (e) {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    const r = card.querySelector('input[type="radio"]');
+                    if (r) {
+                        const group = card.closest('.option-group');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        r.checked = true;
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            // Resizer logic
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerWidth = document.querySelector('.reading-split-container').offsetWidth;
+                let newWidth = (e.clientX / containerWidth) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                panel.style.flex = `0 0 ${newWidth}%`;
+            });
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
