@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 9C Listening: Travel solutions</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 12px !important;
+            width: fit-content !important;
+            margin: 0 !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Layout Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: width 0.2s;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .strategy-box h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .strategy-box ul {
+            margin: 8px 0 0 20px;
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: default;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box strong {
+            color: var(--primary);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Exercise 1: Word Bank Drag & Drop */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.15);
+            justify-content: center;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 10px;
+            user-select: none;
+            transition: all 0.25s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: grab;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            text-decoration: line-through;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .word-item:hover:not(.used) {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Input inline */
+        .phrase-gap-input {
+            border: none;
+            border-bottom: 2px dashed var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            margin: 0 4px;
+            min-width: 80px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: inline;
+            width: auto;
+            field-sizing: content;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .phrase-gap-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .phrase-gap-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .phrase-gap-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        .inline-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        /* Exercise 5: inputs */
+        .ex5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            padding: 2px 5px;
+            font-size: 1rem;
+            min-width: 40px;
+            width: 50px;
+        }
+
+        .ex5-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .ex5-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .ex5-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        .ex5-term-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.95rem;
+            min-width: 120px;
+            field-sizing: content;
+        }
+
+        .ex5-term-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .ex5-term-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .ex5-term-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        /* Exercise 6: option cards dọc */
+        .option-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+            max-width: 600px;
+            min-width: 200px;
+            width: fit-content;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.15) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.15) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+        }
+
+        .speaker-name {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .script-section {
+            display: none;
+        }
+
+        .script-section.active {
+            display: block;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .row-btns {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .eye-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .eye-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .hint-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .hint-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .option-card {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">9C</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Listening</div>
+                <h1>Travel solutions</h1>
+                <p class="subtitle">I can identify the context of a conversation and its register.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Boxes -->
+        <div class="strategy-box">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe 1</h2>
+            <p>Đôi khi bạn khó bắt được tên và danh từ riêng khi nghe. Tuy nhiên, bạn có thể sử dụng các từ xung quanh
+                (bao gồm cả các cụm từ kết hợp - collocations) để suy ra chúng là gì (người, địa điểm, v.v.). Ví dụ, nếu
+                bạn nghe "We stayed four nights at the Grand Plaza", các từ được gạch dưới cho bạn biết Grand Plaza là
+                một khách sạn.</p>
+        </div>
+
+        <div class="strategy-box" style="margin-top:16px;">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe 2</h2>
+            <p>Nhận biết được văn phong trang trọng (formal register) có thể giúp bạn xác định ngữ cảnh. Các thuật ngữ
+                trang trọng được sử dụng trong các thông báo bao gồm:</p>
+            <ul>
+                <li><strong>adjacent to</strong> (next to – bên cạnh)</li>
+                <li><strong>beverages</strong> (drinks – đồ uống)</li>
+                <li><strong>to commence</strong> (to begin – bắt đầu)</li>
+                <li><strong>to depart</strong> (to leave – khởi hành)</li>
+                <li><strong>due to</strong> (because of – bởi vì)</li>
+                <li><strong>prior to</strong> (before – trước khi)</li>
+                <li><strong>to proceed to</strong> (to go to – đi đến)</li>
+                <li><strong>to purchase</strong> (to buy – mua)</li>
+                <li><strong>refreshments</strong> (food and drink – đồ ăn và đồ uống)</li>
+                <li><strong>to terminate</strong> (to end – kết thúc)</li>
+            </ul>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Scripts</h2>
+
+                <!-- Transcript 2.12 -->
+                <div id="script-2-12" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 2.12 (Exercises 2 &amp; 3)</h3>
+
+                    <div style="font-weight:700; margin:12px 0 8px 0;">Dialogue 1</div>
+                    <div class="speaker-line">
+                        <span><strong>Woman:</strong> <span class="highlightable" id="text-ex2-1">There's one! On the
+                                other side of the road! Quick!</span></span><br>
+                        <span><strong>Man:</strong> Sorry! <span class="highlightable" id="text-ex3-1">I tried to hail
+                                it</span>, but it didn't stop. And I can't see any others. Shall we walk back to the
+                            hotel?</span><br>
+                        <span><strong>W:</strong> No, it's too far.</span><br>
+                        <span><strong>M:</strong> Well, let's start walking in the right direction. I'm sure another one
+                            will come along soon.</span><br>
+                        <span><strong>W:</strong> Good idea.</span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Dialogue 2</div>
+                    <div class="speaker-line">
+                        <span><strong>Man:</strong> Our ship sails at seven in the morning. That's early!</span><br>
+                        <span><strong>Woman:</strong> We'll have to get up at about four o'clock. It's quite a long
+                            drive.</span><br>
+                        <span><strong>M:</strong> I know. Let's drive down the night before. <span class="highlightable"
+                                id="text-ex3-2">We can check into the Aurora</span> for the night. <span
+                                class="highlightable" id="text-ex2-2">We've stayed there before – it's
+                                fine.</span></span><br>
+                        <span><strong>W:</strong> And then we don't have to get up so early. Good idea!</span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Dialogue 3</div>
+                    <div class="speaker-line">
+                        <span><strong>Woman:</strong> We should go to the departure gate now. What's the
+                            matter?</span><br>
+                        <span><strong>Man:</strong> <span class="highlightable" id="text-ex2-3">I think I've lost …
+                                hang on. Where is it?</span></span><br>
+                        <span><strong>W:</strong> What? What are you looking for? Your boarding pass is in your
+                            hand.</span><br>
+                        <span><strong>M:</strong> No it's not that. Oh! Silly me. <span class="highlightable"
+                                id="text-ex3-3">I checked it in</span>, didn't I?</span><br>
+                        <span><strong>W:</strong> Come on.</span>
+                    </div>
+                </div>
+
+                <!-- Transcript 2.13 -->
+                <div id="script-2-13" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 2.13 (Exercises 5 &amp; 6)</h3>
+
+                    <div style="font-weight:700; margin:12px 0 8px 0;">Extract 1</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex6-1">OK. Can everybody hear me? Good. Now, we've
+                                got all morning to explore the old town – take some photos, buy some souvenirs. If you
+                                want a map, I've got some here, just come and ask. But please, don't go yet … listen to
+                                this, it's really important. <span class="highlightable" id="text-ex6-1b">Our coach is
+                                    leaving at midday precisely. We can't be late because
+                                    we've got a lot of distance to cover this afternoon. So I want everybody to be here
+                                    at ten to twelve at the latest, ready to board the coach. Is that clear? Please,
+                                    please don't be late. If you are, we will leave you behind, I
+                                    promise!</span></span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Extract 2</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex5-2a">Good afternoon. I would like to welcome all
+                                new passengers on board and remind them that <span class="highlightable"
+                                    id="text-ex5-2b">refreshments</span> are available from <span class="highlightable"
+                                    id="text-ex6-2">the buffet car, which is
+                                    situated between carriages 9 and 10.</span> We also offer a trolley service for
+                                passengers who
+                                wish to <span class="highlightable" id="text-ex5-2c">purchase</span> light snacks and
+                                <span class="highlightable" id="text-ex5-2d">beverages</span> from their seats. Please
+                                be aware that we will be arriving at our destination a few minutes ahead of schedule.
+                                We'd like to thank you for choosing Main Line Railways and hope to see you again in the
+                                near future.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Extract 3</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex6-3">Good afternoon, ladies and gentlemen. This is
+                                Samantha and I'm your chief flight attendant. On behalf of Captain Rodgers and his crew,
+                                I'd like to welcome you aboard Western Airways flight 456, our non-stop service from
+                                <span class="highlightable" id="text-ex6-3b">London to Paris which will depart in a few
+                                    minutes.</span> <span class="highlightable" id="text-ex5-3b">Please make sure your
+                                    seat belt is correctly fastened prior to
+                                    take-off</span>, and that your seat back and tray are in an upright position. <span
+                                    class="highlightable" id="text-ex5-3c">Any electronic equipment must be turned off
+                                    for take-off due to the possibility of interference with our onboard navigation
+                                    systems.</span> Thank you.</span></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Main Exercise Stack -->
+            <div class="main-exercise-panel" id="main-exercise-panel">
+
+                <!-- Exercise 1 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">1. Complete the collocations with the verbs below.</div>
+                    <div class="word-bank" id="ex1-word-bank">
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">board</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">book</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">check in</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">check into</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">hail</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">hire</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">miss</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">reach</span>
+                    </div>
+                    <div id="questions-ex1"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">2. 🎧 2.12 Read Listening Strategy 1. Then listen to three short
+                        dialogues and answer the questions.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.12')">📜 Show Transcript
+                        2.12</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_12.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. 🎧 2.12 Listen again. Which verbs from exercise 1 helped you answer
+                        the questions in exercise 2?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.12')">📜 Show Transcript
+                        2.12</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_12.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">4. Read Listening Strategy 2. Then complete the sentences with formal
+                        words from the Strategy that mean the same as the words in brackets.</div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 5 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">5. 🎧 2.13 Listen to three extracts. Which two are formal? Which formal
+                        terms from Listening Strategy 2 do they include?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.13')">📜 Show Transcript
+                        2.13</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_13.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex5"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 6 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">6. 🎧 2.13 Listen again and circle the correct answers.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.13')">📜 Show Transcript
+                        2.13</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_13.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex6"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ── DATA ─────────────────────────────────────────────────── */
+
+        // Exercise 1
+        const ex1Data = [
+            { q: "______ your bags / your luggage", ans: "check in", hint: "<strong>Đáp án: check in</strong><br><em>check in your bags</em> = làm thủ tục ký gửi hành lý.<br>Dịch: làm thủ tục ký gửi hành lý." },
+            { q: "______ a room / a flight / a holiday", ans: "book", hint: "<strong>Đáp án: book</strong><br><em>book a room</em> = đặt phòng, <em>book a flight</em> = đặt vé máy bay.<br>Dịch: đặt phòng / đặt chuyến bay / đặt kỳ nghỉ." },
+            { q: "______ your destination", ans: "reach", hint: "<strong>Đáp án: reach</strong><br><em>reach your destination</em> = đến được điểm đến.<br>Dịch: đến được điểm đến của bạn." },
+            { q: "______ a hotel", ans: "check into", hint: "<strong>Đáp án: check into</strong><br><em>check into a hotel</em> = làm thủ tục nhận phòng khách sạn.<br>Dịch: làm thủ tục nhận phòng khách sạn." },
+            { q: "______ a taxi", ans: "hail", hint: "<strong>Đáp án: hail</strong><br><em>hail a taxi</em> = vẫy taxi.<br>Dịch: vẫy taxi." },
+            { q: "______ a train / a ship / a flight", ans: "board", hint: "<strong>Đáp án: board</strong><br><em>board a train</em> = lên tàu hỏa.<br>Dịch: lên tàu / lên tàu thủy / lên máy bay." },
+            { q: "______ a car", ans: "hire", hint: "<strong>Đáp án: hire</strong><br><em>hire a car</em> = thuê xe ô tô.<br>Dịch: thuê xe ô tô." },
+            { q: "______ your flight / your train", ans: "miss", hint: "<strong>Đáp án: miss</strong><br><em>miss your flight</em> = lỡ chuyến bay.<br>Dịch: lỡ chuyến bay / lỡ chuyến tàu." }
+        ];
+
+        // Exercise 2
+        const ex2Data = [
+            { q: "1. In dialogue 1, how are they planning to travel to their hotel?", ans: "taxi", target: "text-ex2-1", hint: "<strong>Đáp án: taxi</strong><br>Transcript: <em>'There's one! On the other side of the road! Quick!'</em> và <em>'I tried to hail it'</em> → họ đang cố gắng vẫy taxi để về khách sạn." },
+            { q: "2. In dialogue 2, what is the Aurora?", ans: "hotel", target: "text-ex2-2", hint: "<strong>Đáp án: hotel</strong><br>Transcript: <em>'We can check into the Aurora for the night. We've stayed there before – it's fine.'</em> → họ có thể check vào Aurora và đã từng ở đó, vì vậy Aurora là một khách sạn." },
+            { q: "3. In dialogue 3, what does the man think he's lost?", ans: "luggage", target: "text-ex2-3", hint: "<strong>Đáp án: luggage</strong><br>Transcript: <em>'I think I've lost … hang on. Where is it?'</em> và <em>'I checked it in, didn't I?'</em> → anh ta đã ký gửi hành lý (check it in) nên tưởng là đã làm mất." }
+        ];
+
+        // Exercise 3
+        const ex3Data = [
+            { q: "Dialogue 1:", ans: "hail", target: "text-ex3-1", hint: "<strong>Đáp án: hail</strong><br>Transcript: <em>'I tried to hail it'</em> → từ 'hail' (vẫy taxi) giúp xác định câu trả lời cho câu hỏi 1 ở bài 2." },
+            { q: "Dialogue 2:", ans: "check into", target: "text-ex3-2", hint: "<strong>Đáp án: check into</strong><br>Transcript: <em>'We can check into the Aurora'</em> → cụm 'check into' + tên địa điểm giúp xác định Aurora là một khách sạn." },
+            { q: "Dialogue 3:", ans: "check in", target: "text-ex3-3", hint: "<strong>Đáp án: check in</strong><br>Transcript: <em>'I checked it in'</em> → 'check in' ở đây có nghĩa là ký gửi hành lý, giúp suy ra anh ta nghĩ mình bị mất hành lý." }
+        ];
+
+        // Exercise 4
+        const ex4Data = [
+            { q: "Will all passengers for Milan please ______ (go to) gate 7b, which is ______ (next to) gate 9.", ans: "proceed to, adjacent to", hint: "<strong>Đáp án: proceed to, adjacent to</strong><br><em>proceed to</em> = go to (đi đến)<br><em>adjacent to</em> = next to (bên cạnh)" },
+            { q: "A wide range of ______ (food and drink) are available to ______ (buy) in the departure lounge.", ans: "refreshments, purchase", hint: "<strong>Đáp án: refreshments, purchase</strong><br><em>refreshments</em> = food and drink (đồ ăn và đồ uống)<br><em>purchase</em> = buy (mua)" },
+            { q: "Passengers are advised that some flights will ______ (leave) later than scheduled. This is ______ (because of) the weather conditions.", ans: "depart, due to", hint: "<strong>Đáp án: depart, due to</strong><br><em>depart</em> = leave (khởi hành)<br><em>due to</em> = because of (bởi vì)" },
+            { q: "This train ______ (ends) at Manchester. Please note that hot and cold ______ (drinks) are available from the buffet car.", ans: "terminates, beverages", hint: "<strong>Đáp án: terminates, beverages</strong><br><em>terminates</em> = ends (kết thúc)<br><em>beverages</em> = drinks (đồ uống)" }
+        ];
+
+        // Exercise 5
+        const ex5Data = [
+            {
+                extractNum: { id: "ex5-num1", ans: "2", target: "text-ex5-2a" },
+                terms: [
+                    { id: "ex5-term1-1", ans: "refreshments", target: "text-ex5-2b", hint: "<strong>refreshments</strong> = food and drink (đồ ăn và đồ uống)<br>Transcript: <em>'refreshments are available from the buffet car'</em>" },
+                    { id: "ex5-term1-2", ans: "purchase", target: "text-ex5-2c", hint: "<strong>purchase</strong> = buy (mua)<br>Transcript: <em>'passengers who wish to purchase light snacks'</em>" },
+                    { id: "ex5-term1-3", ans: "beverages", target: "text-ex5-2d", hint: "<strong>beverages</strong> = drinks (đồ uống)<br>Transcript: <em>'light snacks and beverages'</em>" }
+                ],
+                hint: "<strong>Extract 2 là formal</strong><br>Đây là thông báo trên tàu hỏa với ngôn ngữ trang trọng, lịch sự.<br>Các cụm formal: <em>refreshments</em> (đồ ăn nhẹ), <em>purchase</em> (mua), <em>beverages</em> (đồ uống)."
+            },
+            {
+                extractNum: { id: "ex5-num2", ans: "3", target: "text-ex6-3" },
+                terms: [
+                    { id: "ex5-term2-1", ans: "prior to", target: "text-ex5-3b", hint: "<strong>prior to</strong> = before (trước khi)<br>Transcript: <em>'fastened prior to take-off'</em>" },
+                    { id: "ex5-term2-2", ans: "due to", target: "text-ex5-3c", hint: "<strong>due to</strong> = because of (bởi vì)<br>Transcript: <em>'turned off for take-off due to the possibility of interference'</em>" }
+                ],
+                hint: "<strong>Extract 3 là formal</strong><br>Đây là thông báo trên máy bay với ngôn ngữ trang trọng, chính thức.<br>Các cụm formal: <em>prior to</em> (trước khi), <em>due to</em> (bởi vì)."
+            }
+        ];
+
+        // Exercise 6
+        const ex6Data = [
+            { q: "1. What is the speaker's main purpose in extract 1?", opts: ["a. To make sure everyone has a map.", "b. To make sure nobody is late back to the coach.", "c. To make sure everyone has time to buy souvenirs."], ans: "b", targets: ["text-ex6-1b"], hint: "<strong>Đáp án: b</strong><br>Transcript: <em>'Our coach is leaving at midday precisely. We can't be late... I want everybody to be here at ten to twelve at the latest.'</em><br>Mục đích chính của người nói là đảm bảo không ai bị trễ xe buýt." },
+            { q: "2. Where is the announcement in extract 2 being made?", opts: ["a. On a train.", "b. At an underground station.", "c. In an airport terminal."], ans: "a", targets: ["text-ex6-2"], hint: "<strong>Đáp án: a</strong><br>Transcript: <em>'refreshments are available from the buffet car, which is situated between carriages 9 and 10.'</em><br>Thông báo đề cập đến 'buffet car' và 'carriages' – đây là trên tàu hỏa." },
+            { q: "3. At what point in the flight is the announcement in extract 3 made?", opts: ["a. Just before take-off.", "b. Shortly after take-off.", "c. Shortly before landing at the destination."], ans: "a", targets: ["text-ex6-3b"], hint: "<strong>Đáp án: a</strong><br>Transcript: <em>'which will depart in a few minutes... Please make sure your seat belt is correctly fastened prior to take-off'</em><br>Thông báo được đưa ra ngay trước khi máy bay cất cánh." }
+        ];
+
+        /* ── DRAG & DROP HANDLERS (Exercise 1) ── */
+        let draggedWord = null;
+
+        function handleDragStart(e) {
+            draggedWord = e.target;
+            e.dataTransfer.setData('text/plain', e.target.innerText);
+            e.target.classList.add('dragging');
+        }
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWord) draggedWord.classList.remove('dragging');
+        });
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+
+            if (slot.classList.contains('filled')) {
+                const oldWord = slot.innerText;
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === oldWord) item.classList.remove('used');
+                });
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            if (draggedWord) {
+                draggedWord.classList.add('used');
+                draggedWord = null;
+            }
+        }
+
+        function handleSlotClick(slot) {
+            if (!slot.classList.contains('filled')) return;
+            const word = slot.innerText;
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+            bankItems.forEach(item => {
+                if (item.innerText === word) item.classList.remove('used');
+            });
+        }
+
+        /* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+        // ----- Exercise 1 -----
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            container.innerHTML = '';
+            ex1Data.forEach((it, i) => {
+                const qid = `ex1-q${i}`;
+                const parts = it.q.split('______');
+                let html = `<span style="font-weight:500;">${i + 1}. </span>`;
+                parts.forEach((part, idx) => {
+                    html += part;
+                    if (idx < parts.length - 1) {
+                        const slotId = `${qid}-slot`;
+                        html += `
+                            <span class="drop-slot" id="${slotId}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)" style="min-width:90px;"></span>
+                            <span class="inline-controls">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx1('${slotId}')">👁️</button>
+                                <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showHintOnly('${qid}-hint')">i</button>
+                            </span>
+                        `;
+                    }
+                });
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        ${html}
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 2 -----
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = ex2Data.map((it, i) => {
+                const qid = `ex2-q${i}`;
+                const inputId = `${qid}-inp`;
+                return `
+                    <div class="mc-card" style="margin-bottom:14px;">
+                        <div style="font-size:0.97rem; font-weight:500; margin-bottom:10px;">${it.q}</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="text" id="${inputId}" data-ans="${it.ans}"
+                                   class="task5-input" style="min-width:120px; max-width:260px;"
+                                   autocomplete="off" oninput="adjustWidth(this)">
+                            <button class="eye-btn" onclick="showSingleAnsEx2('${inputId}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ['${it.target}'], '${qid}-hint', '2.12')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ----- Exercise 3 -----
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = ex3Data.map((it, i) => {
+                const qid = `ex3-q${i}`;
+                const inputId = `${qid}-inp`;
+                return `
+                    <div class="mc-card" style="margin-bottom:14px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span style="font-size:0.97rem; font-weight:500; flex-shrink:0;">${it.q}</span>
+                            <input type="text" id="${inputId}" data-ans="${it.ans}"
+                                   class="task5-input" style="min-width:100px; max-width:200px;"
+                                   autocomplete="off" oninput="adjustWidth(this)">
+                            <button class="eye-btn" onclick="showSingleAnsEx3('${inputId}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ['${it.target}'], '${qid}-hint', '2.12')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ----- Exercise 4 -----
+        function renderEx4() {
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = '';
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                const parts = it.q.split('______');
+                let html = `<span style="font-weight:500;">${i + 1}. </span>`;
+                let inputCount = 0;
+                const ansParts = it.ans.split(', ');
+                parts.forEach((part, idx) => {
+                    html += part;
+                    if (idx < parts.length - 1) {
+                        const inputId = `${qid}-inp${inputCount}`;
+                        const ans = ansParts[inputCount] || '';
+                        html += `
+                            <span class="inline-controls">
+                                <input type="text" id="${inputId}" data-ans="${ans}" class="phrase-gap-input" autocomplete="off" style="min-width:80px;">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx4('${inputId}')">👁️</button>
+                            </span>
+                        `;
+                        inputCount++;
+                    }
+                });
+                html += `
+                    <span class="inline-controls">
+                        <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showHintOnly('${qid}-hint')">i</button>
+                    </span>
+                `;
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        ${html}
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 5 -----
+        function renderEx5() {
+            const container = document.getElementById('questions-ex5');
+            container.innerHTML = '';
+            ex5Data.forEach((block, bi) => {
+                const numId = block.extractNum.id;
+                const numAns = block.extractNum.ans;
+                const numTarget = block.extractNum.target;
+
+                let html = `
+                    <div style="margin-bottom:20px; padding:14px; background:var(--primary-light); border-radius:10px; border:1px solid var(--glass-border);">
+                        <div class="question-row" style="margin-bottom:8px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <span style="font-weight:600;">Extract</span>
+                            <span class="inline-controls">
+                                <input type="text" id="${numId}" data-ans="${numAns}" class="ex5-input" autocomplete="off" style="width:40px; text-align:center;">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx5Num('${numId}')">👁️</button>
+                            </span>
+                            <span>is formal.</span>
+                            <span class="inline-controls">
+                                <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showHintOnly('${numId}-hint')">i</button>
+                            </span>
+                        </div>
+                        <div class="hint-box" id="${numId}-hint">${block.hint}</div>
+                `;
+
+                html += `<div style="margin-top:10px;"><span style="font-weight:500;">It includes these formal terms:</span></div>`;
+                block.terms.forEach((term, ti) => {
+                    const termId = term.id;
+                    const termAns = term.ans;
+                    const termTarget = term.target;
+                    html += `
+                        <div class="question-row" style="margin:6px 0; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <span style="min-width:24px; font-weight:600;">${ti + 1}.</span>
+                            <span class="inline-controls">
+                                <input type="text" id="${termId}" data-ans="${termAns}" class="ex5-term-input" autocomplete="off" style="min-width:120px;">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx5Term('${termId}')">👁️</button>
+                                <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showReadingHint(event, ['${termTarget}'], '${termId}-hint', '2.13')">i</button>
+                            </span>
+                            <div class="hint-box" id="${termId}-hint">${term.hint}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        // ----- Exercise 6 (option cards) -----
+        function renderEx6() {
+            const container = document.getElementById('questions-ex6');
+            container.innerHTML = '';
+            ex6Data.forEach((it, i) => {
+                const qid = `ex6-q${i}`;
+                const optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`
+                ).join('');
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem;">${it.q}</div>
+                        <div class="option-group-vertical">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '2.13')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
+
+        // Ex1
+        function showSingleAnsEx1(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.classList.contains('filled') && slot.innerText === ans) {
+                const word = slot.innerText;
+                slot.innerText = "";
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === word) item.classList.remove('used');
+                });
+            } else {
+                if (slot.classList.contains('filled')) {
+                    const oldWord = slot.innerText;
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === oldWord) item.classList.remove('used');
+                    });
+                }
+                slot.innerText = ans;
+                slot.classList.add('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === ans) item.classList.add('used');
+                });
+            }
+        }
+
+        // Ex2
+        function showSingleAnsEx2(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex3
+        function showSingleAnsEx3(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex4
+        function showSingleAnsEx4(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex5 number
+        function showSingleAnsEx5Num(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current === ans) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+        }
+
+        // Ex5 term
+        function showSingleAnsEx5Term(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        // Ex6 radio
+        function showSingleAnsRadio(qid, ans) {
+            const radios = document.querySelectorAll(`input[name="${qid}"]`);
+            let targetRadio = null;
+            radios.forEach(r => {
+                const val = r.value;
+                if (val === ans || val.startsWith(ans + '.') || val.startsWith(ans + ' ')) {
+                    targetRadio = r;
+                }
+            });
+            if (targetRadio) {
+                const card = targetRadio.closest('.option-card');
+                const group = card.closest('.option-group-vertical');
+                group.querySelectorAll('.option-card').forEach(c => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    c.querySelector('input').checked = false;
+                });
+                targetRadio.checked = true;
+                card.classList.add('selected', 'correct-card');
+            }
+        }
+
+        // ----- Shared -----
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            const sections = document.querySelectorAll('.script-section');
+            const targetId = `script-${track.replace('.', '-')}`;
+            const targetSection = document.getElementById(targetId);
+
+            if (!forceOpen && panel.classList.contains('active') && targetSection && targetSection.classList.contains('active')) {
+                panel.classList.remove('active');
+                return;
+            }
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+
+        function showReadingHint(event, targets, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            if (isVisible) {
+                hintBox.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            if (track) {
+                toggleTranscript(track, true);
+            }
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            hintBox.style.display = 'block';
+
+            if (targets && targets.length) {
+                const elements = [];
+                targets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+        }
+
+        function showHintOnly(hintBoxId) {
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+            }
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            const w = Math.max(text.length * 12 + 30, 80);
+            el.style.width = w + 'px';
+        }
+
+        // ── CHECK ALL ──
+        function checkAll() {
+            // Ex1
+            document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                if (!slot.classList.contains('filled')) { slot.classList.remove('correct', 'incorrect-marked'); return; }
+                const ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.trim().toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex2
+            document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex3
+            document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex4
+            document.querySelectorAll('#questions-ex4 .phrase-gap-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex5
+            document.querySelectorAll('#questions-ex5 input[data-ans]').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex6
+            document.querySelectorAll('#questions-ex6 .option-group-vertical').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex6Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value.startsWith(correctAns + '.') || checked.value === correctAns;
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                    const ans = slot.dataset.ans;
+                    if (slot.classList.contains('filled')) {
+                        const oldWord = slot.innerText;
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === oldWord) item.classList.remove('used');
+                        });
+                    }
+                    slot.innerText = ans;
+                    slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === ans) item.classList.add('used');
+                    });
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 .phrase-gap-input').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex5') {
+                document.querySelectorAll('#questions-ex5 input[data-ans]').forEach(el => {
+                    if (el.dataset.ans) {
+                        el.value = el.dataset.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex6') {
+                ex6Data.forEach((it, i) => {
+                    const qid = `ex6-q${i}`;
+                    const radios = document.querySelectorAll(`input[name="${qid}"]`);
+                    radios.forEach(r => {
+                        const card = r.closest('.option-card');
+                        if (r.value.startsWith(it.ans + '.') || r.value === it.ans) {
+                            const group = card.closest('.option-group-vertical');
+                            group.querySelectorAll('.option-card').forEach(c => {
+                                c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                                c.querySelector('input').checked = false;
+                            });
+                            r.checked = true;
+                            card.classList.add('selected', 'correct-card');
+                        }
+                    });
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                    if (slot.classList.contains('filled')) {
+                        const word = slot.innerText;
+                        slot.innerText = "";
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === word) item.classList.remove('used');
+                        });
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 .phrase-gap-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex5') {
+                document.querySelectorAll('#questions-ex5 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex6') {
+                document.querySelectorAll('#questions-ex6 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        /* ── INIT ─────────────────────────────────────────────────── */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            renderEx6();
+
+            document.querySelectorAll('.phrase-gap-input, .ex5-input, .ex5-term-input').forEach(el => {
+                if (el.placeholder) el.setAttribute('data-placeholder', el.placeholder);
+                adjustWidth(el);
+            });
+
+            document.body.addEventListener('input', function (e) {
+                if (e.target.classList.contains('phrase-gap-input') || e.target.classList.contains('ex5-input') ||
+                    e.target.classList.contains('ex5-term-input')) {
+                    adjustWidth(e.target);
+                    e.target.classList.remove('correct', 'incorrect-marked');
+                }
+            });
+
+            const toggle = document.getElementById('theme-toggle');
+            toggle.onclick = function () {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                this.innerText = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') checkAll();
+            });
+
+            document.body.addEventListener('click', function (e) {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    const r = card.querySelector('input[type="radio"]');
+                    if (r) {
+                        const group = card.closest('.option-group-vertical');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        r.checked = true;
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerWidth = document.querySelector('.reading-split-container').offsetWidth;
+                let newWidth = (e.clientX / containerWidth) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                panel.style.flex = `0 0 ${newWidth}%`;
+            });
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
