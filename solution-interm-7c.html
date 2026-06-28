@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 7C Listening: Poetry in motion</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* Fix Title & Home Button Alignment */
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 0 !important;
+            gap: 12px !important;
+            width: fit-content !important;
+            margin: 0 !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        /* Layout Split Screen */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 45%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .reading-resizer {
+            width: 0px;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: width 0.2s;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+        }
+
+        /* Strategy Box */
+        .strategy-box {
+            background: var(--hint-bg);
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .strategy-box h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Audio player */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Highlight Style */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: default;
+            border-radius: 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 18px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .hint-box strong {
+            color: var(--primary);
+        }
+
+        .hint-box em {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Exercise 1: Word Bank Drag & Drop */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(var(--primary-rgb), 0.15);
+            justify-content: center;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .word-item {
+            background: var(--word-item-bg);
+            border: 1px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 10px;
+            user-select: none;
+            transition: all 0.25s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: grab;
+        }
+
+        .word-item.used {
+            opacity: 0.3;
+            text-decoration: line-through;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .word-item:hover:not(.used) {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 34px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 5px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        /* Exercise 2: option cards dọc */
+        .option-group-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .option-card {
+            border: 2px solid var(--glass-border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            color: var(--text);
+            max-width: 700px;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .option-card input {
+            display: none;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.15) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.15) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        /* Exercise 3 & 4: input inline */
+        .phrase-gap-input {
+            border: none;
+            border-bottom: 2px dashed var(--primary);
+            background: transparent;
+            padding: 2px 8px;
+            margin: 0 4px;
+            min-width: 80px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: inline;
+            width: auto;
+            field-sizing: content;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .phrase-gap-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .phrase-gap-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .phrase-gap-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        .inline-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin: 0 2px;
+            vertical-align: middle;
+        }
+
+        /* Exercise 5: matching input - điền số speaker (1,2,3) */
+        .matching-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 2px 5px;
+            font-size: 1.05rem;
+            min-width: 40px;
+            width: 50px;
+        }
+
+        .matching-input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-dark);
+        }
+
+        .matching-input.correct {
+            border-bottom-color: var(--success) !important;
+            color: var(--success) !important;
+        }
+
+        .matching-input.incorrect-marked {
+            border-bottom-color: var(--error) !important;
+            color: var(--error) !important;
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+        }
+
+        .speaker-name {
+            font-weight: bold;
+            color: var(--primary-dark);
+        }
+
+        .script-section {
+            display: none;
+        }
+
+        .script-section.active {
+            display: block;
+        }
+
+        .check-all-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+        }
+
+        .row-btns {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+            line-height: 1.8;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: var(--text-muted);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .eye-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .eye-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .hint-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .hint-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        /* Poem block for Exercise 4 */
+        .poem-block {
+            background: var(--card-bg);
+            border-left: 4px solid var(--primary);
+            padding: 20px 24px;
+            margin: 16px 0 20px 0;
+            border-radius: 0 12px 12px 0;
+            box-shadow: var(--card-shadow);
+            font-style: italic;
+            line-height: 2;
+        }
+
+        .poem-block .poem-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            font-style: normal;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .poem-block .poem-author {
+            font-style: normal;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .poem-block .poem-line {
+            font-style: italic;
+            padding-left: 8px;
+            border-left: 2px solid var(--primary-light);
+            margin-bottom: 2px;
+        }
+
+        /* Exercise 5 list */
+        .ex5-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin: 10px 0 16px 0;
+            background: var(--primary-light);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .ex5-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 0;
+        }
+
+        .ex5-item .letter {
+            font-weight: 700;
+            min-width: 24px;
+            color: var(--primary-dark);
+        }
+
+        .ex5-item .text {
+            flex: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .option-card {
+                max-width: 100%;
+            }
+
+            .ex3-drop-zone {
+                min-width: 150px;
+            }
+
+            .ex5-item {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <button class="theme-toggle-btn" id="theme-toggle" title="Chuyển chế độ Sáng/Tối">🌙</button>
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">7C</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Listening</div>
+                <h1>Poetry in motion</h1>
+                <p class="subtitle">I can listen for implications and subtext.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Box -->
+        <div class="strategy-box">
+            <h2><span style="font-size:1.5rem;">🎧</span> Chiến lược nghe</h2>
+            <p>Đôi khi thông tin bạn cần cho một bài tập nghe được <strong>ẩn ý</strong> thay vì được nêu trực tiếp. Ví
+                dụ, nếu ai đó nói "I wish I was back home" (Tôi ước mình được về nhà), điều đó ngụ ý họ không hài lòng
+                với tình huống hiện tại của mình.</p>
+        </div>
+
+        <div class="reading-split-container">
+            <!-- Left Panel: Transcript -->
+            <div class="transcript-panel" id="transcript-panel">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    Listening Scripts</h2>
+
+                <!-- Transcript 2.03 -->
+                <div id="script-2-03" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 2.03 (Exercises 2 &amp; 3)</h3>
+
+                    <div style="font-weight:700; margin:12px 0 8px 0;">Monologue 1 – Josh</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex2-1">I went to see a modern dance performance with
+                                Katy last night. She's a big fan of dance shows. What did I think of it? Well … <span
+                                    class="highlightable" id="text-ex3-1">let's just say this</span>: I'm glad Katy
+                                liked it.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Monologue 2 – Hannah</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex2-2">I went for a part in Cats, the musical. I
+                                didn't get it, though. <span class="highlightable" id="text-ex3-2">That was no big
+                                    surprise</span> – there was only one part, and nearly 200 people went to the
+                                audition! Anyway, I've got two other auditions next week, for different
+                                shows.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Monologue 3 – Ben</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex2-3">I went to an art exhibition last weekend. It
+                                was all modern art. With a lot of the pictures, <span class="highlightable"
+                                    id="text-ex3-3">it was hard to see the point</span>. I just looked at them and
+                                thought, 'I could do that.' That's how I always react when I see modern art,
+                                really.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Monologue 4 – Fatima</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex2-4">My dad and I often disagree about what music
+                                to play in the car. He says he likes pop music, but all his CDs are really ancient –
+                                from the 1980s! He claims it's much better than today's pop music, but <span
+                                    class="highlightable" id="text-ex3-4">that's ridiculous</span>. I reckon it just
+                                reminds him of his youth.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Monologue 5 – Toby</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex3-5">Some opera singers came to my school and did a
+                                show for us in the school hall. They had amazing voices – and although I'm not that keen
+                                on classical music, I did like the songs. But I guess it's different when you go to an
+                                opera house and see a real opera. You have to work out what's happening – although it's
+                                probably all in Italian, so you can't understand it – and it goes on for <span
+                                    class="highlightable" id="text-ex3-5b">hours and hours</span>.</span></span>
+                    </div>
+                </div>
+
+                <!-- Transcript 2.04 -->
+                <div id="script-2-04" class="script-section">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 2.04 (Exercises 4 &amp; 5)</h3>
+
+                    <div style="font-weight:700; margin:12px 0 8px 0;">Speaker 1</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex4-s1">My uncle knew a lot of poems by heart, and he
+                                used to recite them to us sometimes. My sister and I loved them, although <span
+                                    class="highlightable" id="text-ex5-1">I'm not sure we understood them very
+                                    well</span>. One of them began 'There's a one-eyed yellow idol to the north of
+                                Kathmandu' – that was my favourite. But I didn't know what any of the words meant really
+                                – except for 'yellow'. Actually, now that I'm an adult, I've learned a couple of poems
+                                that I can recite from memory, and my own children love hearing them.</span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Speaker 2</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex4-s2">I was in London about a year ago, and had to
+                                get the Tube from Westminster to London Bridge. I was in my seat, and when I looked up,
+                                I noticed a poster on the wall of the carriage with a poem on it. So I read it aloud –
+                                it was short, only a few lines. A very romantic poem, about what it feels like to be in
+                                love. And this girl opposite me said, 'That was beautiful. Did you write it?' She didn't
+                                know I was reading it from a poster! Anyway, <span class="highlightable"
+                                    id="text-ex5-2">we started chatting and ended up swapping phone numbers. We see each
+                                    other quite often now.</span></span></span>
+                    </div>
+
+                    <div style="font-weight:700; margin:16px 0 8px 0;">Speaker 3</div>
+                    <div class="speaker-line">
+                        <span><span class="highlightable" id="text-ex4-s3">When I was about ten years old, I had a big
+                                argument with my best friend, Louise. I can't remember what it was about. I just
+                                remember we fell out badly and weren't talking to each other. I felt terrible. <span
+                                    class="highlightable" id="text-ex5-3">So I wrote her this poem.</span> It was all
+                                about why I liked her and why I was sorry that I had upset her. I wanted to stay best
+                                friends with her. I wrote it on a piece of paper and put it through her door. That
+                                evening, she called me and said, 'Do you want to come round and play?' And that was it –
+                                everything was OK again. It was probably a terrible poem, but it worked! And of course,
+                                I meant it.</span></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="reading-resizer" id="reading-resizer"></div>
+
+            <!-- Right Panel: Main Exercise Stack -->
+            <div class="main-exercise-panel" id="main-exercise-panel">
+
+                <!-- Exercise 1 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">1. Complete the sentences with the words and phrases below.</div>
+                    <div class="word-bank" id="ex1-word-bank">
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">apathetic</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">era</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">foolish</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">lethargic</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">the norm</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">peers</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">quick fix</span>
+                        <span class="word-item" draggable="true" ondragstart="handleDragStart(event)">straight</span>
+                    </div>
+                    <div id="questions-ex1"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 2 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">2. 🎧 2.03 Read the Listening Strategy. Then listen to four monologues
+                        and circle the correct implication for each speaker.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.03')">📜 Show Transcript
+                        2.03</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_03.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex2"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 3 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">3. 🎧 2.03 Listen again and complete the sentences from the monologues.
+                        Use them to help check your answers to exercise 2.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.03')">📜 Show Transcript
+                        2.03</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_03.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex3"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 4 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">4. 🎧 2.04 Read the poem and listen to three speakers talking about
+                        poetry. Which speaker is talking about the poem below?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.04')">📜 Show Transcript
+                        2.04</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_04.wav" type="audio/wav">
+                        </audio>
+                    </div>
+
+                    <div class="poem-block">
+                        <div class="poem-title">Our Meetings</div>
+                        <div class="poem-author">BY ANDREW WATERMAN</div>
+                        <div class="poem-line">As in the Underground there's no mistaking</div>
+                        <div class="poem-line">the train's approach, it pushes air ahead,</div>
+                        <div class="poem-line">whirls paper, the line sings, a sort-of dread</div>
+                        <div class="poem-line">suffusing longing and my platform shaking –</div>
+                        <div class="poem-line">so it is before our every meeting,</div>
+                        <div class="poem-line">till you arrive. Hear how my heart is beating.</div>
+                    </div>
+
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Exercise 5 -->
+                <div class="exercise-card">
+                    <div class="exercise-title">5. 🎧 2.04 Listen again. Match speakers 1–3 with sentences A–F. There
+                        are two extra sentences.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('2.04')">📜 Show Transcript
+                        2.04</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/2_Track_04.wav" type="audio/wav">
+                        </audio>
+                    </div>
+
+
+
+
+
+                    <div id="questions-ex5"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        /* ── DATA ─────────────────────────────────────────────────── */
+
+        // Exercise 1
+        const ex1Data = [
+            { q: "She was feeling ______, so she spent the afternoon watching DVDs.", ans: "lethargic", hint: "<strong>Đáp án: lethargic</strong><br>Dịch: Cô ấy cảm thấy uể oải, vì vậy cô đã dành cả buổi chiều để xem DVD.<br><em>lethargic</em> = mệt mỏi, uể oải, thiếu năng lượng." },
+            { q: "She loves classical music, though most of her ______ prefer pop.", ans: "peers", hint: "<strong>Đáp án: peers</strong><br>Dịch: Cô ấy thích nhạc cổ điển, mặc dù hầu hết bạn bè cùng trang lứa của cô thích nhạc pop.<br><em>peers</em> = những người cùng tuổi, cùng địa vị xã hội." },
+            { q: "Unfortunately, there is no ______ for the problem of homelessness.", ans: "quick fix", hint: "<strong>Đáp án: quick fix</strong><br>Dịch: Thật không may, không có giải pháp nhanh chóng cho vấn đề vô gia cư.<br><em>quick fix</em> = giải pháp tức thời, giải pháp nhanh nhưng thường không bền vững." },
+            { q: "Some people complete their degree in four years, though three years is ______.", ans: "the norm", hint: "<strong>Đáp án: the norm</strong><br>Dịch: Một số người hoàn thành bằng cấp trong bốn năm, mặc dù ba năm là tiêu chuẩn thông thường.<br><em>the norm</em> = điều bình thường, tiêu chuẩn, thông lệ." },
+            { q: "It's easy to become ______ about your future when there don't seem to be many opportunities on offer.", ans: "apathetic", hint: "<strong>Đáp án: apathetic</strong><br>Dịch: Thật dễ dàng để trở nên thờ ơ về tương lai của bạn khi dường như không có nhiều cơ hội.<br><em>apathetic</em> = thờ ơ, lãnh đạm, không quan tâm." },
+            { q: "We need to get these things ______ to avoid similar misunderstandings in future.", ans: "straight", hint: "<strong>Đáp án: straight</strong><br>Dịch: Chúng ta cần giải quyết những vấn đề này để tránh những hiểu lầm tương tự trong tương lai.<br><em>get things straight</em> = sắp xếp, giải quyết rõ ràng." },
+            { q: "It's quite an interesting play, but it isn't very relevant to our ______.", ans: "era", hint: "<strong>Đáp án: era</strong><br>Dịch: Đó là một vở kịch khá thú vị, nhưng nó không liên quan lắm đến thời đại của chúng ta.<br><em>era</em> = kỷ nguyên, thời đại." },
+            { q: "I felt ______ when I realised that I had sent the email to the wrong person.", ans: "foolish", hint: "<strong>Đáp án: foolish</strong><br>Dịch: Tôi cảm thấy thật ngu ngốc khi nhận ra rằng mình đã gửi email nhầm người.<br><em>foolish</em> = ngu ngốc, dại dột." }
+        ];
+
+        // Exercise 2
+        const ex2Data = [
+            { q: "Monologue 1", opts: ["a. Josh enjoyed the modern dance performance a lot.", "b. Josh didn't really enjoy the modern dance performance."], ans: "b", target: "text-ex2-1", hint: "<strong>Đáp án: b – Josh didn't really enjoy the modern dance performance.</strong><br>Transcript: <em>'Well … let's just say this: I'm glad Katy liked it.'</em><br>Lời nói ngụ ý rằng bản thân Josh không thích buổi biểu diễn, nhưng anh ấy vui vì Katy thích nó." },
+            { q: "Monologue 2", opts: ["a. Hannah expected to get a part in the show.", "b. Hannah didn't expect to get a part in the show."], ans: "b", target: "text-ex2-2", hint: "<strong>Đáp án: b – Hannah didn't expect to get a part in the show.</strong><br>Transcript: <em>'That was no big surprise – there was only one part, and nearly 200 people went to the audition!'</em><br>Hannah nói rằng không có gì đáng ngạc nhiên khi cô ấy không nhận được vai, vì có quá nhiều người dự tuyển." },
+            { q: "Monologue 3", opts: ["a. Ben is a big fan of modern art.", "b. Ben is not very keen on modern art."], ans: "b", target: "text-ex2-3", hint: "<strong>Đáp án: b – Ben is not very keen on modern art.</strong><br>Transcript: <em>'With a lot of the pictures, it was hard to see the point. I just looked at them and thought, I could do that.'</em><br>Ben nói rằng khó để thấy được ý nghĩa của các bức tranh và nghĩ rằng mình cũng có thể làm được điều đó, cho thấy anh không có ấn tượng tốt với nghệ thuật hiện đại." },
+            { q: "Monologue 4", opts: ["a. Fatima prefers modern pop to 1980s pop.", "b. Fatima prefers 1980s pop to modern pop."], ans: "a", target: "text-ex2-4", hint: "<strong>Đáp án: a – Fatima prefers modern pop to 1980s pop.</strong><br>Transcript: <em>'He claims it's much better than today's pop music, but that's ridiculous.'</em><br>Fatima cho rằng việc bố cô cho rằng nhạc những năm 1980 hay hơn là vô lý, ngụ ý cô thích nhạc pop hiện đại hơn." }
+        ];
+
+        // Exercise 3
+        const ex3Data = [
+            { q: "Let's ______ this: I'm glad Katy liked it!", ans: "just say", target: "text-ex3-1", hint: "<strong>Đáp án: just say</strong><br>Cụm đầy đủ: <em>Let's just say this: I'm glad Katy liked it!</em><br>Dịch: Hãy cứ nói thế này: Tôi mừng vì Katy thích nó!<br>'Let's just say' được dùng để đưa ra một nhận xét một cách dè dặt hoặc ngụ ý điều khác." },
+            { q: "That was ______ surprise – there was only one part.", ans: "no big", target: "text-ex3-2", hint: "<strong>Đáp án: no big</strong><br>Cụm đầy đủ: <em>That was no big surprise – there was only one part.</em><br>Dịch: Đó không phải là điều gì quá bất ngờ – chỉ có một vai diễn duy nhất.<br>'No big surprise' = không có gì đáng ngạc nhiên." },
+            { q: "With a lot of the pictures, it was ______ the point.", ans: "hard to see", target: "text-ex3-3", hint: "<strong>Đáp án: hard to see</strong><br>Cụm đầy đủ: <em>With a lot of the pictures, it was hard to see the point.</em><br>Dịch: Với nhiều bức tranh, thật khó để thấy được ý nghĩa của chúng.<br>'Hard to see the point' = khó hiểu được ý nghĩa, mục đích." },
+            { q: "He claims it's much better than today's pop music, but ______.", ans: "that's ridiculous", target: "text-ex3-4", hint: "<strong>Đáp án: that's ridiculous</strong><br>Cụm đầy đủ: <em>He claims it's much better than today's pop music, but that's ridiculous.</em><br>Dịch: Ông ấy cho rằng nó hay hơn nhiều so với nhạc pop ngày nay, nhưng điều đó thật vô lý.<br>'That's ridiculous' = thật vô lý, không thể tin được." },
+            { q: "You have to work out what's happening – although it's probably all in Italian, so you can't understand it – and it goes on for ______.", ans: "hours and hours", target: "text-ex3-5b", hint: "<strong>Đáp án: hours and hours</strong><br>Cụm đầy đủ: <em>... and it goes on for hours and hours.</em><br>Dịch: ... và nó kéo dài hàng giờ đồng hồ.<br>'Hours and hours' = nhiều giờ, rất lâu (nhấn mạnh khoảng thời gian dài)." }
+        ];
+
+        // Exercise 4
+        const ex4Data = [
+            { q: "Speaker ___ is talking about this poem.", ans: "3", opts: ["1", "2", "3"], targets: ["text-ex4-s3"], hint: "<strong>Đáp án: Speaker 3</strong><br>Transcript Speaker 3: <em>'So I wrote her this poem... I wrote it on a piece of paper and put it through her door.'</em><br>Bài thơ 'Our Meetings' nói về cảm xúc khi gặp gỡ một người – điều này tương ứng với việc Speaker 3 viết một bài thơ xin lỗi bạn mình. Speaker 1 chỉ nghe người khác đọc thơ, Speaker 2 tình cờ đọc thơ trên tàu điện ngầm." }
+        ];
+
+        // Exercise 5 – đúng như ảnh: A–E có đáp án, F là extra
+        const ex5Data = [
+            {
+                letter: "A", text: "wanted a career in poetry.",
+                ans: "", target: "",
+                hint: "<strong>A = extra (không khớp speaker nào)</strong><br>Không có speaker nào đề cập muốn theo đuổi sự nghiệp thơ ca. Speaker 1 chỉ học thuộc thơ để đọc cho con nghe, không phải muốn trở thành nhà thơ."
+            },
+            {
+                letter: "B", text: "used a poem to apologise to somebody.",
+                ans: "3", target: "text-ex5-3",
+                hint: "<strong>B = Speaker 3</strong><br>Transcript: <em>'So I wrote her this poem. It was all about why I liked her and why I was sorry that I had upset her.'</em><br>Speaker 3 đã viết một bài thơ để xin lỗi người bạn thân nhất sau một cuộc cãi vã."
+            },
+            {
+                letter: "C", text: "made a new friend as the result of reading a poem.",
+                ans: "2", target: "text-ex5-2",
+                hint: "<strong>C = Speaker 2</strong><br>Transcript: <em>'we started chatting and ended up swapping phone numbers. We see each other quite often now.'</em><br>Speaker 2 gặp một cô gái trên tàu điện ngầm sau khi đọc thơ to và họ đã trở thành bạn bè."
+            },
+            {
+                letter: "D", text: "tried to persuade somebody to like a particular poem, but failed.",
+                ans: "", target: "",
+                hint: "<strong>D = extra (không khớp speaker nào)</strong><br>Không có speaker nào cố thuyết phục người khác thích một bài thơ cụ thể nhưng thất bại."
+            },
+            {
+                letter: "E", text: "enjoyed poems without really understanding them.",
+                ans: "1", target: "text-ex5-1",
+                hint: "<strong>E = Speaker 1</strong><br>Transcript: <em>'My sister and I loved them, although I'm not sure we understood them very well.'</em><br>Speaker 1 và em gái thích những bài thơ chú đọc mặc dù không hiểu hết ý nghĩa."
+            },
+
+        ];
+
+        /* ── DRAG & DROP HANDLERS (Exercise 1) ── */
+        let draggedWord = null;
+
+        function handleDragStart(e) {
+            draggedWord = e.target;
+            e.dataTransfer.setData('text/plain', e.target.innerText);
+            e.target.classList.add('dragging');
+        }
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedWord) draggedWord.classList.remove('dragging');
+        });
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+
+            if (slot.classList.contains('filled')) {
+                const oldWord = slot.innerText;
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === oldWord) item.classList.remove('used');
+                });
+            }
+
+            slot.innerText = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+
+            if (draggedWord) {
+                draggedWord.classList.add('used');
+                draggedWord = null;
+            }
+        }
+
+        function handleSlotClick(slot) {
+            if (!slot.classList.contains('filled')) return;
+            const word = slot.innerText;
+            slot.innerText = "";
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+            bankItems.forEach(item => {
+                if (item.innerText === word) item.classList.remove('used');
+            });
+        }
+
+        /* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+        // ----- Exercise 1 -----
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            container.innerHTML = '';
+            ex1Data.forEach((it, i) => {
+                const qid = `ex1-q${i}`;
+                const parts = it.q.split('______');
+                let html = `<span style="font-weight:500;">${i + 1}. </span>`;
+                parts.forEach((part, idx) => {
+                    html += part;
+                    if (idx < parts.length - 1) {
+                        const slotId = `${qid}-slot`;
+                        html += `
+                            <span class="drop-slot" id="${slotId}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)" style="min-width:90px;"></span>
+                            <span class="inline-controls">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx1('${slotId}')">👁️</button>
+                                <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showHintOnly('${qid}-hint')">i</button>
+                            </span>
+                        `;
+                    }
+                });
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        ${html}
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 2 (option cards dọc) -----
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = '';
+            ex2Data.forEach((it, i) => {
+                const qid = `ex2-q${i}`;
+                const optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`
+                ).join('');
+                const targetsStr = "['" + it.target + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem;">${it.q}</div>
+                        <div class="option-group-vertical">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '2.03')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 3 -----
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = '';
+            ex3Data.forEach((it, i) => {
+                const qid = `ex3-q${i}`;
+                const parts = it.q.split('______');
+                let html = `<span style="font-weight:500;">${i + 1}. </span>`;
+                let inputId = `${qid}-inp`;
+                parts.forEach((part, idx) => {
+                    html += part;
+                    if (idx < parts.length - 1) {
+                        html += `
+                            <span class="inline-controls">
+                                <input type="text" id="${inputId}" data-ans="${it.ans}" class="phrase-gap-input" autocomplete="off" style="min-width:80px;">
+                                <button class="eye-btn" style="width:22px; height:22px; font-size:10px;" onclick="showSingleAnsEx3('${inputId}')">👁️</button>
+                                <button class="hint-btn" style="width:18px; height:18px; font-size:9px;" onclick="showReadingHint(event, ['${it.target}'], '${qid}-hint', '2.03')">i</button>
+                            </span>
+                        `;
+                    }
+                });
+                container.innerHTML += `
+                    <div class="question-row" style="margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
+                        ${html}
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 4 (radio) -----
+        function renderEx4() {
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = '';
+            ex4Data.forEach((it, i) => {
+                const qid = `ex4-q${i}`;
+                const optsHtml = it.opts.map(o =>
+                    `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> Speaker ${o}</label>`
+                ).join('');
+                const targetsStr = "['" + it.targets.join("','") + "']";
+                container.innerHTML += `
+                    <div class="question-row" style="display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--glass-border);">
+                        <div style="font-weight:600; font-size:1.02rem;">${it.q}</div>
+                        <div class="option-group-vertical">${optsHtml}</div>
+                        <div class="row-btns" style="margin-left:0;">
+                            <button class="eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, ${targetsStr}, '${qid}-hint', '2.04')">i</button>
+                        </div>
+                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ----- Exercise 5 (matching: điền số speaker) -----
+        function renderEx5() {
+            const container = document.getElementById('questions-ex5');
+            const rowsHtml = ex5Data.map((it, i) => {
+                const qid = `ex5-q${i}`;
+                const targetsStr = it.target ? `['${it.target}']` : `[]`;
+                const hintOnclick = it.target
+                    ? `showReadingHint(event, ${targetsStr}, '${qid}-hint', '2.04')`
+                    : `showHintOnly('${qid}-hint')`;
+                return `
+                    <div class="question-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                        <span style="font-weight:700; color:var(--primary-dark); min-width:18px; flex-shrink:0;">${it.letter}</span>
+                        <span style="flex:1; min-width:200px; font-size:0.97rem;">${it.text}</span>
+                        <span style="display:inline-flex; align-items:center; gap:6px; flex-shrink:0;">
+                            <input type="text" id="${qid}-inp" data-ans="${it.ans}"
+                                class="matching-input"
+                                style="width:36px; height:36px; text-align:center; font-weight:700; font-size:1rem; border:2px solid var(--border-medium); border-radius:6px; background:var(--card-bg);"
+                                autocomplete="off" maxlength="1" placeholder="">
+                            <button class="eye-btn" onclick="showSingleAnsEx5('${qid}-inp')">👁️</button>
+                            <button class="hint-btn" onclick="${hintOnclick}">i</button>
+                        </span>
+                        <div class="hint-box" id="${qid}-hint" style="flex-basis:100%;">
+                            <div class="hint-detail">${it.hint}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+            container.innerHTML = `
+                <p style="font-size:0.97rem; margin-bottom:14px; color:var(--text-muted);">The speaker:</p>
+                ${rowsHtml}`;
+        }
+
+        function showSingleAnsEx5(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            if (el.value === el.dataset.ans && el.classList.contains('correct')) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                document.querySelectorAll('.highlightable').forEach(e => e.classList.remove('active-highlight'));
+                return;
+            }
+            el.value = el.dataset.ans || '–';
+            el.classList.remove('incorrect-marked');
+            if (el.dataset.ans) el.classList.add('correct');
+            const i = parseInt(inputId.replace('ex5-q', '').replace('-inp', ''));
+            const it = ex5Data[i];
+            if (it && it.target) {
+                const panel = document.getElementById('transcript-panel');
+                if (panel && !panel.classList.contains('active')) toggleTranscript('2.04', true);
+                const targetEl = document.getElementById(it.target);
+                if (targetEl) {
+                    document.querySelectorAll('.highlightable').forEach(e => e.classList.remove('active-highlight'));
+                    targetEl.classList.add('active-highlight');
+                    setTimeout(() => targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+                }
+            }
+        }
+
+        /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
+
+        // Ex1: show single answer (drop-slot)
+        function showSingleAnsEx1(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.classList.contains('filled') && slot.innerText === ans) {
+                const word = slot.innerText;
+                slot.innerText = "";
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === word) item.classList.remove('used');
+                });
+            } else {
+                if (slot.classList.contains('filled')) {
+                    const oldWord = slot.innerText;
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === oldWord) item.classList.remove('used');
+                    });
+                }
+                slot.innerText = ans;
+                slot.classList.add('filled', 'correct');
+                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                bankItems.forEach(item => {
+                    if (item.innerText === ans) item.classList.add('used');
+                });
+            }
+        }
+
+        // Ex2 & Ex4: radio
+        function showSingleAnsRadio(qid, ans) {
+            const radios = document.querySelectorAll(`input[name="${qid}"]`);
+            let targetRadio = null;
+            radios.forEach(r => {
+                const val = r.value;
+                if (val === ans || val.startsWith(ans + '.') || val.startsWith(ans + ' ')) {
+                    targetRadio = r;
+                }
+            });
+            if (targetRadio) {
+                const card = targetRadio.closest('.option-card');
+                const group = card.closest('.option-group-vertical');
+                group.querySelectorAll('.option-card').forEach(c => {
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    c.querySelector('input').checked = false;
+                });
+                targetRadio.checked = true;
+                card.classList.add('selected', 'correct-card');
+            }
+        }
+
+        // Ex3: show single answer
+        function showSingleAnsEx3(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const ans = el.dataset.ans.trim();
+            const current = el.value.trim();
+            if (current.toLowerCase() === ans.toLowerCase()) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+
+        // ----- Shared -----
+        function toggleTranscript(track, forceOpen = false) {
+            const panel = document.getElementById('transcript-panel');
+            const sections = document.querySelectorAll('.script-section');
+            const targetId = `script-${track.replace('.', '-')}`;
+            const targetSection = document.getElementById(targetId);
+
+            if (!forceOpen && panel.classList.contains('active') && targetSection && targetSection.classList.contains('active')) {
+                panel.classList.remove('active');
+                return;
+            }
+            sections.forEach(s => s.classList.remove('active'));
+            if (targetSection) targetSection.classList.add('active');
+            panel.classList.add('active');
+        }
+
+        function showReadingHint(event, targets, hintBoxId, track) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            if (isVisible) {
+                hintBox.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            if (track) {
+                toggleTranscript(track, true);
+            }
+
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+
+            hintBox.style.display = 'block';
+
+            if (targets && targets.length) {
+                const elements = [];
+                targets.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        elements.push(el);
+                    }
+                });
+                if (elements.length) {
+                    setTimeout(() => {
+                        elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 150);
+                }
+            }
+        }
+
+        function showHintOnly(hintBoxId) {
+            const hintBox = document.getElementById(hintBoxId);
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+            }
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            const w = Math.max(text.length * 12 + 30, 80);
+            el.style.width = w + 'px';
+        }
+
+        // ── CHECK ALL ──
+        function checkAll() {
+            // Ex1: drop-slots
+            document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                if (!slot.classList.contains('filled')) {
+                    slot.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.trim().toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex2: radio
+            document.querySelectorAll('#questions-ex2 .option-group-vertical').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex2Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value.startsWith(correctAns + '.') || checked.value === correctAns;
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+
+            // Ex3: input
+            document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                if (!el.value) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.trim().toLowerCase();
+                const current = el.value.trim().toLowerCase();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+
+            // Ex4: radio
+            document.querySelectorAll('#questions-ex4 .option-group-vertical').forEach(grp => {
+                const checked = grp.querySelector('input:checked');
+                grp.querySelectorAll('.option-card').forEach(c => c.classList.remove('correct-card', 'incorrect-card'));
+                if (checked) {
+                    const qname = checked.name;
+                    const idx = parseInt(qname.split('-q')[1]);
+                    const correctAns = ex4Data[idx].ans;
+                    const card = checked.closest('.option-card');
+                    const ok = checked.value === correctAns;
+                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+                }
+            });
+
+            // Ex5: matching input (chỉ kiểm tra nếu đã điền)
+            document.querySelectorAll('#questions-ex5 .matching-input').forEach(el => {
+                if (!el.value) {
+                    el.classList.remove('correct', 'incorrect-marked');
+                    return;
+                }
+                const ans = el.dataset.ans.trim();
+                const current = el.value.trim();
+                const ok = current === ans;
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                    const ans = slot.dataset.ans;
+                    if (slot.classList.contains('filled')) {
+                        const oldWord = slot.innerText;
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === oldWord) item.classList.remove('used');
+                        });
+                    }
+                    slot.innerText = ans;
+                    slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
+                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    bankItems.forEach(item => {
+                        if (item.innerText === ans) item.classList.add('used');
+                    });
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                ex2Data.forEach((it, i) => {
+                    const qid = `ex2-q${i}`;
+                    const radios = document.querySelectorAll(`input[name="${qid}"]`);
+                    radios.forEach(r => {
+                        const card = r.closest('.option-card');
+                        if (r.value.startsWith(it.ans + '.') || r.value === it.ans) {
+                            const group = card.closest('.option-group-vertical');
+                            group.querySelectorAll('.option-card').forEach(c => {
+                                c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                                c.querySelector('input').checked = false;
+                            });
+                            r.checked = true;
+                            card.classList.add('selected', 'correct-card');
+                        }
+                    });
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex4') {
+                ex4Data.forEach((it, i) => {
+                    const qid = `ex4-q${i}`;
+                    const radio = document.querySelector(`input[name="${qid}"][value="${it.ans}"]`);
+                    if (radio) {
+                        const card = radio.closest('.option-card');
+                        const group = card.closest('.option-group-vertical');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        radio.checked = true;
+                        card.classList.add('selected', 'correct-card');
+                    }
+                });
+                return;
+            }
+            if (prefix === 'ex5') {
+                document.querySelectorAll('#questions-ex5 .matching-input').forEach(el => {
+                    const ans = el.dataset.ans;
+                    if (ans) {
+                        el.value = ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                    }
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 .drop-slot').forEach(slot => {
+                    if (slot.classList.contains('filled')) {
+                        const word = slot.innerText;
+                        slot.innerText = "";
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                        bankItems.forEach(item => {
+                            if (item.innerText === word) item.classList.remove('used');
+                        });
+                    }
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 .phrase-gap-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('#questions-ex4 input[type="radio"]').forEach(r => {
+                    r.checked = false;
+                    const card = r.closest('.option-card');
+                    if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
+                });
+            } else if (prefix === 'ex5') {
+                document.querySelectorAll('#questions-ex5 .matching-input').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                });
+            }
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        }
+
+        /* ── INIT ─────────────────────────────────────────────────── */
+
+        window.onload = function () {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+
+            // Adjust width
+            document.querySelectorAll('.phrase-gap-input, .matching-input').forEach(el => {
+                if (el.placeholder) {
+                    el.setAttribute('data-placeholder', el.placeholder);
+                }
+                adjustWidth(el);
+            });
+
+            document.body.addEventListener('input', function (e) {
+                if (e.target.classList.contains('phrase-gap-input') || e.target.classList.contains('matching-input')) {
+                    adjustWidth(e.target);
+                    e.target.classList.remove('correct', 'incorrect-marked');
+                }
+            });
+
+            // Theme toggle
+            const toggle = document.getElementById('theme-toggle');
+            toggle.onclick = function () {
+                const cur = document.documentElement.getAttribute('data-theme');
+                const next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                this.innerText = next === 'dark' ? '☀️' : '🌙';
+                localStorage.setItem('access-theme', next);
+            };
+
+            // Enter key triggers checkAll
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') checkAll();
+            });
+
+            // Click on option card selects radio
+            document.body.addEventListener('click', function (e) {
+                const card = e.target.closest('.option-card');
+                if (card) {
+                    const r = card.querySelector('input[type="radio"]');
+                    if (r) {
+                        const group = card.closest('.option-group-vertical');
+                        group.querySelectorAll('.option-card').forEach(c => {
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                            c.querySelector('input').checked = false;
+                        });
+                        r.checked = true;
+                        card.classList.add('selected');
+                    }
+                }
+            });
+
+            // Resizer logic
+            const resizer = document.getElementById('reading-resizer');
+            const panel = document.getElementById('transcript-panel');
+            let isResizing = false;
+            resizer.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const containerWidth = document.querySelector('.reading-split-container').offsetWidth;
+                let newWidth = (e.clientX / containerWidth) * 100;
+                if (newWidth < 20) newWidth = 20;
+                if (newWidth > 80) newWidth = 80;
+                panel.style.flex = `0 0 ${newWidth}%`;
+            });
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+                document.body.style.cursor = '';
+            });
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
