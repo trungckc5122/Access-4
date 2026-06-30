@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 4A Describing houses and homes</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== AUDIO ===== */
+        .audio-player-container {
+            margin: 10px 0 20px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        /* ===== VOCABULARY REFERENCE (collapsible) ===== */
+        .custom-landscape-container {
+            margin-bottom: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+            display: block;
+        }
+
+        .custom-landscape-header {
+            background: var(--primary-light);
+            padding: 18px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-landscape-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .custom-landscape-content {
+            display: none;
+            padding: 25px;
+            position: relative;
+            background: var(--bg);
+        }
+
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .vocab-item {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: 180px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        [data-theme="dark"] .vocab-item {
+            background: var(--card-bg);
+            border-color: var(--glass-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="dark"] .custom-landscape-container {
+            background: var(--card-bg);
+        }
+
+        /* ===== HIGHLIGHT (not used here but kept for consistency) ===== */
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.4);
+            box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            border-radius: 4px;
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ===== HINT BOX ===== */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            transition: none !important;
+        }
+
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 280px;
+            max-width: 340px;
+            margin-top: 5px;
+            z-index: 200;
+        }
+
+        /* Prevent hint boxes from overflowing the right edge of narrow containers */
+        .ex1-row .hint-box.absolute,
+        .ex2-row .hint-box.absolute,
+        .ex3-row .hint-box.absolute {
+            left: auto;
+            right: 0;
+        }
+
+        @media (max-width: 600px) {
+            .hint-box.absolute {
+                left: 0 !important;
+                right: 0 !important;
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+
+        .hint-box strong {
+            color: var(--primary-dark);
+        }
+
+        .hint-box em {
+            color: var(--accent, #0d9488);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        /* ===== INLINE GROUP ===== */
+        .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+        /* ===== ROW BTNS ===== */
+        .row-btns {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+
+        /* ===== CONTROLS ===== */
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        /* ===== EXERCISE 1: vowel fill-in, 2-column grid ===== */
+        .ex1-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 30px;
+            margin-top: 10px;
+        }
+
+        .ex1-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex1-row .task5-input {
+            min-width: 160px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.05rem;
+            letter-spacing: 1px;
+        }
+
+        .ex1-row .task5-input.correct {
+            border-bottom-color: var(--success, #16a34a);
+            color: var(--success, #16a34a);
+        }
+
+        .ex1-row .task5-input.incorrect-marked {
+            border-bottom-color: var(--error, #dc2626);
+            color: var(--error, #dc2626);
+        }
+
+        /* ===== EXERCISE 2: picture + labels side-by-side ===== */
+        .ex2-split {
+            display: flex;
+            gap: 35px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .ex2-img-box {
+            flex: 0 0 650px;
+            width: 180%;
+            min-width: 320px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .ex2-img-box img {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .ex2-labels-box {
+            flex: 1;
+            min-width: 260px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 24px;
+        }
+
+        .ex2-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex2-row .task5-input {
+            min-width: 110px;
+            font-size: 0.98rem;
+        }
+
+        .ex2-row .task5-input.correct {
+            border-bottom-color: var(--success, #16a34a);
+            color: var(--success, #16a34a);
+        }
+
+        .ex2-row .task5-input.incorrect-marked {
+            border-bottom-color: var(--error, #dc2626);
+            color: var(--error, #dc2626);
+        }
+
+        /* ===== EXERCISE 3: listening gap-fill paragraph ===== */
+        .ex3-paragraph {
+            line-height: 2.4;
+            font-size: 1.02rem;
+            color: var(--text);
+            margin-top: 15px;
+        }
+
+        .ex3-row {
+            position: relative;
+        }
+
+        .ex3-paragraph .task5-input {
+            min-width: 160px;
+        }
+
+        .ex3-paragraph .task5-input.correct {
+            border-bottom-color: var(--success, #16a34a);
+            color: var(--success, #16a34a);
+        }
+
+        .ex3-paragraph .task5-input.incorrect-marked {
+            border-bottom-color: var(--error, #dc2626);
+            color: var(--error, #dc2626);
+        }
+
+        /* ===== DARK MODE ===== */
+        [data-theme="dark"] .hint-box {
+            background: var(--hint-bg);
+            color: var(--hint-text);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .ex2-split {
+                flex-direction: column;
+            }
+
+            .ex2-img-box {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: 480px;
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .vocab-item {
+                flex: 1 1 100%;
+            }
+
+            .ex1-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ex2-labels-box {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== FIX: home button alignment (matches preinterm) ===== */
+        .solution-title-row h1 {
+            justify-content: flex-start !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <div class="container">
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary</div>
+                <h1>Describing houses and homes</h1>
+                <p class="subtitle">I can describe houses and homes.</p>
+            </div>
+        </div>
+
+        <!-- Vocabulary Reference (collapsible) -->
+        <div class="custom-landscape-container">
+            <div class="custom-landscape-header" onclick="toggleVocab()">
+                <h3>Vocabulary Reference: Houses &amp; Homes</h3>
+                <span id="vocabIcon" style="font-size:1.2rem;">▼</span>
+            </div>
+            <div class="custom-landscape-content" id="vocabContent">
+                <ul class="vocab-grid">
+                    <li class="vocab-item"><strong>mansion</strong> /ˈmæn.ʃən/: dinh thự, biệt thự lớn</li>
+                    <li class="vocab-item"><strong>farmhouse</strong> /ˈfɑːm.haʊs/: nhà nông trại</li>
+                    <li class="vocab-item"><strong>villa</strong> /ˈvɪl.ə/: biệt thự</li>
+                    <li class="vocab-item"><strong>mobile home</strong> /ˈməʊ.baɪl həʊm/: nhà di động</li>
+                    <li class="vocab-item"><strong>flat</strong> /flæt/: căn hộ chung cư</li>
+                    <li class="vocab-item"><strong>bungalow</strong> /ˈbʌŋ.ɡə.ləʊ/: nhà cấp 4 (1 tầng)</li>
+                    <li class="vocab-item"><strong>houseboat</strong> /ˈhaʊs.bəʊt/: nhà thuyền</li>
+                    <li class="vocab-item"><strong>terraced house</strong> /ˈter.əst haʊs/: nhà liền kề</li>
+                    <li class="vocab-item"><strong>semi-detached house</strong> /ˌsem.i.dɪˈtætʃt haʊs/: nhà song lập
+                    </li>
+                    <li class="vocab-item"><strong>thatched cottage</strong> /θætʃt ˈkɒt.ɪdʒ/: nhà tranh mái rạ</li>
+                    <li class="vocab-item"><strong>detached house</strong> /dɪˈtætʃt haʊs/: nhà biệt lập</li>
+                    <li class="vocab-item"><strong>fence</strong> /fens/: hàng rào</li>
+                    <li class="vocab-item"><strong>extension</strong> /ɪkˈsten.ʃən/: phần xây thêm</li>
+                    <li class="vocab-item"><strong>balcony</strong> /ˈbæl.kə.ni/: ban công</li>
+                    <li class="vocab-item"><strong>shutters</strong> /ˈʃʌt.əz/: cửa chớp</li>
+                    <li class="vocab-item"><strong>gate</strong> /ɡeɪt/: cổng</li>
+                    <li class="vocab-item"><strong>basement</strong> /ˈbeɪs.mənt/: tầng hầm</li>
+                    <li class="vocab-item"><strong>flower bed</strong> /ˈflaʊ.ə bed/: luống hoa</li>
+                    <li class="vocab-item"><strong>porch</strong> /pɔːtʃ/: hiên nhà</li>
+                    <li class="vocab-item"><strong>conservatory</strong> /kənˈsɜː.və.tər.i/: phòng kính trồng cây</li>
+                    <li class="vocab-item"><strong>sliding doors</strong> /ˈslaɪ.dɪŋ dɔːz/: cửa trượt</li>
+                    <li class="vocab-item"><strong>patio</strong> /ˈpæt.i.əʊ/: sân hiên lát đá</li>
+                    <li class="vocab-item"><strong>lawn</strong> /lɔːn/: bãi cỏ</li>
+                    <li class="vocab-item"><strong>path</strong> /pɑːθ/: lối đi</li>
+                    <li class="vocab-item"><strong>pond</strong> /pɒnd/: ao</li>
+                    <li class="vocab-item"><strong>drive</strong> /draɪv/: lối xe vào nhà</li>
+                    <li class="vocab-item"><strong>garage</strong> /ˈɡær.ɑːʒ/: nhà để xe / ga-ra</li>
+                    <li class="vocab-item"><strong>hedge</strong> /hedʒ/: hàng rào cây xanh</li>
+                    <li class="vocab-item"><strong>contemporary</strong> /kənˈtem.pər.ər.i/: hiện đại, đương đại</li>
+                    <li class="vocab-item"><strong>impressive</strong> /ɪmˈpres.ɪv/: ấn tượng</li>
+                    <li class="vocab-item"><strong>lively area</strong> /ˈlaɪv.li ˈeə.ri.ə/: khu vực sôi động</li>
+                    <li class="vocab-item"><strong>conveniently located</strong> /kənˈviː.ni.ənt.li ˈləʊ.keɪ.tɪd/: vị
+                        trí thuận tiện</li>
+                    <li class="vocab-item"><strong>cramped</strong> /kræmpt/: chật chội</li>
+                    <li class="vocab-item"><strong>spacious</strong> /ˈspeɪ.ʃəs/: rộng rãi</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ========== EXERCISE 1: Complete types of home with vowels ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the types of home with <strong>a, e, i, o</strong> and
+                <strong>u</strong>.
+            </div>
+            <div class="ex1-grid" id="questions-ex1"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EXERCISE 2: Picture + labels side by side ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Look at the picture and complete the labels.</div>
+            <div class="ex2-split">
+                <div class="ex2-img-box">
+                    <img src="img-int/module 4a-ex1.png" alt="House exterior with numbered labels">
+                </div>
+                <div class="ex2-labels-box" id="questions-ex2"></div>
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EXERCISE 3: Listening - complete the description ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title">3. 🎧 1.17 Listen to someone describing their ideal home. Complete the
+                description with the missing words.</div>
+            <div class="audio-player-container">
+                <audio controls>
+                    <source src="audio-int/1_Track_17.wav" type="audio/wav">
+                </audio>
+            </div>
+            <div class="ex3-paragraph" id="questions-ex3"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        // ===================== DATA =====================
+
+        // Exercise 1: types of home (vowel fill-in)
+        const ex1Data = [
+            {
+                id: 'ex1-1', word: 'mansion', placeholder: 'm_ns__ _n',
+                hint: '<strong>Đáp án:</strong> mansion<br><strong>Giải thích:</strong> <em>mansion</em> /ˈmæn.ʃən/ — dinh thự, biệt thự lớn và sang trọng.'
+            },
+            {
+                id: 'ex1-2', word: 'farmhouse', placeholder: 'f_rmh__ _s_',
+                hint: '<strong>Đáp án:</strong> farmhouse<br><strong>Giải thích:</strong> <em>farmhouse</em> /ˈfɑːm.haʊs/ — ngôi nhà nằm trong trang trại.'
+            },
+            {
+                id: 'ex1-3', word: 'villa', placeholder: 'v_ll_',
+                hint: '<strong>Đáp án:</strong> villa<br><strong>Giải thích:</strong> <em>villa</em> /ˈvɪl.ə/ — biệt thự, thường ở vùng nông thôn hoặc ven biển.'
+            },
+            {
+                id: 'ex1-4', word: 'mobile home', placeholder: 'm_b_l_ h_m_',
+                hint: '<strong>Đáp án:</strong> mobile home<br><strong>Giải thích:</strong> <em>mobile home</em> /ˈməʊ.baɪl həʊm/ — nhà di động, có thể di chuyển bằng xe kéo.'
+            },
+            {
+                id: 'ex1-5', word: 'flat', placeholder: 'fl_t',
+                hint: '<strong>Đáp án:</strong> flat<br><strong>Giải thích:</strong> <em>flat</em> /flæt/ — căn hộ chung cư (Anh-Anh), tương đương "apartment" trong tiếng Anh-Mỹ.'
+            },
+            {
+                id: 'ex1-6', word: 'bungalow', placeholder: 'b_ng_l_w',
+                hint: '<strong>Đáp án:</strong> bungalow<br><strong>Giải thích:</strong> <em>bungalow</em> /ˈbʌŋ.ɡə.ləʊ/ — nhà chỉ có một tầng (cấp 4).'
+            },
+            {
+                id: 'ex1-7', word: 'houseboat', placeholder: 'h__s_b__t',
+                hint: '<strong>Đáp án:</strong> houseboat<br><strong>Giải thích:</strong> <em>houseboat</em> /ˈhaʊs.bəʊt/ — nhà thuyền, dùng để ở trên sông/kênh.'
+            },
+            {
+                id: 'ex1-8', word: 'terraced house', placeholder: 't_rr_c_d h__s_',
+                hint: '<strong>Đáp án:</strong> terraced house<br><strong>Giải thích:</strong> <em>terraced house</em> /ˈter.əst haʊs/ — nhà liền kề, các nhà nối liền thành hàng dài.'
+            },
+            {
+                id: 'ex1-9', word: 'semi-detached house', placeholder: 's_m_-d_t_ch_d h__s_',
+                hint: '<strong>Đáp án:</strong> semi-detached house<br><strong>Giải thích:</strong> <em>semi-detached house</em> /ˌsem.i.dɪˈtætʃt haʊs/ — nhà song lập, hai nhà chung một bức tường.'
+            },
+            {
+                id: 'ex1-10', word: 'thatched cottage', placeholder: 'th_tch_d c_tt_g_',
+                hint: '<strong>Đáp án:</strong> thatched cottage<br><strong>Giải thích:</strong> <em>thatched cottage</em> /θætʃt ˈkɒt.ɪdʒ/ — nhà nhỏ mái lợp bằng rơm/rạ, kiểu truyền thống Anh.'
+            },
+            {
+                id: 'ex1-11', word: 'detached house', placeholder: 'd_t_ch_d h__s_',
+                hint: '<strong>Đáp án:</strong> detached house<br><strong>Giải thích:</strong> <em>detached house</em> /dɪˈtætʃt haʊs/ — nhà biệt lập, không chung tường với nhà nào khác.'
+            }
+        ];
+
+        // Exercise 2: picture labels (house exterior parts)
+        const ex2Data = [
+            {
+                id: 'ex2-1', num: 1, ans: 'fence', prefix: 'f',
+                hint: '<strong>Đáp án:</strong> fence<br><strong>Giải thích:</strong> <em>fence</em> /fens/ — hàng rào quanh nhà, thường bằng gỗ hoặc kim loại.'
+            },
+            {
+                id: 'ex2-2', num: 2, ans: 'extension', prefix: 'e',
+                hint: '<strong>Đáp án:</strong> extension<br><strong>Giải thích:</strong> <em>extension</em> /ɪkˈsten.ʃən/ — phần được xây thêm vào ngôi nhà gốc.'
+            },
+            {
+                id: 'ex2-3', num: 3, ans: 'balcony', prefix: 'b',
+                hint: '<strong>Đáp án:</strong> balcony<br><strong>Giải thích:</strong> <em>balcony</em> /ˈbæl.kə.ni/ — ban công nhô ra khỏi tầng trên của nhà.'
+            },
+            {
+                id: 'ex2-4', num: 4, ans: 'shutters', prefix: 's',
+                hint: '<strong>Đáp án:</strong> shutters<br><strong>Giải thích:</strong> <em>shutters</em> /ˈʃʌt.əz/ — cửa chớp gắn ngoài cửa sổ, dùng để che nắng/bảo vệ.'
+            },
+            {
+                id: 'ex2-5', num: 5, ans: 'gate', prefix: 'g',
+                hint: '<strong>Đáp án:</strong> gate<br><strong>Giải thích:</strong> <em>gate</em> /ɡeɪt/ — cổng ra vào ở hàng rào.'
+            },
+            {
+                id: 'ex2-6', num: 6, ans: 'basement', prefix: 'b',
+                hint: '<strong>Đáp án:</strong> basement<br><strong>Giải thích:</strong> <em>basement</em> /ˈbeɪs.mənt/ — tầng hầm, nằm dưới mặt đất.'
+            },
+            {
+                id: 'ex2-7', num: 7, ans: 'flower bed', prefix: 'f', suffix: 'b',
+                hint: '<strong>Đáp án:</strong> flower bed<br><strong>Giải thích:</strong> <em>flower bed</em> /ˈflaʊ.ə bed/ — luống hoa được trồng trong vườn.'
+            },
+            {
+                id: 'ex2-8', num: 8, ans: 'porch', prefix: 'p',
+                hint: '<strong>Đáp án:</strong> porch<br><strong>Giải thích:</strong> <em>porch</em> /pɔːtʃ/ — hiên nhà có mái che ngay trước cửa ra vào.'
+            },
+            {
+                id: 'ex2-9', num: 9, ans: 'conservatory', prefix: 'c',
+                hint: '<strong>Đáp án:</strong> conservatory<br><strong>Giải thích:</strong> <em>conservatory</em> /kənˈsɜː.və.tər.i/ — phòng có mái và tường kính, thường dùng để trồng cây hoặc thư giãn.'
+            },
+            {
+                id: 'ex2-10', num: 10, ans: 'sliding doors', prefix: 's', suffix: 'd',
+                hint: '<strong>Đáp án:</strong> sliding doors<br><strong>Giải thích:</strong> <em>sliding doors</em> /ˈslaɪ.dɪŋ dɔːz/ — cửa trượt, đóng/mở bằng cách trượt ngang.'
+            },
+            {
+                id: 'ex2-11', num: 11, ans: 'patio', prefix: 'p',
+                hint: '<strong>Đáp án:</strong> patio<br><strong>Giải thích:</strong> <em>patio</em> /ˈpæt.i.əʊ/ — sân hiên lát đá hoặc gạch ở ngoài trời.'
+            },
+            {
+                id: 'ex2-12', num: 12, ans: 'lawn', prefix: 'l',
+                hint: '<strong>Đáp án:</strong> lawn<br><strong>Giải thích:</strong> <em>lawn</em> /lɔːn/ — bãi cỏ được cắt tỉa gọn gàng trong vườn.'
+            },
+            {
+                id: 'ex2-13', num: 13, ans: 'path', prefix: 'p',
+                hint: '<strong>Đáp án:</strong> path<br><strong>Giải thích:</strong> <em>path</em> /pɑːθ/ — lối đi nhỏ trong vườn hoặc sân.'
+            },
+            {
+                id: 'ex2-14', num: 14, ans: 'pond', prefix: 'p',
+                hint: '<strong>Đáp án:</strong> pond<br><strong>Giải thích:</strong> <em>pond</em> /pɒnd/ — ao nhỏ, thường trang trí trong vườn.'
+            },
+            {
+                id: 'ex2-15', num: 15, ans: 'drive', prefix: 'd',
+                hint: '<strong>Đáp án:</strong> drive<br><strong>Giải thích:</strong> <em>drive</em> /draɪv/ — lối xe chạy vào nhà, từ đường lớn tới ga-ra.'
+            },
+            {
+                id: 'ex2-16', num: 16, ans: 'garage', prefix: 'g',
+                hint: '<strong>Đáp án:</strong> garage<br><strong>Giải thích:</strong> <em>garage</em> /ˈɡær.ɑːʒ/ — nhà để xe / ga-ra.'
+            },
+            {
+                id: 'ex2-17', num: 17, ans: 'hedge', prefix: 'h',
+                hint: '<strong>Đáp án:</strong> hedge<br><strong>Giải thích:</strong> <em>hedge</em> /hedʒ/ — hàng rào làm bằng cây xanh được cắt tỉa.'
+            }
+        ];
+
+        // Exercise 3: listening gap-fill (description of ideal home)
+        const ex3Data = [
+            {
+                id: 'ex3-1', ans: 'contemporary',
+                hint: '<strong>Đáp án:</strong> contemporary<br><strong>Bằng chứng:</strong> "It\'s a contemporary flat..."<br><strong>Giải thích:</strong> <em>contemporary</em> /kənˈtem.pər.ər.i/ — hiện đại, đương đại.'
+            },
+            {
+                id: 'ex3-2', ans: 'impressive',
+                hint: '<strong>Đáp án:</strong> impressive<br><strong>Bằng chứng:</strong> "...in an impressive, modern building..."<br><strong>Giải thích:</strong> <em>impressive</em> /ɪmˈpres.ɪv/ — gây ấn tượng.'
+            },
+            {
+                id: 'ex3-3', ans: 'lively area',
+                hint: '<strong>Đáp án:</strong> lively area<br><strong>Bằng chứng:</strong> "...building in a lively area."<br><strong>Giải thích:</strong> <em>lively area</em> /ˈlaɪv.li ˈeə.ri.ə/ — khu vực sôi động, nhộn nhịp.'
+            },
+            {
+                id: 'ex3-4', ans: 'conveniently located',
+                hint: '<strong>Đáp án:</strong> conveniently located<br><strong>Bằng chứng:</strong> "It\'s conveniently located for shops, restaurants and cinemas."<br><strong>Giải thích:</strong> <em>conveniently located</em> /kənˈviː.ni.ənt.li ˈləʊ.keɪ.tɪd/ — có vị trí thuận tiện.'
+            },
+            {
+                id: 'ex3-5', ans: 'cramped',
+                hint: '<strong>Đáp án:</strong> cramped<br><strong>Bằng chứng:</strong> "Inside, it isn\'t at all cramped."<br><strong>Giải thích:</strong> <em>cramped</em> /kræmpt/ — chật chội, thiếu không gian.'
+            },
+            {
+                id: 'ex3-6', ans: 'spacious',
+                hint: '<strong>Đáp án:</strong> spacious<br><strong>Bằng chứng:</strong> "In fact, it\'s very spacious."<br><strong>Giải thích:</strong> <em>spacious</em> /ˈspeɪ.ʃəs/ — rộng rãi, thoáng đãng.'
+            }
+        ];
+
+        // ===================== RENDER EX1 =====================
+        function renderEx1() {
+            const container = document.getElementById('questions-ex1');
+            ex1Data.forEach((it, idx) => {
+                const hintId = it.id + '-hint';
+                const row = document.createElement('div');
+                row.className = 'ex1-row';
+                row.innerHTML = `
+                    <strong style="min-width:22px;">${idx + 1}.</strong>
+                    <span class="inline-group">
+                        <input type="text" id="${it.id}" data-ans="${it.word}" class="task5-input"
+                            oninput="adjustWidth(this)" placeholder="${it.placeholder}">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="toggleInputAns('${it.id}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                    </span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // ===================== RENDER EX2 =====================
+        function renderEx2() {
+            const container = document.getElementById('questions-ex2');
+            ex2Data.forEach((it) => {
+                const hintId = it.id + '-hint';
+                const row = document.createElement('div');
+                row.className = 'ex2-row';
+                const suffixHtml = it.suffix
+                    ? ` <input type="text" id="${it.id}-b" data-ans="${it.ans.split(' ')[1]}" class="task5-input" oninput="adjustWidth(this)" placeholder="${it.suffix}" style="min-width:90px;">`
+                    : '';
+                row.innerHTML = `
+                    <strong style="min-width:20px;">${it.num}</strong>
+                    <span class="inline-group">
+                        <input type="text" id="${it.id}" data-ans="${it.suffix ? it.ans.split(' ')[0] : it.ans}" class="task5-input"
+                            oninput="adjustWidth(this)" placeholder="${it.prefix}">${suffixHtml}
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="ex2Eye('${it.id}')">👁️</button>
+                            <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                        </span>
+                        <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                    </span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // ex2 eye: fills both inputs (prefix + suffix part) when a 2-word answer
+        function ex2Eye(id) {
+            const item = ex2Data.find(d => d.id === id);
+            if (!item) return;
+            toggleInputAns(id);
+            if (item.suffix) {
+                const elB = document.getElementById(id + '-b');
+                const elA = document.getElementById(id);
+                if (elB && elA) {
+                    if (elA.classList.contains('correct')) {
+                        elB.value = item.ans.split(' ')[1];
+                        elB.classList.add('correct');
+                        elB.classList.remove('incorrect-marked');
+                    } else {
+                        elB.value = '';
+                        elB.classList.remove('correct', 'incorrect-marked');
+                    }
+                    adjustWidth(elB);
+                }
+            }
+        }
+
+        // ===================== RENDER EX3 =====================
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            const mk = (it) => {
+                const hintId = it.id + '-hint';
+                return `<span class="inline-group ex3-row">
+                    <input type="text" id="${it.id}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="toggleInputAns('${it.id}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                    </span>
+                    <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                </span>`;
+            };
+            container.innerHTML = `
+                My ideal home is in the city. It's a <sup>1</sup>${mk(ex3Data[0])}
+                flat, in an <sup>2</sup>${mk(ex3Data[1])}, modern
+                building in a <sup>3</sup>${mk(ex3Data[2])}.
+                It's <sup>4</sup>${mk(ex3Data[3])} for shops,
+                restaurants and cinemas. Inside, it isn't at all
+                <sup>5</sup>${mk(ex3Data[4])}. In fact, it's very
+                <sup>6</sup>${mk(ex3Data[5])}.
+            `;
+        }
+
+        // ===================== UTILITY =====================
+        function toggleVocab() {
+            const c = document.getElementById('vocabContent');
+            const icon = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') {
+                c.style.display = 'none';
+                icon.textContent = '▼';
+            } else {
+                c.style.display = 'block';
+                icon.textContent = '▲';
+            }
+        }
+
+        function toggleHintById(event, hintId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!isVisible) h.style.display = 'block';
+        }
+
+        function toggleInputAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans;
+            if (el.value && el.value.toLowerCase() === ans.toLowerCase() && el.classList.contains('correct')) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            el.style.width = Math.max(text.length * 12 + 40, 80) + 'px';
+        }
+
+        // ===================== CHECK ALL =====================
+        function checkAll() {
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const val = el.value.trim().toLowerCase();
+                if (!val) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.toLowerCase().split('|').map(a => a.trim());
+                const ok = ans.includes(val);
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+        window.checkAll = checkAll;
+
+        // ===================== SHOW ALL / RESET =====================
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+        }
+
+        function resetSection(prefix) {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex2') {
+                document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+            if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+                return;
+            }
+        }
+
+        // ===================== INIT =====================
+        window.onload = () => {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            document.querySelectorAll('input[data-ans]').forEach(adjustWidth);
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
