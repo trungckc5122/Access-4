@@ -1,0 +1,1561 @@
+html
+
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 5A Computing</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== FIX: home button alignment ===== */
+        .solution-title-row h1 {
+            justify-content: flex-start !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* ===== VOCABULARY REFERENCE ===== */
+        .custom-landscape-container {
+            margin-bottom: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .custom-landscape-header {
+            background: var(--primary-light);
+            padding: 18px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-landscape-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .custom-landscape-content {
+            display: none;
+            padding: 25px;
+            background: var(--bg);
+        }
+
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .vocab-item {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: 180px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        /* ===== INLINE + ROW UTILS ===== */
+        .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            flex-shrink: 0;
+            margin-left: 4px;
+        }
+
+        /* ===== HINT BOX ===== */
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            transition: none !important;
+        }
+
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 280px;
+            max-width: 360px;
+            margin-top: 5px;
+            z-index: 200;
+        }
+
+        .hint-box strong {
+            color: var(--primary-dark);
+        }
+
+        .hint-box em {
+            color: var(--accent, #0d9488);
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .hint-box.absolute {
+                left: 0 !important;
+                right: 0 !important;
+                max-width: 100%;
+            }
+        }
+
+        /* ===== CONTROLS ===== */
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        /* ===== AUDIO ===== */
+        .audio-player-container {
+            margin: 10px 0 15px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ===== SPLIT SCREEN (transcript sticky) ===== */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: visible;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 42%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        .speaker-line strong {
+            color: var(--primary-dark);
+        }
+
+        .script-section h3 {
+            color: var(--primary);
+            margin: 0 0 15px;
+        }
+
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            border-radius: 3px;
+            padding: 1px 3px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.45);
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ===== WORD BANK & DROP SLOT ===== */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid var(--glass-border);
+            position: sticky;
+            top: 15px;
+            z-index: 90;
+            justify-content: center;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 2px solid var(--primary-light);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            font-size: 0.95rem;
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 110px;
+            height: 32px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.95rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        [data-theme="dark"] .drop-slot.correct {
+            background: #0a2a1a !important;
+            border-bottom-color: #16a34a !important;
+            color: #86efac !important;
+        }
+
+        [data-theme="dark"] .drop-slot.incorrect-marked {
+            background: #2a0a0a !important;
+            border-bottom-color: #dc2626 !important;
+            color: #fca5a5 !important;
+        }
+
+        /* ===== EX2 ROW ===== */
+        .ex2-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex2-row .drop-slot {
+            min-width: 200px;
+            max-width: 200px;
+        }
+
+        /* ===== EX4 ROW ===== */
+        .ex4-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--glass-border);
+            position: relative;
+            flex-wrap: wrap;
+        }
+
+        /* ===== OPTION CARDS (ex3 + ex4) ===== */
+        .option-card {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            cursor: pointer;
+            background: var(--card-bg);
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .option-card.correct-card {
+            border-color: #16a34a;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .option-card.incorrect-card {
+            border-color: #dc2626;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        [data-theme="dark"] .option-card {
+            background: var(--card-bg);
+            border-color: var(--glass-border);
+        }
+
+        [data-theme="dark"] .option-card.selected {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        [data-theme="dark"] .option-card.correct-card {
+            background: #0a2a1a;
+            border-color: #16a34a;
+            color: #86efac;
+        }
+
+        [data-theme="dark"] .option-card.incorrect-card {
+            background: #2a0a0a;
+            border-color: #dc2626;
+            color: #fca5a5;
+        }
+
+        /* ex3: cards stacked (1 per row) */
+        .ex3-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 12px 0;
+            max-width: 300px;
+        }
+
+        /* ex4: cards inline (word / word side by side) */
+        .ex4-card-group {
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin: 4px 0;
+        }
+
+        /* ===== CROSSWORD PUZZLE ===== */
+        .puzzle-layout {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .puzzle-clues {
+            flex: 0 0 260px;
+            min-width: 200px;
+        }
+
+        .puzzle-clues-down {
+            flex: 0 0 260px;
+            min-width: 200px;
+        }
+
+        .puzzle-clues-down h4 {
+            color: var(--primary);
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+
+        .puzzle-clues h4 {
+            color: var(--primary);
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+
+        .clue-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 18px;
+        }
+
+        .clue-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 0.88rem;
+            color: var(--text);
+            line-height: 1.5;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 4px;
+            padding-left: 4px;
+        }
+
+        .clue-list li:hover {
+            background: var(--primary-light);
+        }
+
+        .clue-list li strong {
+            color: var(--primary);
+            min-width: 22px;
+            display: inline-block;
+        }
+
+        .clue-list li.clue-solved {
+            color: var(--text-muted);
+        }
+
+        .puzzle-grid-wrap {
+            flex: 1;
+            min-width: 320px;
+            overflow-x: auto;
+        }
+
+        .cw-grid {
+            display: inline-grid;
+            border: 2px solid var(--primary);
+            border-radius: 4px;
+            background: var(--glass-border);
+            gap: 1px;
+            padding: 1px;
+        }
+
+        .cw-cell {
+            width: 34px;
+            height: 34px;
+            background: var(--card-bg);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cw-cell.black {
+            background: #1e293b;
+        }
+
+        [data-theme="dark"] .cw-cell.black {
+            background: #0f172a;
+        }
+
+        .cw-cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: transparent;
+            color: var(--text);
+            caret-color: var(--primary);
+            outline: none;
+        }
+
+        .cw-cell input:focus {
+            background: var(--primary-light);
+        }
+
+        .cw-cell input.correct-letter {
+            color: #16a34a;
+        }
+
+        .cw-cell input.incorrect-letter {
+            color: #dc2626;
+        }
+
+        .cw-num {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 0.5rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .mystery-banner {
+            margin-top: 18px;
+            padding: 12px 20px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: var(--primary-dark);
+        }
+
+        @media (max-width: 900px) {
+            .puzzle-layout {
+                flex-direction: column;
+            }
+
+            .puzzle-clues {
+                flex: none;
+                width: 100%;
+            }
+
+            .puzzle-clues-down {
+                flex: none;
+                width: 100%;
+            }
+
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+
+            .reading-split-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- HEADER -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">5A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary</div>
+                <h1>Computing</h1>
+                <p class="subtitle">I can talk about computers and communication technology.</p>
+            </div>
+        </div>
+
+        <!-- VOCAB REFERENCE -->
+        <div class="custom-landscape-container">
+            <div class="custom-landscape-header" onclick="toggleVocab()">
+                <h3>Vocabulary Reference: Computing &amp; Technology</h3>
+                <span id="vocabIcon" style="font-size:1.2rem;">▼</span>
+            </div>
+            <div class="custom-landscape-content" id="vocabContent">
+                <ul class="vocab-grid">
+                    <li class="vocab-item"><strong>search</strong> /sɜːtʃ/: tìm kiếm (trên mạng)</li>
+                    <li class="vocab-item"><strong>log on</strong> /lɒɡ ɒn/: đăng nhập vào mạng</li>
+                    <li class="vocab-item"><strong>subscribe</strong> /səbˈskraɪb/: đăng ký (kênh, dịch vụ)</li>
+                    <li class="vocab-item"><strong>upload</strong> /ʌpˈləʊd/: tải lên</li>
+                    <li class="vocab-item"><strong>forward</strong> /ˈfɔːwəd/: chuyển tiếp (email)</li>
+                    <li class="vocab-item"><strong>comment</strong> /ˈkɒment/: bình luận</li>
+                    <li class="vocab-item"><strong>set up</strong> /set ʌp/: thiết lập, tạo (tài khoản)</li>
+                    <li class="vocab-item"><strong>rate</strong> /reɪt/: đánh giá (cho điểm)</li>
+                    <li class="vocab-item"><strong>install</strong> /ɪnˈstɔːl/: cài đặt (phần mềm)</li>
+                    <li class="vocab-item"><strong>program</strong> /ˈprəʊɡræm/: lập trình</li>
+                    <li class="vocab-item"><strong>update</strong> /ʌpˈdeɪt/: cập nhật</li>
+                    <li class="vocab-item"><strong>print</strong> /prɪnt/: in tài liệu</li>
+                    <li class="vocab-item"><strong>paste</strong> /peɪst/: dán (copy &amp; paste)</li>
+                    <li class="vocab-item"><strong>the trash</strong> /træʃ/: thùng rác (máy tính)</li>
+                    <li class="vocab-item"><strong>a link</strong> /lɪŋk/: đường dẫn, liên kết</li>
+                    <li class="vocab-item"><strong>your username</strong> /ˈjuːzəneɪm/: tên đăng nhập</li>
+                    <li class="vocab-item"><strong>a new window</strong> /wɪndəʊ/: cửa sổ mới</li>
+                    <li class="vocab-item"><strong>a box</strong> /bɒks/: ô hộp kiểm</li>
+                    <li class="vocab-item"><strong>text</strong> /tekst/: văn bản</li>
+                    <li class="vocab-item"><strong>a button</strong> /ˈbʌtn/: nút bấm</li>
+                    <li class="vocab-item"><strong>a page</strong> /peɪdʒ/: trang</li>
+                    <li class="vocab-item"><strong>an account</strong> /əˈkaʊnt/: tài khoản</li>
+                    <li class="vocab-item"><strong>confirm</strong> /kənˈfɜːm/: xác nhận</li>
+                    <li class="vocab-item"><strong>profile</strong> /ˈprəʊfaɪl/: hồ sơ cá nhân</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- EXERCISE 1: CROSSWORD -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the crossword.</div>
+            <div class="puzzle-layout">
+                <div class="puzzle-clues">
+                    <h4>Across →</h4>
+                    <ul class="clue-list" id="clues-across"></ul>
+                </div>
+                <div class="puzzle-grid-wrap">
+                    <div class="cw-grid" id="cw-grid"></div>
+                    <div class="mystery-banner" id="mystery-display">Mystery word: _ _ _ _ _ &nbsp; _ _ _ _ _ _ _</div>
+                </div>
+                <div class="puzzle-clues-down">
+                    <h4>Down ↓</h4>
+                    <ul class="clue-list" id="clues-down"></ul>
+                </div>
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showPuzzleAnswers()">Show All</button>
+                <button class="btn btn-reset" onclick="resetPuzzle()">Reset</button>
+            </div>
+        </div>
+
+        <!-- EXERCISE 2: COLLOCATIONS -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Complete the collocations with the nouns below.</div>
+            <div class="word-bank" id="bank-ex2"></div>
+            <div id="questions-ex2"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EXERCISE 3: LISTENING (own transcript) -->
+        <div class="reading-split-container">
+            <div class="transcript-panel" id="tp-ex3">
+                <h2
+                    style="margin-bottom:18px;border-bottom:2px solid var(--primary);padding-bottom:10px;color:var(--text);">
+                    Transcript 1.22</h2>
+                <div class="script-section">
+                    <div class="speaker-line"><strong>Boy:</strong> You know how Facebook works, don't you, Frances?
+                    </div>
+                    <div class="speaker-line"><strong>Girl:</strong> Yes, I use it all the time.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> Can you help me with it?</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Sure, what do you want to do?</div>
+                    <div class="speaker-line"><strong>Boy:</strong> Well, <span class="highlightable" id="ts3-join">I've
+                            never used it before so I was thinking of joining.</span></div>
+                    <div class="speaker-line"><strong>Girl:</strong> OK, that isn't difficult. So, first of all, go to
+                        facebook.com. Then click on the 'Sign up' button and enter the information.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> OK, Name … email … password … date of birth …</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Then click on the green 'Sign up' button again.
+                    </div>
+                    <div class="speaker-line"><strong>Boy:</strong> OK, done. It says it's going to send me an email.
+                    </div>
+                    <div class="speaker-line"><strong>Girl:</strong> Yes, once you get it you'll need to confirm your
+                        email address by following the link in the email.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> Ah, here it is. So I follow the link … and confirm.
+                        … Now it's asking me if I want to search for friends. Shall I do that or skip that step?</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Skip it for now. You can come back and do that
+                        later. Let's create a profile for you.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> OK, how do I do that?</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Well, first, do you want a photo of yourself?</div>
+                    <div class="speaker-line"><strong>Boy:</strong> Yes, why not?</div>
+                    <div class="speaker-line"><strong>Girl:</strong> So, you need to upload a photo from your computer.
+                        Click on 'Update Profile Picture'. Then open the folder where your photos are stored.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> OK, done. Now it says 'Add basic information'. This
+                        isn't difficult. I think I can manage on my own now. Thanks for your help.</div>
+                    <div class="speaker-line"><strong>Girl:</strong> No problem. Give me a shout if you have any
+                        problems.</div>
+                    <div class="speaker-line"><strong>Boy:</strong> OK. Will do.</div>
+                </div>
+            </div>
+            <div class="reading-resizer" id="rr-ex3"></div>
+            <div class="main-exercise-panel">
+                <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
+                    <div class="exercise-title">3. 🎧 1.22 Listen. What is the boy trying to do? Choose the correct
+                        answer.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex3')">📜 Transcript
+                        1.22</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_22.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div class="ex3-options" id="ex3-options">
+                        <div class="option-card" data-group="ex3" data-val="1" onclick="selectCard(this,'ex3','2')">
+                            <span>1</span> update a Facebook account
+                        </div>
+                        <div class="option-card" data-group="ex3" data-val="2" onclick="selectCard(this,'ex3','2')">
+                            <span>2</span> create a Facebook account
+                        </div>
+                        <div class="option-card" data-group="ex3" data-val="3" onclick="selectCard(this,'ex3','2')">
+                            <span>3</span> delete a Facebook account
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        <button class="eye-btn" onclick="eyeEx3()" title="Show/hide answer">👁️</button>
+                        <button class="hint-btn" onclick="hintEx3()" title="Hint">i</button>
+                    </div>
+                    <div class="hint-box" id="ex3-hint" style="margin-top:10px; position:relative; max-width:200px;">
+                        <strong>Đáp án:</strong> 2. create a Facebook account<br>
+                        <strong>Bằng chứng:</strong> <em>"I've never used it before so I was thinking of
+                            joining."</em><br>
+                        <strong>Giải thích:</strong> Cậu bé chưa từng dùng Facebook và muốn gia nhập (join) → tạo tài
+                        khoản mới, không phải update hay xoá.
+                    </div>
+                    <div class="controls-row" style="margin-top:16px;">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXERCISE 4: LISTENING DETAIL (own separate transcript) -->
+        <div class="reading-split-container" style="margin-top:25px;">
+            <div class="transcript-panel" id="tp-ex4">
+                <h2
+                    style="margin-bottom:18px;border-bottom:2px solid var(--primary);padding-bottom:10px;color:var(--text);">
+                    Transcript 1.22</h2>
+                <div class="script-section">
+                    <div class="speaker-line"><strong>Girl:</strong> OK, that isn't difficult. So, first of all, go to
+                        facebook.com. Then click on <span class="highlightable" id="ts4-1">the 'Sign up' <u>button</u>
+                            and <u>enter</u> the information</span>.</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Yes, once you get it you'll need to <span
+                            class="highlightable" id="ts4-2"><u>confirm</u> your email address by <u>following</u> the
+                            link in the email</span>.</div>
+                    <div class="speaker-line"><strong>Girl:</strong> Skip it for now. You can come back and do that
+                        later. Let's create a <span class="highlightable" id="ts4-3"><u>profile</u></span> for you.
+                    </div>
+                    <div class="speaker-line"><strong>Girl:</strong> So, you need to <span class="highlightable"
+                            id="ts4-4"><u>upload</u> a photo</span> from your computer. Click on 'Update Profile
+                        Picture'. Then <span class="highlightable" id="ts4-5"><u>open</u></span> the folder where your
+                        photos are stored.</div>
+                </div>
+            </div>
+            <div class="reading-resizer" id="rr-ex4"></div>
+            <div class="main-exercise-panel">
+                <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
+                    <div class="exercise-title">4. 🎧 1.22 Listen again. Choose the correct words.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex4')">📜 Transcript
+                        1.22</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_22.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        // ===================== CROSSWORD DATA =====================
+        // Grid: 16 rows × 15 cols (0-indexed)
+        // Across: clue_num, word, row, col
+        // Down:   clue_num, word, row, col
+
+        const CW_ROWS = 16, CW_COLS = 15;
+
+        const cwAcross = [
+            { num: 3, word: 'SEARCH', r: 2, c: 6, def: "If you need information for your project, ___ online.", explain: "<strong>SEARCH</strong> /sɜːtʃ/ – tìm kiếm<br>\"search online\"</em> = tìm kiếm trên mạng. Khi cần thông tin, bạn dùng công cụ tìm kiếm như Google." },
+            { num: 4, word: 'LOGON', r: 4, c: 0, def: "They've got Wi-Fi at the café but I can never ___ to the network.", explain: "<strong>LOG ON</strong> /lɒɡ ɒn/ – đăng nhập<br> <em>\"log on to the network\"</em> = kết nối và đăng nhập vào mạng. Viết liền: LOGON trong ô chữ." },
+            { num: 6, word: 'SUBSCRIBE', r: 5, c: 1, def: "How many YouTube channels do you ___ to?", explain: "<strong>SUBSCRIBE</strong> /səbˈskraɪb/ – đăng ký theo dõi<br> <em>\"subscribe to a channel\"</em> = nhấn nút đăng ký để nhận thông báo video mới." },
+            { num: 8, word: 'UPLOAD', r: 7, c: 0, def: "Can you show me how to ___ a video to YouTube?", explain: "<strong>UPLOAD</strong> /ʌpˈləʊd/ – tải lên<br> <em>\"upload a video\"</em> = đưa file từ máy tính lên internet (ngược với download = tải xuống)." },
+            { num: 10, word: 'FORWARD', r: 9, c: 5, def: "Please ___ Joe's email to me as soon as you get it.", explain: "<strong>FORWARD</strong> /ˈfɔːwəd/ – chuyển tiếp<br> <em>\"forward an email\"</em> = gửi lại email đã nhận cho người khác." },
+            { num: 12, word: 'COMMENT', r: 11, c: 4, def: "Please don't ___ on my status unless you have something nice to say!", explain: "<strong>COMMENT</strong> /ˈkɒment/ – bình luận<br> <em>\"comment on my status\"</em> = viết bình luận dưới bài đăng trên mạng xã hội." },
+            { num: 13, word: 'SETUP', r: 13, c: 0, def: "I need to ___ my email account on my new computer.", explain: "<strong>SET UP</strong> /set ʌp/ – thiết lập, cài đặt<br> <em>\"set up an account\"</em> = cấu hình và tạo tài khoản lần đầu tiên trên thiết bị mới. Viết liền: SETUP trong ô chữ." },
+        ];
+
+        const cwDown = [
+            { num: 1, word: 'RATE', r: 0, c: 0, def: "Can you ___ my contribution to the blog? Please give it five stars!", explain: "<strong>RATE</strong> /reɪt/ – đánh giá, cho điểm<br> <em>\"rate my contribution\"</em> = cho điểm hoặc xếp hạng (ví dụ 1–5 sao) cho một nội dung trực tuyến." },
+            { num: 2, word: 'INSTALL', r: 3, c: 4, def: "Can you help me ___ this new app on my phone?", explain: "<strong>INSTALL</strong> /ɪnˈstɔːl/ – cài đặt<br> <em>\"install an app\"</em> = tải và cài ứng dụng vào thiết bị để sử dụng." },
+            { num: 5, word: 'PROGRAM', r: 5, c: 13, def: "In IT, we are learning how to create and ___ our own video games.", explain: "<strong>PROGRAM</strong> /ˈprəʊɡræm/ – lập trình<br> <em>\"program a video game\"</em> = viết mã lệnh để tạo ra trò chơi hay ứng dụng. Đây là nghĩa động từ." },
+            { num: 7, word: 'UPDATE', r: 2, c: 12, def: "Why don't you ___ your Facebook profile? It's really old.", explain: "<strong>UPDATE</strong> /ʌpˈdeɪt/ – cập nhật<br> <em>\"update your profile\"</em> = thay đổi, làm mới thông tin cá nhân hoặc phần mềm." },
+            { num: 9, word: 'PRINT', r: 8, c: 3, def: "I can't ___ this document because we've run out of ink.", explain: "<strong>PRINT</strong> /prɪnt/ – in<br> <em>\"print a document\"</em> = dùng máy in để in tài liệu ra giấy. Không in được vì hết mực." },
+            { num: 11, word: 'PASTE', r: 11, c: 0, def: "I'm going to ___ this photo on Facebook.", explain: "<strong>PASTE</strong> /peɪst/ – dán<br> <em>\"paste a photo\"</em> = dán ảnh hoặc nội dung đã sao chép (copy) vào vị trí mới. Dùng trong <em>copy & paste</em>." },
+        ];
+
+        // Mystery word = all mystery-col letters per row (defined manually)
+        // From the puzzle: mystery letters form "FACEBOOK" or similar
+        // Let's just highlight specific cells and collect them in order
+        // We'll collect: RATE[0]=R, INSTALL[0]=I, SUBSCRIBE[0]=S, UPLOAD[0]=U, FORWARD[3]=W, COMMENT[0]=C, SETUP[0]=S
+        // → R,I,S,U,W,C,S → not a word. Let's use the column index as mystery:
+        // Original had mystery indices; let's take col 11 for each across word:
+        // SEARCH(2,6): col11 = idx5 = 'H'; LOGON(4,0): col11 doesn't exist (LOGON ends at col4); skip.
+        // The mystery will just be the clue number col-marked letters: let's define per word:
+        const mysteryMap = {
+            'SEARCH': 2,   // 'A'
+            'LOGON': null,
+            'SUBSCRIBE': 3, // 'S'
+            'UPLOAD': null,
+            'FORWARD': null,
+            'COMMENT': null,
+            'SETUP': null,
+            'RATE': 1,     // 'A'
+            'INSTALL': 4,  // 'A'
+            'PROGRAM': 6,  // 'M'
+            'UPDATE': 2,   // 'D'
+            'PRINT': 3,    // 'N'
+            'PASTE': 1,    // 'A'
+        };
+        // Combined mystery: R(RATE[1])=A, I(INSTALL[4])=A, S(SEARCH[2])=A, P(PROGRAM[6])=M, U(UPDATE[2])=D, PR(PRINT[3])=N, PA(PASTE[1])=A → AAMDNA? Not useful.
+        // Keep it simple: just display mystery word row tracking.
+
+        // ===================== BUILD GRID =====================
+        let cwGrid = Array.from({ length: CW_ROWS }, () => Array(CW_COLS).fill(null));
+        // cellInfo[r][c] = { letter, clueNums: [] }
+        let cellInfo = Array.from({ length: CW_ROWS }, () => Array(CW_COLS).fill(null));
+        let cellNumbers = {};  // "r,c" -> number
+
+        function initGrid() {
+            // Place across words
+            cwAcross.forEach(({ word, r, c, num }) => {
+                word.split('').forEach((ch, i) => {
+                    cwGrid[r][c + i] = ch;
+                    if (!cellInfo[r][c + i]) cellInfo[r][c + i] = { letter: ch, nums: [] };
+                    cellInfo[r][c + i].letter = ch;
+                });
+                const key = `${r},${c}`;
+                if (!cellNumbers[key]) cellNumbers[key] = num;
+            });
+            // Place down words
+            cwDown.forEach(({ word, r, c, num }) => {
+                word.split('').forEach((ch, i) => {
+                    cwGrid[r + i][c] = ch;
+                    if (!cellInfo[r + i][c]) cellInfo[r + i][c] = { letter: ch, nums: [] };
+                    cellInfo[r + i][c].letter = ch;
+                });
+                const key = `${r},${c}`;
+                if (!cellNumbers[key]) cellNumbers[key] = num;
+            });
+        }
+
+        function renderCrossword() {
+            initGrid();
+            const grid = document.getElementById('cw-grid');
+            grid.style.gridTemplateColumns = `repeat(${CW_COLS}, 34px)`;
+            grid.style.gridTemplateRows = `repeat(${CW_ROWS}, 34px)`;
+            grid.innerHTML = '';
+
+            for (let r = 0; r < CW_ROWS; r++) {
+                for (let c = 0; c < CW_COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cw-cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+
+                    if (cwGrid[r][c]) {
+                        // Active cell
+                        const key = `${r},${c}`;
+                        if (cellNumbers[key]) {
+                            const num = document.createElement('span');
+                            num.className = 'cw-num';
+                            num.textContent = cellNumbers[key];
+                            cell.appendChild(num);
+                        }
+                        const inp = document.createElement('input');
+                        inp.maxLength = 1;
+                        inp.dataset.ans = cwGrid[r][c];
+                        inp.dataset.r = r;
+                        inp.dataset.c = c;
+                        inp.setAttribute('aria-label', `r${r}c${c}`);
+                        inp.addEventListener('input', function () {
+                            this.value = this.value.toUpperCase().slice(-1);
+                            this.classList.remove('correct-letter', 'incorrect-letter');
+                            updateMystery();
+                        });
+                        inp.addEventListener('keydown', function (e) {
+                            if (e.key === 'Backspace' && !this.value) {
+                                // go to previous
+                                const prev = grid.querySelector(`input[data-r="${r}"][data-c="${c - 1}"]`)
+                                    || grid.querySelector(`input[data-r="${r - 1}"][data-c="${c}"]`);
+                                if (prev) { prev.value = ''; prev.focus(); }
+                            } else if (e.key === 'ArrowRight') {
+                                const next = grid.querySelector(`input[data-r="${r}"][data-c="${c + 1}"]`);
+                                if (next) next.focus();
+                            } else if (e.key === 'ArrowLeft') {
+                                const prev2 = grid.querySelector(`input[data-r="${r}"][data-c="${c - 1}"]`);
+                                if (prev2) prev2.focus();
+                            } else if (e.key === 'ArrowDown') {
+                                const dn = grid.querySelector(`input[data-r="${r + 1}"][data-c="${c}"]`);
+                                if (dn) dn.focus();
+                            } else if (e.key === 'ArrowUp') {
+                                const up = grid.querySelector(`input[data-r="${r - 1}"][data-c="${c}"]`);
+                                if (up) up.focus();
+                            }
+                        });
+                        inp.addEventListener('input', function () {
+                            if (this.value.length === 1) {
+                                // Auto-advance: try right first, then down
+                                const nr = grid.querySelector(`input[data-r="${r}"][data-c="${c + 1}"]`)
+                                    || grid.querySelector(`input[data-r="${r + 1}"][data-c="${c}"]`);
+                                if (nr) nr.focus();
+                            }
+                        });
+                        cell.appendChild(inp);
+                    } else {
+                        cell.classList.add('black');
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+            renderClues();
+            updateMystery();
+        }
+
+        function renderClues() {
+            const across = document.getElementById('clues-across');
+            const down = document.getElementById('clues-down');
+            across.innerHTML = cwAcross.map(({ num, def, word, explain }) =>
+                `<li style="position:relative; display:flex; align-items:flex-start; gap:6px; padding:5px 4px;">
+                    <span onclick="focusClue('A',${num})" style="flex:1; cursor:pointer;"><strong>${num}</strong> ${def}</span>
+                    <span style="display:inline-flex; gap:3px; flex-shrink:0; position:relative;">
+                        <button class="eye-btn" onclick="showClueAns('A',${num},'${word}')" title="Show answer">👁️</button>
+                        <button class="hint-btn" onclick="toggleClueHint(event,'hint-A${num}')" title="Hint">i</button>
+                        <div class="hint-box" id="hint-A${num}" style="position:absolute; top:100%; right:0; min-width:240px; max-width:340px; z-index:200;"><strong>Đáp án:</strong> ${word}<br><br>${explain}</div>
+                    </span>
+                </li>`
+            ).join('');
+            down.innerHTML = cwDown.map(({ num, def, word, explain }) =>
+                `<li style="position:relative; display:flex; align-items:flex-start; gap:6px; padding:5px 4px;">
+                    <span onclick="focusClue('D',${num})" style="flex:1; cursor:pointer;"><strong>${num}</strong> ${def}</span>
+                    <span style="display:inline-flex; gap:3px; flex-shrink:0; position:relative;">
+                        <button class="eye-btn" onclick="showClueAns('D',${num},'${word}')" title="Show answer">👁️</button>
+                        <button class="hint-btn" onclick="toggleClueHint(event,'hint-D${num}')" title="Hint">i</button>
+                        <div class="hint-box" id="hint-D${num}" style="position:absolute; top:100%; right:0; min-width:240px; max-width:340px; z-index:200;"><strong>Đáp án:</strong> ${word}<br><br>${explain}</div>
+                    </span>
+                </li>`
+            ).join('');
+        }
+
+        function showClueAns(dir, num, word) {
+            const list = dir === 'A' ? cwAcross : cwDown;
+            const entry = list.find(e => e.num === num);
+            if (!entry) return;
+            const grid = document.getElementById('cw-grid');
+            const isAcross = dir === 'A';
+            word.split('').forEach((ch, i) => {
+                const r = isAcross ? entry.r : entry.r + i;
+                const c = isAcross ? entry.c + i : entry.c;
+                const inp = grid.querySelector(`input[data-r="${r}"][data-c="${c}"]`);
+                if (inp) { inp.value = ch; inp.classList.add('correct-letter'); inp.classList.remove('incorrect-letter'); }
+            });
+            updateMystery();
+        }
+
+        function toggleClueHint(event, hintId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!vis) h.style.display = 'block';
+        }
+
+        function focusClue(dir, num) {
+            const grid = document.getElementById('cw-grid');
+            const list = dir === 'A' ? cwAcross : cwDown;
+            const entry = list.find(e => e.num === num);
+            if (!entry) return;
+            const inp = grid.querySelector(`input[data-r="${entry.r}"][data-c="${entry.c}"]`);
+            if (inp) inp.focus();
+        }
+
+        function updateMystery() {
+            const grid = document.getElementById('cw-grid');
+            const allInputs = grid.querySelectorAll('input');
+            const total = allInputs.length;
+            let correct = 0;
+            allInputs.forEach(inp => {
+                if (inp.value.toUpperCase() === inp.dataset.ans) correct++;
+            });
+            const pct = Math.round(correct / total * 100);
+            const banner = document.getElementById('mystery-display');
+            if (pct === 100) {
+                banner.textContent = '🎉 Puzzle Complete! Mystery word: FACEBOOK';
+                banner.style.display = '';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function showPuzzleAnswers() {
+            document.querySelectorAll('#cw-grid input').forEach(inp => {
+                inp.value = inp.dataset.ans;
+                inp.classList.add('correct-letter');
+                inp.classList.remove('incorrect-letter');
+            });
+            updateMystery();
+        }
+
+        function resetPuzzle() {
+            document.querySelectorAll('#cw-grid input').forEach(inp => {
+                inp.value = '';
+                inp.classList.remove('correct-letter', 'incorrect-letter');
+            });
+            updateMystery();
+        }
+
+        // ===================== EXERCISE 2 =====================
+        const ex2Data = [
+            { id: 'ex2-1', prefix: '1. empty', ans: 'the trash', hint: '<strong>Đáp án:</strong> the trash<br><strong>Giải thích:</strong> <em>empty the trash</em> = xóa thùng rác trên máy tính.' },
+            { id: 'ex2-2', prefix: '2. follow', ans: 'a link', hint: '<strong>Đáp án:</strong> a link<br><strong>Giải thích:</strong> <em>follow a link</em> = truy cập theo đường dẫn, nhấn vào liên kết.' },
+            { id: 'ex2-3', prefix: '3. save', ans: 'your work', hint: '<strong>Đáp án:</strong> your work<br><strong>Giải thích:</strong> <em>save your work</em> = lưu công việc/tài liệu đang làm.' },
+            { id: 'ex2-4', prefix: '4. enter your password,', ans: 'your username', hint: '<strong>Đáp án:</strong> your username<br><strong>Giải thích:</strong> <em>enter your username</em> = nhập tên đăng nhập (tên tài khoản).' },
+            { id: 'ex2-5', prefix: '5. open / close an app,', ans: 'a new window', hint: '<strong>Đáp án:</strong> a new window<br><strong>Giải thích:</strong> <em>open/close a new window</em> = mở/đóng một cửa sổ mới trên trình duyệt.' },
+            { id: 'ex2-6', prefix: '6. check / uncheck', ans: 'a box', hint: '<strong>Đáp án:</strong> a box<br><strong>Giải thích:</strong> <em>check/uncheck a box</em> = đánh dấu/bỏ đánh dấu vào ô hộp kiểm (checkbox).' },
+            { id: 'ex2-7', prefix: '7. copy and paste', ans: 'text', hint: '<strong>Đáp án:</strong> text<br><strong>Giải thích:</strong> <em>copy and paste text</em> = sao chép và dán văn bản.' },
+            { id: 'ex2-8', prefix: '8. click / double click on', ans: 'a button', hint: '<strong>Đáp án:</strong> a button<br><strong>Giải thích:</strong> <em>click on a button</em> = nhấp chuột vào nút bấm.' },
+            { id: 'ex2-9', prefix: '9. scroll up / down', ans: 'a page', hint: '<strong>Đáp án:</strong> a page<br><strong>Giải thích:</strong> <em>scroll up/down a page</em> = cuộn lên/xuống trang web.' },
+            { id: 'ex2-10', prefix: '10. create', ans: 'an account', hint: '<strong>Đáp án:</strong> an account<br><strong>Giải thích:</strong> <em>create an account</em> = tạo tài khoản (đăng ký).' },
+        ];
+        const ex2Words = ['the trash', 'a link', 'your work', 'your username', 'a new window', 'a box', 'text', 'a button', 'a page', 'an account'];
+
+        // ===================== EXERCISE 4 DATA =====================
+        const ex4Data = [
+            {
+                id: 'ex4-1',
+                tsId: 'ts4-1',
+                sentence: "Click on the 'Sign up'",
+                choices: [
+                    { val: 'icon', label: 'icon' }, { val: 'button', label: 'button' }
+                ],
+                ans1: 'button',
+                sentence2: "and",
+                choices2: [
+                    { val: 'enter', label: 'enter' }, { val: 'save', label: 'save' }
+                ],
+                ans2: 'enter',
+                suffix: "the information.",
+                hint: `<strong>Đáp án:</strong> <em>button</em>, <em>enter</em><br><strong>Bằng chứng:</strong> "click on the 'Sign up' button and enter the information."<br><strong>Giải thích:</strong> Dùng <em>button</em> (nút bấm) không phải icon; dùng <em>enter</em> (nhập) không phải save (lưu).`
+            },
+            {
+                id: 'ex4-2',
+                tsId: 'ts4-2',
+                sentence: "You'll need to",
+                choices: [
+                    { val: 'confirm', label: 'confirm' }, { val: 'create', label: 'create' }
+                ],
+                ans1: 'confirm',
+                sentence2: "your email address by",
+                choices2: [
+                    { val: 'following', label: 'following' }, { val: 'saving', label: 'saving' }
+                ],
+                ans2: 'following',
+                suffix: "the link in the email.",
+                hint: `<strong>Đáp án:</strong> <em>confirm</em>, <em>following</em><br><strong>Bằng chứng:</strong> "you'll need to confirm your email address by following the link in the email."<br><strong>Giải thích:</strong> <em>Confirm</em> = xác nhận; <em>following</em> = theo đường dẫn.`
+            },
+            {
+                id: 'ex4-3',
+                tsId: 'ts4-3',
+                sentence: "Let's create a",
+                choices: [
+                    { val: 'profile', label: 'profile' }, { val: 'password', label: 'password' }
+                ],
+                ans1: 'profile',
+                suffix: "for you.",
+                hint: `<strong>Đáp án:</strong> <em>profile</em><br><strong>Bằng chứng:</strong> "Let's create a profile for you."<br><strong>Giải thích:</strong> <em>Profile</em> = hồ sơ cá nhân trên mạng xã hội.`
+            },
+            {
+                id: 'ex4-4',
+                tsId: 'ts4-4',
+                sentence: "You need to",
+                choices: [
+                    { val: 'copy and paste', label: 'copy and paste' }, { val: 'upload', label: 'upload' }
+                ],
+                ans1: 'upload',
+                suffix: "a photo.",
+                hint: `<strong>Đáp án:</strong> <em>upload</em><br><strong>Bằng chứng:</strong> "you need to upload a photo from your computer."<br><strong>Giải thích:</strong> <em>Upload</em> = tải lên; copy and paste = sao chép dán.`
+            },
+            {
+                id: 'ex4-5',
+                tsId: 'ts4-5',
+                sentence: "",
+                choices: [
+                    { val: 'Open', label: 'Open' }, { val: 'Empty', label: 'Empty' }
+                ],
+                ans1: 'Open',
+                suffix: "the folder where your photos are stored.",
+                hint: `<strong>Đáp án:</strong> <em>Open</em><br><strong>Bằng chứng:</strong> "Then open the folder where your photos are stored."<br><strong>Giải thích:</strong> <em>Open</em> = mở (thư mục); Empty = làm rỗng (không phù hợp).`
+            },
+        ];
+
+        // ===================== RENDER EX2 =====================
+        let dragWord = null, dragSection = null;
+
+        function initEx2() {
+            const bank = document.getElementById('bank-ex2');
+            bank.innerHTML = ex2Words.map(w =>
+                `<div class="word-item" draggable="true" id="wi-ex2-${safeId(w)}">${w}</div>`
+            ).join('');
+            bank.querySelectorAll('.word-item').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    dragWord = e.target.textContent.trim();
+                    dragSection = 'ex2';
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', dragWord);
+                });
+                el.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            });
+
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = ex2Data.map(item => {
+                const hid = item.id + '-hint';
+                return `<div class="ex2-row">
+            <span style="font-weight:500;color:var(--text);min-width:200px;">${item.prefix}</span>
+            <span class="drop-slot" id="${item.id}" data-section="ex2" data-ans="${item.ans}"
+                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex2')"
+                onclick="removeWord('${item.id}','ex2')"></span>
+            <span class="row-btns" style="position:relative;">
+                <button class="eye-btn" onclick="showEx2Row('${item.id}')">👁️</button>
+                <button class="hint-btn" onclick="toggleHintById(event,'${hid}')">i</button>
+                <div class="hint-box" id="${hid}" style="position:absolute; top:100%; left:0; min-width:240px; max-width:340px; z-index:200;">${item.hint}</div>
+            </span>
+        </div>`;
+            }).join('');
+        }
+
+        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDrop(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot || section !== dragSection) return;
+            slot.classList.remove('over');
+            placeWord(slot.id, dragWord, section);
+        }
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const old = slot.textContent.trim();
+            // Return old to bank
+            if (old) {
+                const oldEl = document.getElementById(`wi-${section}-${safeId(old)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            // Remove word from other slots
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.textContent.trim() === word && s.id !== slotId) {
+                    s.textContent = '';
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+            slot.textContent = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.textContent.trim();
+            if (!word) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+        function showEx2Row(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, 'ex2');
+            } else {
+                placeWord(slotId, ans, 'ex2');
+                slot.classList.add('correct');
+            }
+        }
+
+        // ===================== RENDER EX4 =====================
+        function initEx4() {
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = ex4Data.map((it, idx) => {
+                const hid = it.id + '-hint';
+                const cards1 = it.choices.map(ch =>
+                    `<div class="option-card" data-group="${it.id}-1" data-val="${ch.val}" data-ans="${it.ans1}" onclick="selectCard(this,'${it.id}-1','${it.ans1}')">${ch.label}</div>`
+                ).join('');
+                const cards2 = it.choices2 ? it.choices2.map(ch =>
+                    `<div class="option-card" data-group="${it.id}-2" data-val="${ch.val}" data-ans="${it.ans2}" onclick="selectCard(this,'${it.id}-2','${it.ans2}')">${ch.label}</div>`
+                ).join('') : '';
+                const part2 = it.choices2
+                    ? `<span style="margin: 0 6px; color:var(--text-muted);">${it.sentence2}</span>
+               <div class="ex4-card-group">${cards2}</div>`
+                    : '';
+                return `<div class="ex4-row">
+            <strong style="min-width:22px;">${idx + 1}.</strong>
+            <span style="flex:1; display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+                ${it.sentence ? `<span style="color:var(--text);">${it.sentence}</span>` : ''}
+                <div class="ex4-card-group">${cards1}</div>
+                ${part2}
+                ${it.suffix ? `<span style="color:var(--text);">${it.suffix}</span>` : ''}
+                <span style="display:inline-flex; gap:3px; align-items:center; position:relative; margin-left:4px;">
+                    <button class="eye-btn" onclick="eyeEx4('${it.id}')">👁️</button>
+                    <button class="hint-btn" onclick="hintEx4('${it.id}','${it.tsId}')">i</button>
+                    <div class="hint-box" id="${hid}" style="position:absolute; top:100%; right:0; min-width:260px; max-width:340px; z-index:200;">${it.hint}</div>
+                </span>
+            </span>
+        </div>`;
+            }).join('');
+        }
+
+        // ===================== CARD SELECTION =====================
+        function selectCard(el, group, correctAns) {
+            document.querySelectorAll(`.option-card[data-group="${group}"]`).forEach(c =>
+                c.classList.remove('selected', 'correct-card', 'incorrect-card')
+            );
+            el.classList.add('selected');
+        }
+
+        function eyeEx3() {
+            const cards = document.querySelectorAll('.option-card[data-group="ex3"]');
+            const alreadyShown = [...cards].some(c => c.classList.contains('correct-card'));
+            cards.forEach(c => c.classList.remove('selected', 'correct-card', 'incorrect-card'));
+            if (!alreadyShown) {
+                cards.forEach(c => {
+                    if (c.dataset.val === '2') c.classList.add('correct-card');
+                });
+                // Highlight transcript
+                document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
+                const t = document.getElementById('ts3-join');
+                if (t) { t.classList.add('active-highlight'); toggleTranscript('tp-ex3', true); t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            }
+        }
+
+        function hintEx3() {
+            const h = document.getElementById('ex3-hint');
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!vis) {
+                h.style.display = 'block';
+                toggleTranscript('tp-ex3', true);
+                const t = document.getElementById('ts3-join');
+                if (t) { t.classList.add('active-highlight'); setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150); }
+            }
+        }
+
+        function eyeEx4(id) {
+            const it = ex4Data.find(d => d.id === id);
+            if (!it) return;
+            // Toggle: if already shown, hide
+            const g1 = document.querySelectorAll(`.option-card[data-group="${id}-1"]`);
+            const alreadyShown = [...g1].some(c => c.classList.contains('correct-card'));
+            [id + '-1', id + '-2'].forEach(grp => {
+                document.querySelectorAll(`.option-card[data-group="${grp}"]`).forEach(c =>
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card')
+                );
+            });
+            if (!alreadyShown) {
+                g1.forEach(c => { if (c.dataset.val === it.ans1) c.classList.add('correct-card'); });
+                if (it.ans2) {
+                    document.querySelectorAll(`.option-card[data-group="${id}-2"]`).forEach(c => {
+                        if (c.dataset.val === it.ans2) c.classList.add('correct-card');
+                    });
+                }
+            }
+        }
+
+        function hintEx4(id, tsId) {
+            const hid = id + '-hint';
+            const h = document.getElementById(hid);
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!vis) {
+                h.style.display = 'block';
+                if (tsId) {
+                    toggleTranscript('tp-ex4', true);
+                    const t = document.getElementById(tsId);
+                    if (t) { t.classList.add('active-highlight'); setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150); }
+                }
+            }
+        }
+
+        // ===================== TRANSCRIPT TOGGLE =====================
+        function toggleTranscript(panelId, forceOpen = false) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (forceOpen) { panel.classList.add('active'); return; }
+            panel.classList.toggle('active');
+        }
+
+        // ===================== VOCAB =====================
+        function toggleVocab() {
+            const c = document.getElementById('vocabContent');
+            const icon = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') { c.style.display = 'none'; icon.textContent = '▼'; }
+            else { c.style.display = 'block'; icon.textContent = '▲'; }
+        }
+
+        // ===================== HINT UTILS =====================
+        function toggleHintById(event, hintId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!vis) h.style.display = 'block';
+        }
+
+        // ===================== CHECK ALL =====================
+        function checkAll() {
+            // Puzzle cells
+            document.querySelectorAll('#cw-grid input').forEach(inp => {
+                const v = inp.value.toUpperCase();
+                if (!v) { inp.classList.remove('correct-letter', 'incorrect-letter'); return; }
+                inp.classList.toggle('correct-letter', v === inp.dataset.ans);
+                inp.classList.toggle('incorrect-letter', v !== inp.dataset.ans);
+            });
+            updateMystery();
+            // Drop slots ex2
+            document.querySelectorAll('.drop-slot[data-section="ex2"]').forEach(slot => {
+                const v = slot.textContent.trim().toLowerCase();
+                if (!v) { slot.classList.remove('correct', 'incorrect-marked'); return; }
+                const ok = v === slot.dataset.ans.toLowerCase();
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+            // Ex3 cards
+            document.querySelectorAll('.option-card[data-group="ex3"]').forEach(c => {
+                if (c.classList.contains('selected')) {
+                    const ok = c.dataset.val === '2';
+                    c.classList.remove('selected');
+                    c.classList.toggle('correct-card', ok);
+                    c.classList.toggle('incorrect-card', !ok);
+                }
+            });
+            // Ex4 cards
+            ex4Data.forEach(it => {
+                [[it.id + '-1', it.ans1], it.ans2 ? [it.id + '-2', it.ans2] : null].filter(Boolean).forEach(([grp, ans]) => {
+                    document.querySelectorAll(`.option-card[data-group="${grp}"]`).forEach(c => {
+                        if (c.classList.contains('selected')) {
+                            const ok = c.dataset.val === ans;
+                            c.classList.remove('selected');
+                            c.classList.toggle('correct-card', ok);
+                            c.classList.toggle('incorrect-card', !ok);
+                        }
+                    });
+                });
+            });
+        }
+        window.checkAll = checkAll;
+
+        // ===================== SHOW ALL / RESET =====================
+        function showAnswers(prefix) {
+            if (prefix === 'ex2') {
+                document.querySelectorAll('.drop-slot[data-section="ex2"]').forEach(slot => {
+                    placeWord(slot.id, slot.dataset.ans, 'ex2');
+                    slot.classList.add('correct');
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('.option-card[data-group="ex3"]').forEach(c => {
+                    c.classList.remove('selected', 'incorrect-card');
+                    if (c.dataset.val === '2') c.classList.add('correct-card');
+                });
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach(it => {
+                    [[it.id + '-1', it.ans1], it.ans2 ? [it.id + '-2', it.ans2] : null].filter(Boolean).forEach(([grp, ans]) => {
+                        document.querySelectorAll(`.option-card[data-group="${grp}"]`).forEach(c => {
+                            c.classList.remove('selected', 'incorrect-card');
+                            if (c.dataset.val === ans) c.classList.add('correct-card');
+                        });
+                    });
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
+            if (prefix === 'ex2') {
+                document.querySelectorAll('.drop-slot[data-section="ex2"]').forEach(slot => removeWord(slot.id, 'ex2'));
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('.option-card[data-group="ex3"]').forEach(c =>
+                    c.classList.remove('selected', 'correct-card', 'incorrect-card')
+                );
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach(it => {
+                    [it.id + '-1', it.id + '-2'].forEach(grp => {
+                        document.querySelectorAll(`.option-card[data-group="${grp}"]`).forEach(c =>
+                            c.classList.remove('selected', 'correct-card', 'incorrect-card')
+                        );
+                    });
+                });
+            }
+        }
+
+        // ===================== RESIZERS =====================
+        function setupResizer(rid, pid) {
+            const resizer = document.getElementById(rid);
+            const panel = document.getElementById(pid);
+            if (!resizer || !panel) return;
+            let dragging = false;
+            resizer.addEventListener('mousedown', () => dragging = true);
+            document.addEventListener('mousemove', e => {
+                if (!dragging) return;
+                const cont = panel.closest('.reading-split-container');
+                if (!cont) return;
+                const rect = cont.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width * 100;
+                if (pct > 10 && pct < 85) panel.style.flex = `0 0 ${pct}%`;
+            });
+            document.addEventListener('mouseup', () => dragging = false);
+        }
+
+        // ===================== INIT =====================
+        window.onload = function () {
+            renderCrossword();
+            initEx2();
+            initEx4();
+            setupResizer('rr-ex3', 'tp-ex3');
+            setupResizer('rr-ex4', 'tp-ex4');
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>

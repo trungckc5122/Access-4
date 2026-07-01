@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 6A Describing character</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== FIX: home button alignment ===== */
+        .solution-title-row h1 {
+            justify-content: flex-start !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+        }
+
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        /* ===== VOCABULARY REFERENCE ===== */
+        .custom-landscape-container {
+            margin-bottom: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .custom-landscape-header {
+            background: var(--primary-light);
+            padding: 18px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .custom-landscape-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .custom-landscape-content {
+            display: none;
+            padding: 25px;
+            background: var(--bg);
+        }
+
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .vocab-item {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: 180px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .vocab-item strong {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        /* ===== INLINE + ROW UTILS ===== */
+        .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+        /* ===== HINT BOX (absolute popup variant) ===== */
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 260px;
+            max-width: 360px;
+            margin-top: 5px;
+            z-index: 200;
+            /* Override base hint-box flow styles */
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        /* Ex2 / ex3 rows: open hint to the right of the button group */
+        .ex2-row .hint-box.absolute,
+        .ex3-row .hint-box.absolute {
+            left: 0;
+            right: auto;
+        }
+
+        .hint-box strong { color: var(--primary-dark); }
+        .hint-box em { color: var(--accent, #0d9488); font-weight: 600; font-style: italic; }
+
+        @media (max-width: 600px) {
+            .hint-box.absolute {
+                left: 0 !important;
+                right: 0 !important;
+                max-width: 100%;
+            }
+        }
+
+        /* ===== CONTROLS ===== */
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-show-all:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        /* ===== AUDIO ===== */
+        .audio-player-container {
+            margin: 10px 0 15px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ===== SPLIT SCREEN (transcript sticky) ===== */
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: visible;
+        }
+
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .transcript-panel.active {
+            flex: 0 0 42%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+
+        .reading-resizer {
+            width: 0;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .speaker-line {
+            margin-bottom: 12px;
+            display: block;
+            line-height: 1.8;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        .speaker-line strong {
+            color: var(--primary-dark);
+        }
+
+        .script-section h3 {
+            color: var(--primary);
+            margin: 0 0 15px;
+        }
+
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            border-radius: 3px;
+            padding: 1px 3px;
+        }
+
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.45);
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ===== WORD BANK & DROP SLOT ===== */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid var(--glass-border);
+            position: sticky;
+            top: 15px;
+            z-index: 90;
+            justify-content: center;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 2px solid var(--primary-light);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            font-size: 0.95rem;
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 110px;
+            height: 32px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.95rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        [data-theme="dark"] .drop-slot.correct {
+            background: #0a2a1a !important;
+            border-bottom-color: #16a34a !important;
+            color: #86efac !important;
+        }
+
+        [data-theme="dark"] .drop-slot.incorrect-marked {
+            background: #2a0a0a !important;
+            border-bottom-color: #dc2626 !important;
+            color: #fca5a5 !important;
+        }
+
+        /* ===== EXERCISE 1: TABLE ===== */
+        .ex1-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .ex1-table th {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .ex1-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--glass-border);
+            vertical-align: middle;
+        }
+
+        .ex1-table .ex1-num {
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 30px;
+            text-align: center;
+        }
+
+        .ex1-table .task5-input {
+            min-width: 140px;
+            text-align: left;
+            width: auto;
+        }
+
+        /* ===== EX2 ROW ===== */
+        .ex2-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex2-row .drop-slot {
+            min-width: 160px;
+            max-width: 200px;
+        }
+
+        /* ===== EX3 ROW ===== */
+        .ex3-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex3-row .task5-input {
+            min-width: 140px;
+            text-align: left;
+        }
+
+        /* ===== EX4 & EX5 ROW ===== */
+        .ex4-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex4-row .drop-slot {
+            min-width: 130px;
+        }
+
+        .ex4-row .ex4-label {
+            font-weight: 700;
+            color: var(--text);
+            min-width: 40px;
+        }
+
+        .ex5-row {
+            display: flex 0 0 auto;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .ex5-row .drop-slot {
+            min-width: 140px;
+        }
+
+        .ex5-row .ex5-label {
+            font-weight: 700;
+            color: var(--text);
+            min-width: 80px;
+        }
+
+        @media (max-width: 900px) {
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+
+            .reading-split-container {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ex1-table td, .ex1-table th {
+                padding: 4px 6px;
+                font-size: 0.9rem;
+            }
+
+            .ex1-table .task5-input {
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- HEADER -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">6A</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Vocabulary</div>
+                <h1>Describing character</h1>
+                <p class="subtitle">I can describe people's character.</p>
+            </div>
+        </div>
+
+        <!-- VOCAB REFERENCE -->
+        <div class="custom-landscape-container">
+            <div class="custom-landscape-header" onclick="toggleVocab()">
+                <h3>Vocabulary Reference: Character Adjectives &amp; Nouns</h3>
+                <span id="vocabIcon" style="font-size:1.2rem;">▼</span>
+            </div>
+            <div class="custom-landscape-content" id="vocabContent">
+                <ul class="vocab-grid">
+                    <li class="vocab-item"><strong>ambitious</strong> /æmˈbɪʃ.əs/: có tham vọng</li>
+                    <li class="vocab-item"><strong>cheerful</strong> /ˈtʃɪə.fəl/: vui vẻ, phấn khởi</li>
+                    <li class="vocab-item"><strong>creative</strong> /kriˈeɪ.tɪv/: sáng tạo</li>
+                    <li class="vocab-item"><strong>enthusiastic</strong> /ɪnˌθjuː.ziˈæs.tɪk/: nhiệt tình</li>
+                    <li class="vocab-item"><strong>flexible</strong> /ˈflek.sə.bəl/: linh hoạt</li>
+                    <li class="vocab-item"><strong>generous</strong> /ˈdʒen.ər.əs/: hào phóng</li>
+                    <li class="vocab-item"><strong>honest</strong> /ˈɒn.ɪst/: trung thực</li>
+                    <li class="vocab-item"><strong>idealistic</strong> /aɪˌdɪəˈlɪs.tɪk/: lý tưởng</li>
+                    <li class="vocab-item"><strong>intelligent</strong> /ɪnˈtel.ɪ.dʒənt/: thông minh</li>
+                    <li class="vocab-item"><strong>loyal</strong> /ˈlɔɪ.əl/: trung thành</li>
+                    <li class="vocab-item"><strong>mature</strong> /məˈtʃʊər/: trưởng thành</li>
+                    <li class="vocab-item"><strong>modest</strong> /ˈmɒd.ɪst/: khiêm tốn</li>
+                    <li class="vocab-item"><strong>optimistic</strong> /ˌɒp.tɪˈmɪs.tɪk/: lạc quan</li>
+                    <li class="vocab-item"><strong>patient</strong> /ˈpeɪ.ʃənt/: kiên nhẫn</li>
+                    <li class="vocab-item"><strong>pessimistic</strong> /ˌpes.ɪˈmɪs.tɪk/: bi quan</li>
+                    <li class="vocab-item"><strong>punctual</strong> /ˈpʌŋk.tʃu.əl/: đúng giờ</li>
+                    <li class="vocab-item"><strong>realistic</strong> /ˌrɪəˈlɪs.tɪk/: thực tế</li>
+                    <li class="vocab-item"><strong>self-confident</strong> /ˌself ˈkɒn.fɪ.dənt/: tự tin</li>
+                    <li class="vocab-item"><strong>serious</strong> /ˈsɪə.ri.əs/: nghiêm túc</li>
+                    <li class="vocab-item"><strong>shy</strong> /ʃaɪ/: nhút nhát</li>
+                    <li class="vocab-item"><strong>sociable</strong> /ˈsəʊ.ʃə.bəl/: hoà đồng</li>
+                    <li class="vocab-item"><strong>stubborn</strong> /ˈstʌb.ən/: bướng bỉnh</li>
+                    <li class="vocab-item"><strong>sympathetic</strong> /ˌsɪm.pəˈθet.ɪk/: thông cảm</li>
+                    <li class="vocab-item"><strong>thoughtful</strong> /ˈθɔːt.fəl/: chu đáo</li>
+                    <li class="vocab-item"><strong>sense of humour</strong> /sens əv ˈhjuː.mər/: khiếu hài hước</li>
+                    <li class="vocab-item"><strong>common sense</strong> /ˈkɒm.ən sens/: kiến thức thông thường</li>
+                    <li class="vocab-item"><strong>organisational skills</strong> /ˌɔː.ɡən.aɪˈzeɪ.ʃən.əl skɪlz/: kỹ năng tổ chức</li>
+                    <li class="vocab-item"><strong>courage</strong> /ˈkʌr.ɪdʒ/: lòng can đảm</li>
+                    <li class="vocab-item"><strong>initiative</strong> /ɪˈnɪʃ.ə.tɪv/: sự chủ động</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- EXERCISE 1: TABLE -->
+        <div class="exercise-card">
+            <div class="exercise-title">1. Complete the table.</div>
+            <table class="ex1-table" id="ex1-table">
+                <thead>
+                    <tr>
+                        <th style="width:30px;">#</th>
+                        <th>Noun</th>
+                        <th>Adjective</th>
+                        <th style="width:60px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="ex1-body">
+                    <!-- JS will render rows -->
+                </tbody>
+            </table>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EXERCISE 2: DRAG-DROP PHRASES -->
+        <div class="exercise-card">
+            <div class="exercise-title">2. Complete the phrases for describing personal qualities with the words below.</div>
+            <div class="word-bank" id="bank-ex2"></div>
+            <div id="questions-ex2"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EXERCISE 3: SENTENCES -->
+        <div class="exercise-card">
+            <div class="exercise-title">3. Complete the sentences with adjectives and phrases from exercises 1 and 2.</div>
+            <div id="questions-ex3"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- LISTENING EXERCISE 4 (with its own transcript panel) -->
+        <div class="reading-split-container">
+            <div class="transcript-panel" id="tp-ex4">
+                <h2 style="margin-bottom:18px;border-bottom:2px solid var(--primary);padding-bottom:10px;color:var(--text);">
+                    Transcript 1.26</h2>
+                <div class="script-section">
+                    <div class="speaker-line"><strong>1.</strong> My friend Andy is great company – he’s great to do things with and hang out with. This is because <span class="highlightable" id="ts4-1a">he’s usually in a good mood</span>. In fact, I can’t remember the last time he was in a bad mood! <span class="highlightable" id="ts4-1b">He’s always smiling and making a joke about something</span>. <span class="highlightable" id="ts4-1c">He tends to see the positive in every situation</span> and usually finds something nice to say about everybody. I don’t know anybody who doesn’t like him.</div>
+                    <div class="speaker-line"><strong>2.</strong> I’m very impressed with my sister Elise. <span class="highlightable" id="ts4-2a">She’s always been good at school and she’s usually at the top of the class or somewhere near it. She’s got a good brain and uses it.</span> She understands things quickly and remembers things well. It could make her a bit lazy, but actually she’s the opposite! She works extremely hard. And <span class="highlightable" id="ts4-2b">she’s also very focused. She usually has a plan and she works towards it. Now she wants to go to a top university to study biology, which is a very difficult thing to achieve, but she’s determined.</span> And I have no doubt that she will manage it.</div>
+                    <div class="speaker-line"><strong>3.</strong> My dad is an interesting person, although <span class="highlightable" id="ts4-3a">he doesn’t talk a lot and he doesn’t smile easily</span>. But he reads a lot and thinks about things. And <span class="highlightable" id="ts4-3b">he takes a while before he gives you his opinion about something.</span> But that’s OK because when he does finally express his view on a topic, then you know it’s worth listening to and you might learn something.</div>
+                </div>
+            </div>
+            <div class="reading-resizer" id="rr-ex4"></div>
+            <div class="main-exercise-panel">
+                <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
+                    <div class="exercise-title">4. 🎧 1.26 Listen to three people describing a friend or family member. Choose two adjectives below that best describe the people. There are two extra adjectives.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex4')">📜 Transcript 1.26</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_26.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div class="word-bank" id="bank-ex4"></div>
+                    <div id="questions-ex4"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LISTENING EXERCISE 5 (separate transcript panel) -->
+        <div class="reading-split-container" style="margin-top:25px;">
+            <div class="transcript-panel" id="tp-ex5">
+                <h2 style="margin-bottom:18px;border-bottom:2px solid var(--primary);padding-bottom:10px;color:var(--text);">
+                    Transcript 1.26</h2>
+                <div class="script-section">
+                    <div class="speaker-line"><strong>1.</strong> <span class="highlightable" id="ts5-1">He’s a great friend to me, especially because I worry a lot and tend to see the negative side of life. But when I spend time with him, I always feel better after a while.</span></div>
+                    <div class="speaker-line"><strong>2.</strong> <span class="highlightable" id="ts5-2">She’s not afraid to aim high and put the work in to achieve her goals. I’m going to be more like her.</span></div>
+                    <div class="speaker-line"><strong>3.</strong> <span class="highlightable" id="ts5-3">He’s also very helpful with my homework. He’ll sit for hours explaining things to me. He never rushes me or gets annoyed if I don’t understand something. In fact, he’ll start from the beginning and go through it all again until I get it. I think he really enjoys it.</span></div>
+                </div>
+            </div>
+            <div class="reading-resizer" id="rr-ex5"></div>
+            <div class="main-exercise-panel">
+                <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
+                    <div class="exercise-title">5. 🎧 1.26 Listen again. Match the descriptions 1–3 with sentences A–D. There is one extra sentence.</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex5')">📜 Transcript 1.26</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-int/1_Track_26.wav" type="audio/wav">
+                        </audio>
+                    </div>
+                    <div class="word-bank" id="bank-ex5"></div>
+                    <div id="questions-ex5"></div>
+                    <div class="controls-row">
+                        <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                        <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script>
+        // ===================== DATA =====================
+
+        // Exercise 1: Table data
+        const ex1Data = [
+            { num: 1, noun: 'ambition', adj: null, ansAdj: 'ambitious' },
+            { num: 2, noun: null, adj: 'cheerful', ansNoun: 'cheerfulness' },
+            { num: 3, noun: 'creativity', adj: null, ansAdj: 'creative' },
+            { num: 4, noun: null, adj: 'enthusiastic', ansNoun: 'enthusiasm' },
+            { num: 5, noun: 'flexibility', adj: null, ansAdj: 'flexible' },
+            { num: 6, noun: null, adj: 'generous', ansNoun: 'generosity' },
+            { num: 7, noun: 'honesty', adj: null, ansAdj: 'honest' },
+            { num: 8, noun: null, adj: 'idealistic', ansNoun: 'idealism' },
+            { num: 9, noun: 'intelligence', adj: null, ansAdj: 'intelligent' },
+            { num: 10, noun: null, adj: 'loyal', ansNoun: 'loyalty' },
+            { num: 11, noun: 'maturity', adj: null, ansAdj: 'mature' },
+            { num: 12, noun: null, adj: 'modest', ansNoun: 'modesty' },
+            { num: 13, noun: 'optimism', adj: null, ansAdj: 'optimistic' },
+            { num: 14, noun: null, adj: 'patient', ansNoun: 'patience' },
+            { num: 15, noun: 'pessimism', adj: null, ansAdj: 'pessimistic' },
+            { num: 16, noun: null, adj: 'punctual', ansNoun: 'punctuality' },
+            { num: 17, noun: 'realism', adj: null, ansAdj: 'realistic' },
+            { num: 18, noun: null, adj: 'self-confident', ansNoun: 'self-confidence' },
+            { num: 19, noun: 'seriousness', adj: null, ansAdj: 'serious' },
+            { num: 20, noun: null, adj: 'shy', ansNoun: 'shyness' },
+            { num: 21, noun: 'sociability', adj: null, ansAdj: 'sociable' },
+            { num: 22, noun: null, adj: 'stubborn', ansNoun: 'stubbornness' },
+            { num: 23, noun: 'sympathy', adj: null, ansAdj: 'sympathetic' },
+            { num: 24, noun: null, adj: 'thoughtful', ansNoun: 'thoughtfulness' }
+        ];
+
+        // Exercise 2: Phrases
+        const ex2Data = [
+            { id: 'ex2-1', prefix: 'have a good', suffix: 'of humour', ans: 'sense', hint: '<strong>Đáp án:</strong> sense<br><strong>Giải thích:</strong> <em>have a good sense of humour</em> = có khiếu hài hước.' },
+            { id: 'ex2-2', prefix: 'have lots of / no', suffix: 'sense', ans: 'common', hint: '<strong>Đáp án:</strong> common<br><strong>Giải thích:</strong> <em>common sense</em> = kiến thức thông thường, sự nhạy bén thực tế.' },
+            { id: 'ex2-3', prefix: 'have good organisational', suffix: '', ans: 'skills', hint: '<strong>Đáp án:</strong> skills<br><strong>Giải thích:</strong> <em>organisational skills</em> = kỹ năng tổ chức công việc.' },
+            { id: 'ex2-4', prefix: '', suffix: 'self-confidence', ans: 'lack', hint: '<strong>Đáp án:</strong> lack<br><strong>Giải thích:</strong> <em>lack self-confidence</em> = thiếu tự tin.' },
+            { id: 'ex2-5', prefix: 'have physical', suffix: '', ans: 'courage', hint: '<strong>Đáp án:</strong> courage<br><strong>Giải thích:</strong> <em>physical courage</em> = lòng can đảm về mặt thể chất (dũng cảm).' },
+            { id: 'ex2-6', prefix: 'be good at', suffix: '', ans: 'communicating', hint: '<strong>Đáp án:</strong> communicating<br><strong>Giải thích:</strong> <em>be good at communicating</em> = giỏi giao tiếp.' },
+            { id: 'ex2-7', prefix: 'show lots of', suffix: '', ans: 'initiative', hint: '<strong>Đáp án:</strong> initiative<br><strong>Giải thích:</strong> <em>show lots of initiative</em> = thể hiện sự chủ động, sáng kiến.' },
+            { id: 'ex2-8', prefix: 'have lots of', suffix: '', ans: 'energy', hint: '<strong>Đáp án:</strong> energy<br><strong>Giải thích:</strong> <em>have lots of energy</em> = có nhiều năng lượng, sinh lực.' }
+        ];
+        const ex2Words = ['common', 'communicating', 'courage', 'energy', 'initiative', 'lack', 'sense', 'skills'];
+
+        // Exercise 3: Sentences
+        const ex3Data = [
+            { id: 'ex3-1', sentence: '1 Sue is very ______. She always thinks things will get worse.', ans: 'pessimistic', hint: '<strong>Đáp án:</strong> pessimistic<br><strong>Giải thích:</strong> <em>pessimistic</em> = bi quan, luôn nghĩ xấu về mọi thứ.' },
+            { id: 'ex3-2', sentence: '2 Harry loves telling jokes. He has ______.', ans: 'a good sense of humour', hint: '<strong>Đáp án:</strong> a good sense of humour<br><strong>Giải thích:</strong> <em>a good sense of humour</em> = khiếu hài hước, thích kể chuyện cười.' },
+            { id: 'ex3-3', sentence: '3 Try to be ______. It isn’t good to be late.', ans: 'punctual', hint: '<strong>Đáp án:</strong> punctual<br><strong>Giải thích:</strong> <em>punctual</em> = đúng giờ, không nên đi muộn.' },
+            { id: 'ex3-4', sentence: '4 She always tells the truth. She’s very ______.', ans: 'honest', hint: '<strong>Đáp án:</strong> honest<br><strong>Giải thích:</strong> <em>honest</em> = trung thực, luôn nói sự thật.' },
+            { id: 'ex3-5', sentence: '5 She’s always telling everyone how clever she is. She isn’t very ______.', ans: 'modest', hint: '<strong>Đáp án:</strong> modest<br><strong>Giải thích:</strong> <em>modest</em> = khiêm tốn, ngược lại với khoe khoang.' },
+            { id: 'ex3-6', sentence: '6 He loves being with other people. He’s the most ______ person I know!', ans: 'sociable', hint: '<strong>Đáp án:</strong> sociable<br><strong>Giải thích:</strong> <em>sociable</em> = hoà đồng, thích giao tiếp với người khác.' },
+            { id: 'ex3-7', sentence: '7 She loves dangerous sports. She has great ______.', ans: 'courage', hint: '<strong>Đáp án:</strong> courage<br><strong>Giải thích:</strong> <em>courage</em> = lòng can đảm, dám làm những việc mạo hiểm.' },
+            { id: 'ex3-8', sentence: '8 I can talk to her about my problems. She always listens. She’s very ______.', ans: 'sympathetic', hint: '<strong>Đáp án:</strong> sympathetic<br><strong>Giải thích:</strong> <em>sympathetic</em> = thông cảm, biết lắng nghe.' },
+            { id: 'ex3-9', sentence: '9 He always knows what to do. You don’t need to tell him. He ______.', ans: 'shows lots of initiative', hint: '<strong>Đáp án:</strong> shows lots of initiative<br><strong>Giải thích:</strong> <em>shows lots of initiative</em> = thể hiện sự chủ động, tự biết phải làm gì.' }
+        ];
+
+        // Exercise 4: Listening adjectives
+        const ex4Adjectives = ['ambitious', 'cheerful', 'generous', 'intelligent', 'optimistic', 'patient', 'punctual', 'serious'];
+        const ex4Data = [
+            { id: 'ex4-1', label: 'Person 1', ans1: 'cheerful', ans2: 'optimistic', hint: '<strong>Đáp án:</strong> cheerful, optimistic<br><strong>Bằng chứng:</strong> "he\'s usually in a good mood", "always smiling", "sees the positive in every situation"<br><strong>Giải thích:</strong> Người này vui vẻ (cheerful) và lạc quan (optimistic).' },
+            { id: 'ex4-2', label: 'Person 2', ans1: 'intelligent', ans2: 'ambitious', hint: '<strong>Đáp án:</strong> intelligent, ambitious<br><strong>Bằng chứng:</strong> "good at school", "top of the class", "has a plan", "wants to go to a top university"<br><strong>Giải thích:</strong> Người này thông minh (intelligent) và có tham vọng (ambitious).' },
+            { id: 'ex4-3', label: 'Person 3', ans1: 'serious', ans2: 'patient', hint: '<strong>Đáp án:</strong> serious, patient<br><strong>Bằng chứng:</strong> "doesn\'t talk a lot", "doesn\'t smile easily", "takes a while before he gives opinion", "never rushes me", "explains things from the beginning"<br><strong>Giải thích:</strong> Người này nghiêm túc (serious) và kiên nhẫn (patient).' }
+        ];
+
+        // Exercise 5: Matching sentences — show A–D sentences, drop slot for description number
+        // Descriptions 1→C, 2→A, 3→D. Extra sentence B → answer "-"
+        const ex5Sentences = [
+            { letter: 'A', text: 'shows lots of initiative in planning his / her future.', ans: '2', tsId: 'ts5-2',
+              hint: '<strong>Đáp án:</strong> 2<br><strong>Bằng chứng:</strong> "She usually has a plan and works towards it", "not afraid to aim high"<br><strong>Giải thích:</strong> <em>shows lots of initiative in planning his/her future</em> → mô tả người có tham vọng, có kế hoạch rõ ràng.' },
+            { letter: 'B', text: 'lacks confidence in social situations.', ans: '-', tsId: null,
+              hint: '<strong>Đáp án:</strong> – (câu thừa)<br><strong>Giải thích:</strong> Không có đoạn nào trong bài nghe mô tả người thiếu tự tin trong giao tiếp xã hội. Đây là câu thừa.' },
+            { letter: 'C', text: 'has the opposite personality to the speaker.', ans: '1', tsId: 'ts5-1',
+              hint: '<strong>Đáp án:</strong> 1<br><strong>Bằng chứng:</strong> "I worry a lot and tend to see the negative side" — người nói bi quan, còn Andy lạc quan → trái ngược.<br><strong>Giải thích:</strong> <em>has the opposite personality to the speaker</em>.' },
+            { letter: 'D', text: 'likes to pass on knowledge to others.', ans: '3', tsId: 'ts5-3',
+              hint: '<strong>Đáp án:</strong> 3<br><strong>Bằng chứng:</strong> "He\'ll sit for hours explaining things to me. He never rushes me."<br><strong>Giải thích:</strong> <em>likes to pass on knowledge to others</em> → thích giảng giải, truyền đạt kiến thức.' },
+        ];
+
+        // ===================== GLOBAL STATE =====================
+        let dragWord = null, dragSection = null;
+
+        // ===================== RENDER EX1 =====================
+        function renderEx1() {
+            const tbody = document.getElementById('ex1-body');
+            let html = '';
+            ex1Data.forEach(row => {
+                const nounId = `ex1-n-${row.num}`;
+                const adjId = `ex1-a-${row.num}`;
+                const nounInput = row.noun === null
+                    ? `<span class="inline-group">
+                            <input type="text" id="${nounId}" data-ans="${row.ansNoun}" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="toggleInputAns('${nounId}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'hint-${nounId}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="hint-${nounId}"><strong>Đáp án:</strong> ${row.ansNoun}</div>
+                        </span>`
+                    : `<span style="font-weight:600; color:var(--text);">${row.noun}</span>`;
+                const adjInput = row.adj === null
+                    ? `<span class="inline-group">
+                            <input type="text" id="${adjId}" data-ans="${row.ansAdj}" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="toggleInputAns('${adjId}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'hint-${adjId}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="hint-${adjId}"><strong>Đáp án:</strong> ${row.ansAdj}</div>
+                        </span>`
+                    : `<span style="font-weight:600; color:var(--text);">${row.adj}</span>`;
+                html += `<tr>
+                            <td class="ex1-num">${row.num}</td>
+                            <td>${nounInput}</td>
+                            <td>${adjInput}</td>
+                            <td></td>
+                        </tr>`;
+            });
+            tbody.innerHTML = html;
+            setTimeout(() => {
+                document.querySelectorAll('#ex1-body input.task5-input').forEach(el => adjustWidth(el));
+            }, 50);
+        }
+
+        // ===================== RENDER EX2 =====================
+        function initEx2() {
+            const bank = document.getElementById('bank-ex2');
+            bank.innerHTML = ex2Words.map(w =>
+                `<div class="word-item" draggable="true" id="wi-ex2-${safeId(w)}">${w}</div>`
+            ).join('');
+            bank.querySelectorAll('.word-item').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    dragWord = e.target.textContent.trim();
+                    dragSection = 'ex2';
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', dragWord);
+                });
+                el.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            });
+
+            const container = document.getElementById('questions-ex2');
+            container.innerHTML = ex2Data.map((item, idx) => {
+                const hid = item.id + '-hint';
+                const prefixHtml = item.prefix ? `<span style="color:var(--text);">${item.prefix}</span>` : '';
+                const suffixHtml = item.suffix ? `<span style="color:var(--text); margin-left:4px;">${item.suffix}</span>` : '';
+                return `<div class="ex2-row">
+                            <strong style="min-width:22px; color:var(--primary-dark);">${idx + 1}</strong>
+                            ${prefixHtml}
+                            <span class="drop-slot" id="${item.id}" data-section="ex2" data-ans="${item.ans}"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex2')"
+                                onclick="removeWord('${item.id}','ex2')"></span>
+                            ${suffixHtml}
+                            <span class="row-btns" style="position:relative; margin-left:6px;">
+                                <button class="eye-btn" onclick="showEx2Row('${item.id}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'${hid}')">i</button>
+                                <div class="hint-box absolute" id="${hid}">${item.hint}</div>
+                            </span>
+                        </div>`;
+            }).join('');
+        }
+
+        function showEx2Row(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, 'ex2');
+            } else {
+                placeWord(slotId, ans, 'ex2');
+                slot.classList.add('correct');
+            }
+        }
+
+        // ===================== RENDER EX3 =====================
+        function renderEx3() {
+            const container = document.getElementById('questions-ex3');
+            container.innerHTML = ex3Data.map(item => {
+                const hid = item.id + '-hint';
+                const parts = item.sentence.split('______');
+                const qHtml = parts.map((p, i) => {
+                    if (i === parts.length - 1) return p;
+                    const inputId = item.id;
+                    // Bold the leading sentence number (first digit + space)
+                    const boldP = p.replace(/^(\d+)\s/, '<strong>$1</strong> ');
+                    return `${boldP}<span class="inline-group">
+                                <input type="text" id="${inputId}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                                <span class="row-btns">
+                                    <button class="eye-btn" onclick="toggleInputAns('${inputId}')">👁️</button>
+                                    <button class="hint-btn" onclick="toggleHintById(event,'${hid}')">i</button>
+                                </span>
+                                <div class="hint-box absolute" id="${hid}">${item.hint}</div>
+                            </span>`;
+                }).join('');
+                return `<div class="ex3-row">${qHtml}</div>`;
+            }).join('');
+            setTimeout(() => {
+                document.querySelectorAll('#questions-ex3 input.task5-input').forEach(el => adjustWidth(el));
+            }, 50);
+        }
+
+        // ===================== RENDER EX4 =====================
+        function initEx4() {
+            const bank = document.getElementById('bank-ex4');
+            bank.innerHTML = ex4Adjectives.map(w =>
+                `<div class="word-item" draggable="true" id="wi-ex4-${safeId(w)}">${w}</div>`
+            ).join('');
+            bank.querySelectorAll('.word-item').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    dragWord = e.target.textContent.trim();
+                    dragSection = 'ex4';
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', dragWord);
+                });
+                el.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            });
+
+            const container = document.getElementById('questions-ex4');
+            container.innerHTML = ex4Data.map(item => {
+                const hid = item.id + '-hint';
+                const ansStr = `${item.ans1}|${item.ans2}`;
+                return `<div class="ex4-row">
+                            <span class="ex4-label">${item.label}</span>
+                            <span class="drop-slot" id="${item.id}-1" data-section="ex4" data-ans="${ansStr}"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex4')"
+                                onclick="removeWord('${item.id}-1','ex4')"></span>
+                            <span class="drop-slot" id="${item.id}-2" data-section="ex4" data-ans="${ansStr}"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex4')"
+                                onclick="removeWord('${item.id}-2','ex4')"></span>
+                            <span class="row-btns" style="position:relative;">
+                                <button class="eye-btn" onclick="showEx4Row('${item.id}')">👁️</button>
+                                <button class="hint-btn" onclick="showListeningHint('ex4','${item.id}','${hid}')">i</button>
+                                <div class="hint-box" id="${hid}" style="position:absolute; top:100%; left:0; min-width:260px; max-width:360px; z-index:200;">${item.hint}</div>
+                            </span>
+                        </div>`;
+            }).join('');
+        }
+
+        function showEx4Row(id) {
+            const item = ex4Data.find(d => d.id === id);
+            if (!item) return;
+            const slot1 = document.getElementById(`${id}-1`);
+            const slot2 = document.getElementById(`${id}-2`);
+            if (!slot1 || !slot2) return;
+            const ans1 = item.ans1, ans2 = item.ans2;
+            if (slot1.textContent.trim() === ans1 && slot2.textContent.trim() === ans2) {
+                removeWord(`${id}-1`, 'ex4');
+                removeWord(`${id}-2`, 'ex4');
+            } else {
+                removeWord(`${id}-1`, 'ex4');
+                removeWord(`${id}-2`, 'ex4');
+                placeWord(`${id}-1`, ans1, 'ex4');
+                placeWord(`${id}-2`, ans2, 'ex4');
+                slot1.classList.add('correct');
+                slot2.classList.add('correct');
+            }
+        }
+
+        // ===================== RENDER EX5 =====================
+        function initEx5() {
+            // No word bank needed — numbers are typed/dragged from a small bank
+            const bank = document.getElementById('bank-ex5');
+            bank.innerHTML = ['1', '2', '3'].map(w =>
+                `<div class="word-item" draggable="true" id="wi-ex5-${w}">${w}</div>`
+            ).join('');
+            bank.querySelectorAll('.word-item').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    dragWord = e.target.textContent.trim();
+                    dragSection = 'ex5';
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', dragWord);
+                });
+                el.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            });
+
+            const container = document.getElementById('questions-ex5');
+            container.innerHTML = `<p style="margin:0 0 12px; color:var(--text);">This person:</p>` +
+                ex5Sentences.map(item => {
+                    const hid = 'ex5-' + item.letter + '-hint';
+                    const slotId = 'ex5-slot-' + item.letter;
+                    // Extra sentence B gets a "-" read-only indicator instead of a drop slot
+                    const slotHtml = item.ans === '-'
+                        ? `<span class="drop-slot" id="${slotId}" data-section="ex5" data-ans="-"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex5')"
+                                onclick="removeWord('${slotId}','ex5')" style="min-width:40px;"></span>`
+                        : `<span class="drop-slot" id="${slotId}" data-section="ex5" data-ans="${item.ans}"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex5')"
+                                onclick="removeWord('${slotId}','ex5')" style="min-width:40px;"></span>`;
+                    return `<div class="ex5-row">
+                                <strong style="min-width:26px; color:var(--primary-dark); font-size:1.05rem;">${item.letter}</strong>
+                                <span style="flex:1; color:var(--text);">${item.text}</span>
+                                ${slotHtml}
+                                <span class="row-btns" style="position:relative;">
+                                    <button class="eye-btn" onclick="showEx5Row('${slotId}')">👁️</button>
+                                    <button class="hint-btn" onclick="showListeningHint('ex5','${item.letter}','${hid}')">i</button>
+                                    <div class="hint-box absolute" id="${hid}">${item.hint}</div>
+                                </span>
+                            </div>`;
+                }).join('');
+        }
+
+        function showEx5Row(slotId) {
+            const letter = slotId.replace('ex5-slot-', '');
+            const item = ex5Sentences.find(s => s.letter === letter);
+            if (!item) return;
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = item.ans;
+            if (slot.textContent.trim() === ans) {
+                if (ans !== '-') removeWord(slotId, 'ex5');
+            } else {
+                if (ans === '-') {
+                    // Show dash directly without using word bank
+                    slot.textContent = '–';
+                    slot.classList.add('filled', 'correct');
+                } else {
+                    removeWord(slotId, 'ex5');
+                    placeWord(slotId, ans, 'ex5');
+                    slot.classList.add('correct');
+                }
+            }
+        }
+
+        // ===================== DRAG-DROP HELPERS =====================
+        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
+
+        function handleDragOver(e) { e.preventDefault(); }
+
+        function handleDrop(e, section) {
+            e.preventDefault();
+            const slot = e.target.closest('.drop-slot');
+            if (!slot || section !== dragSection) return;
+            slot.classList.remove('over');
+            placeWord(slot.id, dragWord, section);
+        }
+
+        function placeWord(slotId, word, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const old = slot.textContent.trim();
+            if (old) {
+                const oldEl = document.getElementById(`wi-${section}-${safeId(old)}`);
+                if (oldEl) oldEl.classList.remove('used');
+            }
+            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
+                if (s.textContent.trim() === word && s.id !== slotId) {
+                    s.textContent = '';
+                    s.classList.remove('filled', 'correct', 'incorrect-marked');
+                }
+            });
+            slot.textContent = word;
+            slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.add('used');
+        }
+
+        function removeWord(slotId, section) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const word = slot.textContent.trim();
+            if (!word) return;
+            slot.textContent = '';
+            slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
+            if (wordEl) wordEl.classList.remove('used');
+        }
+
+        // ===================== LISTENING HINT =====================
+        function showListeningHint(exercise, targetId, hintBoxId) {
+            const h = document.getElementById(hintBoxId);
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (!vis) {
+                h.style.display = 'block';
+                const panelId = exercise === 'ex4' ? 'tp-ex4' : 'tp-ex5';
+                toggleTranscript(panelId, true);
+                let tsId = null;
+                if (exercise === 'ex4') {
+                    // targetId is like 'ex4-1' — use ts4-1a
+                    const num = targetId.split('-')[1];
+                    tsId = `ts4-${num}a`;
+                } else {
+                    // targetId is the letter A/B/C/D — look up tsId from ex5Sentences
+                    const sent = ex5Sentences.find(s => s.letter === targetId);
+                    tsId = sent ? sent.tsId : null;
+                }
+                if (tsId) {
+                    const t = document.getElementById(tsId);
+                    if (t) {
+                        t.classList.add('active-highlight');
+                        setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                    }
+                }
+            }
+        }
+
+        // ===================== UTILITY =====================
+        function adjustWidth(el) {
+            if (!el) return;
+            const text = el.value || el.placeholder || '';
+            el.style.width = Math.max(text.length * 12 + 40, 80) + 'px';
+        }
+
+        function toggleInputAns(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans;
+            if (el.value && el.value.toLowerCase() === ans.toLowerCase() && el.classList.contains('correct')) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.add('correct');
+                el.classList.remove('incorrect-marked');
+            }
+            adjustWidth(el);
+        }
+
+        function toggleHintById(event, hintId) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const vis = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            if (!vis) h.style.display = 'block';
+        }
+
+        function toggleVocab() {
+            const c = document.getElementById('vocabContent');
+            const icon = document.getElementById('vocabIcon');
+            if (c.style.display === 'block') { c.style.display = 'none'; icon.textContent = '▼'; }
+            else { c.style.display = 'block'; icon.textContent = '▲'; }
+        }
+
+        function toggleTranscript(panelId, forceOpen = false) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (forceOpen) { panel.classList.add('active'); return; }
+            panel.classList.toggle('active');
+        }
+
+        // ===================== CHECK ALL =====================
+        function checkAll() {
+            document.querySelectorAll('input[data-ans]').forEach(el => {
+                const val = el.value.trim().toLowerCase();
+                if (!val) { el.classList.remove('correct', 'incorrect-marked'); return; }
+                const ans = el.dataset.ans.toLowerCase().split('|').map(a => a.trim());
+                const ok = ans.includes(val);
+                el.classList.toggle('correct', ok);
+                el.classList.toggle('incorrect-marked', !ok);
+            });
+            document.querySelectorAll('.drop-slot').forEach(slot => {
+                const val = slot.textContent.trim().toLowerCase();
+                if (!val) { slot.classList.remove('correct', 'incorrect-marked'); return; }
+                const rawAns = slot.dataset.ans;
+                // Extra sentence: accept '–' or '-' as correct for data-ans="-"
+                if (rawAns === '-') {
+                    const ok = val === '-' || val === '–';
+                    slot.classList.toggle('correct', ok);
+                    slot.classList.toggle('incorrect-marked', !ok);
+                    return;
+                }
+                const ans = rawAns.toLowerCase().split('|').map(a => a.trim());
+                const ok = ans.includes(val);
+                slot.classList.toggle('correct', ok);
+                slot.classList.toggle('incorrect-marked', !ok);
+            });
+        }
+        window.checkAll = checkAll;
+
+        // ===================== SHOW ALL / RESET =====================
+        function showAnswers(prefix) {
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-body input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('.drop-slot[data-section="ex2"]').forEach(slot => {
+                    placeWord(slot.id, slot.dataset.ans, 'ex2');
+                    slot.classList.add('correct');
+                });
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = el.dataset.ans;
+                    el.classList.add('correct');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex4') {
+                ex4Data.forEach(item => {
+                    const slot1 = document.getElementById(`${item.id}-1`);
+                    const slot2 = document.getElementById(`${item.id}-2`);
+                    if (slot1 && slot2) {
+                        removeWord(`${item.id}-1`, 'ex4');
+                        removeWord(`${item.id}-2`, 'ex4');
+                        placeWord(`${item.id}-1`, item.ans1, 'ex4');
+                        placeWord(`${item.id}-2`, item.ans2, 'ex4');
+                        slot1.classList.add('correct');
+                        slot2.classList.add('correct');
+                    }
+                });
+            } else if (prefix === 'ex5') {
+                ex5Sentences.forEach(item => {
+                    const slotId = 'ex5-slot-' + item.letter;
+                    const slot = document.getElementById(slotId);
+                    if (!slot) return;
+                    if (item.ans === '-') {
+                        slot.textContent = '–';
+                        slot.classList.add('filled', 'correct');
+                    } else {
+                        removeWord(slotId, 'ex5');
+                        placeWord(slotId, item.ans, 'ex5');
+                        slot.classList.add('correct');
+                    }
+                });
+            }
+        }
+
+        function resetSection(prefix) {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
+            if (prefix === 'ex1') {
+                document.querySelectorAll('#ex1-body input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex2') {
+                document.querySelectorAll('.drop-slot[data-section="ex2"]').forEach(slot => removeWord(slot.id, 'ex2'));
+            } else if (prefix === 'ex3') {
+                document.querySelectorAll('#questions-ex3 input[data-ans]').forEach(el => {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(el);
+                });
+            } else if (prefix === 'ex4') {
+                document.querySelectorAll('.drop-slot[data-section="ex4"]').forEach(slot => removeWord(slot.id, 'ex4'));
+            } else if (prefix === 'ex5') {
+                ex5Sentences.forEach(item => {
+                    const slotId = 'ex5-slot-' + item.letter;
+                    removeWord(slotId, 'ex5');
+                    const slot = document.getElementById(slotId);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                });
+            }
+        }
+
+        // ===================== RESIZERS =====================
+        function setupResizer(rid, pid) {
+            const resizer = document.getElementById(rid);
+            const panel = document.getElementById(pid);
+            if (!resizer || !panel) return;
+            let dragging = false;
+            resizer.addEventListener('mousedown', () => dragging = true);
+            document.addEventListener('mousemove', e => {
+                if (!dragging) return;
+                const cont = panel.closest('.reading-split-container');
+                if (!cont) return;
+                const rect = cont.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width * 100;
+                if (pct > 10 && pct < 85) panel.style.flex = `0 0 ${pct}%`;
+            });
+            document.addEventListener('mouseup', () => dragging = false);
+        }
+
+        // ===================== INIT =====================
+        window.onload = function () {
+            renderEx1();
+            initEx2();
+            renderEx3();
+            initEx4();
+            initEx5();
+            setupResizer('rr-ex4', 'tp-ex4');
+            setupResizer('rr-ex5', 'tp-ex5');
+            setTimeout(() => {
+                document.querySelectorAll('input.task5-input').forEach(el => adjustWidth(el));
+            }, 100);
+        };
+    </script>
+    <script src="access-core.js"></script>
+</body>
+
+</html>
