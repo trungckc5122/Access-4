@@ -1,0 +1,1059 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solution Intermediate - 8A On the phone</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== INHERIT FROM 7A ===== */
+        .solution-title-row h1 {
+            justify-content: flex-start !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            gap: 15px !important;
+        }
+        .solution-title-row .home-btn {
+            position: static !important;
+            transform: none !important;
+        }
+
+        .custom-landscape-container {
+            margin-bottom: 40px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        .custom-landscape-header {
+            background: var(--primary-light);
+            padding: 18px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .custom-landscape-header h3 {
+            margin: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .custom-landscape-content {
+            display: none;
+            padding: 25px;
+            background: var(--bg);
+        }
+        .vocab-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .vocab-item {
+            flex: 1 1 calc(33.33% - 12px);
+            min-width: 180px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+        .vocab-item strong {
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            vertical-align: middle;
+            line-height: 1;
+        }
+        .hint-box.absolute {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 260px;
+            max-width: 380px;
+            margin-top: 5px;
+            z-index: 200;
+            display: none;
+            background: var(--hint-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--hint-border);
+            color: var(--hint-text);
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+        .hint-box strong {
+            color: var(--primary-dark);
+        }
+        .hint-box em {
+            color: var(--accent, #0d9488);
+            font-weight: 600;
+            font-style: italic;
+        }
+        @media (max-width: 600px) {
+            .hint-box.absolute {
+                left: 0 !important;
+                right: 0 !important;
+                max-width: 100%;
+            }
+        }
+
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+        .btn-show-all {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-show-all:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .audio-player-container {
+            margin: 10px 0 15px 0;
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .audio-player-container audio {
+            flex: 1;
+            height: 35px;
+        }
+        .transcript-toggle-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .transcript-toggle-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .reading-split-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            background: var(--bg);
+            overflow: visible;
+        }
+        .transcript-panel {
+            flex: 0 0 0%;
+            padding: 0;
+            background: var(--reading-bg, #f8f9fa);
+            transition: all 0.3s ease;
+            border-right: 0px solid var(--glass-border);
+            position: sticky;
+            top: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 12px 0 0 12px;
+        }
+        .transcript-panel.active {
+            flex: 0 0 44%;
+            padding: 25px;
+            border-right: 1px solid var(--glass-border);
+        }
+        .reading-resizer {
+            width: 0;
+            background: var(--resizer-bg, #cbd5e1);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .transcript-panel.active+.reading-resizer {
+            width: 8px;
+        }
+        .main-exercise-panel {
+            flex: 1;
+            padding: 25px;
+            background: var(--card-bg, #fff);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .speaker-line {
+            margin-bottom: 14px;
+            display: block;
+            line-height: 1.8;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        .speaker-line strong {
+            color: var(--primary-dark);
+        }
+        .script-section h3 {
+            color: var(--primary);
+            margin: 0 0 15px;
+        }
+        .highlightable {
+            transition: background-color 0.3s, box-shadow 0.3s;
+            border-radius: 3px;
+            padding: 1px 3px;
+            cursor: pointer;
+        }
+        .highlightable.active-highlight {
+            background-color: rgba(250, 204, 21, 0.5);
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+            color: #000;
+            font-weight: 500;
+        }
+
+        /* ===== WORD BANK (static) ===== */
+        .word-bank-static {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 14px 18px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid var(--glass-border);
+            justify-content: center;
+        }
+        .word-bank-static .word-tag {
+            background: var(--card-bg);
+            padding: 4px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            font-weight: 600;
+            color: var(--primary-dark);
+            font-size: 0.9rem;
+        }
+
+        /* ===== EXERCISE 1 ===== */
+        .ex1-dialogue {
+            margin-bottom: 20px;
+            padding: 16px 18px;
+            background: var(--bg);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+        .ex1-dialogue .speaker-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .ex1-dialogue .dialogue-text {
+            font-size: 0.95rem;
+            line-height: 2;
+            color: var(--text);
+        }
+        .ex1-dialogue .dialogue-text .inline-group {
+            margin: 0 2px;
+        }
+        .ex1-dialogue .dialogue-text .task5-input {
+            min-width: 120px;
+            text-align: left;
+            width: auto;
+            font-size: 0.92rem;
+        }
+
+        /* ===== EXERCISE 2 ===== */
+        .ex2-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+            flex-wrap: wrap;
+        }
+        .ex2-row .task5-input {
+            min-width: 160px;
+            text-align: left;
+            width: auto;
+        }
+        .ex2-row .sentence-text {
+            color: var(--text);
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        /* ===== EXERCISE 3 ===== */
+        .ex3-item {
+            margin-bottom: 28px;
+            padding: 18px 22px;
+            background: var(--bg);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+        .ex3-question {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 14px;
+            font-size: 1.05rem;
+        }
+        .ex3-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ex3-options .word-choice {
+            padding: 10px 16px;
+            border-radius: 10px;
+            max-width: 400px;
+            border: 2px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            display: block;
+            width: 100%;
+            text-align: left;
+        }
+        .ex3-options .word-choice:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .ex3-options .word-choice.selected {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .ex3-options .word-choice.correct-select {
+            background: #16a34a;
+            color: #fff;
+            border-color: #16a34a;
+        }
+        .ex3-options .word-choice.incorrect-select {
+            background: #dc2626;
+            color: #fff;
+            border-color: #dc2626;
+        }
+        .ex3-row-btns {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            position: relative;
+        }
+        .ex3-row-btns .hint-box.absolute {
+            left: 0;
+            right: auto;
+            min-width: 300px;
+        }
+
+        @media (max-width: 768px) {
+            .ex1-dialogue .dialogue-text .task5-input {
+                min-width: 100px;
+            }
+            .ex2-row .task5-input {
+                min-width: 120px;
+            }
+            .ex3-row-btns .hint-box.absolute {
+                min-width: 260px;
+                max-width: 90vw;
+            }
+        }
+        @media (max-width: 900px) {
+            .transcript-panel.active {
+                flex: 0 0 100%;
+                position: relative;
+                max-height: none;
+            }
+            .reading-split-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="solution-title-row">
+        <div class="solution-unit-badge">8A</div>
+        <div class="solution-title-content">
+            <div class="solution-skill-tag">Vocabulary &amp; Listening</div>
+            <h1>On the phone</h1>
+            <p class="subtitle">I can talk about using my phone.</p>
+        </div>
+    </div>
+
+    <!-- VOCABULARY REFERENCE -->
+    <div class="custom-landscape-container">
+        <div class="custom-landscape-header" onclick="toggleVocab()">
+            <h3>Vocabulary Reference: Phone &amp; Communication</h3>
+            <span id="vocabIcon" style="font-size:1.2rem;">▼</span>
+        </div>
+        <div class="custom-landscape-content" id="vocabContent">
+            <ul class="vocab-grid">
+                <li class="vocab-item"><strong>top up</strong> /tɒp ʌp/: nạp tiền (điện thoại)</li>
+                <li class="vocab-item"><strong>disable</strong> /dɪsˈeɪ.bəl/: vô hiệu hóa</li>
+                <li class="vocab-item"><strong>make a call</strong> /meɪk ə kɔːl/: gọi điện</li>
+                <li class="vocab-item"><strong>send a text</strong> /send ə tekst/: gửi tin nhắn</li>
+                <li class="vocab-item"><strong>save a number</strong> /seɪv ə ˈnʌm.bər/: lưu số điện thoại</li>
+                <li class="vocab-item"><strong>enter a number</strong> /ˈen.tər ə ˈnʌm.bər/: nhập số</li>
+                <li class="vocab-item"><strong>put on silent</strong> /pʊt ɒn ˈsaɪ.lənt/: để chế độ im lặng</li>
+                <li class="vocab-item"><strong>leave a message</strong> /liːv ə ˈmes.ɪdʒ/: để lại tin nhắn</li>
+                <li class="vocab-item"><strong>listen to voicemail</strong> /ˈlɪs.ən tu ˈvɔɪs.meɪl/: nghe thư thoại</li>
+                <li class="vocab-item"><strong>lose the signal</strong> /luːz ðə ˈsɪɡ.nəl/: mất sóng</li>
+                <li class="vocab-item"><strong>recharge the battery</strong> /riːˈtʃɑːdʒ ðə ˈbæt.ər.i/: sạc pin</li>
+                <li class="vocab-item"><strong>run out of charge</strong> /rʌn aʊt əv tʃɑːdʒ/: hết pin</li>
+                <li class="vocab-item"><strong>pick up</strong> /pɪk ʌp/: nhấc máy, bắt máy</li>
+                <li class="vocab-item"><strong>switch off</strong> /swɪtʃ ɒf/: tắt</li>
+                <li class="vocab-item"><strong>speak up</strong> /spiːk ʌp/: nói to hơn</li>
+                <li class="vocab-item"><strong>break up</strong> /breɪk ʌp/: (tín hiệu) bị ngắt quãng</li>
+                <li class="vocab-item"><strong>get through</strong> /ɡet θruː/: kết nối được</li>
+                <li class="vocab-item"><strong>call back</strong> /kɔːl bæk/: gọi lại</li>
+                <li class="vocab-item"><strong>hang up</strong> /hæŋ ʌp/: cúp máy</li>
+                <li class="vocab-item"><strong>get back to</strong> /ɡet bæk tu/: trả lời lại, liên hệ lại</li>
+                <li class="vocab-item"><strong>cut off</strong> /kʌt ɒf/: bị ngắt kết nối (cúp máy đột ngột)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ==================== EXERCISE 1 ==================== -->
+    <div class="exercise-card">
+        <div class="exercise-title">1. Complete the dialogue extracts with the correct form of the verbs below.</div>
+
+        <!-- Word bank (static) -->
+        <div class="word-bank-static" id="wordbank-ex1">
+            <span class="word-tag">top up</span>
+            <span class="word-tag">disable</span>
+            <span class="word-tag">make</span>
+            <span class="word-tag">send</span>
+            <span class="word-tag">save</span>
+            <span class="word-tag">text</span>
+            <span class="word-tag">enter</span>
+            <span class="word-tag">put</span>
+            <span class="word-tag">leave</span>
+            <span class="word-tag">listen to</span>
+            <span class="word-tag">lose</span>
+            <span class="word-tag">recharge</span>
+            <span class="word-tag">call</span>
+        </div>
+
+        <div id="questions-ex1"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+        </div>
+    </div>
+
+    <!-- ==================== EXERCISE 2 ==================== -->
+    <div class="exercise-card">
+        <div class="exercise-title">2. Complete the sentences with phrasal verbs.</div>
+        <div id="questions-ex2"></div>
+        <div class="controls-row">
+            <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+            <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+        </div>
+    </div>
+
+    <!-- ==================== EXERCISE 3 (Listening) ==================== -->
+    <div class="reading-split-container">
+        <div class="transcript-panel" id="tp-ex3">
+            <h2 style="margin-bottom:18px;border-bottom:2px solid var(--primary);padding-bottom:10px;color:var(--text);">
+                Transcript 2.05</h2>
+            <div class="script-section">
+
+                <div class="speaker-line"><strong>Dialogue 1</strong></div>
+                <div class="speaker-line"><strong>Holly:</strong> What are you doing, Sam?<br>
+                    <strong>Sam:</strong> I’m just <span class="highlightable" id="ts3-1a">saving some numbers to my phone book</span>.<br>
+                    <strong>Holly:</strong> Miss Brown will be cross if she sees you.<br>
+                    <strong>Sam:</strong> She isn’t here right now, is she? And I’m not making a call or sending a text, am I? I <span class="highlightable" id="ts3-1b">can’t get a signal here anyway</span>.<br>
+                    <strong>Holly:</strong> <span class="highlightable" id="ts3-1c">I can</span>.<br>
+                    <strong>Sam:</strong> Really? I have to go outside, in the playground.<br>
+                    <strong>Holly:</strong> Watch out. Here’s Miss Brown now. ...<br>
+                    <strong>Teacher:</strong> Whose phone is that?<br>
+                    <strong>Sam:</strong> Mine, Miss. Sorry, Miss.<br>
+                    <strong>Teacher:</strong> <span class="highlightable" id="ts3-1d">Switch it off</span>. You know you aren’t allowed to use phones in school.<br>
+                    <strong>Sam:</strong> Not even in the corridor, Miss?<br>
+                    <strong>Teacher:</strong> Not even in the corridor. Now, come on everybody, into the classroom, please.<br>
+                    <strong>Holly:</strong> <span class="highlightable" id="ts3-1e">You should’ve put it on silent!</span>
+                </div>
+
+                <div class="speaker-line" style="margin-top:18px;"><strong>Dialogue 2</strong></div>
+                <div class="speaker-line">
+                    <strong>Daniel:</strong> Hi, Sally. It’s me, Daniel. Listen, I’m sorry about yesterday.<br>
+                    I didn’t mean to <span class="highlightable" id="ts3-2a">cut you off</span>. I wasn’t angry – well, I was a bit angry, but not because of what you said on the phone. It’s just that <span class="highlightable" id="ts3-2b">I’d left you a message</span> about tomorrow evening – you know the film we were planning to go and see. <span class="highlightable" id="ts3-2c">And you didn’t get back to me</span>, so we can’t go now because the tickets have all sold out. And I’m busy for the rest of the week, so it was my only chance. Anyway, I’m sorry, and let’s fix something up for next weekend? OK? Bye now.
+                </div>
+
+                <div class="speaker-line" style="margin-top:18px;"><strong>Dialogue 3</strong></div>
+                <div class="speaker-line">
+                    <strong>Mum:</strong> You’re good with gadgets, aren’t you, Lucy? Can you help me with something?<br>
+                    <strong>Lucy:</strong> Sure, Mum. What are you trying to do?<br>
+                    <strong>Mum:</strong> Well, your grandad has sent me a text, and <span class="highlightable" id="ts3-3a">I want to be able to call him without dialling the number</span>.<br>
+                    <strong>Lucy:</strong> The easiest thing would be to <span class="highlightable" id="ts3-3b">add his number to your contacts list</span>.<br>
+                    <strong>Mum:</strong> How do I do that?<br>
+                    <strong>Lucy:</strong> Select the message. Tap on this icon. … That’s right.<br>
+                    <strong>Mum:</strong> Oh. The phone’s gone dead. What’s happened?<br>
+                    <strong>Lucy:</strong> <span class="highlightable" id="ts3-3c">Looks like the battery’s run out of charge</span>. Didn’t you get a warning message about it?<br>
+                    <strong>Mum:</strong> I got a message about ten minutes ago, but I didn’t read it.<br>
+                    <strong>Lucy:</strong> Plug it into the charger. You put the lead in the small hole at —<br>
+                    <strong>Mum:</strong> Yes, I know how to recharge my phone. I’m not that useless.<br>
+                    <strong>Lucy:</strong> OK, now it’s coming back on. So, tap the icon I showed you, then tap on ‘Save contact to address book’. Then you can type in Grandad’s name and save it.<br>
+                    <strong>Mum:</strong> OK, thanks. I think I can manage now.
+                </div>
+
+            </div>
+        </div>
+        <div class="reading-resizer" id="rr-ex3"></div>
+        <div class="main-exercise-panel">
+            <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
+                <div class="exercise-title">3. 🎧 2.05 Listen and circle the correct answers.</div>
+                <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex3')">📜 Transcript 2.05</button>
+                <div class="audio-player-container">
+                    <audio controls>
+                        <source src="audio-int/2_Track_05.wav" type="audio/wav">
+                    </audio>
+                </div>
+                <div id="questions-ex3"></div>
+                <div class="controls-row">
+                    <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+<script>
+    // ===================== DATA =====================
+
+    // Exercise 1: Full dialogue extracts
+    const ex1Data = {
+        dialogues: [
+            {
+                speaker: 'A Ben',
+                parts: [
+                    'I went abroad last month to Italy. I ',
+                    ' my mobile before I left with €40. I didn’t ',
+                    ' data roaming while I was away, and I ',
+                    ' lots of calls. I checked my balance when I got back and found I’d been charged €30!'
+                ],
+                answers: ['topped up', 'disable', 'made'],
+                hints: [
+                    '<strong>Đáp án:</strong> topped up<br><strong>Giải thích:</strong> <em>top up</em> = nạp tiền điện thoại trước khi đi du lịch.',
+                    '<strong>Đáp án:</strong> disable<br><strong>Giải thích:</strong> <em>disable data roaming</em> = tắt chức năng dữ liệu roaming để tránh phí.',
+                    '<strong>Đáp án:</strong> made<br><strong>Giải thích:</strong> <em>make calls</em> = thực hiện các cuộc gọi.'
+                ]
+            },
+            {
+                speaker: 'B Emma',
+                parts: [
+                    'I’ll ',
+                    ' you a text and you can ',
+                    ' my number to your phone book. Then, when you want to ring or ',
+                    ' me, you won’t have to ',
+                    ' the number.'
+                ],
+                answers: ['send', 'save', 'text', 'enter'],
+                hints: [
+                    '<strong>Đáp án:</strong> send<br><strong>Giải thích:</strong> <em>send a text</em> = gửi tin nhắn.',
+                    '<strong>Đáp án:</strong> save<br><strong>Giải thích:</strong> <em>save my number to your phone book</em> = lưu số vào danh bạ.',
+                    '<strong>Đáp án:</strong> text<br><strong>Giải thích:</strong> <em>text me</em> = nhắn tin cho tôi.',
+                    '<strong>Đáp án:</strong> enter<br><strong>Giải thích:</strong> <em>enter the number</em> = nhập số điện thoại.'
+                ]
+            },
+            {
+                speaker: 'C Ryan',
+                parts: [
+                    'I phoned Tom, but he must have ',
+                    ' his phone on silent, so he didn’t answer. I ',
+                    ' a message, so hopefully he’ll ',
+                    ' his voicemail later.'
+                ],
+                answers: ['put', 'left', 'listen to'],
+                hints: [
+                    '<strong>Đáp án:</strong> put<br><strong>Giải thích:</strong> <em>put the phone on silent</em> = để điện thoại chế độ im lặng.',
+                    '<strong>Đáp án:</strong> left<br><strong>Giải thích:</strong> <em>leave a message</em> = để lại tin nhắn thoại.',
+                    '<strong>Đáp án:</strong> listen to<br><strong>Giải thích:</strong> <em>listen to his voicemail</em> = nghe thư thoại.'
+                ]
+            },
+            {
+                speaker: 'D Zoe',
+                parts: [
+                    'Hi, Sally, we’re on the train. I’ve ',
+                    ' the phone on loudspeaker so that Mike can speak to you too ... No, it won’t annoy the other passengers! ... Oh, the train is about to go into a tunnel and I think we’ll ',
+                    ' the signal ... Can you hear me? ... OK, listen, I’m running out of charge too, I need to ',
+                    ' the battery. I’ll hang up now and ',
+                    ' you later ... Bye.'
+                ],
+                answers: ['put', 'lose', 'recharge', 'call'],
+                hints: [
+                    '<strong>Đáp án:</strong> put<br><strong>Giải thích:</strong> <em>put the phone on loudspeaker</em> = bật loa ngoài.',
+                    '<strong>Đáp án:</strong> lose<br><strong>Giải thích:</strong> <em>lose the signal</em> = mất sóng khi vào đường hầm.',
+                    '<strong>Đáp án:</strong> recharge<br><strong>Giải thích:</strong> <em>recharge the battery</em> = sạc pin.',
+                    '<strong>Đáp án:</strong> call<br><strong>Giải thích:</strong> <em>call you later</em> = gọi lại cho bạn sau.'
+                ]
+            }
+        ]
+    };
+
+    // Exercise 2: with first letter placeholder
+    const ex2Data = [
+        { num: 1, text: 'Oh, no! My phone has ______ charge! Can I borrow your charger?', ans: 'run out of', placeholder: 'r', hint: '<strong>Đáp án:</strong> run out of<br><strong>Giải thích:</strong> <em>run out of charge</em> = hết pin.' },
+        { num: 2, text: '‘Did you speak to Jack?’ ‘No. I phoned him, and his mobile rang for ages, but he didn’t ______.’', ans: 'pick up', placeholder: 'p', hint: '<strong>Đáp án:</strong> pick up<br><strong>Giải thích:</strong> <em>pick up</em> = nhấc máy, bắt máy.' },
+        { num: 3, text: 'Announcement on a plane: ‘Would all passengers please ______ all mobile devices and computers.’', ans: 'switch off', placeholder: 's', hint: '<strong>Đáp án:</strong> switch off<br><strong>Giải thích:</strong> <em>switch off</em> = tắt nguồn.' },
+        { num: 4, text: 'Can you please ______? I can’t hear you very well. You are ______ because the signal isn’t very strong.', ans: ['speak up', 'breaking up'], placeholder: ['s', 'b'], hint: '<strong>Đáp án:</strong> speak up / breaking up<br><strong>Giải thích:</strong> <em>speak up</em> = nói to hơn; <em>breaking up</em> = tín hiệu bị ngắt quãng.' },
+        { num: 5, text: 'I rang my dad’s office and spoke to the receptionist, but I didn’t ______ to my dad.', ans: 'get through', placeholder: 'g', hint: '<strong>Đáp án:</strong> get through<br><strong>Giải thích:</strong> <em>get through</em> = kết nối được với ai qua điện thoại.' },
+        { num: 6, text: 'Message on an answerphone: ‘Can you ______ me ______ when you get this message? My number is 01548 956711.’', ans: ['call', 'back'], placeholder: ['c', 'b'], hint: '<strong>Đáp án:</strong> call back<br><strong>Giải thích:</strong> <em>call back</em> = gọi lại cho ai.' },
+        { num: 7, text: 'Recorded announcement: ‘The number you have dialled does not exist. Please ______ and dial again.’', ans: 'hang up', placeholder: 'h', hint: '<strong>Đáp án:</strong> hang up<br><strong>Giải thích:</strong> <em>hang up</em> = cúp máy.' },
+        { num: 8, text: 'Message on an answerphone: ‘Hi, Neil. I’ve been trying to call you all morning. Can you ______ to me on 01548 190684?’', ans: 'get back', placeholder: 'g', hint: '<strong>Đáp án:</strong> get back<br><strong>Giải thích:</strong> <em>get back to someone</em> = liên hệ lại với ai.' },
+        { num: 9, text: '‘Why did you hang up during the call?’ ‘I didn’t hang up. We were ______.’', ans: 'cut off', placeholder: 'c', hint: '<strong>Đáp án:</strong> cut off<br><strong>Giải thích:</strong> <em>cut off</em> = bị ngắt kết nối đột ngột.' }
+    ];
+
+    // Exercise 3
+    const ex3Data = [
+        {
+            id: '1',
+            question: 'Dialogue 1: Which of these sentences is a fact, not an opinion?',
+            options: [
+                { label: 'a', text: 'Alex returned the charger to Jane.', ans: true },
+                { label: 'b', text: 'Alex borrows Jane’s charger very frequently.', ans: false },
+                { label: 'c', text: 'Alex was the last person to use Jane’s charger.', ans: false }
+            ],
+            tsIds: ['ts3-1a', 'ts3-1b', 'ts3-1c', 'ts3-1d', 'ts3-1e'],
+            hint: '<strong>Đáp án:</strong> a<br><strong>Bằng chứng:</strong> Trong đoạn hội thoại, Sam đang lưu số vào danh bạ và Holly nói "Miss Brown sẽ giận". Câu a là một sự kiện khách quan có thể kiểm chứng.<br><strong>Giải thích:</strong> "Alex trả sạc cho Jane" là một sự kiện thực tế, không phải ý kiến cá nhân chủ quan.'
+        },
+        {
+            id: '2',
+            question: 'Dialogue 2: Daniel was cross because',
+            options: [
+                { label: 'a', text: 'of something Sally said.', ans: false },
+                { label: 'b', text: 'Sally didn’t return his call.', ans: true },
+                { label: 'c', text: 'he’s too busy to go to the cinema.', ans: false }
+            ],
+            tsIds: ['ts3-2a', 'ts3-2b', 'ts3-2c'],
+            hint: '<strong>Đáp án:</strong> b<br><strong>Bằng chứng:</strong> Daniel nói: "I\'d left you a message... and you didn\'t get back to me"<br><strong>Giải thích:</strong> Daniel tức giận vì Sally không gọi lại, khiến anh không thể đi xem phim.'
+        },
+        {
+            id: '3',
+            question: 'Dialogue 3: Lucy’s mum needs help with',
+            options: [
+                { label: 'a', text: 'recharging her phone.', ans: false },
+                { label: 'b', text: 'saving a number to her phone book.', ans: true },
+                { label: 'c', text: 'understanding warning messages.', ans: false }
+            ],
+            tsIds: ['ts3-3a', 'ts3-3b', 'ts3-3c'],
+            hint: '<strong>Đáp án:</strong> b<br><strong>Bằng chứng:</strong> Mẹ của Lucy nói: "I want to be able to call him without dialling the number" và Lucy hướng dẫn "add his number to your contacts list".<br><strong>Giải thích:</strong> Mẹ của Lucy cần giúp đỡ để lưu số điện thoại của ông vào danh bạ.'
+        }
+    ];
+
+    // ===================== RENDER EX1 =====================
+    function renderEx1() {
+        const container = document.getElementById('questions-ex1');
+        let globalIdx = 0;
+        let html = '';
+
+        ex1Data.dialogues.forEach(dialogue => {
+            let partsHtml = '';
+            dialogue.parts.forEach((part, idx) => {
+                if (idx < dialogue.answers.length) {
+                    const id = 'ex1-' + (globalIdx + idx);
+                    const hintId = id + '-hint';
+                    partsHtml += part +
+                        `<span class="inline-group">
+                            <input type="text" id="${id}" data-ans="${dialogue.answers[idx]}" class="task5-input" oninput="adjustWidth(this)" placeholder="">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="toggleInputAns('${id}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="${hintId}">${dialogue.hints[idx]}</div>
+                        </span>`;
+                } else {
+                    partsHtml += part;
+                }
+            });
+            // If the last part doesn't have a blank, it's already included in the loop above.
+            // But if parts.length > answers.length, the last part is appended without blank.
+            // Actually, we need to handle the case where the last part has no blank.
+            // The loop above handles it because for idx < answers.length we add blank + part,
+            // and for idx === answers.length we just add the remaining part.
+
+            // The above logic works because we're iterating parts and adding blanks before each part
+            // except when we've already added all answers.
+
+            // Let's rebuild more cleanly:
+            // Actually the current logic: for each part, if idx < answers.length, add part + blank.
+            // This puts the blank AFTER the part. But the blank should be IN the sentence where ______ is.
+
+            // Better approach: reconstruct using the parts array where each part is text before a blank.
+            // The last part has no blank after it.
+
+            let rebuilt = '';
+            for (let i = 0; i < dialogue.parts.length; i++) {
+                const part = dialogue.parts[i];
+                if (i < dialogue.answers.length) {
+                    const id = 'ex1-' + (globalIdx + i);
+                    const hintId = id + '-hint';
+                    rebuilt += part +
+                        `<span class="inline-group">
+                            <input type="text" id="${id}" data-ans="${dialogue.answers[i]}" class="task5-input" oninput="adjustWidth(this)" placeholder="">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="toggleInputAns('${id}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="${hintId}">${dialogue.hints[i]}</div>
+                        </span>`;
+                } else {
+                    rebuilt += part;
+                }
+            }
+
+            html += `<div class="ex1-dialogue">
+                        <span class="speaker-label">${dialogue.speaker}</span>
+                        <div class="dialogue-text">${rebuilt}</div>
+                    </div>`;
+            globalIdx += dialogue.answers.length;
+        });
+
+        container.innerHTML = html;
+        setTimeout(() => {
+            document.querySelectorAll('#questions-ex1 input.task5-input').forEach(el => adjustWidth(el));
+        }, 50);
+    }
+
+    // ===================== RENDER EX2 =====================
+    function renderEx2() {
+        const container = document.getElementById('questions-ex2');
+        container.innerHTML = ex2Data.map(item => {
+            const baseId = 'ex2-' + item.num;
+            const hintId = baseId + '-hint';
+            const isMulti = Array.isArray(item.ans);
+            const parts = item.text.split('______');
+            const boldNum = `<strong>${item.num}</strong>`;
+            let blankIdx = 0;
+            let sentenceHtml = '';
+            parts.forEach((p, i) => {
+                sentenceHtml += p;
+                if (i < parts.length - 1) {
+                    const inputId = isMulti ? baseId + '-' + blankIdx : baseId;
+                    const ansVal = isMulti ? item.ans[blankIdx] : item.ans;
+                    const ph = isMulti ? item.placeholder[blankIdx] : item.placeholder;
+                    // Only show eye/hint on the last blank to avoid duplicates
+                    const isLast = i === parts.length - 2;
+                    const btnHtml = isLast
+                        ? `<span class="row-btns">
+                                <button class="eye-btn" onclick="showEx2Row('${baseId}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                            </span>
+                            <div class="hint-box absolute" id="${hintId}">${item.hint}</div>`
+                        : '';
+                    sentenceHtml += `<span class="inline-group">
+                            <input type="text" id="${inputId}" data-ans="${ansVal}" class="task5-input" oninput="adjustWidth(this)" placeholder="${ph}">
+                            ${btnHtml}
+                        </span>`;
+                    blankIdx++;
+                }
+            });
+            return `<div class="ex2-row">${boldNum} <span class="sentence-text">${sentenceHtml}</span></div>`;
+        }).join('');
+        setTimeout(() => {
+            document.querySelectorAll('#questions-ex2 input.task5-input').forEach(el => adjustWidth(el));
+        }, 50);
+    }
+
+    function showEx2Row(baseId) {
+        const item = ex2Data.find(d => 'ex2-' + d.num === baseId);
+        if (!item) return;
+        const isMulti = Array.isArray(item.ans);
+        if (isMulti) {
+            item.ans.forEach((ans, i) => {
+                const el = document.getElementById(baseId + '-' + i);
+                if (!el) return;
+                const showing = el.classList.contains('correct');
+                if (showing) {
+                    el.value = ''; el.classList.remove('correct', 'incorrect-marked');
+                } else {
+                    el.value = ans; el.classList.add('correct'); el.classList.remove('incorrect-marked');
+                }
+                adjustWidth(el);
+            });
+        } else {
+            toggleInputAns(baseId);
+        }
+    }
+
+    // ===================== RENDER EX3 =====================
+    function renderEx3() {
+        const container = document.getElementById('questions-ex3');
+        container.innerHTML = ex3Data.map(item => {
+            const grp = 'ex3-' + item.id;
+            const hintId = grp + '-hint';
+            const optHtml = item.options.map(opt => {
+                return `<span class="word-choice" data-ans-group="${grp}" data-ans-val="${opt.label}" onclick="selectEx3Choice(this, '${item.options.find(o => o.ans === true).label}')">
+                            ${opt.label}. ${opt.text}
+                        </span>`;
+            }).join('');
+
+            // Single eye + single hint button per question
+            return `<div class="ex3-item">
+                        <div class="ex3-question">${item.question}</div>
+                        <div class="ex3-options">
+                            ${optHtml}
+                        </div>
+                        <div class="ex3-row-btns">
+                            <button class="eye-btn" onclick="showEx3Ans('${grp}','${item.options.find(o => o.ans === true).label}')">👁️</button>
+                            <button class="hint-btn" onclick="showListeningHint('${item.tsIds[0]}','${hintId}')">i</button>
+                            <div class="hint-box absolute" id="${hintId}">${item.hint}</div>
+                        </div>
+                    </div>`;
+        }).join('');
+    }
+
+    function selectEx3Choice(span, correctVal) {
+        const grp = span.dataset.ansGroup;
+        document.querySelectorAll(`.word-choice[data-ans-group="${grp}"]`).forEach(s => {
+            s.classList.remove('selected', 'correct-select', 'incorrect-select');
+        });
+        span.classList.add('selected');
+    }
+
+    function showEx3Ans(grp, correctVal) {
+        const spans = document.querySelectorAll(`.word-choice[data-ans-group="${grp}"]`);
+        const alreadyShown = Array.from(spans).some(s => s.classList.contains('correct-select'));
+        if (alreadyShown) {
+            spans.forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            return;
+        }
+        spans.forEach(s => {
+            s.classList.remove('selected', 'correct-select', 'incorrect-select');
+            if (s.dataset.ansVal === correctVal) s.classList.add('correct-select');
+        });
+    }
+
+    // ===================== LISTENING HINT =====================
+    function showListeningHint(targetId, hintBoxId) {
+        const h = document.getElementById(hintBoxId);
+        if (!h) return;
+        const vis = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+        if (!vis) {
+            h.style.display = 'block';
+            const panel = document.getElementById('tp-ex3');
+            if (panel && !panel.classList.contains('active')) panel.classList.add('active');
+            const t = document.getElementById(targetId);
+            if (t) {
+                t.classList.add('active-highlight');
+                setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+            }
+        }
+    }
+
+    // ===================== UTILITY =====================
+    function adjustWidth(el) {
+        if (!el) return;
+        const text = el.value || el.placeholder || '';
+        el.style.width = Math.max(text.length * 12 + 40, 80) + 'px';
+    }
+
+    function toggleInputAns(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const ans = el.dataset.ans;
+        if (el.value && el.value.toLowerCase() === ans.toLowerCase() && el.classList.contains('correct')) {
+            el.value = '';
+            el.classList.remove('correct', 'incorrect-marked');
+        } else {
+            el.value = ans;
+            el.classList.add('correct');
+            el.classList.remove('incorrect-marked');
+        }
+        adjustWidth(el);
+    }
+
+    function toggleHintById(event, hintId) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(hintId);
+        if (!h) return;
+        const vis = h.style.display === 'block';
+        document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        if (!vis) h.style.display = 'block';
+    }
+
+    function toggleVocab() {
+        const c = document.getElementById('vocabContent');
+        const icon = document.getElementById('vocabIcon');
+        if (c.style.display === 'block') { c.style.display = 'none'; icon.textContent = '▼'; }
+        else { c.style.display = 'block'; icon.textContent = '▲'; }
+    }
+
+    function toggleTranscript(panelId) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        panel.classList.toggle('active');
+    }
+
+    // ===================== CHECK ALL =====================
+    function checkAll() {
+        document.querySelectorAll('input[data-ans]').forEach(el => {
+            const val = el.value.trim().toLowerCase();
+            if (!val) { el.classList.remove('correct', 'incorrect-marked'); return; }
+            const ans = el.dataset.ans.toLowerCase().split('/').map(a => a.trim());
+            const ok = ans.some(a => val === a);
+            el.classList.toggle('correct', ok);
+            el.classList.toggle('incorrect-marked', !ok);
+        });
+        ex3Data.forEach(item => {
+            const grp = 'ex3-' + item.id;
+            const correctVal = item.options.find(o => o.ans === true).label;
+            document.querySelectorAll(`.word-choice[data-ans-group="${grp}"]`).forEach(span => {
+                if (!span.classList.contains('selected')) return;
+                const ok = span.dataset.ansVal === correctVal;
+                span.classList.remove('correct-select', 'incorrect-select');
+                span.classList.add(ok ? 'correct-select' : 'incorrect-select');
+            });
+        });
+    }
+    window.checkAll = checkAll;
+
+    // ===================== SHOW ALL / RESET =====================
+    function showAnswers(prefix) {
+        if (prefix === 'ex1') {
+            document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                adjustWidth(el);
+            });
+            return;
+        }
+        if (prefix === 'ex2') {
+            document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                el.value = el.dataset.ans;
+                el.classList.add('correct');
+                adjustWidth(el);
+            });
+            return;
+        }
+        if (prefix === 'ex3') {
+            ex3Data.forEach(item => {
+                const grp = 'ex3-' + item.id;
+                const correctVal = item.options.find(o => o.ans === true).label;
+                document.querySelectorAll(`.word-choice[data-ans-group="${grp}"]`).forEach(span => {
+                    span.classList.remove('selected', 'correct-select', 'incorrect-select');
+                    if (span.dataset.ansVal === correctVal) span.classList.add('correct-select');
+                });
+            });
+            return;
+        }
+    }
+
+    function resetSection(prefix) {
+        document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+        document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
+        if (prefix === 'ex1') {
+            document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+            return;
+        }
+        if (prefix === 'ex2') {
+            document.querySelectorAll('#questions-ex2 input[data-ans]').forEach(el => {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+            return;
+        }
+        if (prefix === 'ex3') {
+            ex3Data.forEach(item => {
+                document.querySelectorAll(`.word-choice[data-ans-group="ex3-${item.id}"]`).forEach(s => {
+                    s.classList.remove('selected', 'correct-select', 'incorrect-select');
+                });
+            });
+            return;
+        }
+    }
+
+    // ===================== RESIZER =====================
+    function setupResizer(rid, pid) {
+        const resizer = document.getElementById(rid);
+        const panel = document.getElementById(pid);
+        if (!resizer || !panel) return;
+        let dragging = false;
+        resizer.addEventListener('mousedown', () => dragging = true);
+        document.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const cont = panel.closest('.reading-split-container');
+            if (!cont) return;
+            const rect = cont.getBoundingClientRect();
+            const pct = (e.clientX - rect.left) / rect.width * 100;
+            if (pct > 10 && pct < 85) panel.style.flex = `0 0 ${pct}%`;
+        });
+        document.addEventListener('mouseup', () => dragging = false);
+    }
+
+    // ===================== INIT =====================
+    window.onload = function () {
+        renderEx1();
+        renderEx2();
+        renderEx3();
+        setupResizer('rr-ex3', 'tp-ex3');
+        setTimeout(() => {
+            document.querySelectorAll('input.task5-input').forEach(el => adjustWidth(el));
+        }, 100);
+    };
+</script>
+<script src="access-core.js"></script>
+</body>
+
+</html>
