@@ -1026,7 +1026,7 @@
                 div.innerHTML = `
                     ${html}
                     <span class="row-btns" style="position:relative;">
-                        <button class="eye-btn" onclick="showEx4Group('${qid}')">👁️</button>
+                        <button class="eye-btn" onclick="toggleEx4Group('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         <div class="hint-box" id="${qid}-hint" style="position:absolute;top:100%;left:0;min-width:260px;max-width:380px;z-index:200;">
                             <div class="hint-detail">${hintText}</div>
@@ -1042,19 +1042,18 @@
             });
         }
 
-        function showEx4Group(qid) {
+        // Nhấn lần 1: điền đáp án + đánh dấu. Nhấn lần 2: chỉ xóa những ô do nút này vừa show (không xóa ô user đã tự nhập)
+        function toggleEx4Group(qid) {
             const inputs = document.querySelectorAll(`[id^="${qid}-"]`);
-            // Kiểm tra nếu tất cả các ô đã điền đúng thì xóa hết, nếu không thì điền
-            const allCorrect = Array.from(inputs).every(el => {
-                const userVal = el.value.toLowerCase().trim();
-                const correctVal = el.dataset.ans.toLowerCase().trim();
-                return userVal === correctVal && userVal !== '';
-            });
-            if (allCorrect) {
+            const wasShown = Array.from(inputs).some(el => el.dataset.eyeShown === '1');
+            if (wasShown) {
                 inputs.forEach(el => {
-                    el.value = "";
-                    el.classList.remove('correct', 'incorrect-marked');
-                    adjustWidth(el);
+                    if (el.dataset.eyeShown === '1') {
+                        el.value = '';
+                        el.classList.remove('correct', 'incorrect-marked');
+                        adjustWidth(el);
+                        delete el.dataset.eyeShown;
+                    }
                 });
             } else {
                 inputs.forEach(el => {
@@ -1062,6 +1061,7 @@
                     el.classList.add('correct');
                     el.classList.remove('incorrect-marked');
                     adjustWidth(el);
+                    el.dataset.eyeShown = '1';
                 });
             }
         }
