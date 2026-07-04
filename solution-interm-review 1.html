@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Solution Intermediate | Review Unit 1</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .reading-split-container {
+            display: flex;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            background: var(--bg);
+            min-height: 550px;
+        }
+
+        .reading-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+            line-height: 2;
+            font-size: 1rem;
+            text-align: justify;
+            border-right: 1px solid var(--glass-border);
+            position: sticky;
+            top: 15px;
+            max-height: calc(100vh - 30px);
+            align-self: flex-start;
+        }
+
+        .exercise-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover,
+        .reading-resizer.active {
+            background: var(--primary);
+        }
+
+        .choice-group {
+            display: flex;
+            gap: 12px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .choice-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--glass-border);
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+            flex: 1 0 auto;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .choice-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .choice-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .choice-btn.correct-highlight {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: white;
+        }
+
+        .choice-btn.incorrect-highlight {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 6px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .question-item, .question-row {
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 16px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .question-header {
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .reading-box {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 22px;
+            line-height: 2.4;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        #ex9-container .choice-group {
+            display: inline-flex;
+            gap: 6px;
+            margin: 0 6px;
+            vertical-align: middle;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #ex9-container .choice-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+            flex: none;
+            min-width: unset;
+            white-space: nowrap;
+        }
+
+        #ex9-container .choice-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        #ex9-container .choice-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        #ex9-container .choice-btn.correct-highlight {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: white;
+        }
+
+        #ex9-container .choice-btn.incorrect-highlight {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+        }
+
+        #ex9-container .hint-box {
+            display: none;
+            width: 100%;
+        }
+
+        @media (max-width: 700px) {
+            #ex9-container .choice-group { display: flex; margin: 6px 0; }
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Floating hint — nổi, nằm gần nút nhấn, không đẩy nội dung */
+        .float-hint {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 280px;
+            width: auto;
+            max-width: 360px;
+            margin-top: 0;
+            z-index: 300;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.13);
+        }
+
+        .hint-anchor {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .hint-detail {
+            margin-bottom: 6px;
+        }
+
+        .active-highlight {
+            background-color: #fef08a;
+            box-shadow: 0 0 0 2px #fef08a;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .btn-show-all {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-color: var(--primary);
+        }
+
+        .btn-show-all:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-reset {
+            background: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .btn-reset:hover {
+            background: #e2e8f0;
+        }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            font-weight: bold;
+            text-align: center;
+            min-width: 80px;
+            font-size: 1.05rem;
+            color: var(--primary);
+            padding: 2px 6px;
+            transition: all 0.2s;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            background: var(--primary-light);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.1);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-medium);
+            justify-content: center;
+            position: sticky;
+            top: 15px;
+            z-index: 90;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+        
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+        
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        .mcq-group {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+            align-items: center;
+        }
+
+        .mcq-option {
+            border: 2px solid var(--border-medium);
+            padding: 10px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--card-bg);
+            font-weight: 500;
+        }
+        
+        .mcq-option:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .mcq-option.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .mcq-option.correct-card {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+        
+        .mcq-option.incorrect-card {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+        
+        .choice-gap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(13, 148, 136, 0.05);
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1px solid var(--primary-light);
+        }
+        
+        .word-choice {
+            padding: 2px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+        
+        .word-choice:hover {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+        
+        .word-choice.selected {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .word-choice.correct-select {
+            background: #16a34a;
+            color: white;
+        }
+        
+        .word-choice.incorrect-select {
+            background: #dc2626;
+            color: white;
+        }
+
+        .global-check {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 14px 28px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            z-index: 1000;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+            transition: all 0.2s;
+        }
+        
+        .global-check:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+            background: #219653;
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 60px !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .inline-input-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin: 0 4px;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        .tiny-verb {
+            font-style: italic;
+            color: var(--text-muted, #64748b);
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        #ex6-container .hint-box,
+        #ex7-container .hint-box {
+            display: none;
+            width: 100%;
+        }
+
+        .dialogue-block {
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .dialogue-block:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .dialogue-line {
+            margin-bottom: 10px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- HEADER -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">1</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar & Vocabulary</div>
+                <h1>Review Unit 1</h1>
+                <p class="subtitle">Age & life stages, life events, phrasal verbs, used to / get used to</p>
+            </div>
+        </div>
+
+        <!-- EX1: age & life stages -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Rewrite the sentences with the words below.</div>
+            <div class="word-bank" id="bank-ex1"></div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX2: life events verbs -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Complete each pair of life events with a suitable verb.</div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX3: life event verbs (with word bank shown, no drag) -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Complete the sentences with the correct form of the verbs below.</div>
+            <div class="word-bank" id="bank-ex3"></div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX4: phrasal verbs replacing underlined words -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Replace the underlined words with the correct form of the phrasal verbs below.</div>
+            <div class="word-bank" id="bank-ex4"></div>
+            <div id="ex4-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX5: phrasal verb pairs -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Complete the sentences with the correct form of the correct verb in brackets. Include a pronoun where necessary.</div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX6: past tense narrative text -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>6.</strong> Complete the text with the correct past tense form of the verbs in brackets.</div>
+            <div id="ex6-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX7: dialogues with used to -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>7.</strong> Complete the dialogues with the correct form of <em>used to</em> and the verbs in brackets.</div>
+            <div id="ex7-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex7')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex7')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EX8: used to / get used to -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>8.</strong> Complete the sentences with <em>used to</em> or <em>get used to</em>.</div>
+            <div id="ex8-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex8')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex8')">Reset</button>
+            </div>
+        </div>
+
+        <!-- EXERCISE 9: USE OF ENGLISH (option cards embedded in the text) -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>9.</strong> Circle the correct answers.</div>
+            <p style="font-weight:bold; font-size:1.2rem; border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:15px; color:var(--primary-dark);">Boyhood</p>
+            <div id="ex9-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAllEx9()">Show All</button>
+                <button class="btn btn-reset" onclick="resetEx9()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="global-check" onclick="checkAll()"> CHECK ALL ANSWERS (ENTER)</button>
+
+    <script src="access-core.js"></script>
+
+    <script>
+        // Utilities
+        function adjustWidth(el) {
+            if (el) {
+                el.style.width = Math.max((el.value || '').length * 10 + 30, 60) + 'px';
+            }
+        }
+
+        function getHintHTML(ans, explanation) {
+            return `<div class="hint-detail"><strong>Đáp án:</strong> <span style="color:var(--primary); font-weight:bold;">${ans}</span></div>
+                    <div class="hint-detail"><strong>Giải thích:</strong> ${explanation}</div>`;
+        }
+
+        function toggleSlot(id, ans) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (el.tagName === 'INPUT') {
+                if (el.value === ans) {
+                    el.value = '';
+                    el.classList.remove('correct', 'incorrect-marked');
+                } else {
+                    el.value = ans;
+                    el.classList.remove('incorrect-marked');
+                    el.classList.add('correct');
+                }
+                adjustWidth(el);
+            } else {
+                if (el.innerText === ans) {
+                    el.innerText = '';
+                    el.classList.remove('correct', 'incorrect-marked', 'filled');
+                } else {
+                    el.innerText = ans;
+                    el.classList.remove('incorrect-marked');
+                    el.classList.add('correct', 'filled');
+                }
+            }
+        }
+
+        function toggleHint(evtOrId, id) {
+            // Accept both toggleHint(event, id) and legacy toggleHint(id)
+            let hintId;
+            if (typeof evtOrId === 'string') {
+                hintId = evtOrId;
+            } else {
+                if (evtOrId && evtOrId.stopPropagation) evtOrId.stopPropagation();
+                hintId = id;
+            }
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(box => box.style.display = 'none');
+            if (!isVisible) h.style.display = 'block';
+        }
+
+        // Safe reveal for inputs — avoids apostrophe-in-onclick-string bugs
+        function revealInput(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0];
+            if (el.value === ans && el.classList.contains('correct')) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.remove('incorrect-marked');
+                el.classList.add('correct');
+            }
+            adjustWidth(el);
+        }
+
+        function renderStaticBank(id, words) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = words.map(w => `<div class="word-item" style="cursor:default;">${w}</div>`).join('');
+        }
+
+        // ---------- EX 1: age & life stages ----------
+        const ex1Words = ["a centenarian", "an infant", "in (your) teens", "in (your) twenties", "middle-aged", "a toddler", "a young child"];
+        const ex1Data = [
+            { text: "My niece is only four months old.", ans: "My niece is an infant.", expl: "'an infant' = trẻ sơ sinh (khoảng dưới 1 tuổi), phù hợp với bé gái 4 tháng tuổi." },
+            { text: "My little brother is six.", ans: "My little brother is a young child.", expl: "'a young child' = trẻ nhỏ, dùng cho trẻ khoảng 3-8 tuổi." },
+            { text: "My great-grandfather is over a hundred.", ans: "My great-grandfather is a centenarian.", expl: "'a centenarian' = người sống trên 100 tuổi." },
+            { text: "My cousin Jack is fifteen.", ans: "My cousin Jack is in his teens.", expl: "'in your teens' = ở độ tuổi thiếu niên (13-19 tuổi)." },
+            { text: "My mother is fifty next year.", ans: "My mother is middle-aged.", expl: "'middle-aged' = trung niên, thường dùng cho người khoảng 45-65 tuổi." },
+            { text: "My nephew is two years old.", ans: "My nephew is a toddler.", expl: "'a toddler' = trẻ mới biết đi (khoảng 1-3 tuổi)." },
+            { text: "My sister was twenty-three on her last birthday.", ans: "My sister was in her twenties.|My sister is in her twenties.", expl: "'in your twenties' = ở độ tuổi 20. Giữ thì quá khứ 'was' vì câu gốc dùng 'was'." }
+        ];
+
+        function renderEx1() {
+            renderStaticBank('bank-ex1', ex1Words);
+            let html = '';
+            ex1Data.forEach((item, i) => {
+                const primary = item.ans.split('|')[0];
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> ${item.text}<br>
+                    <div style="margin-top:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <input type="text" id="ex1-q${i}" data-ans="${item.ans}" class="task5-input" style="width:400px; max-width:100%; text-align:left; flex-shrink:0;" oninput="adjustWidth(this)">
+                        <span class="row-btns">
+                            <button class="eye-btn" onclick="revealInput('ex1-q${i}')">👁️</button>
+                            <span class="hint-anchor">
+                                <button class="hint-btn" onclick="toggleHint(event,'ex1-h${i}')">i</button>
+                                <div class="hint-box float-hint" id="ex1-h${i}">${getHintHTML(primary, item.expl)}</div>
+                            </span>
+                        </span>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('ex1-container').innerHTML = html;
+        }
+
+        // ---------- EX 2: life event verbs ----------
+        const ex2Data = [
+            { pair: "born / brought up", ans: "be", expl: "'be born' = được sinh ra; 'be brought up' = được nuôi dạy." },
+            { pair: "a flat / a house", ans: "buy", expl: "'buy a flat / a house' = mua căn hộ / nhà." },
+            { pair: "home / school", ans: "leave", expl: "'leave home / school' = rời khỏi nhà (ra ở riêng) / rời trường (tốt nghiệp)." },
+            { pair: "married / engaged", ans: "get", expl: "'get married / engaged' = kết hôn / đính hôn." },
+            { pair: "a business / a family", ans: "start", expl: "'start a business / a family' = khởi nghiệp / lập gia đình." },
+            { pair: "a house / money", ans: "inherit", expl: "'inherit a house / money' = thừa kế nhà / tiền." }
+        ];
+
+        function renderEx2() {
+            let html = '';
+            ex2Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> <input type="text" id="ex2-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)"> <span class="tiny-verb">${item.pair}</span>
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="revealInput('ex2-q${i}')">👁️</button>
+                        <span class="hint-anchor">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button>
+                            <div class="hint-box float-hint" id="ex2-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                        </span>
+                    </span>
+                </div>`;
+            });
+            document.getElementById('ex2-container').innerHTML = html;
+            document.querySelectorAll('#ex2-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 3: verbs with word bank shown (no drag) ----------
+        const ex3Words = ["emigrate", "grow up", "move", "pass away", "retire", "settle down"];
+        const ex3Data = [
+            { text: "My grandfather is in his seventies, but he has no plans to ______ from his job.", ans: "retire", expl: "'retire' = nghỉ hưu. Phù hợp vì ông đã lớn tuổi nhưng chưa có kế hoạch nghỉ việc." },
+            { text: "I missed my friends terribly when we ______ house.", ans: "moved", expl: "'move house' = chuyển nhà. Chia quá khứ 'moved' vì đi cùng 'missed' (quá khứ)." },
+            { text: "They're thinking of leaving the UK. They'd like to ______ to Australia.", ans: "emigrate", expl: "'emigrate to' = di cư đến (một nước khác)." },
+            { text: "My best friend ______ in France, so she's bilingual.", ans: "grew up", expl: "'grow up' = lớn lên. Chia quá khứ 'grew up' vì kể về quá trình đã qua." },
+            { text: "When I leave university, I want to go travelling before I ______ and have a family.", ans: "settle down", expl: "'settle down' = ổn định cuộc sống (kết hôn, có gia đình)." },
+            { text: "Tom's grandmother is ill in hospital. He'll be extremely upset if she ______.", ans: "passes away", expl: "'pass away' = qua đời (cách nói giảm nhẹ của 'die'). Chia ngôi thứ ba số ít 'passes away'." }
+        ];
+
+        function renderEx3() {
+            renderStaticBank('bank-ex3', ex3Words);
+            let html = '';
+            ex3Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex3-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="revealInput('ex3-q${i}')">👁️</button>
+                        <span class="hint-anchor">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button>
+                            <div class="hint-box float-hint" id="ex3-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                        </span>
+                    </span>
+                </div>`;
+            });
+            document.getElementById('ex3-container').innerHTML = html;
+            document.querySelectorAll('#ex3-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 4: phrasal verbs replacing underlined words ----------
+        const ex4Words = ["catch up with", "fit in with", "get on with", "go through with", "live up to", "put up with", "run out of", "sign up for", "walk out on"];
+        const ex4Data = [
+            { text: "Connor didn't <u>fulfil</u> his parents' expectations and failed to get a place at university.", ans: "live up to", expl: "'live up to' = sống đúng như kỳ vọng. 'fulfil expectations' = 'live up to expectations'." },
+            { text: "After her father <u>abandoned</u> his job, the family moved house.", ans: "walked out on", expl: "'walk out on' = bỏ ngang, bỏ rơi (công việc/ai đó). Chia quá khứ 'walked out on'." },
+            { text: "That child doesn't <u>behave like</u> the rest of the class because he prefers to play on his own.", ans: "fit in with", expl: "'fit in with' = hòa nhập với. Giữ hiện tại đơn phủ định 'doesn't fit in with'." },
+            { text: "When Amy <u>agreed to do</u> a job as a waitress, she didn't think it would be such hard work.", ans: "signed up for", expl: "'sign up for' = đăng ký nhận làm (một công việc). Chia quá khứ 'signed up for'." },
+            { text: "My brother is always making ambitious plans, but he never <u>completes</u> them.", ans: "goes through with", expl: "'go through with' = thực hiện đến cùng (một kế hoạch). Giữ hiện tại đơn 'goes through with'." },
+            { text: "He'll never <u>succeed in reaching</u> the other runners because he's much slower than they are.", ans: "catch up with", expl: "'catch up with' = đuổi kịp. Sau 'will' dùng động từ nguyên mẫu 'catch up with'." },
+            { text: "I couldn't <u>tolerate</u> the heat any longer, so I went out and bought a fan.", ans: "put up with", expl: "'put up with' = chịu đựng. Sau 'couldn't' dùng động từ nguyên mẫu 'put up with'." },
+            { text: "She couldn't finish the exam because she had <u>used all of</u> the time.", ans: "run out of", expl: "'run out of' = hết, cạn kiệt (thời gian/đồ dùng). Chia quá khứ hoàn thành 'had run out of'." },
+            { text: "My little brother and I don't <u>have a good relationship with</u> each other.", ans: "get on with", expl: "'get on with' = hòa hợp với. Giữ hiện tại đơn phủ định 'don't get on with'." }
+        ];
+
+        function renderEx4() {
+            renderStaticBank('bank-ex4', ex4Words);
+            let html = '';
+            ex4Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> ${item.text} <input type="text" id="ex4-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="revealInput('ex4-q${i}')">👁️</button>
+                        <span class="hint-anchor">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>
+                            <div class="hint-box float-hint" id="ex4-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                        </span>
+                    </span>
+                </div>`;
+            });
+            document.getElementById('ex4-container').innerHTML = html;
+            document.querySelectorAll('#ex4-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 5: verb pairs in brackets ----------
+        const ex5Data = [
+            { text: "The room was full, so he needed to take a deep breath before he ______. (go in / go in for)", ans: "went in", expl: "'go in' = đi vào. Câu không có tân ngữ nên dùng 'go in', chia quá khứ 'went in'." },
+            { text: "The teacher didn't notice that we hadn't done the homework. We ______. (get away / get away with)", ans: "got away with it", expl: "'get away with' = trốn tránh được (hậu quả), thêm tân ngữ 'it' thay cho việc chưa làm bài tập." },
+            { text: "The starter wasn't very tasty, but the main course ______. It was delicious! (make up / make up for)", ans: "made up for it", expl: "'make up for' = bù đắp cho, thêm tân ngữ 'it' thay cho món khai vị không ngon." },
+            { text: "I didn't answer the phone because I ______ yet. (get up / get up to)", ans: "hadn't got up", expl: "'get up' = thức dậy. Hành động xảy ra trước một mốc quá khứ khác nên dùng quá khứ hoàn thành 'hadn't got up'." },
+            { text: "If you don't understand a word, ______ in the dictionary. (look up / look up to)", ans: "look it up", expl: "'look up' = tra cứu, đại từ 'it' chen giữa cụm động từ tách được (look it up)." },
+            { text: "If you make a promise, you shouldn't ______. (go back / go back on)", ans: "go back on it", expl: "'go back on' = nuốt lời, thất hứa, thêm tân ngữ 'it' thay cho lời hứa." }
+        ];
+
+        function renderEx5() {
+            let html = '';
+            ex5Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex5-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="revealInput('ex5-q${i}')">👁️</button>
+                        <span class="hint-anchor">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button>
+                            <div class="hint-box float-hint" id="ex5-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                        </span>
+                    </span>
+                </div>`;
+            });
+            document.getElementById('ex5-container').innerHTML = html;
+            document.querySelectorAll('#ex5-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 6: past tense narrative text ----------
+        const ex6Template = "Fauja Singh used to take part in amateur races when he was younger, but he {{1}} running marathons until he was in his eighties. He {{2}} a race since 1947 when he joined his local running club at the age of 84. The coach nearly {{3}} him home on the first day because he {{4}} a suit. Mr Singh's first race was the London Marathon, which he {{5}} in six hours and 54 minutes, a new record for the over-nineties. The previous record holder {{6}} a time of seven hours and 52 minutes.";
+        const ex6Data = [
+            { verb: "not start", ans: "didn't start", expl: "Hành động 'không bắt đầu' kéo dài đến một mốc trong quá khứ ('until he was in his eighties') -> quá khứ đơn phủ định 'didn't start'." },
+            { verb: "not run", ans: "hadn't run", expl: "Khoảng thời gian 'since 1947' tính đến mốc 'khi anh gia nhập câu lạc bộ ở tuổi 84' -> quá khứ hoàn thành phủ định 'hadn't run'." },
+            { verb: "send", ans: "sent", expl: "Hành động xảy ra một lần, đã hoàn tất trong quá khứ -> quá khứ đơn 'sent'." },
+            { verb: "wear", ans: "was wearing", expl: "Mô tả trạng thái đang diễn ra tại thời điểm đó (lý do huấn luyện viên suýt đuổi về) -> quá khứ tiếp diễn 'was wearing'." },
+            { verb: "complete", ans: "completed", expl: "Hành động đã hoàn thành (hoàn thành cuộc đua) -> quá khứ đơn 'completed'." },
+            { verb: "set", ans: "had set", expl: "Sự việc xảy ra trước đó, trước khi Mr Singh phá kỷ lục -> quá khứ hoàn thành 'had set'." }
+        ];
+
+        function renderEx6() {
+            let text = ex6Template;
+            ex6Data.forEach((item, idx) => {
+                const n = idx + 1;
+                const id = `ex6-q${n}`;
+                const input = `<span class="inline-input-wrapper">
+                    <input type="text" id="${id}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                    <span class="tiny-verb">(${item.verb})</span>
+                    <button class="eye-btn" onclick="revealInput('${id}')">👁️</button>
+                    <span class="hint-anchor">
+                        <button class="hint-btn" onclick="toggleHint(event,'${id}-h')">i</button>
+                        <div class="hint-box float-hint" id="${id}-h">${getHintHTML(item.ans, item.expl)}</div>
+                    </span>
+                </span>`;
+                text = text.replace(`{{${n}}}`, input);
+            });
+            document.getElementById('ex6-container').innerHTML = `<div class="reading-box">${text}</div>`;
+            document.querySelectorAll('#ex6-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 7: dialogues with used to ----------
+        const ex7Dialogues = [
+            {
+                lines: [
+                    { speaker: "A", text: "______ (you / watch) a lot of cartoons when you were a child?", blanks: [
+                        { ans: "Did you use to watch", expl: "Câu hỏi về thói quen trong quá khứ: 'Did + S + use to + V?'" }
+                    ] },
+                    { speaker: "B", text: "No, I ______ (not watch) much television. I ______ (play) outside with my friends when I could.", blanks: [
+                        { ans: "didn't use to watch", expl: "Phủ định thói quen quá khứ: 'didn't use to + V'." },
+                        { ans: "used to play", expl: "Khẳng định thói quen quá khứ: 'used to + V'." }
+                    ] }
+                ]
+            },
+            {
+                lines: [
+                    { speaker: "A", text: "My brother has got a new job in a shop.", blanks: [] },
+                    { speaker: "B", text: "Really? What ______ (he / do)?", blanks: [
+                        { ans: "did he use to do", expl: "Câu hỏi với từ để hỏi 'what' về thói quen quá khứ: 'What did + S + use to + V?'" }
+                    ] },
+                    { speaker: "A", text: "He ______ (work) in a factory, but he ______ (not like) it very much.", blanks: [
+                        { ans: "used to work", expl: "Khẳng định thói quen quá khứ đã không còn đúng ở hiện tại: 'used to + V'." },
+                        { ans: "didn't use to like", expl: "Phủ định cảm giác/thói quen trong quá khứ: 'didn't use to + V'." }
+                    ] }
+                ]
+            },
+            {
+                lines: [
+                    { speaker: "A", text: "Where ______ (you and your family / spend) the summer holidays?", blanks: [
+                        { ans: "did you and your family use to spend", expl: "Câu hỏi với chủ ngữ ghép về thói quen quá khứ: 'Did + S + use to + V?'" }
+                    ] },
+                    { speaker: "B", text: "We ______ (not have) a family holiday because my parents were working. But my brother and I ______ (go) and stay with my grandparents in the country.", blanks: [
+                        { ans: "didn't use to have", expl: "Phủ định thói quen quá khứ: 'didn't use to + V'." },
+                        { ans: "used to go", expl: "Khẳng định thói quen quá khứ: 'used to + V'." }
+                    ] }
+                ]
+            }
+        ];
+
+        function renderEx7() {
+            let html = '';
+            let counter = 0;
+            ex7Dialogues.forEach(dlg => {
+                html += `<div class="dialogue-block">`;
+                dlg.lines.forEach(line => {
+                    let text = line.text;
+                    line.blanks.forEach(b => {
+                        counter++;
+                        const id = `ex7-q${counter}`;
+                        const input = `<span class="inline-input-wrapper">
+                            <input type="text" id="${id}" data-ans="${b.ans}" class="task5-input" style="min-width:220px;" oninput="adjustWidth(this)">
+                            <button class="eye-btn" onclick="revealInput('${id}')">👁️</button>
+                            <span class="hint-anchor">
+                                <button class="hint-btn" onclick="toggleHint(event,'${id}-h')">i</button>
+                                <div class="hint-box float-hint" id="${id}-h">${getHintHTML(b.ans, b.expl)}</div>
+                            </span>
+                        </span>`;
+                        text = text.replace('______', input);
+                    });
+                    html += `<div class="dialogue-line"><strong>${line.speaker}:</strong> ${text}</div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById('ex7-container').innerHTML = html;
+            document.querySelectorAll('#ex7-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 8: used to / get used to ----------
+        const ex8Data = [
+            { text: "My sister ______ cry a lot when she was a baby.", ans: "used to", expl: "Diễn tả thói quen/tình trạng trong quá khứ không còn đúng ở hiện tại -> 'used to + V'." },
+            { text: "Mike has just moved to the city from the country and he can't ______ the noise.", ans: "get used to", expl: "'get used to' = dần quen với (một điều mới). Đi kèm 'can't' + V nguyên mẫu." },
+            { text: "I'll never ______ wearing contact lenses. To be honest, I prefer my glasses.", ans: "get used to", expl: "'get used to' = quá trình làm quen dần, ở đây phủ định 'never get used to'." },
+            { text: "We ______ live in a small flat, but we've recently moved to a house.", ans: "used to", expl: "Thói quen/tình trạng quá khứ không còn đúng -> 'used to + V'." },
+            { text: "I ______ see my best friend every day, but now I'm too busy.", ans: "used to", expl: "Thói quen quá khứ đã thay đổi -> 'used to + V'." },
+            { text: "You'll have to ______ drinking tea if you go and live in the UK.", ans: "get used to", expl: "'get used to' = quá trình làm quen; đi sau 'have to'." }
+        ];
+
+        function renderEx8() {
+            let html = '';
+            ex8Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex8-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <span class="row-btns">
+                        <button class="eye-btn" onclick="revealInput('ex8-q${i}')">👁️</button>
+                        <span class="hint-anchor">
+                            <button class="hint-btn" onclick="toggleHint(event,'ex8-h${i}')">i</button>
+                            <div class="hint-box float-hint" id="ex8-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                        </span>
+                    </span>
+                </div>`;
+            });
+            document.getElementById('ex8-container').innerHTML = html;
+            document.querySelectorAll('#ex8-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ---------- EX 9: use of English (option cards embedded in the text) ----------
+        const ex9Data = [
+            { text: "The film Boyhood follows the life of a boy called Mason as he is [CHOICE] ", opts: ["getting", "growing", "looking"], ans: "growing", hint: "'grow up' = lớn lên, phù hợp ngữ cảnh kể về quá trình trưởng thành của Mason." },
+            { text: "up. Mason's parents are divorced, so he and his sister are [CHOICE] ", opts: ["brought", "made", "signed"], ans: "brought", hint: "'bring up' (bring - brought - brought) = nuôi dạy. Dùng ở dạng bị động 'are brought up by...'." },
+            { text: "up by their mother, Olivia. Olivia eventually marries her university professor, but the children don't like him because they [CHOICE] ", opts: ["aren't", "didn't", "don't"], ans: "aren't", hint: "'be used to' = quen với. Cần 'aren't used to' (chưa quen với kỷ luật nghiêm khắc của ông ấy)." },
+            { text: "used to his strict discipline. Finally, the couple [CHOICE]", opts: ["pass away", "settle down", "split up"], ans: "split up", hint: "'split up' = chia tay, ly hôn, phù hợp vì câu sau nói Olivia sớm kết hôn lại." },
+            { text: ", but Olivia soon marries again. By this time, Mason is in his teens and he soon [CHOICE] ", opts: ["falls", "gets", "goes"], ans: "falls", hint: "'fall in love' = phải lòng, yêu ai đó. Động từ 'fall' đi với cụm 'in love'." },
+            { text: "in love himself. The film finishes when Mason [CHOICE] ", opts: ["goes", "goes to", "goes to the"], ans: "goes to", hint: "'go to university' = đi học đại học (không dùng mạo từ 'the')." },
+            { text: "university and meets a new group of friends, who he accompanies on a trip to the desert. The thing that makes Boyhood remarkable is the fact that the director [CHOICE] ", opts: ["took", "was taking", "had taken"], ans: "took", hint: "Đây là thông tin thực tế ngoài đời về đạo diễn -> dùng quá khứ đơn 'took'." },
+            { text: "nearly twelve years to make it. Once a year, he [CHOICE] ", opts: ["got used to", "was used to", "used to"], ans: "used to", hint: "'used to + V' diễn tả thói quen lặp lại trong quá khứ (mỗi năm một lần anh ấy thường gặp các diễn viên)." },
+            { text: "meet up with the actors to develop the next part of the film. He wanted to know what [CHOICE] ", opts: ["happened", "was happening", "had happened"], ans: "had happened", hint: "Việc xảy ra trước thời điểm 'wanted to know' (quá khứ) -> quá khứ hoàn thành 'had happened'." },
+            { text: "in their real lives in the previous months, especially in the case of the child actor who played Mason. As a result, the film succeeds in portraying what the boy [CHOICE] during each stage of his childhood.", opts: ["thought", "was thinking", "had thought"], ans: "was thinking", hint: "Diễn tả hành động đang diễn ra trong tâm trí ở mỗi giai đoạn -> quá khứ tiếp diễn 'was thinking'." }
+        ];
+
+        function renderEx9() {
+            const html = ex9Data.map((item, i) => {
+                const choices = `<span class="choice-group" data-id="ex9-${i}" data-ans="${item.ans}">` +
+                    item.opts.map((opt, idx) => `<button class="choice-btn" data-value="${opt}" onclick="selectEx9Choice(this)">${String.fromCharCode(97 + idx)}) ${opt}</button>`).join('') +
+                    `</span>`;
+                const tools = `<span class="row-btns">
+                    <button class="eye-btn" onclick="toggleEx9Choice('ex9-${i}')">👁️</button>
+                    <span class="hint-anchor">
+                        <button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>
+                        <div class="hint-box float-hint" id="ex9-h${i}">${getHintHTML(item.ans, item.hint)}</div>
+                    </span>
+                </span>`;
+                return item.text.replace('[CHOICE]', `${choices}${tools}`);
+            }).join('');
+            document.getElementById('ex9-container').innerHTML = `<div class="reading-box">${html}</div>`;
+        }
+
+        window.selectEx9Choice = function(btn) {
+            const group = btn.closest('.choice-group');
+            group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+            btn.classList.add('selected');
+        };
+
+        window.toggleEx9Choice = function(groupId) {
+            const group = document.querySelector(`.choice-group[data-id="${groupId}"]`);
+            if (!group) return;
+            const ans = group.dataset.ans;
+            const correctBtn = Array.from(group.querySelectorAll('.choice-btn')).find(btn => btn.dataset.value === ans);
+            const alreadyShown = correctBtn && correctBtn.classList.contains('correct-highlight');
+            group.querySelectorAll('.choice-btn').forEach(btn => btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+            if (!alreadyShown && correctBtn) correctBtn.classList.add('selected', 'correct-highlight');
+        };
+
+        window.showAllEx9 = function() {
+            document.querySelectorAll('#ex9-container .choice-group').forEach(group => {
+                const ans = group.dataset.ans;
+                const correctBtn = Array.from(group.querySelectorAll('.choice-btn')).find(btn => btn.dataset.value === ans);
+                group.querySelectorAll('.choice-btn').forEach(btn => btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+                if (correctBtn) correctBtn.classList.add('selected', 'correct-highlight');
+            });
+        };
+
+        window.resetEx9 = function() {
+            document.querySelectorAll('#ex9-container .choice-btn').forEach(btn => btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+            document.querySelectorAll('#ex9-container .hint-box').forEach(h => h.style.display = 'none');
+        };
+
+        // ================= INITIALIZE ALL =================
+        document.addEventListener('DOMContentLoaded', () => {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            renderEx6();
+            renderEx7();
+            renderEx8();
+            renderEx9();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkAll();
+                }
+            });
+        });
+
+        // ================= SHOW / RESET =================
+        window.showAnswers = function(section) {
+            if (section === 'ex1') {
+                ex1Data.forEach((d, i) => { const el = document.getElementById(`ex1-q${i}`); el.value = d.ans.split('|')[0]; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex2') {
+                ex2Data.forEach((d, i) => { const el = document.getElementById(`ex2-q${i}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex3') {
+                ex3Data.forEach((d, i) => { const el = document.getElementById(`ex3-q${i}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex4') {
+                ex4Data.forEach((d, i) => { const el = document.getElementById(`ex4-q${i}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex5') {
+                ex5Data.forEach((d, i) => { const el = document.getElementById(`ex5-q${i}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex6') {
+                ex6Data.forEach((d, idx) => { const el = document.getElementById(`ex6-q${idx + 1}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex7') {
+                document.querySelectorAll('#ex7-container .task5-input').forEach(el => { el.value = el.dataset.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+            if (section === 'ex8') {
+                ex8Data.forEach((d, i) => { const el = document.getElementById(`ex8-q${i}`); el.value = d.ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); });
+            }
+        };
+
+        window.resetSection = function(section) {
+            document.querySelectorAll(`#${section}-container .hint-box`).forEach(h => h.style.display = 'none');
+            document.querySelectorAll(`#${section}-container .task5-input`).forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+        };
+
+        window.checkAll = function() {
+            document.querySelectorAll('input.task5-input').forEach(inp => {
+                if (!inp.value.trim()) return;
+                const val = inp.value.trim().toLowerCase();
+                const answers = inp.dataset.ans.split('|').map(s => s.toLowerCase());
+                const ok = answers.includes(val);
+                inp.classList.remove('correct', 'incorrect-marked');
+                inp.classList.add(ok ? 'correct' : 'incorrect-marked');
+            });
+
+            document.querySelectorAll('#ex9-container .choice-group').forEach(group => {
+                const selected = group.querySelector('.choice-btn.selected');
+                if (!selected) return;
+                const ok = selected.dataset.value === group.dataset.ans;
+                selected.classList.remove('correct-highlight', 'incorrect-highlight');
+                selected.classList.add(ok ? 'correct-highlight' : 'incorrect-highlight');
+            });
+        };
+    </script>
+</body>
+</html>
