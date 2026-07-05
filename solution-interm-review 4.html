@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Solution Intermediate | Review Unit 4</title>
+    <link rel="stylesheet" href="access-theme.css">
+    <style>
+        /* ===== Toàn bộ CSS giống hệt Review 1 (chỉ thêm vài style cho drag & drop mới) ===== */
+        .reading-split-container {
+            display: flex;
+            gap: 0;
+            margin-top: 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            background: var(--bg);
+            min-height: 550px;
+        }
+
+        .reading-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+            line-height: 2;
+            font-size: 1rem;
+            text-align: justify;
+            border-right: 1px solid var(--glass-border);
+            position: sticky;
+            top: 15px;
+            max-height: calc(100vh - 30px);
+            align-self: flex-start;
+        }
+
+        .exercise-panel {
+            flex: 1 1 50%;
+            padding: 25px;
+            background: var(--card-bg);
+            overflow-y: auto;
+        }
+
+        .reading-resizer {
+            width: 8px;
+            background: var(--resizer-bg);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .reading-resizer:hover,
+        .reading-resizer.active {
+            background: var(--primary);
+        }
+
+        .choice-group {
+            display: flex;
+            gap: 12px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .choice-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--glass-border);
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+            flex: 1 0 auto;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .choice-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .choice-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .choice-btn.correct-highlight {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: white;
+        }
+
+        .choice-btn.incorrect-highlight {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+        }
+
+        .row-btns {
+            display: inline-flex;
+            gap: 6px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .question-item,
+        .question-row {
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 16px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .question-header {
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .reading-box {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 22px;
+            line-height: 2.4;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        #ex9-container .choice-group {
+            display: inline-flex;
+            gap: 6px;
+            margin: 0 6px;
+            vertical-align: middle;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #ex9-container .choice-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+            flex: none;
+            min-width: unset;
+            white-space: nowrap;
+        }
+
+        #ex9-container .choice-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        #ex9-container .choice-btn.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        #ex9-container .choice-btn.correct-highlight {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: white;
+        }
+
+        #ex9-container .choice-btn.incorrect-highlight {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+        }
+
+        #ex9-container .hint-box {
+            display: none;
+            width: 100%;
+        }
+
+        @media (max-width: 700px) {
+            #ex9-container .choice-group {
+                display: flex;
+                margin: 6px 0;
+            }
+        }
+
+        .hint-box {
+            display: none;
+            background: var(--hint-bg);
+            border-left: 4px solid var(--hint-border);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .float-hint {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 280px;
+            width: auto;
+            max-width: 360px;
+            margin-top: 0;
+            z-index: 300;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.13);
+        }
+
+        .hint-anchor {
+            position: relative;
+            display: inline-block;
+        }
+
+        .hint-detail {
+            margin-bottom: 6px;
+        }
+
+        .active-highlight {
+            background-color: #fef08a;
+            box-shadow: 0 0 0 2px #fef08a;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .btn-show-all {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-color: var(--primary);
+        }
+
+        .btn-show-all:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-reset {
+            background: #f1f5f9;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .btn-reset:hover {
+            background: #e2e8f0;
+        }
+
+        .task5-input {
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            background: transparent;
+            font-weight: bold;
+            text-align: center;
+            min-width: 80px;
+            font-size: 1.05rem;
+            color: var(--primary);
+            padding: 2px 6px;
+            transition: all 0.2s;
+        }
+
+        .task5-input:focus {
+            outline: none;
+            background: var(--primary-light);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .task5-input.correct {
+            color: #166534;
+            border-bottom-color: #16a34a;
+            background: rgba(22, 163, 74, 0.1);
+        }
+
+        .task5-input.incorrect-marked {
+            color: #991b1b;
+            border-bottom-color: #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-medium);
+            justify-content: center;
+            position: sticky;
+            top: 15px;
+            z-index: 90;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .word-item {
+            background: var(--card-bg);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--border-medium);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .word-item.active-word {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
+        }
+
+        .word-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .word-item.used {
+            display: none;
+        }
+
+        .drop-slot {
+            display: inline-flex;
+            min-width: 100px;
+            height: 30px;
+            background: rgba(13, 148, 136, 0.05);
+            border-bottom: 2px solid var(--primary);
+            margin: 0 3px;
+            vertical-align: middle;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            color: var(--primary);
+            justify-content: center;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 1rem;
+        }
+
+        .drop-slot.over {
+            background: var(--primary-light);
+            border-bottom-style: dashed;
+        }
+
+        .drop-slot.filled {
+            background: var(--primary-light);
+        }
+
+        .drop-slot.correct {
+            background: #dcfce7 !important;
+            border-bottom-color: #16a34a !important;
+            color: #166534 !important;
+        }
+
+        .drop-slot.incorrect-marked {
+            background: #fee2e2 !important;
+            border-bottom-color: #dc2626 !important;
+            color: #991b1b !important;
+        }
+
+        .mcq-group {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+            align-items: center;
+        }
+
+        .mcq-option {
+            border: 2px solid var(--border-medium);
+            padding: 10px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--card-bg);
+            font-weight: 500;
+        }
+
+        .mcq-option:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .mcq-option.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .mcq-option.correct-card {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+
+        .mcq-option.incorrect-card {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        .choice-gap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(13, 148, 136, 0.05);
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1px solid var(--primary-light);
+        }
+
+        .word-choice {
+            padding: 2px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .word-choice:hover {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .word-choice.selected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .word-choice.correct-select {
+            background: #16a34a;
+            color: white;
+        }
+
+        .word-choice.incorrect-select {
+            background: #dc2626;
+            color: white;
+        }
+
+        .global-check {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 14px 28px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            z-index: 1000;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+            transition: all 0.2s;
+        }
+
+        .global-check:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+            background: #219653;
+        }
+
+        .solution-title-row h1 {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding-left: 60px !important;
+            gap: 15px !important;
+            width: fit-content;
+        }
+
+        .inline-input-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin: 0 4px;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        .tiny-verb {
+            font-style: italic;
+            color: var(--text-muted, #64748b);
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        #ex6-container .hint-box,
+        #ex7-container .hint-box {
+            display: none;
+            width: 100%;
+        }
+
+        .dialogue-block {
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .dialogue-block:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .dialogue-line {
+            margin-bottom: 10px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .sub-exercise-label {
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin: 18px 0 8px 0;
+            font-size: 1.1rem;
+            border-bottom: 1px dashed var(--glass-border);
+            padding-bottom: 6px;
+        }
+
+        /* ===== Extra styles for vertical options in Ex10 ===== */
+        #ex10-container .choice-group {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        #ex10-container .choice-btn {
+            width: 100%;
+            max-width: 500px;
+            text-align: left;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: var(--card-bg);
+            font-weight: 500;
+            font-size: 1.05rem;
+            flex: none;
+            min-width: unset;
+        }
+
+        #ex10-container .choice-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        #ex10-container .choice-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        #ex10-container .choice-btn.correct-highlight {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+
+        #ex10-container .choice-btn.incorrect-highlight {
+            background: #dc2626;
+            color: white;
+            border-color: #dc2626;
+        }
+
+        /* Drag & drop matching for Ex5.1 */
+        .match-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .match-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 120px;
+        }
+
+        .match-col h4 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: var(--primary-dark);
+        }
+
+        .match-item {
+            padding: 10px 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s;
+            min-width: 80px;
+        }
+
+        .match-item:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .match-item.dragging {
+            opacity: 0.5;
+        }
+
+        .match-item.droppable {
+            border: 2px dashed var(--primary);
+            background: rgba(13, 148, 136, 0.05);
+            cursor: grab;
+        }
+
+        .match-item.matched {
+            background: #dcfce7;
+            border-color: #16a34a;
+            color: #166534;
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        .match-item.wrong-match {
+            background: #fee2e2;
+            border-color: #dc2626;
+            color: #991b1b;
+        }
+
+        .match-pair {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .match-pair span {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Compound result list */
+        .compound-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .compound-result-item {
+            background: var(--primary-light);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            border: 1px solid var(--primary);
+            font-size: 0.95rem;
+        }
+
+        .compound-result-label {
+            font-weight: 700;
+            margin-right: 10px;
+            color: var(--text-muted);
+        }
+    </style>
+
+<body data-theme="light">
+    <div class="container">
+
+        <!-- HEADER -->
+        <div class="solution-title-row">
+            <div class="solution-unit-badge">4</div>
+            <div class="solution-title-content">
+                <div class="solution-skill-tag">Grammar & Vocabulary</div>
+                <h1>Review Unit 4</h1>
+                <p class="subtitle">Homes &amp; features, comparatives, conditionals, wish / if only</p>
+            </div>
+        </div>
+
+        <!-- ========== EX1: types of home (kéo thả wordbank) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>1.</strong> Match the definitions with the types of home below. Drag the
+                words into the blanks.</div>
+            <div class="word-bank" id="bank-ex1"></div>
+            <div id="ex1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex1')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX2: house features (kéo thả wordbank) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>2.</strong> Complete the sentences with the words below. Drag the words
+                into the blanks.</div>
+            <div class="word-bank" id="bank-ex2"></div>
+            <div id="ex2-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX3: adjectives replacing underlined words (wordbank shown, fill-in) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>3.</strong> Replace the underlined words with the adjectives below.
+            </div>
+            <div class="word-bank" id="bank-ex3"></div>
+            <div id="ex3-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex3')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX4: do / make / take (kéo thả wordbank) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>4.</strong> Complete the sentences with <em>do</em>, <em>make</em>, or
+                <em>take</em>. Drag the words into the blanks.</div>
+            <div class="word-bank" id="bank-ex4"></div>
+            <div id="ex4-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX5: consider/feel/suppose/think (wordbank shown, fill-in, nhiều đáp án) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>5.</strong> Complete the sentences with the correct form of the words
+                below. The words may be used more than once.</div>
+            <div class="word-bank" id="bank-ex5"></div>
+            <div id="ex5-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex5')">Reset</button>
+            </div>
+        </div>
+
+        <h2 style="margin-top:36px; margin-bottom:10px; color:var(--primary-dark);">Grammar</h2>
+
+        <!-- ========== EX6: comparatives/superlatives (fill-in) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>6.</strong> Complete the sentences with the correct form of the
+                adjectives in brackets. It may be necessary to add an extra word to the sentence.</div>
+            <div id="ex6-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex6')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX7: second conditional (dialogues) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>7.</strong> Complete the dialogues with the correct form of the verbs in
+                brackets.</div>
+            <div id="ex7-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex7')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex7')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX8: wish / if only (fill-in, nhiều đáp án) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>8.</strong> Complete the sentences with the correct form of the verbs in
+                brackets.</div>
+            <div id="ex8-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex8')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex8')">Reset</button>
+            </div>
+        </div>
+
+        <!-- ========== EX9: sentence transformation (fill-in, câu đầy đủ) ========== -->
+        <div class="exercise-card">
+            <div class="exercise-title"><strong>9.</strong> Complete the second sentence so that it has a similar
+                meaning to the first. Use the words in brackets.</div>
+            <div id="ex9-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex9')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex9')">Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <button class="global-check" onclick="checkAll()">✅ CHECK ALL ANSWERS (ENTER)</button>
+
+    <script src="access-core.js"></script>
+
+    <script>
+        // ================= UTILITIES =================
+        function adjustWidth(el) {
+            if (el) {
+                el.style.width = Math.max((el.value || '').length * 10 + 30, 60) + 'px';
+            }
+        }
+
+        function getHintHTML(ans, explanation) {
+            return `<div class="hint-detail"><strong>Đáp án:</strong> <span style="color:var(--primary); font-weight:bold;">${ans}</span></div>
+                        <div class="hint-detail"><strong>Giải thích:</strong> ${explanation}</div>`;
+        }
+
+        function toggleHint(evtOrId, id) {
+            let hintId;
+            if (typeof evtOrId === 'string') {
+                hintId = evtOrId;
+            } else {
+                if (evtOrId && evtOrId.stopPropagation) evtOrId.stopPropagation();
+                hintId = id;
+            }
+            const h = document.getElementById(hintId);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            document.querySelectorAll('.hint-box').forEach(box => box.style.display = 'none');
+            if (!isVisible) h.style.display = 'block';
+        }
+
+        function revealInput(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const ans = el.dataset.ans.split('|')[0];
+            if (el.value === ans && el.classList.contains('correct')) {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+            } else {
+                el.value = ans;
+                el.classList.remove('incorrect-marked');
+                el.classList.add('correct');
+            }
+            adjustWidth(el);
+        }
+
+        function renderStaticBank(id, words) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = words.map(w => `<div class="word-item" style="cursor:default;">${w}</div>`).join('');
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // ================= Drag & drop wordbank (dùng chung cho Ex1, Ex2, Ex4) =================
+        function dragStartWord(e) {
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', e.target.dataset.word);
+        }
+
+        function dragEndWord(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function dragOverSlot(e) { e.preventDefault(); }
+        function dragEnterSlot(e) { e.preventDefault(); e.target.classList.add('over'); }
+        function dragLeaveSlot(e) { e.target.classList.remove('over'); }
+
+        // Hàm drop dùng chung, không check đúng/sai ngay, hỗ trợ wordbank có từ trùng nhau (data-word giống nhau)
+        function dropSlotNoCheck(e) {
+            e.preventDefault();
+            e.target.classList.remove('over');
+            const word = e.dataTransfer.getData('text/plain');
+            const slot = e.target;
+            const bank = slot.closest('.exercise-card').querySelector('.word-bank');
+            // Nếu ô đã có từ, trả từ cũ lại wordbank trước khi điền từ mới
+            if (slot.dataset.filled === 'true') {
+                const oldWord = slot.textContent.trim();
+                if (bank && oldWord) {
+                    const oldEl = bank.querySelector(`.word-item[data-word="${oldWord}"].used`);
+                    if (oldEl) oldEl.classList.remove('used');
+                }
+            }
+            slot.textContent = word;
+            slot.dataset.filled = 'true';
+            slot.classList.remove('incorrect-marked');
+            slot.classList.add('filled');
+            if (bank) {
+                const wordEl = bank.querySelector(`.word-item[data-word="${word}"]:not(.used)`);
+                if (wordEl) wordEl.classList.add('used');
+            }
+        }
+
+        // Hàm reveal cho slot, cũng hỗ trợ wordbank có từ trùng nhau
+        function revealDropSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            const bank = slot.closest('.exercise-card').querySelector('.word-bank');
+            if (slot.dataset.filled === 'true' && slot.textContent === ans) {
+                slot.textContent = '';
+                slot.dataset.filled = 'false';
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                if (bank) {
+                    const wordEl = bank.querySelector(`.word-item[data-word="${ans}"].used`);
+                    if (wordEl) wordEl.classList.remove('used');
+                }
+            } else {
+                if (slot.dataset.filled === 'true') {
+                    const oldWord = slot.textContent.trim();
+                    if (bank && oldWord) {
+                        const oldEl = bank.querySelector(`.word-item[data-word="${oldWord}"].used`);
+                        if (oldEl) oldEl.classList.remove('used');
+                    }
+                }
+                slot.textContent = ans;
+                slot.dataset.filled = 'true';
+                slot.classList.remove('incorrect-marked');
+                slot.classList.add('filled', 'correct');
+                if (bank) {
+                    const wordEl = bank.querySelector(`.word-item[data-word="${ans}"]:not(.used)`);
+                    if (wordEl) wordEl.classList.add('used');
+                }
+            }
+        }
+
+        function resetDragSection(section, wordsOriginal) {
+            document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => {
+                slot.textContent = '';
+                slot.dataset.filled = 'false';
+                slot.classList.remove('filled', 'correct', 'incorrect-marked');
+            });
+            const bank = document.getElementById(`bank-${section}`);
+            const shuffled = shuffle([...wordsOriginal]);
+            bank.innerHTML = shuffled.map(w =>
+                `<div class="word-item" draggable="true" data-word="${w}">${w}</div>`
+            ).join('');
+            bank.querySelectorAll('.word-item').forEach(item => {
+                item.addEventListener('dragstart', dragStartWord);
+                item.addEventListener('dragend', dragEndWord);
+            });
+        }
+
+        function showAllDragSection(section) {
+            const bank = document.getElementById(`bank-${section}`);
+            document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => {
+                const ans = slot.dataset.ans;
+                slot.textContent = ans;
+                slot.dataset.filled = 'true';
+                slot.classList.remove('incorrect-marked');
+                slot.classList.add('filled', 'correct');
+            });
+            if (bank) bank.querySelectorAll('.word-item').forEach(el => el.classList.add('used'));
+        }
+
+        // ================= EX1: types of home (kéo thả wordbank) =================
+        const ex1Words = ["bungalow", "flat", "mansion", "semi-detached house", "terraced house", "thatched cottage"];
+        const ex1Data = [
+            { text: "a set of rooms usually on one floor, often in a tower block ______", ans: "flat", expl: "'flat' = căn hộ, thường là một tầng trong một tòa nhà cao tầng." },
+            { text: "a house which shares one wall with another to form a pair of houses ______", ans: "semi-detached house", expl: "'semi-detached house' = nhà liền kề (chung một bức tường với nhà bên cạnh, tạo thành một cặp)." },
+            { text: "a house without stairs which is on one level ______", ans: "bungalow", expl: "'bungalow' = nhà một tầng, không có cầu thang." },
+            { text: "a small, old house with a roof made of straw ______", ans: "thatched cottage", expl: "'thatched cottage' = nhà tranh nhỏ, mái lợp bằng rơm/cỏ." },
+            { text: "a house in a line of similar houses ______", ans: "terraced house", expl: "'terraced house' = nhà phố liền kề nằm trong một dãy nhà giống nhau." },
+            { text: "a very large house ______", ans: "mansion", expl: "'mansion' = biệt thự, dinh thự lớn." }
+        ];
+
+        function renderEx1() {
+            const bank = document.getElementById('bank-ex1');
+            const shuffled = shuffle([...ex1Words]);
+            bank.innerHTML = shuffled.map(w =>
+                `<div class="word-item" draggable="true" data-word="${w}">${w}</div>`
+            ).join('');
+
+            let html = '';
+            ex1Data.forEach((item, i) => {
+                const slotId = `ex1-slot-${i}`;
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text.replace('______', `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-filled="false"></span>`)}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealDropSlot('${slotId}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex1-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex1-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex1-container').innerHTML = html;
+
+            document.querySelectorAll('#bank-ex1 .word-item').forEach(item => {
+                item.addEventListener('dragstart', dragStartWord);
+                item.addEventListener('dragend', dragEndWord);
+            });
+            document.querySelectorAll('#ex1-container .drop-slot').forEach(slot => {
+                slot.addEventListener('dragover', dragOverSlot);
+                slot.addEventListener('dragenter', dragEnterSlot);
+                slot.addEventListener('dragleave', dragLeaveSlot);
+                slot.addEventListener('drop', dropSlotNoCheck);
+            });
+        }
+
+        // ================= EX2: house features (kéo thả wordbank) =================
+        const ex2Words = ["attic", "basement", "conservatory", "drive", "fence", "landing", "patio", "shutters"];
+        const ex2Data = [
+            { text: "We often have lunch outside on the ______ when the weather is fine.", ans: "patio", expl: "'patio' = sân hiên lát gạch phía sau/bên nhà, nơi ăn uống ngoài trời." },
+            { text: "There's a wooden ______ around the garden to keep people out.", ans: "fence", expl: "'fence' = hàng rào gỗ quanh vườn để ngăn người lạ." },
+            { text: "They're building a ______ onto the outside of their house.", ans: "conservatory", expl: "'conservatory' = phòng kính (nhà kính nhỏ gắn thêm vào nhà) đón ánh sáng." },
+            { text: "His flat doesn't get a lot of light because it's in the ______.", ans: "basement", expl: "'basement' = tầng hầm, thường thiếu ánh sáng tự nhiên." },
+            { text: "Go up the stairs to the ______ and the bathroom is on the left.", ans: "landing", expl: "'landing' = chiếu nghỉ cầu thang (khoảng sàn ở đầu cầu thang trước khi vào các phòng)." },
+            { text: "All of my old toys are up in the ______.", ans: "attic", expl: "'attic' = gác mái, nơi cất đồ cũ." },
+            { text: "It's dark in here because I haven't opened the ______ yet.", ans: "shutters", expl: "'shutters' = cửa chớp/cửa sập che cửa sổ, chưa mở nên phòng tối." },
+            { text: "Our garage is full of old furniture, so we have to leave our car on the ______.", ans: "drive", expl: "'drive' = lối xe vào nhà (khoảng sân trước nhà để đỗ xe)." }
+        ];
+
+        function renderEx2() {
+            const bank = document.getElementById('bank-ex2');
+            const shuffled = shuffle([...ex2Words]);
+            bank.innerHTML = shuffled.map(w =>
+                `<div class="word-item" draggable="true" data-word="${w}">${w}</div>`
+            ).join('');
+
+            let html = '';
+            ex2Data.forEach((item, i) => {
+                const slotId = `ex2-slot-${i}`;
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text.replace('______', `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-filled="false"></span>`)}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealDropSlot('${slotId}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex2-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex2-container').innerHTML = html;
+
+            document.querySelectorAll('#bank-ex2 .word-item').forEach(item => {
+                item.addEventListener('dragstart', dragStartWord);
+                item.addEventListener('dragend', dragEndWord);
+            });
+            document.querySelectorAll('#ex2-container .drop-slot').forEach(slot => {
+                slot.addEventListener('dragover', dragOverSlot);
+                slot.addEventListener('dragenter', dragEnterSlot);
+                slot.addEventListener('dragleave', dragLeaveSlot);
+                slot.addEventListener('drop', dropSlotNoCheck);
+            });
+        }
+
+        // ================= EX3: adjectives replacing underlined words (wordbank shown, fill-in) =================
+        const ex3Words = ["charming", "contemporary", "cosy", "cramped", "dilapidated", "lively"];
+        const ex3Data = [
+            { text: "We've just bought a very <u>attractive</u> old farmhouse which we're going to restore.", ans: "charming", expl: "'charming' = duyên dáng, hấp dẫn, thay thế cho 'attractive'." },
+            { text: "The living room looked extremely <u>warm and inviting</u> in the firelight.", ans: "cosy", expl: "'cosy' = ấm cúng, thay thế cho 'warm and inviting'." },
+            { text: "I'm looking for a place in a <u>fun and exciting</u> part of town.", ans: "lively", expl: "'lively' = sôi động, nhộn nhịp, thay thế cho 'fun and exciting'." },
+            { text: "Nobody has lived in the family home for years, so today it looks <u>in very bad condition</u>.", ans: "dilapidated", expl: "'dilapidated' = đổ nát, xuống cấp, thay thế cho 'in very bad condition'." },
+            { text: "Their living quarters are <u>uncomfortably small</u> because four of them are sharing the same room.", ans: "cramped", expl: "'cramped' = chật chội, thay thế cho 'uncomfortably small'." },
+            { text: "She lives in a flat in a <u>modern</u> building which is very conveniently located.", ans: "contemporary", expl: "'contemporary' = hiện đại, đương đại, thay thế cho 'modern'." }
+        ];
+
+        function renderEx3() {
+            renderStaticBank('bank-ex3', ex3Words);
+            let html = '';
+            ex3Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text} <input type="text" id="ex3-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealInput('ex3-q${i}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex3-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex3-container').innerHTML = html;
+            document.querySelectorAll('#ex3-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ================= EX4: do / make / take (kéo thả wordbank, mỗi từ dùng 2 lần) =================
+        const ex4Words = ["do", "do", "make", "make", "take", "take"];
+        const ex4Data = [
+            { text: "You can usually ______ one look at a house to know whether you want to live there or not.", ans: "take", expl: "'take a look' = nhìn qua, liếc qua một cái." },
+            { text: "You shouldn't ______ more than 120 km/h when you're driving on a motorway in Spain.", ans: "do", expl: "'do + tốc độ' = chạy với tốc độ bao nhiêu (do 120 km/h)." },
+            { text: "I can't ______ up my mind what to wear to the party tonight.", ans: "make", expl: "'make up your mind' = quyết định." },
+            { text: "They're going to ______ the spare room into a nursery for their new baby.", ans: "make", expl: "'make (something) into' = biến đổi thành, cải tạo thành." },
+            { text: "We were prepared for last night's storm, so it didn't ______ a lot of damage.", ans: "do", expl: "'do damage' = gây ra thiệt hại." },
+            { text: "I'd like to ______ French lessons, but I can't seem to find the time.", ans: "take", expl: "'take lessons' = tham gia học (các buổi học)." }
+        ];
+
+        function renderEx4() {
+            const bank = document.getElementById('bank-ex4');
+            const shuffled = shuffle([...ex4Words]);
+            bank.innerHTML = shuffled.map(w =>
+                `<div class="word-item" draggable="true" data-word="${w}">${w}</div>`
+            ).join('');
+
+            let html = '';
+            ex4Data.forEach((item, i) => {
+                const slotId = `ex4-slot-${i}`;
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text.replace('______', `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-filled="false"></span>`)}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealDropSlot('${slotId}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex4-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex4-container').innerHTML = html;
+
+            document.querySelectorAll('#bank-ex4 .word-item').forEach(item => {
+                item.addEventListener('dragstart', dragStartWord);
+                item.addEventListener('dragend', dragEndWord);
+            });
+            document.querySelectorAll('#ex4-container .drop-slot').forEach(slot => {
+                slot.addEventListener('dragover', dragOverSlot);
+                slot.addEventListener('dragenter', dragEnterSlot);
+                slot.addEventListener('dragleave', dragLeaveSlot);
+                slot.addEventListener('drop', dropSlotNoCheck);
+            });
+        }
+
+        // ================= EX5: consider/feel/suppose/think (wordbank shown, fill-in, nhiều đáp án) =================
+        const ex5Words = ["consider", "feel", "suppose", "think"];
+        const ex5Data = [
+            { text: "______ about it, perhaps it isn't such a good idea.", ans: "Thinking", expl: "'Thinking about it' = nghĩ lại thì, dùng dạng V-ing đứng đầu câu để mở đầu ý kiến." },
+            { text: "I ______ the thing is whether you enjoy it or not.", ans: "suppose", expl: "'I suppose (that)' = tôi cho là, đưa ra ý kiến cá nhân không chắc chắn hoàn toàn." },
+            { text: "Actually, now I come to ______ about it, that would definitely be the best option.", ans: "think", expl: "'come to think about it' = nghĩ kỹ lại thì. Sau 'to' dùng động từ nguyên mẫu 'think'." },
+            { text: "It's clearly a question which people have strong ______ about.", ans: "feelings", expl: "'feel' (động từ) → 'feelings' (danh từ số nhiều) = cảm xúc, quan điểm. 'have strong feelings about' = có quan điểm mạnh mẽ về." },
+            { text: "I'd have to give that some ______.", ans: "thought", expl: "'think' (động từ) → 'thought' (danh từ) = sự suy nghĩ. 'give something some thought' = suy nghĩ kỹ về điều gì đó." },
+            { text: "All things ______, I don't suppose it really matters.", ans: "considered", expl: "'all things considered' = xét cho cùng, xét mọi mặt. Dùng dạng phân từ quá khứ 'considered' trong cụm cố định này." }
+        ];
+
+        function renderEx5() {
+            renderStaticBank('bank-ex5', ex5Words);
+            let html = '';
+            ex5Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex5-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealInput('ex5-q${i}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex5-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex5-container').innerHTML = html;
+            document.querySelectorAll('#ex5-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ================= EX6: comparatives/superlatives (fill-in) =================
+        const ex6Data = [
+            { text: "The ______ the house, the more expensive it is to heat. (large)", ans: "larger", expl: "Cấu trúc so sánh kép 'The + so sánh hơn..., the + so sánh hơn...' = càng... thì càng... 'large' → 'larger'." },
+            { text: "That's the ______ balcony I've ever seen. (tiny)", ans: "tiniest", expl: "So sánh nhất với tính từ ngắn có 1 âm tiết kết thúc phụ âm+y: 'tiny' → 'tiniest' (đổi y thành i, thêm -est)." },
+            { text: "Houseboats are ______ today than they used to be. (common)", ans: "more common", expl: "So sánh hơn với tính từ 2 âm tiết: 'common' → 'more common'." },
+            { text: "We'll have to look ______ if we want to find a house we can afford. (hard)", ans: "harder", expl: "So sánh hơn với trạng từ 1 âm tiết: 'hard' → 'harder' (thêm -er)." },
+            { text: "Our new flat has ______ rooms than our old one, so now I have to share a room with my sister. (few)", ans: "fewer", expl: "So sánh hơn của 'few' (dùng với danh từ đếm được số nhiều) → 'fewer'." },
+            { text: "Your garden is ______ than ours because you haven't got as many flowers. (colourful)", ans: "less colourful", expl: "So sánh hơn dạng kém hơn với tính từ dài: 'less + tính từ' = 'less colourful'." },
+            { text: "They're worried that their cellar might flood as it's raining ______ now. (heavy)", ans: "more heavily", expl: "So sánh hơn của trạng từ '-ly': 'heavily' → 'more heavily'." },
+            { text: "This is the ______ room in the house because we haven't furnished it yet. (comfortable)", ans: "least comfortable", expl: "So sánh nhất dạng kém nhất với tính từ dài: 'least + tính từ' = 'least comfortable'." },
+            { text: "The grass on their lawn is growing ______ and ______, but nobody seems interested in cutting it. (high)", ans: "higher", expl: "Cấu trúc lặp so sánh hơn để diễn tả mức độ tăng dần 'higher and higher' = ngày càng cao hơn." }
+        ];
+
+        function renderEx6() {
+            let html = '';
+            ex6Data.forEach((item, i) => {
+                let text = item.text;
+                const count = (text.match(/______/g) || []).length;
+                const ids = [];
+                for (let k = 0; k < count; k++) {
+                    const id = `ex6-q${i}-${k}`;
+                    ids.push(id);
+                    text = text.replace('______', `<input type="text" id="${id}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+                }
+                const eyeCalls = ids.map(id => `revealInput('${id}')`).join('; ');
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${text}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="${eyeCalls}">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex6-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex6-h${i}">${getHintHTML(item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex6-container').innerHTML = html;
+            document.querySelectorAll('#ex6-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ================= EX7: second conditional (dialogues) =================
+        const ex7Dialogues = [
+            {
+                lines: [
+                    {
+                        speaker: "A", text: "Where would you live if you ______ (have) the choice?", blanks: [
+                            { ans: "had", expl: "Câu điều kiện loại 2, mệnh đề 'if' dùng quá khứ đơn: 'had'." }
+                        ]
+                    },
+                    {
+                        speaker: "B", text: "I ______ (buy) a villa on the coast.", blanks: [
+                            { ans: "'d buy", expl: "Mệnh đề chính của câu điều kiện loại 2: 'would + V' (viết tắt ''d buy')." }
+                        ]
+                    }
+                ]
+            },
+            {
+                lines: [
+                    {
+                        speaker: "A", text: "What would your parents do if you ______ (not clean) your room?", blanks: [
+                            { ans: "didn't clean", expl: "Mệnh đề 'if' phủ định dùng quá khứ đơn: 'didn't clean'." }
+                        ]
+                    },
+                    {
+                        speaker: "B", text: "They ______ (not give) me any pocket money.", blanks: [
+                            { ans: "wouldn't give", expl: "Mệnh đề chính phủ định: 'wouldn't + V nguyên mẫu'." }
+                        ]
+                    }
+                ]
+            },
+            {
+                lines: [
+                    {
+                        speaker: "A", text: "How would you feel if you ______ (be) homeless?", blanks: [
+                            { ans: "were", expl: "Câu điều kiện loại 2 với động từ 'be' thường dùng 'were' cho mọi ngôi (kể cả 'I/he/she/it')." }
+                        ]
+                    },
+                    {
+                        speaker: "B", text: "I ______ (not like) it at all.", blanks: [
+                            { ans: "wouldn't like", expl: "Mệnh đề chính phủ định: 'wouldn't like'." }
+                        ]
+                    }
+                ]
+            },
+            {
+                lines: [
+                    {
+                        speaker: "A", text: "If you could, ______ (you / make) any changes to your home?", blanks: [
+                            { ans: "would you make", expl: "Câu hỏi ở mệnh đề chính của câu điều kiện loại 2: 'would + S + V?'" }
+                        ]
+                    },
+                    {
+                        speaker: "B", text: "Yes. I'd build an extension so that I ______ (can) have my own room.", blanks: [
+                            { ans: "could", expl: "'can' ở dạng giả định dùng 'could' để phù hợp với câu điều kiện loại 2." }
+                        ]
+                    }
+                ]
+            },
+            {
+                lines: [
+                    {
+                        speaker: "A", text: "If your room ______ (need) painting, what colour would you choose?", blanks: [
+                            { ans: "needed", expl: "Mệnh đề 'if' dùng quá khứ đơn: 'needed'." }
+                        ]
+                    },
+                    {
+                        speaker: "B", text: "I ______ (paint) one wall blue and the others white.", blanks: [
+                            { ans: "'d paint", expl: "Mệnh đề chính: 'would paint' (viết tắt ''d paint')." }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        function renderEx7() {
+            let html = '';
+            let counter = 0;
+            ex7Dialogues.forEach(dlg => {
+                html += `<div class="dialogue-block">`;
+                dlg.lines.forEach(line => {
+                    let text = line.text;
+                    line.blanks.forEach(b => {
+                        counter++;
+                        const id = `ex7-q${counter}`;
+                        const input = `<span class="inline-input-wrapper">
+                                    <input type="text" id="${id}" data-ans="${b.ans}" class="task5-input" style="min-width:160px;" oninput="adjustWidth(this)">
+                                    <button class="eye-btn" onclick="revealInput('${id}')">👁️</button>
+                                    <span class="hint-anchor">
+                                        <button class="hint-btn" onclick="toggleHint(event,'${id}-h')">i</button>
+                                        <div class="hint-box float-hint" id="${id}-h">${getHintHTML(b.ans, b.expl)}</div>
+                                    </span>
+                                </span>`;
+                        text = text.replace('______', input);
+                    });
+                    html += `<div class="dialogue-line"><strong>${line.speaker}:</strong> ${text}</div>`;
+                });
+                html += `</div>`;
+            });
+            document.getElementById('ex7-container').innerHTML = html;
+            document.querySelectorAll('#ex7-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ================= EX8: wish / if only (fill-in, nhiều đáp án) =================
+        const ex8Data = [
+            { text: "I wish we ______ a swimming pool. It would be perfect in the summer. (have)", ans: "had", expl: "'wish + S + quá khứ đơn' diễn tả mong ước trái với thực tế ở hiện tại (ước gì chúng ta có một bể bơi)." },
+            { text: "If only my brother ______ more in the house. Then I wouldn't have to do everything! (help)", ans: "would help", expl: "'If only + S + would + V' diễn tả mong muốn ai đó thay đổi hành vi/thói quen hiện tại." },
+            { text: "If only you ______ so far away. We hardly ever see each other. (not live)", ans: "didn't live", expl: "'If only + S + quá khứ đơn (phủ định)' diễn tả ước muốn trái với thực tế hiện tại." },
+            { text: "I wish my neighbour ______ his music so loud. I can't concentrate! (not play)", ans: "wouldn't play", expl: "'wish + S + wouldn't + V' diễn tả sự phàn nàn về thói quen/hành vi của người khác ở hiện tại." },
+            { text: "I wish you ______ the bathroom every time you have a shower. You make such a mess! (not flood)", ans: "wouldn't flood", expl: "'wish + S + wouldn't + V' diễn tả sự phàn nàn về hành động lặp đi lặp lại gây khó chịu." },
+            { text: "If only I ______ older. Then I could leave home. (be)", ans: "was|were", expl: "'If only + S + quá khứ đơn của 'be'' diễn tả ước muốn trái với thực tế hiện tại; cả 'was' và 'were' đều được chấp nhận trong văn nói." }
+        ];
+
+        function renderEx8() {
+            let html = '';
+            ex8Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex8-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealInput('ex8-q${i}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex8-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex8-h${i}">${getHintHTML(item.ans.split('|').join(' / '), item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex8-container').innerHTML = html;
+            document.querySelectorAll('#ex8-container .task5-input').forEach(adjustWidth);
+        }
+
+        // ================= EX9: sentence transformation (fill-in, câu đầy đủ) =================
+        const ex9Data = [
+            { prompt: "We haven't got enough money, so we can't buy a new house. (if)", prefix: "We", ans: "could buy a new house if we had enough money.", expl: "Câu điều kiện loại 2 diễn tả tình huống giả định trái với thực tế hiện tại: không đủ tiền -> không mua được nhà." },
+            { prompt: "I didn't expect the mobile home to be so cosy. (than)", prefix: "The", ans: "mobile home was cosier than I expected.", expl: "So sánh hơn 'cosier than' để diễn tả nhà lưu động ấm cúng hơn mong đợi." },
+            { prompt: "She's stressed because she lives in the city centre. (be)", prefix: "If", ans: "she didn't live in the city centre, she wouldn't be stressed.", expl: "Câu điều kiện loại 2: đảo ngược nguyên nhân - kết quả thành mệnh đề giả định." },
+            { prompt: "I'm annoyed because you never make your bed. (wish)", prefix: "I", ans: "wish you would make your bed.", expl: "'wish + S + would + V' diễn tả sự phàn nàn/mong muốn ai đó thay đổi thói quen." },
+            { prompt: "I've never seen such an ugly chest of drawers. (the)", prefix: "That's", ans: "the ugliest chest of drawers I've ever seen.", expl: "So sánh nhất 'the ugliest... I've ever seen' = xấu nhất mà tôi từng thấy." },
+            { prompt: "I don't like my room. It hasn't got a desk. (only)", prefix: "If", ans: "only my room had a desk.", expl: "'If only + S + quá khứ đơn' diễn tả ước muốn trái với thực tế hiện tại." },
+            { prompt: "The kitchen isn't as cramped as the bathroom. (less)", prefix: "The kitchen", ans: "is less cramped than the bathroom.", expl: "'less + tính từ + than' = kém... hơn, diễn đạt lại ý so sánh 'not as...as' theo chiều ngược." },
+            { prompt: "There's a lift, so I don't use the stairs. (if)", prefix: "I", ans: "'d use the stairs if there wasn't a lift.", expl: "Câu điều kiện loại 2 đảo ngược tình huống giả định: nếu không có thang máy thì sẽ dùng cầu thang." }
+        ];
+
+        function renderEx9() {
+            let html = '';
+            ex9Data.forEach((item, i) => {
+                html += `<div class="question-row">
+                            <strong>${i + 1}</strong> ${item.prompt}<br>
+                            <span style="font-weight:600;">${item.prefix}</span>
+                            <input type="text" id="ex9-q${i}" data-ans="${item.ans}" class="task5-input" style="width:400px; max-width:100%; flex-shrink:0; text-align:left;" oninput="adjustWidth(this)"> .
+                            <span class="row-btns">
+                                <button class="eye-btn" onclick="revealInput('ex9-q${i}')">👁️</button>
+                                <span class="hint-anchor">
+                                    <button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>
+                                    <div class="hint-box float-hint" id="ex9-h${i}">${getHintHTML(item.prefix + ' ' + item.ans, item.expl)}</div>
+                                </span>
+                            </span>
+                        </div>`;
+            });
+            document.getElementById('ex9-container').innerHTML = html;
+            document.querySelectorAll('#ex9-container .task5-input').forEach(el => el.style.width = '400px');
+        }
+
+        // ================= GLOBAL SHOW / RESET / CHECK =================
+        window.showAnswers = function (section) {
+            if (section === 'ex1') { showAllDragSection('ex1'); return; }
+            if (section === 'ex2') { showAllDragSection('ex2'); return; }
+            if (section === 'ex4') { showAllDragSection('ex4'); return; }
+            const selector = `#${section}-container .task5-input`;
+            document.querySelectorAll(selector).forEach(el => {
+                el.value = el.dataset.ans.split('|')[0];
+                el.classList.remove('incorrect-marked');
+                el.classList.add('correct');
+                adjustWidth(el);
+            });
+        };
+
+        window.resetSection = function (section) {
+            if (section === 'ex1') { resetDragSection('ex1', ex1Words); return; }
+            if (section === 'ex2') { resetDragSection('ex2', ex2Words); return; }
+            if (section === 'ex4') { resetDragSection('ex4', ex4Words); return; }
+            document.querySelectorAll(`#${section}-container .hint-box`).forEach(h => h.style.display = 'none');
+            document.querySelectorAll(`#${section}-container .task5-input`).forEach(el => {
+                el.value = '';
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+            });
+        };
+
+        window.checkAll = function () {
+            ['ex1', 'ex2', 'ex4'].forEach(section => {
+                document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => {
+                    if (slot.dataset.filled === 'true') {
+                        const ans = slot.dataset.ans;
+                        const ok = slot.textContent.trim() === ans;
+                        slot.classList.remove('correct', 'incorrect-marked');
+                        slot.classList.add(ok ? 'correct' : 'incorrect-marked');
+                    }
+                });
+            });
+
+            document.querySelectorAll('input.task5-input').forEach(inp => {
+                if (!inp.value.trim()) return;
+                const val = inp.value.trim().toLowerCase();
+                const answers = inp.dataset.ans.split('|').map(s => s.toLowerCase());
+                const ok = answers.includes(val);
+                inp.classList.remove('correct', 'incorrect-marked');
+                inp.classList.add(ok ? 'correct' : 'incorrect-marked');
+            });
+        };
+
+        // ================= INIT =================
+        document.addEventListener('DOMContentLoaded', () => {
+            renderEx1();
+            renderEx2();
+            renderEx3();
+            renderEx4();
+            renderEx5();
+            renderEx6();
+            renderEx7();
+            renderEx8();
+            renderEx9();
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkAll();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
