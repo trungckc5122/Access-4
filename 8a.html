@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access 4 - Module 8a</title>
     <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .hint-box {
+            background-color: #F0FDFA !important;
+            color: #115E59 !important;
+            border-left-color: #0D9488 !important;
+        }
+
+        .hint-box .hint-detail {
+            border-color: #0D9488 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -282,7 +293,8 @@
                                 turn a simple idea into a beautiful <strong>design</strong>. It takes
                                 <strong>effort</strong> and patience to <strong>impress</strong> viewers. We should
                                 never <strong>discard</strong> waste thoughtlessly — instead, we can give it a new life.
-                                With <strong>creativity</strong>, what is old can become extraordinary.</p>
+                                With <strong>creativity</strong>, what is old can become extraordinary.
+                            </p>
                         </div>
                         <!-- Vietnamese column (highlighted key terms) -->
                         <div class="split-col">
@@ -297,7 +309,8 @@
                                     tượng</strong> với người xem. Chúng ta không bao giờ nên <strong>vứt bỏ rác
                                     thải</strong> một cách thiếu suy nghĩ — thay vào đó, chúng ta có thể mang lại cho nó
                                 một cuộc đời mới. Với <strong>sự sáng tạo</strong>, những thứ cũ kỹ có thể trở nên phi
-                                thường.</p>
+                                thường.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -500,8 +513,25 @@
 
             /* --- GIỮ NGUYÊN TOÀN BỘ JAVASCRIPT CHỨC NĂNG (KHÔNG THAY ĐỔI) --- */
             let currentActiveIPA = null;
+            let currentActiveHint = null;
             let answerStates = new Map();
             let wordUsageCount = {};
+
+            // Hàm phát âm từ vựng bằng Web Speech API
+            function speakText(text) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để không bị đè tiếng
+
+                    // Lọc bỏ số thứ tự (VD: "1. ") và từ loại (VD: "(n)") để AI đọc chuẩn từ vựng
+                    let cleanText = text.replace(/^\d+\.\s*/, '').replace(/\s*\([^)]*\)/g, '').trim();
+
+                    let utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9;
+
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
 
             function renderMatching(id, data) {
                 const v = document.getElementById(`vocab-${id}`);
@@ -522,7 +552,7 @@
                 <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)">
                 <div class="row-btns">
                     <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
-                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')">i</button>
                 </div>
                 <div class="hint-box" id="${qid}-hint">${item.hint}</div>
                 <div class="ipa-box" id="${qid}-ipa"><span class="ipa-label">IPA:</span><span class="ipa-text">${item.ipa}</span></div>
@@ -615,12 +645,31 @@
                 el.style.width = Math.min(newWidth, maxWidth) + "px";
             }
 
-            function toggleHint(id) {
+            function toggleHint(id, wordToSpeak = null) {
                 const h = document.getElementById(id + '-hint');
                 const infoBtn = document.getElementById(id + '-info');
                 if (h) {
-                    if (h.style.display === 'block') { h.style.display = 'none'; if (infoBtn) infoBtn.classList.remove('active'); }
-                    else { h.style.display = 'block'; if (infoBtn) infoBtn.classList.add('active'); }
+                    if (currentActiveHint === h) {
+                        // Đang mở -> đóng lại
+                        h.style.display = 'none';
+                        if (infoBtn) infoBtn.classList.remove('active');
+                        currentActiveHint = null;
+                    } else {
+                        // Đóng hint cũ (nếu có) trước khi mở hint mới
+                        if (currentActiveHint) {
+                            currentActiveHint.style.display = 'none';
+                            const oldId = currentActiveHint.id.replace('-hint', '-info');
+                            const oldBtn = document.getElementById(oldId);
+                            if (oldBtn) oldBtn.classList.remove('active');
+                        }
+                        h.style.display = 'block';
+                        if (infoBtn) infoBtn.classList.add('active');
+                        currentActiveHint = h;
+                        // Nếu có từ vựng truyền vào (chỉ Task 1), tự động phát âm
+                        if (wordToSpeak && id.startsWith('t1')) {
+                            speakText(wordToSpeak);
+                        }
+                    }
                 }
             }
 

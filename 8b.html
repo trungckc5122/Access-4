@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access 4 - Module 8b</title>
     <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .hint-box {
+            background-color: #F0FDFA !important;
+            color: #115E59 !important;
+            border-left-color: #0D9488 !important;
+        }
+
+        .hint-box .hint-detail {
+            border-color: #0D9488 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -33,7 +44,8 @@
                         <div class="detail-title">1. Khái niệm chung</div>
                         <div>Động từ khuyết thiếu <strong>must, can't, may/might/could</strong> được dùng để suy luận,
                             phỏng đoán dựa trên bằng chứng có sẵn. Không dùng để diễn tả khả năng chung chung (dùng
-                            <em>can</em>), mà là phỏng đoán có căn cứ.</div>
+                            <em>can</em>), mà là phỏng đoán có căn cứ.
+                        </div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-title">2. Suy luận ở hiện tại / tương lai gần</div>
@@ -269,7 +281,8 @@
                             quick decisions: a driver might need to <strong>swerve</strong> onto the
                             <strong>pavement</strong> to avoid danger. Our brains are constantly interpreting, mixing
                             what we see with what we expect. Learning about these processes helps us appreciate both art
-                            and the world around us with fresh eyes.</p>
+                            and the world around us with fresh eyes.
+                        </p>
                     </div>
                     <!-- Vietnamese column: matching translation, vocabulary bolded, smooth flow -->
                     <div class="split-col">
@@ -457,19 +470,36 @@
         let wordUsageCount = {};
         let optionSelections = new Map();
 
+        // Hàm phát âm từ vựng bằng Web Speech API
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để không bị đè tiếng
+
+                // Lọc bỏ số thứ tự (VD: "1. ") và từ loại (VD: "(n)") để AI đọc chuẩn từ vựng
+                let cleanText = text.replace(/^\d+\.\s*/, '').replace(/\s*\([^)]*\)/g, '').trim();
+
+                let utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9;
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         function renderMatching(id, data) {
             const v = document.getElementById(`vocab-${id}`);
             const d = document.getElementById(`def-${id}`);
             v.innerHTML = '';
             d.innerHTML = '';
+            const definitions = {};
+            data.forEach(item => { definitions[item.letter] = item.def; });
+            const sortedLetters = Object.keys(definitions).sort();
+            sortedLetters.forEach(letter => {
+                d.innerHTML += `<div class="definition-item"><span class="definition-letter">${letter}.</span><span class="definition-text">${definitions[letter]}</span></div>`;
+            });
             data.forEach((item, i) => {
                 const qid = `${id}-q${i}`;
-                v.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.v}</span><input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
-                if (i === 0) {
-                    const definitions = data.map(item => ({ letter: item.letter, def: item.def }));
-                    definitions.sort((a, b) => a.letter.localeCompare(b.letter));
-                    definitions.forEach(defItem => { d.innerHTML += `<div class="def-item"><strong>${defItem.letter}.</strong> ${defItem.def}</div>`; });
-                }
+                v.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.v}</span><input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
             });
         }
 
@@ -537,10 +567,32 @@
             el.style.width = Math.min(newWidth, maxWidth) + "px";
         }
 
-        function toggleHint(id) {
+        function toggleHint(id, wordToSpeak = null) {
             const h = document.getElementById(id + '-hint');
             const infoBtn = document.getElementById(id + '-info');
-            if (h) { if (h.style.display === 'block') { h.style.display = 'none'; if (infoBtn) infoBtn.classList.remove('active'); } else { h.style.display = 'block'; if (infoBtn) infoBtn.classList.add('active'); } }
+            if (h) {
+                if (currentActiveHint === h) {
+                    // Đang mở -> đóng lại
+                    h.style.display = 'none';
+                    if (infoBtn) infoBtn.classList.remove('active');
+                    currentActiveHint = null;
+                } else {
+                    // Đóng hint cũ (nếu có) trước khi mở hint mới
+                    if (currentActiveHint) {
+                        currentActiveHint.style.display = 'none';
+                        const oldId = currentActiveHint.id.replace('-hint', '-info');
+                        const oldBtn = document.getElementById(oldId);
+                        if (oldBtn) oldBtn.classList.remove('active');
+                    }
+                    h.style.display = 'block';
+                    if (infoBtn) infoBtn.classList.add('active');
+                    currentActiveHint = h;
+                    // Nếu có từ vựng truyền vào (chỉ Task 1), tự động phát âm
+                    if (wordToSpeak && id.startsWith('t1')) {
+                        speakText(wordToSpeak);
+                    }
+                }
+            }
         }
 
         function toggleSingleAns(id) {

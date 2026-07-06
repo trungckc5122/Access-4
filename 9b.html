@@ -6,6 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access 4 - Module 9b</title>
     <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .hint-box {
+            background-color: #F0FDFA !important;
+            color: #115E59 !important;
+            border-left-color: #0D9488 !important;
+        }
+
+        .hint-box .hint-detail {
+            border-color: #0D9488 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -396,11 +407,28 @@
 
         // ==================== ORIGINAL JAVASCRIPT (unchanged) ====================
         let currentActiveIPA = null;
+        let currentActiveHint = null;
         let answerStates = new Map();
         let wordUsageCount = {};
         let isVerticalResizing = false;
         let lastMouseX = 0;
         let leftPanelWidth = 50;
+
+        // Hàm phát âm từ vựng bằng Web Speech API
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Dừng âm thanh đang đọc (nếu có) để không bị đè tiếng
+
+                // Lọc bỏ số thứ tự (VD: "1. ") và từ loại (VD: "(n)") để AI đọc chuẩn từ vựng
+                let cleanText = text.replace(/^\d+\.\s*/, '').replace(/\s*\([^)]*\)/g, '').trim();
+
+                let utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9;
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
 
         function renderMatching(id, data) {
             const v = document.getElementById(`vocab-${id}`);
@@ -415,7 +443,7 @@
             });
             data.forEach((item, i) => {
                 const qid = `${id}-q${i}`;
-                v.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.v}</span><input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" title="Show/Hide hint">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div><div class="ipa-box" id="${qid}-ipa"><span class="ipa-label">IPA:</span><span class="ipa-text">${item.ipa}</span></div></div>`;
+                v.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.v}</span><input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')" title="Show/Hide hint">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div><div class="ipa-box" id="${qid}-ipa"><span class="ipa-label">IPA:</span><span class="ipa-text">${item.ipa}</span></div></div>`;
             });
         }
 
@@ -507,16 +535,30 @@
             el.style.width = Math.min(newWidth, maxWidth) + "px";
         }
 
-        function toggleHint(id) {
+        function toggleHint(id, wordToSpeak = null) {
             const h = document.getElementById(id + '-hint');
             const infoBtn = document.getElementById(id + '-info');
             if (h) {
-                if (h.style.display === 'block') {
+                if (currentActiveHint === h) {
+                    // Đang mở -> đóng lại
                     h.style.display = 'none';
                     if (infoBtn) infoBtn.classList.remove('active');
+                    currentActiveHint = null;
                 } else {
+                    // Đóng hint cũ (nếu có) trước khi mở hint mới
+                    if (currentActiveHint) {
+                        currentActiveHint.style.display = 'none';
+                        const oldId = currentActiveHint.id.replace('-hint', '-info');
+                        const oldBtn = document.getElementById(oldId);
+                        if (oldBtn) oldBtn.classList.remove('active');
+                    }
                     h.style.display = 'block';
                     if (infoBtn) infoBtn.classList.add('active');
+                    currentActiveHint = h;
+                    // Nếu có từ vựng truyền vào (chỉ Task 1), tự động phát âm
+                    if (wordToSpeak && id.startsWith('t1')) {
+                        speakText(wordToSpeak);
+                    }
                 }
             }
         }
@@ -846,7 +888,6 @@
             });
         })();
     </script>
-
     <script src="access-core.js"></script>
 </body>
 
