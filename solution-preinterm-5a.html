@@ -344,6 +344,34 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Vocab TTS – Jobs & Adjectives */
+        #contentJobs .grammar-list li strong.vocab-speak,
+        #contentAdjectives .grammar-list li strong.vocab-speak {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary, #0d9488);
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        #contentJobs .grammar-list li strong.vocab-speak:hover,
+        #contentAdjectives .grammar-list li strong.vocab-speak:hover {
+            background: var(--primary-light, #e0f2f1);
+            color: var(--primary-dark, #0f766e);
+        }
+        #contentJobs .grammar-list li strong.vocab-speak.speaking,
+        #contentAdjectives .grammar-list li strong.vocab-speak.speaking {
+            background: #fef08a; color: #92400e;
+            border-bottom-color: #d97706;
+            animation: speakPulse 0.6s ease infinite alternate;
+        }
+        @keyframes speakPulse { from { opacity:1; } to { opacity:0.65; } }
+        #contentJobs .grammar-list li strong.vocab-speak::after,
+        #contentAdjectives .grammar-list li strong.vocab-speak::after { content:' 🔊'; font-size:0.8em; opacity:0.5; }
+        #contentJobs .grammar-list li strong.vocab-speak:hover::after,
+        #contentJobs .grammar-list li strong.vocab-speak.speaking::after,
+        #contentAdjectives .grammar-list li strong.vocab-speak:hover::after,
+        #contentAdjectives .grammar-list li strong.vocab-speak.speaking::after { opacity:1; }
     </style>
 </head>
 <body>
@@ -1212,6 +1240,33 @@
             document.querySelectorAll('input.task5-input').forEach(el => adjustWidth(el));
         }, 100);
     };
+</script>
+
+<script>
+    // ── Vocabulary TTS – Jobs & Adjectives (Web Speech API) ──────────────────
+    (function initVocabTTS() {
+        if (!window.speechSynthesis) return;
+        const selectors = '#contentJobs .grammar-list li strong, #contentAdjectives .grammar-list li strong';
+        document.querySelectorAll(selectors).forEach(strong => {
+            strong.classList.add('vocab-speak');
+            strong.title = 'Click để nghe phát âm';
+            strong.addEventListener('click', e => { e.stopPropagation(); speakText(strong.textContent.trim(), strong); });
+        });
+        function speakText(text, el) {
+            window.speechSynthesis.cancel();
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+                         || voices.find(v => v.lang.startsWith('en')) || null;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US'; utter.rate = 0.85; utter.pitch = 1; utter.volume = 1;
+            if (enVoice) utter.voice = enVoice;
+            utter.onstart = () => el.classList.add('speaking');
+            utter.onend   = () => el.classList.remove('speaking');
+            utter.onerror = () => el.classList.remove('speaking');
+            window.speechSynthesis.speak(utter);
+        }
+        window.speechSynthesis.onvoiceschanged = () => {};
+    })();
 </script>
 
 </body>

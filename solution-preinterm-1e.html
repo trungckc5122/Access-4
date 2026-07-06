@@ -275,6 +275,38 @@
             margin: 0;
             border-radius: 0;
         }
+
+        /* Vocab TTS - clickable words in Cambridge Dictionary Reference */
+        #contentDict .grammar-list li strong.vocab-speak {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary, #0d9488);
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        #contentDict .grammar-list li strong.vocab-speak:hover {
+            background: var(--primary-light, #e0f2f1);
+            color: var(--primary-dark, #0f766e);
+        }
+        #contentDict .grammar-list li strong.vocab-speak.speaking {
+            background: #fef08a;
+            color: #92400e;
+            border-bottom-color: #d97706;
+            animation: speakPulse 0.6s ease infinite alternate;
+        }
+        @keyframes speakPulse {
+            from { opacity: 1; }
+            to   { opacity: 0.65; }
+        }
+        #contentDict .grammar-list li strong.vocab-speak::after {
+            content: ' 🔊';
+            font-size: 0.8em;
+            opacity: 0.5;
+        }
+        #contentDict .grammar-list li strong.vocab-speak:hover::after,
+        #contentDict .grammar-list li strong.vocab-speak.speaking::after {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -734,6 +766,51 @@
             };
         }
     </script>
+<script>
+    // ── Vocabulary TTS – Cambridge Dictionary Reference (Web Speech API) ─────
+    (function initVocabTTS() {
+        if (!window.speechSynthesis) return;
+
+        // Gắn vào tất cả <strong> bên trong #contentDict .grammar-list
+        document.querySelectorAll('#contentDict .grammar-list li strong').forEach(strong => {
+            strong.classList.add('vocab-speak');
+            strong.title = 'Click để nghe phát âm';
+
+            strong.addEventListener('click', function (e) {
+                e.stopPropagation();
+                speakText(strong.textContent.trim(), strong);
+            });
+        });
+
+        function speakText(text, el) {
+            window.speechSynthesis.cancel();
+
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+                         || voices.find(v => v.lang.startsWith('en'))
+                         || null;
+
+            // "amusing / amused" → đọc "amusing, amused" (dấu phẩy giúp browser ngắt rõ)
+            const readText = text.replace(/\s*\/\s*/g, ', ');
+
+            const utter = new SpeechSynthesisUtterance(readText);
+            utter.lang = 'en-US';
+            utter.rate = 0.85;
+            utter.pitch = 1;
+            utter.volume = 1;
+            if (enVoice) utter.voice = enVoice;
+
+            utter.onstart = () => el.classList.add('speaking');
+            utter.onend   = () => el.classList.remove('speaking');
+            utter.onerror = () => el.classList.remove('speaking');
+
+            window.speechSynthesis.speak(utter);
+        }
+
+        window.speechSynthesis.onvoiceschanged = () => {};
+    })();
+</script>
+
 <script src="access-core.js"></script>
 </body>
 

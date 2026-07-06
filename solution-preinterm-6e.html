@@ -325,6 +325,28 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Vocab TTS – Travel Compounds */
+        #contentList .grammar-list li strong.vocab-speak {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary, #0d9488);
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        #contentList .grammar-list li strong.vocab-speak:hover {
+            background: var(--primary-light, #e0f2f1);
+            color: var(--primary-dark, #0f766e);
+        }
+        #contentList .grammar-list li strong.vocab-speak.speaking {
+            background: #fef08a; color: #92400e;
+            border-bottom-color: #d97706;
+            animation: speakPulse 0.6s ease infinite alternate;
+        }
+        @keyframes speakPulse { from { opacity:1; } to { opacity:0.65; } }
+        #contentList .grammar-list li strong.vocab-speak::after { content:' 🔊'; font-size:0.8em; opacity:0.5; }
+        #contentList .grammar-list li strong.vocab-speak:hover::after,
+        #contentList .grammar-list li strong.vocab-speak.speaking::after { opacity:1; }
     </style>
 </head>
 
@@ -911,6 +933,31 @@
     <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
     <script src="access-core.js"></script>
+<script>
+    // ── Vocabulary TTS – Travel Compounds (Web Speech API) ───────────────────
+    (function initVocabTTS() {
+        if (!window.speechSynthesis) return;
+        document.querySelectorAll('#contentList .grammar-list li strong').forEach(strong => {
+            strong.classList.add('vocab-speak');
+            strong.title = 'Click để nghe phát âm';
+            strong.addEventListener('click', e => { e.stopPropagation(); speakText(strong.textContent.trim(), strong); });
+        });
+        function speakText(text, el) {
+            window.speechSynthesis.cancel();
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice = voices.find(v => v.lang.startsWith('en') && v.localService)
+                         || voices.find(v => v.lang.startsWith('en')) || null;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US'; utter.rate = 0.85; utter.pitch = 1; utter.volume = 1;
+            if (enVoice) utter.voice = enVoice;
+            utter.onstart = () => el.classList.add('speaking');
+            utter.onend   = () => el.classList.remove('speaking');
+            utter.onerror = () => el.classList.remove('speaking');
+            window.speechSynthesis.speak(utter);
+        }
+        window.speechSynthesis.onvoiceschanged = () => {};
+    })();
+</script>
     <script>
         // Data setup
         const ex1Words = ["centre", "checks", "class", "crew", "lounge", "pass", "season"];
