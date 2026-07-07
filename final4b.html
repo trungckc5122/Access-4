@@ -964,7 +964,20 @@
         // UI helpers
         function adjustWidth(el) { let baseWidth = el.classList.contains('letter-input') ? 45 : 120; let charWidth = el.classList.contains('word-input') ? 9 : 10; let newWidth = Math.max(el.value.length * charWidth + 20, baseWidth); let maxWidth = el.classList.contains('letter-input') ? 80 : 400; el.style.width = Math.min(newWidth, maxWidth) + "px"; }
         let currentActiveHint = null;
-        function speakText(text) { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); let cleanText = text.replace(/^\d+\.\s*/, '').replace(/\s*\([^)]*\)/g, '').trim(); let utterance = new SpeechSynthesisUtterance(cleanText); utterance.lang = 'en-US'; utterance.rate = 0.9; window.speechSynthesis.speak(utterance); } }
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let cleanText = text.replace(/^\d+\.\s*/, '').replace(/\s*\([^)]*\)/g, '').trim();
+                let utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9;
+                const voices = window.speechSynthesis.getVoices();
+                const enVoice = voices.find(v => v.lang.startsWith('en') && v.localService) || voices.find(v => v.lang.startsWith('en'));
+                if (enVoice) utterance.voice = enVoice;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+        if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = () => { }; }
         function toggleHint(id, wordToSpeak = null) { const h = document.getElementById(id + '-hint'); const infoBtn = document.getElementById(id + '-info'); if (h) { if (currentActiveHint === h) { h.style.display = 'none'; if (infoBtn) infoBtn.classList.remove('active'); clearDynamicHighlights(); currentActiveHint = null; } else { if (currentActiveHint) { currentActiveHint.style.display = 'none'; const oldBtn = document.getElementById(currentActiveHint.id.replace('-hint', '-info')); if (oldBtn) oldBtn.classList.remove('active'); } h.style.display = 'block'; if (infoBtn) infoBtn.classList.add('active'); currentActiveHint = h; if (wordToSpeak && id.startsWith('t1')) speakText(wordToSpeak); } } }
         function toggleSingleAns(id) {
             const qid = id.replace('-eye', '');
