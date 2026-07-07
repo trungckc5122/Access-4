@@ -16,6 +16,38 @@
         .hint-box .hint-detail {
             border-color: #0D9488 !important;
         }
+
+        /* Vocab TTS - clickable words */
+        #contentPhrasalVerbs td strong.vocab-speak {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary, #0d9488);
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        #contentPhrasalVerbs td strong.vocab-speak:hover {
+            background: var(--primary-light, #e0f2f1);
+            color: var(--primary-dark, #0f766e);
+        }
+        #contentPhrasalVerbs td strong.vocab-speak.speaking {
+            background: #fef08a;
+            color: #92400e;
+            border-bottom-color: #d97706;
+            animation: speakPulse 0.6s ease infinite alternate;
+        }
+        @keyframes speakPulse {
+            from { opacity: 1; }
+            to   { opacity: 0.65; }
+        }
+        #contentPhrasalVerbs td strong.vocab-speak::after {
+            content: ' 🔊';
+            font-size: 0.8em;
+            opacity: 0.5;
+        }
+        #contentPhrasalVerbs td strong.vocab-speak:hover::after,
+        #contentPhrasalVerbs td strong.vocab-speak.speaking::after {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -826,6 +858,39 @@
         };
 
         document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+    </script>
+    <script>
+        // ── Phrasal Verbs TTS (Web Speech API) ─────────────────────────────────
+        (function initVocabTTS() {
+            if (!window.speechSynthesis) return;
+            // 5a dùng bảng <table>: target td chứa phrasal verb (cột đầu tiên)
+            document.querySelectorAll('#contentPhrasalVerbs td:first-child strong').forEach(strong => {
+                strong.classList.add('vocab-speak');
+                strong.title = 'Click để nghe phát âm';
+                strong.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const word = strong.textContent.trim();
+                    speakVocabWord(word, strong);
+                });
+            });
+            function speakVocabWord(word, el) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(word);
+                utter.lang = 'en-US';
+                utter.rate = 0.85;
+                utter.pitch = 1;
+                utter.volume = 1;
+                const voices = window.speechSynthesis.getVoices();
+                const enVoice = voices.find(v => v.lang.startsWith('en') && !v.localService === false)
+                             || voices.find(v => v.lang.startsWith('en')) || null;
+                if (enVoice) utter.voice = enVoice;
+                utter.onstart  = () => el.classList.add('speaking');
+                utter.onend    = () => el.classList.remove('speaking');
+                utter.onerror  = () => el.classList.remove('speaking');
+                window.speechSynthesis.speak(utter);
+            }
+            window.speechSynthesis.onvoiceschanged = () => {};
+        })();
     </script>
     <script src="access-core.js"></script>
 </body>

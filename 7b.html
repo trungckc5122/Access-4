@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -15,6 +15,38 @@
 
         .hint-box .hint-detail {
             border-color: #0D9488 !important;
+        }
+
+        /* Vocab TTS - clickable words */
+        .grammar-list li strong.vocab-speak {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary, #0d9488);
+            transition: all 0.2s ease;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+        .grammar-list li strong.vocab-speak:hover {
+            background: var(--primary-light, #e0f2f1);
+            color: var(--primary-dark, #0f766e);
+        }
+        .grammar-list li strong.vocab-speak.speaking {
+            background: #fef08a;
+            color: #92400e;
+            border-bottom-color: #d97706;
+            animation: speakPulse 0.6s ease infinite alternate;
+        }
+        @keyframes speakPulse {
+            from { opacity: 1; }
+            to   { opacity: 0.65; }
+        }
+        .grammar-list li strong.vocab-speak::after {
+            content: ' 🔊';
+            font-size: 0.8em;
+            opacity: 0.5;
+        }
+        .grammar-list li strong.vocab-speak:hover::after,
+        .grammar-list li strong.vocab-speak.speaking::after {
+            opacity: 1;
         }
     </style>
 </head>
@@ -836,6 +868,44 @@
                 document.documentElement.setAttribute('data-theme', newTheme);
                 localStorage.setItem('theme', newTheme);
             });
+        })();
+    </script>
+    <script>
+        // -- Vocabulary TTS (Web Speech API) --
+        (function initVocabTTS() {
+            if (!window.speechSynthesis) return;
+            const vocabSelectors = ['#contentVocab'];
+            document.querySelectorAll('.grammar-list li').forEach(li => {
+                const strong = li.querySelector('strong');
+                if (!strong) return;
+                const inVocab = vocabSelectors.some(sel => li.closest(sel));
+                if (inVocab) {
+                    strong.classList.add('vocab-speak');
+                    strong.title = 'Click de nghe phat am';
+                    strong.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const word = strong.textContent.replace(/\s*\(.*?\)\s*/g, '').trim();
+                        speakVocabWord(word, strong);
+                    });
+                }
+            });
+            function speakVocabWord(word, el) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(word);
+                utter.lang = 'en-US';
+                utter.rate = 0.85;
+                utter.pitch = 1;
+                utter.volume = 1;
+                const voices = window.speechSynthesis.getVoices();
+                const enVoice = voices.find(v => v.lang.startsWith('en') && !v.localService === false)
+                             || voices.find(v => v.lang.startsWith('en')) || null;
+                if (enVoice) utter.voice = enVoice;
+                utter.onstart  = () => el.classList.add('speaking');
+                utter.onend    = () => el.classList.remove('speaking');
+                utter.onerror  = () => el.classList.remove('speaking');
+                window.speechSynthesis.speak(utter);
+            }
+            window.speechSynthesis.onvoiceschanged = () => {};
         })();
     </script>
     <script src="access-core.js"></script>
