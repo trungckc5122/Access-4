@@ -5,7 +5,7 @@ const starterState = () => ({
   textSize: 24,
   nowX: 78,
   showCcqAnswers: false,
-  showTenseExplain: false,
+  showTenseExplain: true,
   sentence: "My mom had cooked dinner when I got home.",
   events: [
     { id: makeId(), label: "Mom cooked dinner", timestamp: "", color: PALETTE[0], x: 25, endX: 43, lane: "below", shape: "point", tense: "past_perfect_simple" },
