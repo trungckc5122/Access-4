@@ -431,23 +431,33 @@
       const precedesAnotherFuture = others.some((event) => classifyEventTime(event, nowX) === "future"
         && itemEnd < Number(event.x));
       if (precedesAnotherFuture) {
+        const usePerfectContinuous = item.tense === "future_perfect_continuous";
+        const exText = usePerfectContinuous
+          ? "By next month, Ronaldo will have been playing for Al-Nassr for 5 years."
+          : "Ronaldo will have finished training by the time the match starts.";
+        const exUnderline = usePerfectContinuous
+          ? "Ronaldo will have been playing for Al-Nassr for 5 years"
+          : "Ronaldo will have finished training";
         return {
           suggested: "future_perfect_simple",
           reason: "Hành động này sẽ hoàn tất TRƯỚC một sự kiện tương lai khác",
-          example: { text: "Ronaldo will have finished training by the time the match starts.", underline: "Ronaldo will have finished training" },
+          example: { text: exText, underline: exUnderline },
           alternatives: isRange ? [
-            tenseRef("future_perfect_continuous", "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến mốc tương lai kia, thay vì chỉ nói đã hoàn tất."),
+            { id: "future_perfect_continuous", label: TimelineMath?.TENSES?.future_perfect_continuous?.label || "Tương lai hoàn thành tiếp diễn", reason: "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến mốc tương lai kia, thay vì chỉ nói đã hoàn tất.", example: { text: "By next month, Ronaldo will have been playing for Al-Nassr for 5 years.", underline: "Ronaldo will have been playing for Al-Nassr for 5 years" } },
           ] : [],
         };
       }
 
-      const followsAnotherFuture = others.some((event) => classifyEventTime(event, nowX) === "future"
+      const followsAnotherFutureEvent = others.find((event) => classifyEventTime(event, nowX) === "future"
         && otherEnd(event) < Number(item.x));
-      if (followsAnotherFuture) {
+      if (followsAnotherFutureEvent) {
+        const precedingUsesContinuous = followsAnotherFutureEvent.tense === "future_perfect_continuous";
         return {
           suggested: "future_present_simple",
           reason: "Đây là mốc thời gian dùng làm điểm mốc cho một hành động tương lai khác đã hoàn tất trước đó — mốc tham chiếu này luôn chia ở Hiện tại đơn dù mang nghĩa tương lai.",
-          example: { text: "Ronaldo will have finished training by the time the match starts.", underline: "the match starts" },
+          example: precedingUsesContinuous
+            ? { text: "By next month, Ronaldo will have been playing for Al-Nassr for 5 years.", underline: "next month" }
+            : { text: "Ronaldo will have finished training by the time the match starts.", underline: "the match starts" },
           alternatives: [],
         };
       }

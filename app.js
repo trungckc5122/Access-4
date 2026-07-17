@@ -300,6 +300,14 @@ function renderTimeline() {
           partner.tense = item.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
         }
       }
+      // Nếu chọn future_perfect_continuous/simple → mốc tham chiếu tự set future_present_simple
+      if (item.tense === "future_perfect_continuous" || item.tense === "future_perfect_simple") {
+        const itemEnd = item.shape === "range" ? Number(item.endX) : Number(item.x);
+        const moc = state.events.find((e) => e.id !== item.id
+          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
+          && itemEnd < (e.shape === "range" ? Number(e.x) : Number(e.x)));
+        if (moc) moc.tense = "future_present_simple";
+      }
       renderTimeline();
       scheduleSave();
     });
@@ -673,6 +681,14 @@ function renderConceptQuestions() {
         if (partner) {
           partner.tense = eventItem.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
         }
+      }
+      // Nếu chọn future_perfect_continuous/simple → mốc tham chiếu tự set future_present_simple
+      if (eventItem.tense === "future_perfect_continuous" || eventItem.tense === "future_perfect_simple") {
+        const itemEnd = eventItem.shape === "range" ? Number(eventItem.endX) : Number(eventItem.x);
+        const moc = state.events.find((e) => e.id !== eventItem.id
+          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
+          && itemEnd < Number(e.x));
+        if (moc) moc.tense = "future_present_simple";
       }
       renderTimeline();
       scheduleSave();
