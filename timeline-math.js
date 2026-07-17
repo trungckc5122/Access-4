@@ -231,6 +231,8 @@
     past_perfect_continuous: { label: "Quá khứ hoàn thành tiếp diễn", group: "past" },
     present_simple: { label: "Hiện tại đơn", group: "present" },
     present_continuous: { label: "Hiện tại tiếp diễn", group: "present" },
+    present_continuous_habit: { label: "Hiện tại tiếp diễn (thói quen)", group: "present" },
+    present_continuous_trend: { label: "Hiện tại tiếp diễn (xu hướng)", group: "present" },
     present_perfect_simple: { label: "Hiện tại hoàn thành", group: "present" },
     present_perfect_continuous: { label: "Hiện tại hoàn thành tiếp diễn", group: "present" },
     future_will: { label: "Tương lai đơn (will)", group: "future" },
@@ -240,6 +242,28 @@
     future_continuous: { label: "Tương lai tiếp diễn", group: "future" },
     future_perfect_simple: { label: "Tương lai hoàn thành", group: "future" },
     future_perfect_continuous: { label: "Tương lai hoàn thành tiếp diễn", group: "future" },
+  };
+
+  // One canonical, affirmative, active-voice Ronaldo example per tense —
+  // used verbatim whenever a teacher manually picks a tense from the dropdown.
+  const TENSE_EXAMPLES = {
+    past_simple: "Ronaldo scored a hat-trick.",
+    past_continuous: "Ronaldo was training at the gym.",
+    past_perfect_simple: "Ronaldo had already scored before half-time.",
+    past_perfect_continuous: "Ronaldo had been playing for Manchester United for six years.",
+    present_simple: "Ronaldo trains every morning.",
+    present_continuous: "Ronaldo is warming up right now.",
+    present_continuous_habit: "Ronaldo is always arriving late to training.",
+    present_continuous_trend: "Ronaldo is getting better every season.",
+    present_perfect_simple: "Ronaldo has won five Ballon d'Or awards.",
+    present_perfect_continuous: "Ronaldo has been playing football for over 20 years.",
+    future_will: "Ronaldo will retire one day.",
+    future_going_to: "Ronaldo is going to join a new club.",
+    future_present_continuous: "Ronaldo is meeting his coach tomorrow.",
+    future_present_simple: "Ronaldo's flight leaves at nine tomorrow.",
+    future_continuous: "Ronaldo will be training at this time tomorrow.",
+    future_perfect_simple: "Ronaldo will have scored 900 goals by next year.",
+    future_perfect_continuous: "Ronaldo will have been playing for 25 years by 2030.",
   };
 
   // Suggests a tense from structural signals only (shape, position vs NOW, containment).
@@ -339,7 +363,7 @@
   }
 
   function tenseRef(id, reason) {
-    return { id, label: TENSES[id].label, reason };
+    return { id, label: TENSES[id].label, reason, example: { text: TENSE_EXAMPLES[id], underline: null } };
   }
 
   function explainTense(item, events = [], nowX = 78) {
@@ -359,6 +383,7 @@
           return {
             suggested: "future_continuous",
             reason: "Hành động này sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, thì bị một sự kiện khác (điểm mốc bên trong) xen vào",
+            example: { text: "Ronaldo will be training when the new season starts.", underline: "the new season starts" },
             alternatives: [],
           };
         }
@@ -370,6 +395,7 @@
           return {
             suggested: "future_continuous",
             reason: "Hai hành động sẽ cùng diễn ra song song, chồng lấn thời gian trong tương lai.",
+            example: { text: "Ronaldo will be resting while the team travels.", underline: null },
             alternatives: [],
           };
         }
@@ -381,6 +407,7 @@
           return {
             suggested: "future_present_simple",
             reason: "Đây là mốc làm gián đoạn một hành động khác đang diễn ra liên tục trong tương lai — mốc thời gian kiểu này (trong mệnh đề \"when/after/before...\") luôn chia ở Hiện tại đơn dù mang nghĩa tương lai.",
+            example: { text: "Ronaldo will be training when the new season starts.", underline: "the new season starts" },
             alternatives: [],
           };
         }
@@ -392,6 +419,7 @@
         return {
           suggested: "future_perfect_simple",
           reason: "Hành động này sẽ hoàn tất TRƯỚC một sự kiện tương lai khác",
+          example: { text: "Ronaldo will have finished training by the time the match starts.", underline: "Ronaldo will have finished training" },
           alternatives: isRange ? [
             tenseRef("future_perfect_continuous", "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến mốc tương lai kia, thay vì chỉ nói đã hoàn tất."),
           ] : [],
@@ -404,6 +432,7 @@
         return {
           suggested: "future_present_simple",
           reason: "Đây là mốc thời gian dùng làm điểm mốc cho một hành động tương lai khác đã hoàn tất trước đó — mốc tham chiếu này luôn chia ở Hiện tại đơn dù mang nghĩa tương lai.",
+          example: { text: "Ronaldo will have finished training by the time the match starts.", underline: "the match starts" },
           alternatives: [],
         };
       }
@@ -412,6 +441,7 @@
         return {
           suggested: "future_continuous",
           reason: "Hành động sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, hoặc là một hành động sẽ xảy ra nếu mọi thứ diễn ra như dự đoán - được dùng để chỉ rõ người nói không đưa ra yêu cầu hoặc đề nghị, hoặc 1 thói quen/chuỗi hành động sẽ xảy ra ở tương lai.",
+          example: { text: "Ronaldo will be training at this time tomorrow.", underline: null },
           alternatives: [],
         };
       }
@@ -436,6 +466,7 @@
         return {
           suggested: "present_simple",
           reason: "Đây là một thời điểm đơn lẻ ngay tại mốc Hiện tại (NOW) — khớp với sự thật hiển nhiên, thói quen, hoặc tường thuật trực tiếp (bình luận thể thao, hướng dẫn từng bước...).",
+          example: { text: "Ronaldo trains every morning.", underline: null },
           alternatives: [
             tenseRef("present_continuous", "Nếu đây thực chất là một hành động đang xảy ra ngay lúc nói, chưa hoàn tất."),
           ],
@@ -449,7 +480,9 @@
           suggested: null,
           reason: "Sự kiện bắt đầu từ trước NOW, đang diễn ra ngay bây giờ, và còn tiếp diễn sang tương lai. Đây có thể là hành động đang xảy ra ngay lúc nói, hoặc một khoảng thời gian đã tiếp diễn tính đến hiện tại — hai cách hiểu này cần thì khác nhau.",
           alternatives: [
-            tenseRef("present_continuous", "Nhấn mạnh hành động đang xảy ra ngay bây giờ."),
+            { id: "present_continuous", label: "Hiện tại tiếp diễn", reason: "Hành động đang xảy ra ngay bây giờ, tại thời điểm nói.", example: { text: "Ronaldo is warming up right now.", underline: null } },
+            { id: "present_continuous_habit", label: "Hiện tại tiếp diễn (thói quen gây chú ý)", reason: "Diễn tả thói quen lặp đi lặp lại gây bực bội hoặc thú vị — dùng với always/constantly/forever.", example: { text: "Ronaldo is always arriving late to training.", underline: null } },
+            { id: "present_continuous_trend", label: "Hiện tại tiếp diễn (xu hướng thay đổi)", reason: "Diễn tả một xu hướng hoặc sự thay đổi đang dần xảy ra trong giai đoạn này.", example: { text: "Ronaldo is getting better every season.", underline: null } },
             tenseRef("present_perfect_continuous", "Nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến hiện tại."),
             tenseRef("present_perfect_simple", "Một tình huống/trạng thái bắt đầu trong quá khứ và vẫn đúng đến bây giờ."),
           ],
@@ -460,6 +493,7 @@
         return {
           suggested: "present_continuous",
           reason: "Sự kiện bắt đầu từ trước NOW và đang diễn ra đúng lúc NOW — vẫn là một hành động đang tiếp diễn tại thời điểm nói.",
+          example: { text: "Ronaldo is finishing his warm-up right now.", underline: null },
           alternatives: [
             tenseRef("present_perfect_continuous", "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến hiện tại, thay vì chỉ nói nó đang xảy ra."),
             tenseRef("present_perfect_simple", "Nếu muốn nhấn mạnh đây là một tình huống/trạng thái bắt đầu trong quá khứ và vẫn đúng đến bây giờ."),
@@ -471,6 +505,7 @@
         return {
           suggested: "present_continuous",
           reason: "Sự kiện bắt đầu đúng lúc NOW và sẽ còn tiếp diễn sang tương lai - một hành động đang xảy ra, chưa kết thúc.",
+          example: { text: "Ronaldo is starting his warm-up right now.", underline: null },
           alternatives: [],
         };
       }
@@ -478,6 +513,7 @@
       return {
         suggested: "present_continuous",
         reason: "Hành động đang xảy ra ngay bây giờ, xung quanh mốc Hiện tại (NOW), mang tính tạm thời.",
+        example: { text: "Ronaldo is warming up right now.", underline: null },
         alternatives: [],
       };
     }
@@ -490,6 +526,7 @@
         return {
           suggested: "past_continuous",
           reason: "Hành động đang diễn ra trong quá khứ thì bị một sự kiện khác (điểm mốc nằm bên trong) xen vào, làm gián đoạn.",
+          example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" },
           alternatives: [
             tenseRef("past_perfect_continuous", "Nếu muốn nhấn mạnh hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó."),
           ],
@@ -503,6 +540,7 @@
         return {
           suggested: "past_continuous",
           reason: "Hai hành động cùng diễn ra song song, chồng lấn thời gian trong quá khứ.",
+          example: { text: "Ronaldo was training while Messi was resting.", underline: null },
           alternatives: [],
         };
       }
@@ -535,6 +573,7 @@
       return {
         suggested: "past_continuous",
         reason: "Hành động diễn ra liên tục trong quá khứ, không có sự kiện quá khứ nào khác liên quan trực tiếp — phù hợp với một tình huống tạm thời hoặc bối cảnh nền.",
+        example: { text: "Ronaldo was training at the gym.", underline: null },
         alternatives: [
           tenseRef("past_simple", "Nếu muốn coi đây là một hành động trọn vẹn đã hoàn tất, không nhấn mạnh tính đang-diễn-ra."),
         ],
@@ -547,15 +586,49 @@
       return {
         suggested: "past_simple",
         reason: "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ.",
+        example: { text: "Ronaldo was training when the coach arrived.", underline: "the coach arrived" },
         alternatives: [],
       };
     }
 
     const hasOtherPastEvent = others.some((event) => classifyEventTime(event, nowX) === "past");
     if (hasOtherPastEvent) {
+      const otherPastEvent = others.find((event) => classifyEventTime(event, nowX) === "past");
+      const isEarlier = otherPastEvent && Number(item.x) < eventCenter(otherPastEvent);
+      const otherTense = otherPastEvent?.tense;
+      const thisTense = item.tense;
+
+      // Nhánh: một bên past_perfect_simple, bên kia past_simple (hoặc ngược lại)
+      const isPerfectSimplePair = (thisTense === "past_perfect_simple" && otherTense === "past_simple")
+        || (thisTense === "past_simple" && otherTense === "past_perfect_simple")
+        || (!thisTense && otherTense === "past_perfect_simple")
+        || (thisTense === "past_perfect_simple" && !otherTense);
+
+      if (isPerfectSimplePair) {
+        // Ví dụ: sự kiện trước (past_perfect) gạch "had already scored", sau (past_simple) gạch "the final whistle blew"
+        const ppText = "Ronaldo had already scored before the final whistle blew.";
+        const ppUnderline = (thisTense === "past_perfect_simple" || (!thisTense && isEarlier))
+          ? "Ronaldo had already scored"
+          : "the final whistle blew";
+        return {
+          suggested: null,
+          reason: "Có một sự kiện quá khứ khác không lồng vào sự kiện này. Nếu đây chỉ là một sự kiện tiếp theo trong chuỗi câu chuyện, dùng Quá khứ đơn cho cả hai; nếu muốn nhấn mạnh sự kiện này đã xảy ra/hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành.",
+          example: { text: ppText, underline: ppUnderline },
+          alternatives: [
+            tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
+            tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
+          ],
+        };
+      }
+
+      // Nhánh mặc định: cả hai past_simple hoặc chưa chọn
+      const bothPastSimple = (thisTense === "past_simple" && otherTense === "past_simple");
+      const exampleText = "Ronaldo scored a hat-trick. Then he shouted: I'm back, I'm back.";
+      const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: I'm back, I'm back";
       return {
         suggested: null,
         reason: "Có một sự kiện quá khứ khác không lồng vào sự kiện này. Nếu đây chỉ là một sự kiện tiếp theo trong chuỗi câu chuyện, dùng Quá khứ đơn cho cả hai; nếu muốn nhấn mạnh sự kiện này đã xảy ra/hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành.",
+        example: bothPastSimple ? { text: exampleText, underline: exampleUnderline } : null,
         alternatives: [
           tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
           tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
@@ -578,12 +651,13 @@
     return {
       suggested: "past_simple",
       reason: "Một hành động đơn, đã hoàn tất tại một thời điểm cụ thể trong quá khứ.",
+      example: { text: "Ronaldo scored a hat-trick.", underline: null },
       alternatives: [],
     };
   }
 
   return {
     assignWaveTracks, rangeFromDrag, isAlongTimeline, buildConceptQuestions, classifyEventTime,
-    createHistory, nextUniqueColor, TENSES, suggestTense, explainTense,
+    createHistory, nextUniqueColor, TENSES, TENSE_EXAMPLES, suggestTense, explainTense,
   };
 });

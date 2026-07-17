@@ -1,4 +1,4 @@
-const STORAGE_KEY = "tenseline-project-v1";
+﻿const STORAGE_KEY = "tenseline-project-v1";
 const PALETTE = ["#e85d45", "#1967d2", "#0b8f71", "#9b51e0", "#d28a00", "#d43b78", "#44546a"];
 
 const starterState = () => ({
@@ -6,11 +6,8 @@ const starterState = () => ({
   nowX: 78,
   showCcqAnswers: true,
   showTenseExplain: true,
-  sentence: "My mom had cooked dinner when I got home.",
-  events: [
-    { id: makeId(), label: "Mom cooked dinner", timestamp: "", color: PALETTE[0], x: 25, endX: 43, lane: "below", shape: "point", tense: "past_perfect_simple" },
-    { id: makeId(), label: "I got home", timestamp: "", color: PALETTE[1], x: 48, endX: 66, lane: "above", shape: "point", tense: "past_simple" },
-  ],
+  sentence: "",
+  events: [],
   links: [],
 });
 
@@ -89,6 +86,7 @@ function bindGlobalEvents() {
     const step = event.shiftKey ? 5 : 1;
     recordHistory("now-keyboard", true);
     setNowPosition(state.nowX + (event.key === "ArrowLeft" ? -step : step));
+    autoResetTenses();
   });
 
   els.editor.addEventListener("input", () => {
@@ -192,6 +190,22 @@ function buildTenseSelectHtml(item) {
   return `<select class="tense-select" aria-label="Chọn thì cho sự kiện">${placeholder}${groups}</select>`;
 }
 
+function buildEventExampleHtml(item) {
+  const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
+  // Nếu ngữ cảnh mơ hồ và chưa chọn thì → chờ người dùng chọn trước
+  if (!explanation.suggested && !item.tense) return "Chọn thì để xem ví dụ";
+  // Ưu tiên ví dụ context-aware từ explainTense, fallback về TENSE_EXAMPLES nếu không có
+  const raw = explanation.example || (item.tense ? TimelineMath.TENSE_EXAMPLES[item.tense] : null);
+  if (!raw) return "Chọn thì để xem ví dụ";
+  const exObj = (typeof raw === "object" && raw !== null) ? raw : { text: raw, underline: null };
+  if (!exObj.text) return "Chọn thì để xem ví dụ";
+  const escaped = escapeHtml(exObj.text);
+  if (!exObj.underline) return `Ví dụ: <em>${escaped}</em>`;
+  const escapedUnderline = escapeHtml(exObj.underline);
+  const highlighted = escaped.replace(escapedUnderline, `<u>${escapedUnderline}</u>`);
+  return `Ví dụ: <em>${highlighted}</em>`;
+}
+
 function renderTimeline() {
   const waveTracks = TimelineMath.assignWaveTracks(state.events);
   els.layer.innerHTML = state.events.map((item) => {
@@ -212,6 +226,7 @@ function renderTimeline() {
             <span>${item.tense ? "Thì" : TimelineMath.suggestTense(item, state.events, state.nowX) ? "Thì (gợi ý)" : "Thì (cần chọn)"}</span>
             ${buildTenseSelectHtml(item)}
           </label>
+          ${state.showTenseExplain ? `<p class="tense-example">${buildEventExampleHtml(item)}</p>` : ""}
           <div class="inline-controls">
             <label class="colour-control" title="Màu sự kiện"><span>Màu</span><input class="inline-colour" type="color" value="${item.color}" aria-label="Màu sự kiện" /></label>
             <button class="inline-action lane-action" type="button" title="Chuyển xuống ${item.lane === "above" ? "dưới" : "trên"} đường thời gian" aria-label="Chuyển xuống ${item.lane === "above" ? "dưới" : "trên"} đường thời gian">${item.lane === "above" ? "↓" : "↑"}</button>
@@ -280,7 +295,12 @@ function renderTimeline() {
     });
     node.querySelector(".lane-action").addEventListener("click", () => {
       recordHistory(`event-lane-${item.id}`);
-      item.lane = item.lane === "above" ? "below" : "above";
+      const wantedLane = item.lane === "above" ? "below" : "above";
+      const othersAbove = state.events.filter((e) => e.id !== item.id && e.lane === "above").length;
+      const othersBelow = state.events.filter((e) => e.id !== item.id && e.lane === "below").length;
+      if (Math.abs((wantedLane === "above" ? othersAbove + 1 : othersAbove) - (wantedLane === "below" ? othersBelow + 1 : othersBelow)) <= 1) {
+        item.lane = wantedLane;
+      }
       renderTimeline();
       scheduleSave();
     });
@@ -308,6 +328,7 @@ function renderTimeline() {
         } else {
           item.x = clamp(item.x + delta, 4, 96);
         }
+        autoResetTenses();
         renderTimeline();
         scheduleSave();
       }
@@ -502,7 +523,16 @@ function onPointerMove(event) {
   } else {
     item.x = Math.round(clamp(pointerX, 4, 96));
   }
-  if (Math.abs(event.clientY - drag.startY) > 12) item.lane = event.clientY < rect.top + rect.height / 2 ? "above" : "below";
+  if (Math.abs(event.clientY - drag.startY) > 12) {
+    const pointerLane = event.clientY < rect.top + rect.height / 2 ? "above" : "below";
+    // Kiểm tra nếu đổi lane có gây mất cân bằng không
+    const othersAbove = state.events.filter((e) => e.id !== item.id && e.lane === "above").length;
+    const othersBelow = state.events.filter((e) => e.id !== item.id && e.lane === "below").length;
+    // Chỉ cho đổi lane nếu phía đó không vượt quá phía kia quá 1
+    if (Math.abs((pointerLane === "above" ? othersAbove + 1 : othersAbove) - (pointerLane === "below" ? othersBelow + 1 : othersBelow)) <= 1) {
+      item.lane = pointerLane;
+    }
+  }
   renderTimeline();
 }
 
@@ -558,6 +588,7 @@ function renderConceptQuestions() {
 
   if (!state.events.length) {
     els.ccqList.innerHTML = `<p class="ccq-empty">Hãy thêm một sự kiện để tạo câu hỏi kiểm tra khái niệm.</p>`;
+    els.layer.querySelectorAll(".tense-row, .tense-select").forEach((el) => el.classList.remove("is-stale"));
     return;
   }
 
