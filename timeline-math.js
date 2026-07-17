@@ -385,7 +385,7 @@
           return {
             suggested: "future_continuous",
             reason: "Hành động này sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, có bối cảnh, thời gian xác định bởi 1 sự kiện nào đó. Bối cảnh này chia ở hiện tại đơn.",
-            example: { text: "Ronaldo will be training when the new season starts.", underline: "the new season starts" },
+            example: { text: "Ronaldo will be training when the new season starts.", underline: "Ronaldo will be training" },
             alternatives: [],
           };
         }
