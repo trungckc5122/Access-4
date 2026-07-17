@@ -180,6 +180,25 @@ function buildTenseSelectHtml(item) {
   const placeholder = suggestion
     ? `<option value="">— Dùng gợi ý tự động —</option>`
     : `<option value="" disabled ${effective ? "" : "selected"}>— Chọn thì —</option>`;
+
+  // Ở chế độ tự suy luận: chỉ hiện thì được gợi ý + các thì thay thế
+  if (state.showTenseExplain) {
+    const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
+    const allowedIds = new Set();
+    if (suggestion) allowedIds.add(suggestion);
+    if (item.tense) allowedIds.add(item.tense);
+    explanation.alternatives.forEach((alt) => allowedIds.add(alt.id));
+    if (allowedIds.size === 0) {
+      // Ngữ cảnh mơ hồ chưa có alternatives → hiện toàn bộ như thường
+    } else {
+      const options = [...allowedIds]
+        .filter((id) => TimelineMath.TENSES[id])
+        .map((id) => `<option value="${id}" ${id === effective ? "selected" : ""}>${escapeHtml(TimelineMath.TENSES[id].label)}</option>`)
+        .join("");
+      return `<select class="tense-select" aria-label="Chọn thì cho sự kiện">${placeholder}${options}</select>`;
+    }
+  }
+
   const groups = ["past", "present", "future"].map((group) => {
     const options = Object.entries(TimelineMath.TENSES)
       .filter(([, meta]) => meta.group === group)
@@ -271,6 +290,16 @@ function renderTimeline() {
     tenseField.addEventListener("change", (event) => {
       recordHistory(`event-tense-${item.id}`);
       item.tense = event.target.value || null;
+      // Nếu là cặp overlap future range → tự set tense cho sự kiện kia
+      if (item.tense === "future_continuous" || item.tense === "future_present_simple") {
+        const partner = state.events.find((e) => e.id !== item.id
+          && e.shape === "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
+          && Number(item.x) < Number(e.endX) && Number(e.x) < Number(item.endX));
+        if (partner) {
+          partner.tense = item.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
+        }
+      }
       renderTimeline();
       scheduleSave();
     });
@@ -635,6 +664,16 @@ function renderConceptQuestions() {
       if (!eventItem) return;
       recordHistory(`event-tense-${eventItem.id}`);
       eventItem.tense = btn.dataset.tenseKey || null;
+      // Nếu là cặp overlap future range → tự set tense cho sự kiện kia
+      if (eventItem.tense === "future_continuous" || eventItem.tense === "future_present_simple") {
+        const partner = state.events.find((e) => e.id !== eventItem.id
+          && e.shape === "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
+          && Number(eventItem.x) < Number(e.endX) && Number(e.x) < Number(eventItem.endX));
+        if (partner) {
+          partner.tense = eventItem.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
+        }
+      }
       renderTimeline();
       scheduleSave();
     });

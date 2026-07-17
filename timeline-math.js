@@ -240,6 +240,7 @@
     future_present_continuous: { label: "Hiện tại tiếp diễn (chỉ tương lai)", group: "future" },
     future_present_simple: { label: "Hiện tại đơn (chỉ tương lai)", group: "future" },
     future_continuous: { label: "Tương lai tiếp diễn", group: "future" },
+    future_continuous_course: { label: "Tương lai tiếp diễn (diễn ra theo lẽ thường)", group: "future" },
     future_perfect_simple: { label: "Tương lai hoàn thành", group: "future" },
     future_perfect_continuous: { label: "Tương lai hoàn thành tiếp diễn", group: "future" },
   };
@@ -262,6 +263,7 @@
     future_present_continuous: "Ronaldo is meeting his coach tomorrow.",
     future_present_simple: "Ronaldo's flight leaves at nine tomorrow.",
     future_continuous: "Ronaldo will be training at this time tomorrow.",
+    future_continuous_course: "Ronaldo's team will be arriving on Thursday.",
     future_perfect_simple: "Ronaldo will have scored 900 goals by next year.",
     future_perfect_continuous: "Ronaldo will have been playing for 25 years by 2030.",
   };
@@ -299,10 +301,10 @@
           && Number(event.x) >= Number(item.x) && Number(event.x) <= Number(item.endX));
         if (containsPoint) return "future_continuous";
 
-        const overlapsAnotherFutureRange = others.some((event) => event.shape === "range"
+        const overlappingFutureRange = others.find((event) => event.shape === "range"
           && classifyEventTime(event, nowX) === "future"
           && Number(item.x) < Number(event.endX) && Number(event.x) < Number(item.endX));
-        if (overlapsAnotherFutureRange) return "future_continuous";
+        if (overlappingFutureRange) return null;
       } else {
         const containingRange = others.find((event) => event.shape === "range"
           && classifyEventTime(event, nowX) === "future"
@@ -382,21 +384,34 @@
         if (containsPoint) {
           return {
             suggested: "future_continuous",
-            reason: "Hành động này sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, thì bị một sự kiện khác (điểm mốc bên trong) xen vào",
+            reason: "Hành động này sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, có bối cảnh, thời gian xác định bởi 1 sự kiện nào đó. Bối cảnh này chia ở hiện tại đơn.",
             example: { text: "Ronaldo will be training when the new season starts.", underline: "the new season starts" },
             alternatives: [],
           };
         }
 
-        const overlapsAnotherFutureRange = others.some((event) => event.shape === "range"
+        const overlappingFutureRange = others.find((event) => event.shape === "range"
           && classifyEventTime(event, nowX) === "future"
           && Number(item.x) < Number(event.endX) && Number(event.x) < Number(item.endX));
-        if (overlapsAnotherFutureRange) {
+        if (overlappingFutureRange) {
+          const thisTense = item.tense;
+          const otherTense = overlappingFutureRange.tense;
+          // Khi đã chọn thì cho cả 2 → trả về example đúng với vai trò đã chọn
+          const resolvedThis = thisTense || null;
+          let exampleObj = null;
+          if (resolvedThis === "future_continuous") {
+            exampleObj = { text: "Ronaldo will be resting while the team travels.", underline: "Ronaldo will be resting" };
+          } else if (resolvedThis === "future_present_simple") {
+            exampleObj = { text: "Ronaldo will be resting while the team travels.", underline: "the team travels" };
+          }
           return {
-            suggested: "future_continuous",
-            reason: "Hai hành động sẽ cùng diễn ra song song, chồng lấn thời gian trong tương lai.",
-            example: { text: "Ronaldo will be resting while the team travels.", underline: null },
-            alternatives: [],
+            suggested: null,
+            reason: "Hai hành động xảy ra song song trong tương lai. Cấu trúc ngữ pháp bắt buộc: mệnh đề chứa \"while\" dùng Hiện tại đơn, hành động chính muốn nhấn mạnh sự kéo dài dùng Tương lai tiếp diễn. Việc phân chia không dựa trên mức độ quan trọng mà dựa trên vai trò ngữ pháp bạn chọn cho từng hành động.",
+            example: exampleObj,
+            alternatives: [
+              { id: "future_continuous", label: "Tương lai tiếp diễn", reason: "Hành động chính — hành động bạn muốn nhấn mạnh sự kéo dài, đang diễn ra khi hành động kia xảy ra.", example: { text: "Ronaldo will be resting while the team travels.", underline: "Ronaldo will be resting" } },
+              { id: "future_present_simple", label: "Hiện tại đơn (chỉ tương lai)", reason: "Mệnh đề nền — đứng trong mệnh đề \"while\", xác định bối cảnh thời gian cho hành động chính. Bắt buộc dùng Hiện tại đơn dù mang nghĩa tương lai.", example: { text: "Ronaldo will be resting while the team travels.", underline: "the team travels" } },
+            ],
           };
         }
       } else {
@@ -406,7 +421,7 @@
         if (containingRange) {
           return {
             suggested: "future_present_simple",
-            reason: "Đây là mốc làm gián đoạn một hành động khác đang diễn ra liên tục trong tương lai — mốc thời gian kiểu này (trong mệnh đề \"when/after/before...\") luôn chia ở Hiện tại đơn dù mang nghĩa tương lai.",
+            reason: "Đây là mốc làm để xác định một hành động khác đang diễn ra liên tục trong tương lai — mốc thời gian kiểu này (trong mệnh đề \"when/after/before...\") luôn chia ở Hiện tại đơn dù mang nghĩa tương lai.",
             example: { text: "Ronaldo will be training when the new season starts.", underline: "the new season starts" },
             alternatives: [],
           };
@@ -439,10 +454,12 @@
 
       if (isRange) {
         return {
-          suggested: "future_continuous",
-          reason: "Hành động sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai, hoặc là một hành động sẽ xảy ra nếu mọi thứ diễn ra như dự đoán - được dùng để chỉ rõ người nói không đưa ra yêu cầu hoặc đề nghị, hoặc 1 thói quen/chuỗi hành động sẽ xảy ra ở tương lai.",
-          example: { text: "Ronaldo will be training at this time tomorrow.", underline: null },
-          alternatives: [],
+          suggested: null,
+          reason: "Sự kiện diễn ra liên tục trong tương lai, đứng độc lập. Tương lai tiếp diễn có thể diễn tả hành động đang xảy ra tại một thời điểm cụ thể, một sự việc diễn ra theo lẽ thường, hoặc một thói quen lặp lại trong tương lai — ba cách dùng này cần ngữ cảnh để phân biệt.",
+          alternatives: [
+            { id: "future_continuous", label: "Tương lai tiếp diễn", reason: "Hành động sẽ đang diễn ra tại một thời điểm cụ thể trong tương lai.", example: { text: "Ronaldo will be training at this time tomorrow.", underline: null } },
+            { id: "future_continuous_course", label: "Tương lai tiếp diễn (diễn ra theo lẽ thường)", reason: "Sự việc sẽ xảy ra theo diễn tiến bình thường — dùng để nói về điều gì đó sắp xảy ra mà không ngụ ý yêu cầu hay đề nghị.", example: { text: "Ronaldo's team will be arriving on Thursday.", underline: null } },
+          ],
         };
       }
 
