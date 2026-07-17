@@ -4,7 +4,7 @@ const PALETTE = ["#e85d45", "#1967d2", "#0b8f71", "#9b51e0", "#d28a00", "#d43b78
 const starterState = () => ({
   textSize: 24,
   nowX: 78,
-  showCcqAnswers: false,
+  showCcqAnswers: true,
   showTenseExplain: true,
   sentence: "My mom had cooked dinner when I got home.",
   events: [
@@ -288,6 +288,9 @@ function renderTimeline() {
       recordHistory(`event-shape-${item.id}`);
       item.shape = item.shape === "range" ? "point" : "range";
       if (item.shape === "range") item.endX = clamp(item.endX ?? item.x + 18, item.x + 5, 96);
+      // Shape đổi → thì cũ chắc chắn không còn đúng, reset về gợi ý tự động
+      item.tense = null;
+      autoResetTenses();
       renderTimeline();
       scheduleSave();
     });
@@ -312,6 +315,7 @@ function renderTimeline() {
   });
   scheduleCollisionLayout();
   renderConceptQuestions();
+  updateTenseWarnings();
 }
 
 function scheduleCollisionLayout() {
@@ -507,13 +511,41 @@ function endDrag(event) {
   if (nowDrag) {
     nowDrag = false;
     els.nowMarker.classList.remove("is-dragging");
+    autoResetTenses();
     scheduleSave();
     return;
   }
   if (!drag) return;
   drag = null;
+  autoResetTenses();
   renderTimeline();
   scheduleSave();
+}
+
+function autoResetTenses() {
+  if (!state.showTenseExplain) return;
+  state.events.forEach((item) => {
+    if (!item.tense) return; // đang dùng gợi ý tự động, không cần reset
+    const suggested = TimelineMath.suggestTense(item, state.events, state.nowX);
+    // Nếu có gợi ý tự động rõ ràng, hoặc gợi ý khác với thì đang chọn → reset
+    if (suggested !== item.tense) item.tense = null;
+  });
+}
+
+function updateTenseWarnings() {
+  if (!state.showTenseExplain) return;
+  els.layer.querySelectorAll(".timeline-event").forEach((node) => {
+    const item = state.events.find((e) => e.id === node.dataset.id);
+    if (!item) return;
+    const tenseRow = node.querySelector(".tense-row");
+    const tenseSelect = node.querySelector(".tense-select");
+    if (!tenseRow || !tenseSelect) return;
+    const suggested = TimelineMath.suggestTense(item, state.events, state.nowX);
+    // Tô vàng khi: ngữ cảnh mơ hồ (không có gợi ý tự động) VÀ người dùng chưa chọn tay
+    const needsChoice = !suggested && !item.tense;
+    tenseRow.classList.toggle("is-stale", needsChoice);
+    tenseSelect.classList.toggle("is-stale", needsChoice);
+  });
 }
 
 function renderConceptQuestions() {
@@ -533,10 +565,11 @@ function renderConceptQuestions() {
   els.ccqList.innerHTML = state.events.map((item) => {
     const questions = TimelineMath.buildConceptQuestions(item, state.events, state.nowX);
     const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
-    const resolvedTense = item.tense || explanation.suggested;
-    if (resolvedTense) {
-      questions.push({ question: "Sự kiện này nên dùng thì gì?", answer: TimelineMath.TENSES[resolvedTense].label });
-    }
+    const resolvedTense = explanation.suggested || item.tense;
+    const tenseAnswer = resolvedTense
+      ? TimelineMath.TENSES[resolvedTense].label
+      : "Tùy ngữ cảnh";
+    questions.push({ question: "Sự kiện này nên dùng thì gì?", answer: tenseAnswer });
     const timeFrame = TimelineMath.classifyEventTime(item, state.nowX);
     const kind = item.shape === "range" ? "Hành động diễn ra liên tục" : "Một thời điểm";
     const time = item.timestamp?.trim();
@@ -548,7 +581,7 @@ function renderConceptQuestions() {
           ${explanation.alternatives.length ? `
           <p class="ccq-tense-alt-label">Các thì khác có thể dùng:</p>
           <ul class="ccq-tense-alt-list">
-            ${explanation.alternatives.map((alt) => `<li><strong>${escapeHtml(alt.label)}</strong> — ${escapeHtml(alt.reason)}</li>`).join("")}
+            ${explanation.alternatives.map((alt) => `<li><button class="ccq-tense-alt-btn" data-event-id="${escapeAttribute(item.id)}" data-tense-key="${escapeAttribute(alt.id)}">${escapeHtml(alt.label)}</button> — ${escapeHtml(alt.reason)}</li>`).join("")}
           </ul>` : ""}
         </div>` : "";
     return `
@@ -564,6 +597,18 @@ function renderConceptQuestions() {
         ${tenseExplainHtml}
       </article>`;
   }).join("");
+
+  els.ccqList.querySelectorAll(".ccq-tense-alt-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const eventItem = state.events.find((e) => e.id === btn.dataset.eventId);
+      if (!eventItem) return;
+      recordHistory(`event-tense-${eventItem.id}`);
+      eventItem.tense = btn.dataset.tenseKey || null;
+      renderTimeline();
+      scheduleSave();
+    });
+  });
+  updateTenseWarnings();
 }
 
 function renderParagraphTools(updateParagraph = true) {
@@ -636,9 +681,12 @@ function addEvent(x = null, options = {}) {
   recordHistory("add-event");
   const index = state.events.length;
   const eventX = x ?? clamp(25 + index * 15, 10, 90);
+  const aboveCount = state.events.filter((e) => e.lane === "above").length;
+  const belowCount = state.events.filter((e) => e.lane === "below").length;
+  const lane = aboveCount <= belowCount ? "above" : "below";
   const item = {
-    id: makeId(), label: `Sự kiện mới ${index + 1}`, timestamp: "", color: nextEventColour(state.events),
-    x: eventX, lane: index % 2 ? "above" : "below", shape: options.shape || "point", tense: null,
+    id: makeId(), label: `Sự kiện ${index + 1}`, timestamp: "", color: nextEventColour(state.events),
+    x: eventX, lane, shape: options.shape || "point", tense: null,
   };
   item.endX = clamp(options.endX ?? item.x + 18, item.x + 5, 96);
   state.events.push(item);
