@@ -419,7 +419,8 @@
         <div class="exercise-card" id="task3-container">
             <div class="exercise-title">Task 3: Complete each sentence with the correct personality adjective from Task
                 2</div>
-            <div class="instructions">Use each word once only. Fill in the blanks.</div>
+            <div class="instructions">Kéo từ trong word bank thả vào chỗ trống, hoặc bấm vào từ để điền vào ô trống gần nhất. Mỗi từ chỉ dùng một lần.</div>
+            <div class="word-bank" id="bank-t3"></div>
             <div id="questions-t3"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
@@ -631,6 +632,7 @@
             { q: "My sister is very ____ and enjoys talking to new people at parties.", ans: "sociable", hint: "<div class='hint-detail'><span class='key-word'>sociable</span>: hòa đồng</div><div class='hint-detail'>Chị gái rất hòa đồng và thích nói chuyện với người mới tại các bữa tiệc.</div>" },
             { q: "A good group leader should be ____ and willing to adjust plans when necessary.", ans: "flexible", hint: "<div class='hint-detail'><span class='key-word'>flexible</span>: linh hoạt</div><div class='hint-detail'>Người lãnh đạo nhóm nên linh hoạt và sẵn sàng điều chỉnh kế hoạch khi cần.</div>" }
         ];
+        const t3_wordBank = shuffleArray(t3_data.map(item => item.ans));
 
         // Task 4: Word bank
         const t4_data_original = [
@@ -866,7 +868,11 @@
             const dc = document.getElementById('def-t2');
             t2_data.forEach((item, i) => {
                 const qid = `t2-q${i}`;
-                vc.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.letter}. ${item.v}</span><input type="text" class="letter-input" id="${qid}" maxlength="1" oninput="checkT2(${i}, this.value)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="showT2(${i})">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')">i</button></div><div class="hint-box" id="${qid}-hint">Definition: ${item.def}</div></div>`;
+                vc.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.letter}. ${item.v}</span><input type="text" class="letter-input" id="${qid}" maxlength="1" oninput="checkT2(${i}, this.value)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="showT2(${i})">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+            });
+            // Sắp xếp cột định nghĩa theo thứ tự A -> J, không theo thứ tự từ vựng 1 -> 10
+            const sortedDefs = [...t2_data].sort((a, b) => a.def.split('.')[0].localeCompare(b.def.split('.')[0]));
+            sortedDefs.forEach(item => {
                 dc.innerHTML += `<div class="definition-item"><span class="definition-letter">${item.def.split('.')[0]}.</span><span class="definition-text">${item.def.substring(2)}</span></div>`;
             });
         }
@@ -889,13 +895,22 @@
         }
 
         function renderTask3() {
+            const bank = document.getElementById('bank-t3');
             const container = document.getElementById('questions-t3');
+            bank.innerHTML = ''; wordUsageCount.t3 = {};
+            t3_wordBank.forEach((w, i) => {
+                const wid = `t3-word-${i}`;
+                bank.innerHTML += `<div class="word-item" id="${wid}" data-word="${w.toLowerCase()}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${wid}')">${w}</div>`;
+                wordUsageCount.t3[w.toLowerCase()] = 0;
+            });
+            container.innerHTML = '';
             t3_data.forEach((item, i) => {
                 const qid = `t3-q${i}`;
                 const parts = item.q.split('____');
-                const html = `<div class="question-row"><strong>${i + 1}</strong> ${parts[0]}<input type="text" class="word-input inline-input" id="${qid}" oninput="checkT3(${i}, this.value)">${parts[1]}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="showT3(${i})">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+                const html = `<div class="question-row"><strong>${i + 1}</strong> ${parts[0]}<input type="text" class="word-input inline-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this); updateWordBank('t3'); checkT3(${i}, this.value);" ondrop="dropWord(event,'${qid}')" ondragover="allowDrop(event)" style="width:120px">${parts[1]}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="showT3(${i})">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
                 container.innerHTML += html;
             });
+            addWordBankEventListeners('t3');
         }
 
         function checkT3(i, val) {
@@ -910,7 +925,10 @@
 
         function showT3(i) {
             const qid = `t3-q${i}`;
-            document.getElementById(qid).value = t3_data[i].ans;
+            const el = document.getElementById(qid);
+            el.value = t3_data[i].ans;
+            adjustWidth(el);
+            updateWordBank('t3');
             checkT3(i, t3_data[i].ans);
         }
 
@@ -962,9 +980,11 @@
             if (inp) {
                 inp.value = word;
                 adjustWidth(inp);
-                updateWordBank('t4');
-                const idx = inputId.split('-')[1];
-                checkT4(parseInt(idx), word);
+                const prefix = inputId.split('-')[0];
+                updateWordBank(prefix);
+                const idx = parseInt(inputId.split('-q')[1], 10);
+                const checkFn = window[`check${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`];
+                if (checkFn) checkFn(idx, word);
             }
         }
 
@@ -1281,9 +1301,10 @@
             const containerId = `task${prefix.slice(1)}-container`;
             const container = document.getElementById(containerId);
 
-            if (prefix === 't4') {
-                document.querySelectorAll('#bank-t4 .word-item').forEach(w => w.classList.remove('used'));
-                Object.keys(wordUsageCount.t4 || {}).forEach(w => wordUsageCount.t4[w] = 0);
+            const bankEl = document.getElementById(`bank-${prefix}`);
+            if (bankEl) {
+                bankEl.querySelectorAll('.word-item').forEach(w => w.classList.remove('used'));
+                Object.keys(wordUsageCount[prefix] || {}).forEach(w => wordUsageCount[prefix][w] = 0);
             }
 
             if (container) {
