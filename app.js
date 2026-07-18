@@ -7,7 +7,10 @@ const starterState = () => ({
   showCcqAnswers: true,
   showTenseExplain: true,
   sentence: "",
-  events: [],
+  events: [
+    { id: makeId(), label: "Sự kiện 1", timestamp: "", color: PALETTE[0], x: 30, endX: 48, lane: "above", shape: "point", tense: null },
+    { id: makeId(), label: "Sự kiện 2", timestamp: "", color: PALETTE[1], x: 58, endX: 76, lane: "below", shape: "point", tense: null },
+  ],
   links: [],
 });
 
@@ -130,9 +133,6 @@ function bindGlobalEvents() {
   document.querySelector("#confirmNew").addEventListener("click", () => {
     recordHistory("new-timeline");
     state = starterState();
-    state.sentence = "";
-    state.events = [];
-    state.links = [];
     setTextSize(state.textSize, false);
     setNowPosition(state.nowX, false);
     render();
