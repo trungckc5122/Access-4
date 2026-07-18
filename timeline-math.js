@@ -443,7 +443,7 @@
           reason: "Hành động này sẽ hoàn tất TRƯỚC một sự kiện tương lai khác",
           example: { text: exText, underline: exUnderline },
           alternatives: isRange ? [
-            { id: "future_perfect_continuous", label: TimelineMath?.TENSES?.future_perfect_continuous?.label || "Tương lai hoàn thành tiếp diễn", reason: "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến mốc tương lai kia, thay vì chỉ nói đã hoàn tất.", example: { text: "By next month, Ronaldo will have been playing for Al-Nassr for 5 years.", underline: "Ronaldo will have been playing for Al-Nassr for 5 years" } },
+            { id: "future_perfect_continuous", label: TENSES["future_perfect_continuous"].label, reason: "Nếu muốn nhấn mạnh khoảng thời gian đã tiếp diễn liên tục tính đến mốc tương lai kia, thay vì chỉ nói đã hoàn tất.", example: { text: "By next month, Ronaldo will have been playing for Al-Nassr for 5 years.", underline: "Ronaldo will have been playing for Al-Nassr for 5 years" } },
           ] : [],
         };
       }
