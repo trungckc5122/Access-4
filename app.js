@@ -308,6 +308,25 @@ function renderTimeline() {
           && itemEnd < (e.shape === "range" ? Number(e.x) : Number(e.x)));
         if (moc) moc.tense = "future_present_simple";
       }
+      // Cặp quá khứ: điểm-điểm trong quá khứ
+      if (item.shape === "point" && TimelineMath.classifyEventTime(item, state.nowX) === "past") {
+        // Điểm A chọn past_perfect_simple → điểm B đứng sau A tự set past_simple
+        if (item.tense === "past_perfect_simple") {
+          const laterPoint = state.events.find((e) => e.id !== item.id
+            && e.shape === "point"
+            && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+            && Number(e.x) > Number(item.x));
+          if (laterPoint) laterPoint.tense = "past_simple";
+        }
+        // Điểm A chọn past_simple → điểm B đứng sau A cũng set past_simple (chuỗi quá khứ đơn)
+        if (item.tense === "past_simple") {
+          const laterPoint = state.events.find((e) => e.id !== item.id
+            && e.shape === "point"
+            && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+            && Number(e.x) > Number(item.x));
+          if (laterPoint) laterPoint.tense = "past_simple";
+        }
+      }
       renderTimeline();
       scheduleSave();
     });
@@ -579,6 +598,7 @@ function endDrag(event) {
     nowDrag = false;
     els.nowMarker.classList.remove("is-dragging");
     autoResetTenses();
+    renderTimeline();
     scheduleSave();
     return;
   }
@@ -597,6 +617,27 @@ function autoResetTenses() {
     // Nếu có gợi ý tự động rõ ràng, hoặc gợi ý khác với thì đang chọn → reset
     if (suggested && suggested !== item.tense) item.tense = null;
   });
+}
+
+// Sau khi xóa event, cân bằng lại lane above/below để tránh lệch quá nhiều.
+// Thuật toán: sắp xếp theo x, lần lượt gán lane sao cho chênh lệch above-below <= 1.
+function rebalanceLanes() {
+  if (!state.events.length) return;
+  const above = state.events.filter((e) => e.lane === "above").length;
+  const below = state.events.filter((e) => e.lane === "below").length;
+  if (Math.abs(above - below) <= 1) return; // đã cân bằng
+  // Lấy lane thừa và dịch chuyển event gần giữa nhất sang lane thiếu
+  const surplus = above > below ? "above" : "below";
+  const deficit = surplus === "above" ? "below" : "above";
+  const candidates = state.events
+    .filter((e) => e.lane === surplus)
+    .sort((a, b) => {
+      const ca = a.shape === "range" ? (a.x + a.endX) / 2 : a.x;
+      const cb = b.shape === "range" ? (b.x + b.endX) / 2 : b.x;
+      return Math.abs(ca - 50) - Math.abs(cb - 50);
+    });
+  const toMove = Math.floor((Math.abs(above - below)) / 2);
+  candidates.slice(0, toMove).forEach((e) => { e.lane = deficit; });
 }
 
 function updateTenseWarnings() {
@@ -789,6 +830,8 @@ function deleteEvent(id) {
   recordHistory(`delete-event-${id}`);
   state.events = state.events.filter((item) => item.id !== id);
   state.links = state.links.filter((link) => link.eventId !== id);
+  autoResetTenses();
+  rebalanceLanes();
   render();
   scheduleSave();
 }
