@@ -650,8 +650,8 @@
 
       // Nhánh mặc định: cả hai past_simple hoặc chưa chọn
       const bothPastSimple = (thisTense === "past_simple" && otherTense === "past_simple");
-      const exampleText = "Ronaldo scored a hat-trick. Then he shouted: I'm back, I'm back.";
-      const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: I'm back, I'm back";
+      const exampleText = "Ronaldo scored a hat-trick. Then he shouted: ''I'm back, I'm back.''";
+      const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: ''I'm back, I'm back.''";
       return {
         suggested: null,
         reason: "Có một sự kiện quá khứ khác không lồng vào sự kiện này. Nếu đây chỉ là một sự kiện tiếp theo trong chuỗi câu chuyện, dùng Quá khứ đơn cho cả hai; nếu muốn nhấn mạnh sự kiện này đã xảy ra/hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành.",
