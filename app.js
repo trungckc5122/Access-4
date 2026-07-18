@@ -595,7 +595,7 @@ function autoResetTenses() {
     if (!item.tense) return; // đang dùng gợi ý tự động, không cần reset
     const suggested = TimelineMath.suggestTense(item, state.events, state.nowX);
     // Nếu có gợi ý tự động rõ ràng, hoặc gợi ý khác với thì đang chọn → reset
-    if (suggested !== item.tense) item.tense = null;
+    if (suggested && suggested !== item.tense) item.tense = null;
   });
 }
 
