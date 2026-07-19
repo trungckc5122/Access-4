@@ -249,7 +249,7 @@
   // One canonical, affirmative, active-voice Ronaldo example per tense —
   // used verbatim whenever a teacher manually picks a tense from the dropdown.
   const TENSE_EXAMPLES = {
-    past_simple: "Ronaldo scored a hat-trick.",
+    past_simple: "Ronaldo scored a hat-trick yesterday.",
     past_continuous: "Ronaldo was training at the gym.",
     past_perfect_simple: "Ronaldo had already scored before half-time.",
     past_perfect_continuous: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.",
@@ -263,7 +263,7 @@
     future_will: "Ronaldo will retire one day.",
     future_going_to: "Ronaldo is going to join a new club.",
     future_present_continuous: "Ronaldo is meeting his coach tomorrow.",
-    future_present_simple: "Ronaldo's flight leaves at nine tomorrow.",
+    future_present_simple: "Ronaldo's flight leaves at nine.",
     future_continuous: "Ronaldo will be training at this time tomorrow.",
     future_continuous_course: "Ronaldo's team will be arriving on Thursday.",
     future_perfect_simple: "Ronaldo will have scored 900 goals by next year.",
@@ -385,7 +385,14 @@
     const containingRange = others.find((event) => event.shape === "range"
       && Number(item.x) >= Number(event.x) && Number(item.x) <= Number(event.endX)
       && !pointTouchesRangeRight(item, event));
-    if (containingRange) return "past_simple";
+    // Chỉ gợi ý past_simple khi range đang thực sự là past_continuous/past_perfect_continuous
+    // (đã có tense rõ ràng hoặc suggestTense của range trả về past_continuous)
+    if (containingRange) {
+      const rangeSuggested = suggestTense(containingRange, events, nowX);
+      const rangeTense = containingRange.tense || rangeSuggested;
+      if (rangeTense === "past_continuous" || rangeTense === "past_perfect_continuous") return "past_simple";
+      return null;
+    }
 
     // A point that touches the right edge of a past range → past_simple
     // (the range is the past_perfect_continuous background action)
@@ -408,12 +415,13 @@
         && event.tense === "past_perfect_simple"
         && Number(event.x) < Number(item.x));
       if (otherIsPerfect) return "past_simple";
-      // Nếu sự kiện kia là điểm đã chọn past_simple → điểm này cũng past_simple (chuỗi)
-      const otherIsPastSimple = others.some((event) => event.shape === "point"
+      // Nếu sự kiện kia là điểm đã chọn tay past_simple → điểm này cũng past_simple (chuỗi)
+      // Chỉ áp dụng khi sự kiện kia đã chọn tay (event.tense !== null), không tự động từ gợi ý
+      const otherIsPastSimpleManual = others.some((event) => event.shape === "point"
         && classifyEventTime(event, nowX) === "past"
         && event.tense === "past_simple"
         && Number(event.x) < Number(item.x));
-      if (otherIsPastSimple) return "past_simple";
+      if (otherIsPastSimpleManual) return "past_simple";
       return null;
     }
 
@@ -761,12 +769,12 @@
           tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
         ];
         if (isRecentFromRange) {
-          altsFromRange.push({ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } });
+          altsFromRange.push({ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } });
         }
         return {
           suggested: "past_simple",
           reason: "Quá khứ đơn là lựa chọn tự nhiên nhất khi kể tiếp trình tự sau một hành động kéo dài (nêu rõ thời điểm cụ thể). Chọn Hiện tại hoàn thành nếu không muốn nêu mốc thời gian cụ thể mà muốn nhấn mạnh kết quả/sự liên quan đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan, không phải quy tắc quyết định.",
-          example: { text: "Ronaldo scored a hat-trick.", underline: null },
+          example: { text: "Ronaldo scored a hat-trick yesterday.", underline: null },
           alternatives: [
             tenseRef("past_simple", "Kể tiếp trình tự câu chuyện, nêu rõ thời điểm cụ thể."),
             ...altsFromRange,
@@ -823,19 +831,22 @@
             tenseRef("past_perfect_simple", "Nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia."),
             ...(!isEarlier ? [
               tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan đến hiện tại."),
-              ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+              ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
             ] : []),
           ],
         };
       }
 
       // Nhánh mặc định: chưa chọn thì, không rõ trường hợp
+      // present_perfect_simple xuất hiện khi: đứng sau (!isEarlier) HOẶC sự kiện kia đã chọn present_perfect
+      const otherHasPresentPerfect = otherTense === "present_perfect_simple" || otherTense === "present_perfect_simple_just";
+      const showPresentPerfect = !isEarlier || otherHasPresentPerfect;
       const defaultAlternatives = [
         tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
         tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
-        ...(!isEarlier ? [
+        ...(showPresentPerfect ? [
           tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
-          ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+          ...(isRecent && !isEarlier ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
         ] : []),
       ];
       return {
@@ -854,7 +865,7 @@
       alternatives: [
         tenseRef("past_simple", "Kể như một hành động đã hoàn tất tại một thời điểm cụ thể trong quá khứ (có nêu rõ mốc thời gian)."),
         tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
-        ...(isRecentIsolated ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+        ...(isRecentIsolated ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
       ],
     };
   }
