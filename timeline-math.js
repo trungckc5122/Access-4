@@ -226,9 +226,11 @@
 
   const TENSES = {
     past_simple: { label: "Quá khứ đơn", group: "past" },
+    past_simple_result: { label: "Quá khứ đơn (chỉ kết quả)", group: "past" },
     past_continuous: { label: "Quá khứ tiếp diễn", group: "past" },
     past_perfect_simple: { label: "Quá khứ hoàn thành", group: "past" },
     past_perfect_continuous: { label: "Quá khứ hoàn thành tiếp diễn", group: "past" },
+    past_perfect_continuous_result: { label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", group: "past" },
     present_simple: { label: "Hiện tại đơn", group: "present" },
     present_continuous: { label: "Hiện tại tiếp diễn", group: "present" },
     present_continuous_habit: { label: "Hiện tại tiếp diễn (thói quen)", group: "present" },
@@ -250,9 +252,11 @@
   // used verbatim whenever a teacher manually picks a tense from the dropdown.
   const TENSE_EXAMPLES = {
     past_simple: "Ronaldo scored a hat-trick yesterday.",
+    past_simple_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.",
     past_continuous: "Ronaldo was training at the gym.",
     past_perfect_simple: "Ronaldo had already scored before half-time.",
     past_perfect_continuous: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.",
+    past_perfect_continuous_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.",
     present_simple: "Ronaldo trains every morning.",
     present_continuous: "Ronaldo is warming up right now.",
     present_continuous_habit: "Ronaldo is always arriving late to training.",
@@ -273,7 +277,7 @@
   // Returns true if a point event "touches" the right edge of a range event.
   // "Touching" means the point's x is within TOUCH_TOLERANCE units of the range's endX,
   // but the point is NOT strictly inside the range (i.e. point is at or beyond endX).
-  const TOUCH_TOLERANCE = 5;
+  const TOUCH_TOLERANCE = 0;
   function pointTouchesRangeRight(point, range) {
     const px = Number(point.x);
     const re = Number(range.endX);
@@ -398,7 +402,9 @@
     // (the range is the past_perfect_continuous background action)
     const touchedRange = others.find((event) => event.shape === "range"
       && pointTouchesRangeRight(item, event));
-    if (touchedRange) return "past_simple";
+    if (touchedRange) {
+      return touchedRange.tense === "past_perfect_continuous_result" ? "past_simple_result" : "past_simple";
+    }
 
     const hasOtherPastEvent = others.some((event) => classifyEventTime(event, nowX) === "past");
     if (hasOtherPastEvent) {
@@ -637,14 +643,15 @@
       if (touchingPoint) {
         const touchExample = item.tense === "past_continuous"
           ? { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
-          : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" };
+          : item.tense === "past_perfect_continuous_result"
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" }
+            : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" };
         return {
           suggested: "past_perfect_continuous",
-          reason: "Hành động này đã diễn ra liên tục và kết thúc đúng lúc một sự kiện khác xảy ra. Dùng Quá khứ hoàn thành tiếp diễn khi muốn nhấn mạnh khoảng thời gian đã tiếp diễn trước đó (thường đi kèm for/since); nếu không cần nhấn mạnh khoảng thời gian đó, Quá khứ tiếp diễn đơn giản vẫn chấp nhận được.",
+          reason: "Hành động này đã diễn ra liên tục và kết thúc đúng lúc một sự kiện khác xảy ra. Dùng Quá khứ hoàn thành tiếp diễn khi muốn nhấn mạnh khoảng thời gian đã tiếp diễn trước đó; nếu không cần nhấn mạnh khoảng thời gian đó, Quá khứ tiếp diễn đơn giản vẫn chấp nhận được.",
           example: touchExample,
           alternatives: [
-            { id: "past_perfect_continuous", label: "Quá khứ hoàn thành tiếp diễn", reason: "Nhấn mạnh khoảng thời gian đã tiếp diễn liên tục trước khi sự kiện kia xảy ra (thường đi kèm for/since).", example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" } },
-            { id: "past_continuous", label: "Quá khứ tiếp diễn", reason: "Nếu không cần nhấn mạnh khoảng thời gian đã tiếp diễn, chỉ muốn kể hành động nền bị kết thúc bởi sự kiện kia.", example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" } },
+            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" } },
           ],
         };
       }
@@ -655,7 +662,9 @@
       if (containsPoint) {
         const ppcExample = item.tense === "past_perfect_continuous"
           ? { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training for two hours" }
-          : { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" };
+          : item.tense === "past_perfect_continuous_result"
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" }
+            : { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" };
         return {
           suggested: "past_continuous",
           reason: "Hành động đang diễn ra trong quá khứ thì bị một sự kiện khác (điểm mốc nằm bên trong) xen vào, làm gián đoạn.",
@@ -663,6 +672,7 @@
           alternatives: [
             tenseRef("past_continuous", "Hành động đang diễn ra trong quá khứ, bị sự kiện điểm xen vào gián đoạn."),
             tenseRef("past_perfect_continuous", "Nếu muốn nhấn mạnh hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó."),
+            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" } },
           ],
         };
       }
@@ -696,11 +706,28 @@
       }
 
       const recentness = Number(nowX) - Number(item.endX);
+      if (item.tense === "past_perfect_continuous") {
+        return {
+          suggested: "past_continuous",
+          reason: "Nhấn mạnh hành động đã tiếp diễn liên tục trong một khoảng thời gian trước một mốc quá khứ cụ thể.",
+          example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" },
+          alternatives: [
+            tenseRef("past_continuous", "Diễn tả bối cảnh nền — hành động đang tiếp diễn tại một thời điểm trong quá khứ."),
+            tenseRef("past_perfect_continuous", "Nhấn mạnh hành động đã tiếp diễn liên tục trong một khoảng thời gian trước một mốc quá khứ cụ thể."),
+            ...(recentness <= RECENCY_THRESHOLD ? [
+              tenseRef("present_perfect_continuous", "Nhấn mạnh khoảng thời gian đã tiếp diễn, vừa kết thúc gần đây, còn liên quan đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
+              tenseRef("present_perfect_simple", "Nhấn mạnh kết quả/sự liên quan của hành động đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
+            ] : []),
+          ],
+        };
+      }
       return {
         suggested: "past_continuous",
         reason: "Hành động diễn ra liên tục trong quá khứ, không có sự kiện quá khứ nào khác liên quan trực tiếp — phù hợp với một tình huống tạm thời hoặc bối cảnh nền.",
         example: { text: "Ronaldo was training at the gym.", underline: null },
         alternatives: [
+          tenseRef("past_continuous", "Diễn tả bối cảnh nền — hành động đang tiếp diễn tại một thời điểm trong quá khứ."),
+          tenseRef("past_perfect_continuous", "Nhấn mạnh hành động đã tiếp diễn liên tục trong một khoảng thời gian trước một mốc quá khứ cụ thể."),
           ...(recentness <= RECENCY_THRESHOLD ? [
             tenseRef("present_perfect_continuous", "Nhấn mạnh khoảng thời gian đã tiếp diễn, vừa kết thúc gần đây, còn liên quan đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
             tenseRef("present_perfect_simple", "Nhấn mạnh kết quả/sự liên quan của hành động đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
@@ -735,17 +762,44 @@
     if (touchedRange) {
       const rangeTense = touchedRange.tense;
       const isPpc = rangeTense !== "past_continuous";
-      const exampleText = isPpc
-        ? "Ronaldo had been playing for Manchester United for 6 years before he left in 2006."
-        : "Ronaldo was training when the coach arrived.";
-      const exampleUnderline = isPpc ? "he left in 2006" : "the coach arrived";
+      const isResult = rangeTense === "past_perfect_continuous_result";
+
+      let exampleObj;
+      if (isResult) {
+        exampleObj = { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he was exhausted" };
+      } else if (isPpc) {
+        exampleObj = (item.tense === "past_simple_result"
+          ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he was exhausted" }
+          : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "he left in 2006" });
+      } else {
+        exampleObj = { text: "Ronaldo was training when the coach arrived.", underline: "the coach arrived" };
+      }
+
       return {
-        suggested: "past_simple",
-        reason: "Đây là sự kiện điểm đánh dấu thời điểm kết thúc của một hành động tiếp diễn trong quá khứ. Nó chia quá khứ đơn, còn hành động kéo dài trước đó chia quá khứ hoàn thành tiếp diễn hoặc quá khứ tiếp diễn.",
-        example: { text: exampleText, underline: exampleUnderline },
-        alternatives: [
-          tenseRef("past_simple", "Kể như sự việc đã xảy ra tại thời điểm đó, kết thúc hành động tiếp diễn trước đó."),
-        ],
+        suggested: isResult ? "past_simple_result" : "past_simple",
+        reason: isResult
+          ? "Đây là trạng thái/hành động ngắn biểu thị kết quả của hành động kéo dài trước đó (Quá khứ hoàn thành tiếp diễn)."
+          : "Đây là sự kiện điểm đánh dấu thời điểm kết thúc của một hành động tiếp diễn trong quá khứ. Nó chia quá khứ đơn, còn hành động kéo dài trước đó chia quá khứ hoàn thành tiếp diễn hoặc quá khứ tiếp diễn.",
+        example: exampleObj,
+        alternatives: isResult
+          ? [
+            {
+              id: "past_simple",
+              label: "Quá khứ đơn",
+              reason: "Mô tả kết quả của 1 hành động tiếp diễn trong quá khứ.",
+              example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "he left in 2006" }
+            }
+          ]
+          : [
+            {
+              id: "past_simple",
+              label: "Quá khứ đơn",
+              reason: "Kể như sự việc đã xảy ra tại thời điểm đó, kết thúc hành động tiếp diễn trước đó.",
+              example: isPpc
+                ? { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "he left in 2006" }
+                : { text: "Ronaldo was training when the coach arrived.", underline: "the coach arrived" }
+            },
+          ],
       };
     }
 
@@ -914,5 +968,6 @@
   return {
     assignWaveTracks, rangeFromDrag, isAlongTimeline, buildConceptQuestions, classifyEventTime,
     createHistory, nextUniqueColor, TENSES, TENSE_EXAMPLES, suggestTense, explainTense,
+    pointTouchesRangeRight,
   };
 });

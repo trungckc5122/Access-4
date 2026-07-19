@@ -246,6 +246,7 @@ function buildEventExampleHtml(item) {
 
   if (!raw) return "Chọn thì để xem ví dụ";
   const exObj = (typeof raw === "object" && raw !== null) ? raw : { text: raw, underline: null };
+  if (exObj.html) return `Ví dụ: <em>${exObj.html}</em>`;
   if (!exObj.text) return "Chọn thì để xem ví dụ";
   const escaped = escapeHtml(exObj.text);
   if (!exObj.underline) return `Ví dụ: <em>${escaped}</em>`;
@@ -256,6 +257,7 @@ function buildEventExampleHtml(item) {
 
 function renderTimeline() {
   els.stage.querySelectorAll(".timeline-marker-2030").forEach((el) => el.remove());
+  els.stage.querySelectorAll(".timeline-marker-2006").forEach((el) => el.remove());
   const waveTracks = TimelineMath.assignWaveTracks(state.events);
   els.layer.innerHTML = state.events.map((item) => {
     const lane = item.lane === "above" ? "is-above" : "is-below";
@@ -328,6 +330,36 @@ function renderTimeline() {
           && Number(item.x) < Number(e.endX) && Number(e.x) < Number(item.endX));
         if (partner) {
           partner.tense = item.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
+        }
+      }
+      // Cặp PPC/Result: Nếu Range thay đổi -> tự cập nhật Point tương ứng (và ngược lại)
+      if (item.shape === "range" && TimelineMath.classifyEventTime(item, state.nowX) === "past") {
+        const touchingPoint = state.events.find((e) =>
+          e.id !== item.id
+          && e.shape !== "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+          && TimelineMath.pointTouchesRangeRight(e, item)
+        );
+        if (touchingPoint) {
+          if (item.tense === "past_perfect_continuous_result" && (!touchingPoint.tense || touchingPoint.tense === "past_simple")) {
+            touchingPoint.tense = "past_simple_result";
+          } else if (item.tense === "past_perfect_continuous" && touchingPoint.tense === "past_simple_result") {
+            touchingPoint.tense = "past_simple";
+          }
+        }
+      } else if (item.shape === "point" && TimelineMath.classifyEventTime(item, state.nowX) === "past") {
+        const touchedRange = state.events.find((e) =>
+          e.id !== item.id
+          && e.shape === "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+          && TimelineMath.pointTouchesRangeRight(item, e)
+        );
+        if (touchedRange) {
+          if (item.tense === "past_simple_result" && (!touchedRange.tense || touchedRange.tense === "past_perfect_continuous")) {
+            touchedRange.tense = "past_perfect_continuous_result";
+          } else if (item.tense === "past_simple" && touchedRange.tense === "past_perfect_continuous_result") {
+            touchedRange.tense = "past_perfect_continuous";
+          }
         }
       }
       // Cặp quá khứ: điểm-điểm trong quá khứ
@@ -416,6 +448,21 @@ function renderTimeline() {
       label.textContent = "2030";
       const posX = item.shape === "range" ? (Number(item.x) + Number(item.endX)) / 2 : Number(item.x);
       label.style.left = `${posX}%`;
+      els.stage.appendChild(label);
+    }
+  });
+
+  // Vẽ nhãn "2006" ở mí phải của range quá khứ khi chọn past_perfect_continuous (chứa điểm bên trong)
+  state.events.forEach((item) => {
+    if (
+      item.shape === "range"
+      && TimelineMath.classifyEventTime(item, state.nowX) === "past"
+      && item.tense === "past_perfect_continuous"
+    ) {
+      const label = document.createElement("div");
+      label.className = "timeline-marker-2006";
+      label.textContent = "2006";
+      label.style.left = `${Number(item.endX)}%`;
       els.stage.appendChild(label);
     }
   });
@@ -763,6 +810,36 @@ function renderConceptQuestions() {
           && Number(eventItem.x) < Number(e.endX) && Number(e.x) < Number(eventItem.endX));
         if (partner) {
           partner.tense = eventItem.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
+        }
+      }
+      // Cặp PPC/Result: Nếu Range thay đổi -> tự cập nhật Point tương ứng (và ngược lại)
+      if (eventItem.shape === "range" && TimelineMath.classifyEventTime(eventItem, state.nowX) === "past") {
+        const touchingPoint = state.events.find((e) =>
+          e.id !== eventItem.id
+          && e.shape !== "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+          && TimelineMath.pointTouchesRangeRight(e, eventItem)
+        );
+        if (touchingPoint) {
+          if (eventItem.tense === "past_perfect_continuous_result" && (!touchingPoint.tense || touchingPoint.tense === "past_simple")) {
+            touchingPoint.tense = "past_simple_result";
+          } else if (eventItem.tense === "past_perfect_continuous" && touchingPoint.tense === "past_simple_result") {
+            touchingPoint.tense = "past_simple";
+          }
+        }
+      } else if (eventItem.shape === "point" && TimelineMath.classifyEventTime(eventItem, state.nowX) === "past") {
+        const touchedRange = state.events.find((e) =>
+          e.id !== eventItem.id
+          && e.shape === "range"
+          && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+          && TimelineMath.pointTouchesRangeRight(eventItem, e)
+        );
+        if (touchedRange) {
+          if (eventItem.tense === "past_simple_result" && (!touchedRange.tense || touchedRange.tense === "past_perfect_continuous")) {
+            touchedRange.tense = "past_perfect_continuous_result";
+          } else if (eventItem.tense === "past_simple" && touchedRange.tense === "past_perfect_continuous_result") {
+            touchedRange.tense = "past_perfect_continuous";
+          }
         }
       }
       renderTimeline();
