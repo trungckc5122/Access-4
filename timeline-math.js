@@ -257,7 +257,7 @@
     present_continuous: "Ronaldo is warming up right now.",
     present_continuous_habit: "Ronaldo is always arriving late to training.",
     present_continuous_trend: "Ronaldo is getting better every season.",
-    present_perfect_simple: "Ronaldo has won five Ballon d'Or awards.",
+    present_perfect_simple: "Ronaldo has played for Manchester United.",
     present_perfect_simple_just: "I have just met Ronaldo.",
     present_perfect_continuous: "Ronaldo has been playing football for over 20 years.",
     future_will: "Ronaldo will retire one day.",
@@ -273,7 +273,7 @@
   // Returns true if a point event "touches" the right edge of a range event.
   // "Touching" means the point's x is within TOUCH_TOLERANCE units of the range's endX,
   // but the point is NOT strictly inside the range (i.e. point is at or beyond endX).
-  const TOUCH_TOLERANCE = 3;
+  const TOUCH_TOLERANCE = 5;
   function pointTouchesRangeRight(point, range) {
     const px = Number(point.x);
     const re = Number(range.endX);
@@ -351,7 +351,6 @@
       // past_perfect_continuous for the range. The touching point itself
       // gets past_simple (handled below in the point branch).
       const touchingPoint = others.find((event) => event.shape !== "range"
-        && classifyEventTime(event, nowX) === "past"
         && pointTouchesRangeRight(event, item));
       if (touchingPoint) return "past_perfect_continuous";
 
@@ -391,7 +390,6 @@
     // A point that touches the right edge of a past range → past_simple
     // (the range is the past_perfect_continuous background action)
     const touchedRange = others.find((event) => event.shape === "range"
-      && classifyEventTime(event, nowX) === "past"
       && pointTouchesRangeRight(item, event));
     if (touchedRange) return "past_simple";
 
@@ -401,29 +399,25 @@
       // Nhưng nếu gần NOW thì mở ra để chọn present_perfect
       const otherIsRange = others.some((event) => event.shape === "range" && classifyEventTime(event, nowX) === "past");
       if (otherIsRange) {
-        const recentnessFromRange = Number(nowX) - Number(item.x);
-        return recentnessFromRange <= RECENCY_THRESHOLD ? null : "past_simple";
+        return "past_simple";
       }
       const recentness = Number(nowX) - Number(item.x);
       // Nếu sự kiện kia là điểm đã chọn past_perfect_simple → điểm này là past_simple
-      // (nhưng nếu gần NOW thì mở ra để chọn present_perfect cũng được)
       const otherIsPerfect = others.some((event) => event.shape === "point"
         && classifyEventTime(event, nowX) === "past"
         && event.tense === "past_perfect_simple"
         && Number(event.x) < Number(item.x));
-      if (otherIsPerfect) return recentness <= RECENCY_THRESHOLD ? null : "past_simple";
+      if (otherIsPerfect) return "past_simple";
       // Nếu sự kiện kia là điểm đã chọn past_simple → điểm này cũng past_simple (chuỗi)
-      // (nhưng nếu gần NOW thì mở ra để chọn present_perfect cũng được)
       const otherIsPastSimple = others.some((event) => event.shape === "point"
         && classifyEventTime(event, nowX) === "past"
         && event.tense === "past_simple"
         && Number(event.x) < Number(item.x));
-      if (otherIsPastSimple) return recentness <= RECENCY_THRESHOLD ? null : "past_simple";
+      if (otherIsPastSimple) return "past_simple";
       return null;
     }
 
-    const recentness = Number(nowX) - Number(item.x);
-    return recentness <= RECENCY_THRESHOLD ? null : "past_simple";
+    return null;
   }
 
   function tenseRef(id, reason) {
@@ -580,6 +574,7 @@
           reason: "Đây là một thời điểm đơn lẻ ngay tại mốc Hiện tại (NOW) — khớp với sự thật hiển nhiên, thói quen, hoặc tường thuật trực tiếp (bình luận thể thao, hướng dẫn từng bước...).",
           example: { text: "Ronaldo trains every morning.", underline: null },
           alternatives: [
+            tenseRef("present_simple", "Sự thật hiển nhiên, thói quen, hoặc tường thuật trực tiếp."),
             tenseRef("present_continuous", "Nếu đây thực chất là một hành động đang xảy ra ngay lúc nói, chưa hoàn tất."),
           ],
         };
@@ -635,14 +630,19 @@
       // Range whose RIGHT edge is touched by a past point → past_perfect_continuous.
       // The touching point gets past_simple (handled in the point branch below).
       const touchingPoint = others.find((event) => event.shape !== "range"
-        && classifyEventTime(event, nowX) === "past"
         && pointTouchesRangeRight(event, item));
       if (touchingPoint) {
+        const touchExample = item.tense === "past_continuous"
+          ? { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
+          : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" };
         return {
           suggested: "past_perfect_continuous",
-          reason: "Hành động này đã diễn ra liên tục trong quá khứ và kết thúc trước một sự kiện khác xảy ra, nhấn mạnh tính liên tục.",
-          example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" },
-          alternatives: [],
+          reason: "Hành động này đã diễn ra liên tục và kết thúc đúng lúc một sự kiện khác xảy ra. Dùng Quá khứ hoàn thành tiếp diễn khi muốn nhấn mạnh khoảng thời gian đã tiếp diễn trước đó (thường đi kèm for/since); nếu không cần nhấn mạnh khoảng thời gian đó, Quá khứ tiếp diễn đơn giản vẫn chấp nhận được.",
+          example: touchExample,
+          alternatives: [
+            { id: "past_perfect_continuous", label: "Quá khứ hoàn thành tiếp diễn", reason: "Nhấn mạnh khoảng thời gian đã tiếp diễn liên tục trước khi sự kiện kia xảy ra (thường đi kèm for/since).", example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" } },
+            { id: "past_continuous", label: "Quá khứ tiếp diễn", reason: "Nếu không cần nhấn mạnh khoảng thời gian đã tiếp diễn, chỉ muốn kể hành động nền bị kết thúc bởi sự kiện kia.", example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" } },
+          ],
         };
       }
 
@@ -699,8 +699,8 @@
         example: { text: "Ronaldo was training at the gym.", underline: null },
         alternatives: [
           ...(recentness <= RECENCY_THRESHOLD ? [
-            tenseRef("present_perfect_continuous", "Nhấn mạnh khoảng thời gian đã tiếp diễn, vừa kết thúc gần đây, còn liên quan đến hiện tại."),
-            tenseRef("present_perfect_simple", "Nhấn mạnh kết quả/sự liên quan của hành động đến hiện tại."),
+            tenseRef("present_perfect_continuous", "Nhấn mạnh khoảng thời gian đã tiếp diễn, vừa kết thúc gần đây, còn liên quan đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
+            tenseRef("present_perfect_simple", "Nhấn mạnh kết quả/sự liên quan của hành động đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định."),
           ] : []),
         ],
       };
@@ -719,21 +719,30 @@
         suggested: "past_simple",
         reason: "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ.",
         example: { text: exampleText, underline: exampleUnderline },
-        alternatives: [],
+        alternatives: [
+          tenseRef("past_simple", "Hành động ngắn xen vào, làm gián đoạn hành động tiếp diễn."),
+        ],
       };
     }
 
     // Point touching the right edge of a past range → past_simple terminating
     // a past_perfect_continuous background action.
     const touchedRange = others.find((event) => event.shape === "range"
-      && classifyEventTime(event, nowX) === "past"
       && pointTouchesRangeRight(item, event));
     if (touchedRange) {
+      const rangeTense = touchedRange.tense;
+      const isPpc = rangeTense !== "past_continuous";
+      const exampleText = isPpc
+        ? "Ronaldo had been playing for Manchester United for 6 years before he left in 2006."
+        : "Ronaldo was training when the coach arrived.";
+      const exampleUnderline = isPpc ? "he left in 2006" : "the coach arrived";
       return {
         suggested: "past_simple",
-        reason: "Đây là sự kiện điểm đánh dấu thời điểm kết thúc của một hành động tiếp diễn trong quá khứ. Nó chia quá khứ đơn, còn hành động kéo dài trước đó chia quá khứ hoàn thành tiếp diễn.",
-        example: { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "he left in 2006" },
-        alternatives: [],
+        reason: "Đây là sự kiện điểm đánh dấu thời điểm kết thúc của một hành động tiếp diễn trong quá khứ. Nó chia quá khứ đơn, còn hành động kéo dài trước đó chia quá khứ hoàn thành tiếp diễn hoặc quá khứ tiếp diễn.",
+        example: { text: exampleText, underline: exampleUnderline },
+        alternatives: [
+          tenseRef("past_simple", "Kể như sự việc đã xảy ra tại thời điểm đó, kết thúc hành động tiếp diễn trước đó."),
+        ],
       };
     }
 
@@ -748,23 +757,20 @@
       if (otherPastEvent && otherPastEvent.shape === "range") {
         const recentnessFromRange = Number(nowX) - Number(item.x);
         const isRecentFromRange = recentnessFromRange <= RECENCY_THRESHOLD;
+        const altsFromRange = [
+          tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
+        ];
         if (isRecentFromRange) {
-          return {
-            suggested: null,
-            reason: "Đây là mốc thời điểm đứng sau một hành động kéo dài trong quá khứ, và nằm gần mốc Hiện tại (NOW). Có thể chia quá khứ đơn hoặc hiện tại hoàn thành tùy mức độ liên quan đến hiện tại.",
-            example: null,
-            alternatives: [
-              tenseRef("past_simple", "Kể như sự việc đã hoàn tất tại một thời điểm cụ thể trong quá khứ."),
-              tenseRef("present_perfect_simple", "Nhấn mạnh kết quả ở hiện tại, hoặc thời điểm cụ thể không quan trọng."),
-              { id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } },
-            ],
-          };
+          altsFromRange.push({ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } });
         }
         return {
           suggested: "past_simple",
-          reason: "Đây là mốc thời điểm đứng sau một hành động kéo dài trong quá khứ. Sự kiện điểm này chia quá khứ đơn.",
+          reason: "Quá khứ đơn là lựa chọn tự nhiên nhất khi kể tiếp trình tự sau một hành động kéo dài (nêu rõ thời điểm cụ thể). Chọn Hiện tại hoàn thành nếu không muốn nêu mốc thời gian cụ thể mà muốn nhấn mạnh kết quả/sự liên quan đến hiện tại — khoảng cách đến NOW chỉ là gợi ý trực quan, không phải quy tắc quyết định.",
           example: { text: "Ronaldo scored a hat-trick.", underline: null },
-          alternatives: [],
+          alternatives: [
+            tenseRef("past_simple", "Kể tiếp trình tự câu chuyện, nêu rõ thời điểm cụ thể."),
+            ...altsFromRange,
+          ],
         };
       }
       const isEarlier = otherPastEvent && Number(item.x) < eventCenter(otherPastEvent);
@@ -802,9 +808,9 @@
       const defaultAlternatives = [
         tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
         tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
-        ...(isRecent && !isEarlier ? [
-          tenseRef("present_perfect_simple", "Gần NOW — nhấn mạnh kết quả ở hiện tại, hoặc thời điểm cụ thể không quan trọng."),
-          { id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } },
+        ...(!isEarlier ? [
+          tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
+          ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
         ] : []),
       ];
       return {
@@ -816,23 +822,15 @@
     }
 
     const recentness = Number(nowX) - Number(item.x);
-    if (recentness <= RECENCY_THRESHOLD) {
-      return {
-        suggested: null,
-        reason: "Hành động này vừa mới xảy ra, khá gần với mốc Hiện tại (NOW). Nếu muốn kể như một sự việc đã hoàn tất tại một thời điểm cụ thể, dùng Quá khứ đơn; nếu muốn nhấn mạnh kết quả/sự liên quan của nó đến hiện tại (hoặc không nêu rõ thời điểm cụ thể), dùng Hiện tại hoàn thành.",
-        alternatives: [
-          tenseRef("past_simple", "Kể như một hành động đã hoàn tất tại một thời điểm cụ thể trong quá khứ."),
-          tenseRef("present_perfect_simple", "Nhấn mạnh kết quả ở hiện tại, hoặc thời điểm cụ thể không quan trọng."),
-          { id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } },
-        ],
-      };
-    }
-
+    const isRecentIsolated = recentness <= RECENCY_THRESHOLD;
     return {
-      suggested: "past_simple",
-      reason: "Một hành động đơn, đã hoàn tất tại một thời điểm cụ thể trong quá khứ.",
-      example: { text: "Ronaldo scored a hat-trick.", underline: null },
-      alternatives: [],
+      suggested: null,
+      reason: "Sự kiện quá khứ độc lập, không tương tác với sự kiện nào khác. Tiêu chí chọn thì: nếu muốn nêu rõ thời điểm xảy ra (yesterday, in 2006, last year...) → Quá khứ đơn; nếu không nêu thời điểm cụ thể và muốn nhấn mạnh kết quả/sự liên quan đến hiện tại → Hiện tại hoàn thành. Khoảng cách đến NOW chỉ là gợi ý trực quan phụ, không phải quy tắc quyết định.",
+      alternatives: [
+        tenseRef("past_simple", "Kể như một hành động đã hoàn tất tại một thời điểm cụ thể trong quá khứ (có nêu rõ mốc thời gian)."),
+        tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
+        ...(isRecentIsolated ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+      ],
     };
   }
 

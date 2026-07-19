@@ -213,8 +213,19 @@ function buildEventExampleHtml(item) {
   const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
   // Nếu ngữ cảnh mơ hồ và chưa chọn thì → chờ người dùng chọn trước
   if (!explanation.suggested && !item.tense) return "Chọn thì để xem ví dụ";
-  // Ưu tiên ví dụ context-aware từ explainTense, fallback về TENSE_EXAMPLES nếu không có
-  const raw = explanation.example || (item.tense ? TimelineMath.TENSE_EXAMPLES[item.tense] : null);
+
+  // Khi người dùng đã chọn tay một thì cụ thể:
+  // 1. Nếu thì đó khớp với suggested → dùng explanation.example (context-aware)
+  // 2. Nếu thì đó là alternative → dùng example từ alternatives
+  // 3. Fallback về TENSE_EXAMPLES[item.tense]
+  let raw = null;
+  if (item.tense && item.tense !== explanation.suggested) {
+    const alt = explanation.alternatives?.find((a) => a.id === item.tense);
+    raw = (alt?.example) || TimelineMath.TENSE_EXAMPLES[item.tense] || null;
+  } else {
+    raw = explanation.example || (item.tense ? TimelineMath.TENSE_EXAMPLES[item.tense] : null);
+  }
+
   if (!raw) return "Chọn thì để xem ví dụ";
   const exObj = (typeof raw === "object" && raw !== null) ? raw : { text: raw, underline: null };
   if (!exObj.text) return "Chọn thì để xem ví dụ";
