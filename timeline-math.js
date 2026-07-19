@@ -415,13 +415,8 @@
         && event.tense === "past_perfect_simple"
         && Number(event.x) < Number(item.x));
       if (otherIsPerfect) return "past_simple";
-      // Nếu sự kiện kia là điểm đã chọn tay past_simple → điểm này cũng past_simple (chuỗi)
-      // Chỉ áp dụng khi sự kiện kia đã chọn tay (event.tense !== null), không tự động từ gợi ý
-      const otherIsPastSimpleManual = others.some((event) => event.shape === "point"
-        && classifyEventTime(event, nowX) === "past"
-        && event.tense === "past_simple"
-        && Number(event.x) < Number(item.x));
-      if (otherIsPastSimpleManual) return "past_simple";
+      // Không tự gợi ý past_simple chỉ vì sự kiện kia đã chọn past_simple —
+      // chuỗi quá khứ đơn chỉ hình thành khi người dùng chủ động chọn cả hai.
       return null;
     }
 
@@ -756,6 +751,25 @@
 
     const hasOtherPastEvent = others.some((event) => classifyEventTime(event, nowX) === "past");
     if (hasOtherPastEvent) {
+      if (item.tense === "present_perfect_simple") {
+        const hasEarlierPresentPerfect = others.some((event) =>
+          event.shape === "point"
+          && classifyEventTime(event, nowX) === "past"
+          && (event.tense === "present_perfect_simple" || event.tense === "present_perfect_simple_just")
+          && Number(event.x) < Number(item.x)
+        );
+        if (hasEarlierPresentPerfect) {
+          return {
+            suggested: "present_perfect_simple",
+            reason: "Sự kiện hiện tại hoàn thành xảy ra sau một sự kiện hiện tại hoàn thành khác trong quá khứ.",
+            example: { text: "Ronaldo has never won a FIFA World Cup.", underline: null },
+            alternatives: [
+              tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
+            ],
+          };
+        }
+      }
+
       const otherPastEvent = others.find((event) => classifyEventTime(event, nowX) === "past");
 
       // Nếu sự kiện quá khứ kia là RANGE đứng trước điểm này → điểm chỉ là mốc
@@ -791,9 +805,13 @@
       // LƯU Ý: chỉ áp dụng khi sự kiện NÀY đã có thì được người dùng tự chọn
       // (thisTense có giá trị) — không tự động gợi ý cho một sự kiện MỚI
       // (thisTense rỗng) chỉ vì sự kiện quá khứ kia đã là past_perfect_simple.
-      const isPerfectSimplePair = (thisTense === "past_perfect_simple" && otherTense === "past_simple")
+      // THÊM: past_perfect_simple chỉ hợp lệ khi sự kiện này đứng TRƯỚC (isEarlier)
+      // vì quá khứ hoàn thành phải hoàn tất TRƯỚC một mốc quá khứ khác. Nếu sự
+      // kiện này đứng SAU mà cố chọn past_perfect_simple → mâu thuẫn logic, không
+      // xử lý như một cặp hợp lệ.
+      const isPerfectSimplePair = (thisTense === "past_perfect_simple" && otherTense === "past_simple" && isEarlier)
         || (thisTense === "past_simple" && otherTense === "past_perfect_simple")
-        || (thisTense === "past_perfect_simple" && !otherTense);
+        || (thisTense === "past_perfect_simple" && !otherTense && isEarlier);
 
       const isThisPerfect = thisTense === "past_perfect_simple";
 
@@ -811,19 +829,32 @@
           example: { text: ppText, underline: ppUnderline },
           alternatives: [
             tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
-            tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
+            // Chỉ gợi ý past_perfect_simple cho sự kiện đứng TRƯỚC
+            ...(isEarlier ? [tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau.")] : []),
+            tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
+            ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+          ],
+        };
+      }
+
+      // Trường hợp người dùng cố chọn past_perfect_simple cho sự kiện đứng SAU
+      // → mâu thuẫn logic, cần báo lỗi và gợi ý past_simple thay thế.
+      if (thisTense === "past_perfect_simple" && !isEarlier) {
+        return {
+          suggested: "past_simple",
+          reason: "⚠️ Mâu thuẫn logic: Sự kiện này xảy ra SAU sự kiện quá khứ kia, nên không thể dùng Quá khứ hoàn thành (thì này chỉ dùng cho sự kiện đã hoàn tất TRƯỚC một mốc quá khứ khác). Hãy chọn Quá khứ đơn cho sự kiện đứng sau; sự kiện đứng trước mới dùng Quá khứ hoàn thành.",
+          example: { text: "Ronaldo had already scored before the final whistle blew.", underline: "the final whistle blew" },
+          alternatives: [
+            tenseRef("past_simple", "Sự kiện đứng SAU — kể theo trình tự thời gian."),
           ],
         };
       }
 
       // Nhánh: cả hai đã chọn past_simple → chuỗi quá khứ đơn.
-      // LƯU Ý: chỉ khớp khi sự kiện NÀY đã có thì được chọn thủ công
-      // (thisTense === "past_simple") — một sự kiện MỚI (thisTense rỗng) không
-      // còn được tự động rơi vào nhánh này nữa, kể cả khi sự kiện quá khứ kia
-      // đã là past_simple. Nó phải luôn đi xuống nhánh mặc định bên dưới, nơi
-      // suggested luôn là null, bắt buộc người dùng tự chọn tay.
+      // Chỉ kích hoạt khi BOTH sự kiện đã chủ động chọn past_simple —
+      // không ghép cặp khi chỉ một bên chọn còn bên kia chưa chọn gì.
       const bothPastSimple = (thisTense === "past_simple" && otherTense === "past_simple");
-      if (bothPastSimple || (thisTense === "past_simple" && !otherTense)) {
+      if (bothPastSimple) {
         const exampleText = "Ronaldo scored a hat-trick. Then he shouted: ''I'm back, I'm back.''";
         const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: ''I'm back, I'm back.''";
         return {
@@ -832,27 +863,36 @@
           example: { text: exampleText, underline: exampleUnderline },
           alternatives: [
             tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
-            tenseRef("past_perfect_simple", "Nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia."),
+            // Sự kiện đứng SAU không thể là past_perfect_simple trong cặp này
+            ...(isEarlier ? [tenseRef("past_perfect_simple", "Nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia.")] : []),
             tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — tách thành một sự kiện độc lập, nhấn mạnh kết quả hoặc sự liên quan đến hiện tại."),
             ...(!isEarlier && isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
           ],
         };
       }
 
+
       // Nhánh mặc định: sự kiện này CHƯA được chọn thì (mới thêm vào, hoặc
       // chọn tay một thì không khớp các cặp cụ thể ở trên). Khi đã có một
       // điểm sự kiện khác trong quá khứ, KHÔNG được tự ý gợi ý thì cho sự
       // kiện mới — luôn để suggested: null, bắt buộc người dùng tự chọn tay.
       // Danh sách "Các thì khác có thể dùng" vẫn hiện đủ để họ chọn.
+      // Sự kiện đứng SAU (!isEarlier) không thể là past_perfect_simple vì
+      // past_perfect chỉ dùng cho sự kiện đã hoàn tất TRƯỚC một mốc quá khứ
+      // khác — gợi ý past_perfect_simple cho sự kiện xảy ra sau là mâu thuẫn
+      // logic (sự kiện đó lẽ ra phải là past_simple trong cặp đó).
       const defaultAlternatives = [
         tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
-        tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
+        ...(isEarlier ? [tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau.")] : []),
         tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan của sự việc đến hiện tại."),
         ...(isRecent && !isEarlier ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
       ];
+      const defaultReason = isEarlier
+        ? "Có một sự kiện quá khứ khác (điểm) đã tồn tại — bạn cần tự chọn thì cho sự kiện này: nếu chỉ là một mắt xích khác nối tiếp trong chuỗi câu chuyện, dùng Quá khứ đơn; nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành; nếu không nêu rõ thời điểm cụ thể mà muốn nhấn mạnh kết quả/sự liên quan đến hiện tại, dùng Hiện tại hoàn thành."
+        : "Sự kiện này xảy ra SAU một sự kiện quá khứ khác — không thể dùng Quá khứ hoàn thành vì thì đó chỉ dùng cho sự kiện đã hoàn tất TRƯỚC một mốc quá khứ khác. Chọn Quá khứ đơn nếu kể theo trình tự; hoặc Hiện tại hoàn thành nếu không nêu rõ thời điểm mà muốn nhấn mạnh kết quả/sự liên quan đến hiện tại.";
       return {
         suggested: null,
-        reason: "Có một sự kiện quá khứ khác (điểm) đã tồn tại — bạn cần tự chọn thì cho sự kiện này: nếu chỉ là một mắt xích khác nối tiếp trong chuỗi câu chuyện, dùng Quá khứ đơn; nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành; nếu không nêu rõ thời điểm cụ thể mà muốn nhấn mạnh kết quả/sự liên quan đến hiện tại, dùng Hiện tại hoàn thành.",
+        reason: defaultReason,
         example: null,
         alternatives: defaultAlternatives,
       };

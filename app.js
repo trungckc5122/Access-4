@@ -1,4 +1,4 @@
-﻿const STORAGE_KEY = "tenseline-project-v1";
+const STORAGE_KEY = "tenseline-project-v1";
 const PALETTE = ["#e85d45", "#1967d2", "#0b8f71", "#9b51e0", "#d28a00", "#d43b78", "#44546a"];
 
 const starterState = () => ({
@@ -184,6 +184,21 @@ function buildTenseSelectHtml(item) {
     ? `<option value="" ${item.tense ? "" : "selected"}>— Dùng gợi ý tự động —</option>`
     : `<option value="" disabled ${item.tense ? "" : "selected"}>— Chọn thì —</option>`;
 
+  // Tính tập thì bị cấm vì mâu thuẫn logic vị trí:
+  // Sự kiện điểm trong quá khứ đứng SAU điểm quá khứ khác không thể là
+  // past_perfect_simple (quá khứ hoàn thành chỉ dùng cho sự kiện hoàn tất
+  // TRƯỚC một mốc quá khứ khác — gán cho sự kiện đứng sau là sai logic).
+  const forbiddenTenseIds = new Set();
+  if (item.shape === "point" && TimelineMath.classifyEventTime(item, state.nowX) === "past") {
+    const hasPastPointBefore = state.events.some((e) =>
+      e.id !== item.id
+      && e.shape === "point"
+      && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+      && Number(e.x) < Number(item.x)
+    );
+    if (hasPastPointBefore) forbiddenTenseIds.add("past_perfect_simple");
+  }
+
   // Ở chế độ tự suy luận: chỉ hiện thì được gợi ý + các thì thay thế
   if (state.showTenseExplain) {
     const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
@@ -195,7 +210,7 @@ function buildTenseSelectHtml(item) {
       // Ngữ cảnh mơ hồ chưa có alternatives → hiện toàn bộ như thường
     } else {
       const options = [...allowedIds]
-        .filter((id) => TimelineMath.TENSES[id])
+        .filter((id) => TimelineMath.TENSES[id] && !forbiddenTenseIds.has(id))
         .map((id) => `<option value="${id}" ${item.tense === id ? "selected" : ""}>${escapeHtml(TimelineMath.TENSES[id].label)}</option>`)
         .join("");
       return `<select class="tense-select" aria-label="Chọn thì cho sự kiện">${placeholder}${options}</select>`;
@@ -204,7 +219,7 @@ function buildTenseSelectHtml(item) {
 
   const groups = ["past", "present", "future"].map((group) => {
     const options = Object.entries(TimelineMath.TENSES)
-      .filter(([, meta]) => meta.group === group)
+      .filter(([id, meta]) => meta.group === group && !forbiddenTenseIds.has(id))
       .map(([id, meta]) => `<option value="${id}" ${item.tense === id ? "selected" : ""}>${escapeHtml(meta.label)}</option>`)
       .join("");
     return `<optgroup label="${TENSE_GROUP_LABELS[group]}">${options}</optgroup>`;
