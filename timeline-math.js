@@ -785,14 +785,21 @@
         || (!thisTense && otherTense === "past_perfect_simple")
         || (thisTense === "past_perfect_simple" && !otherTense);
 
+      // Nhánh: sự kiện trước chọn past_perfect_simple, sự kiện này là past_simple (hoặc chưa chọn đứng sau)
+      const isPerfectBeforeThis = !isEarlier && otherTense === "past_perfect_simple";
+      const isThisPerfect = thisTense === "past_perfect_simple";
+
       if (isPerfectSimplePair) {
         const ppText = "Ronaldo had already scored before the final whistle blew.";
-        const ppUnderline = (thisTense === "past_perfect_simple" || (!thisTense && isEarlier))
+        const ppUnderline = isThisPerfect || (!thisTense && isEarlier)
           ? "Ronaldo had already scored"
           : "the final whistle blew";
+        const reasonPerfect = isThisPerfect
+          ? "Sự kiện này xảy ra TRƯỚC một mốc quá khứ khác — dùng Quá khứ hoàn thành để nhấn mạnh trình tự trước-sau. Sự kiện sau chia Quá khứ đơn."
+          : "Sự kiện này xảy ra SAU một sự kiện đã hoàn tất trước đó (Quá khứ hoàn thành). Sự kiện đứng trước chia Quá khứ hoàn thành, sự kiện này chia Quá khứ đơn.";
         return {
-          suggested: null,
-          reason: "Có một sự kiện quá khứ khác không lồng vào sự kiện này. Nếu đây chỉ là một sự kiện tiếp theo trong chuỗi câu chuyện, dùng Quá khứ đơn cho cả hai; nếu muốn nhấn mạnh sự kiện này đã xảy ra/hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành.",
+          suggested: isThisPerfect ? "past_perfect_simple" : "past_simple",
+          reason: reasonPerfect,
           example: { text: ppText, underline: ppUnderline },
           alternatives: [
             tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
@@ -801,10 +808,28 @@
         };
       }
 
-      // Nhánh mặc định: cả hai point-point, past_simple hoặc chưa chọn
+      // Nhánh: cả hai đã chọn past_simple hoặc sự kiện sau đứng sau một past_simple → chuỗi quá khứ đơn
       const bothPastSimple = (thisTense === "past_simple" && otherTense === "past_simple");
-      const exampleText = "Ronaldo scored a hat-trick. Then he shouted: ''I'm back, I'm back.''";
-      const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: ''I'm back, I'm back.''";
+      const prevIsPastSimple = !isEarlier && otherTense === "past_simple";
+      if (bothPastSimple || (prevIsPastSimple && !thisTense) || (thisTense === "past_simple" && !otherTense)) {
+        const exampleText = "Ronaldo scored a hat-trick. Then he shouted: ''I'm back, I'm back.''";
+        const exampleUnderline = isEarlier ? "Ronaldo scored a hat-trick" : "he shouted: ''I'm back, I'm back.''";
+        return {
+          suggested: "past_simple",
+          reason: "Chuỗi sự kiện xảy ra nối tiếp nhau trong quá khứ — mỗi sự kiện chia Quá khứ đơn theo trình tự thời gian.",
+          example: { text: exampleText, underline: exampleUnderline },
+          alternatives: [
+            tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
+            tenseRef("past_perfect_simple", "Nếu muốn nhấn mạnh sự kiện này đã hoàn tất TRƯỚC sự kiện quá khứ kia."),
+            ...(!isEarlier ? [
+              tenseRef("present_perfect_simple", "Không nêu rõ thời điểm cụ thể — nhấn mạnh kết quả hoặc sự liên quan đến hiện tại."),
+              ...(isRecent ? [{ id: "present_perfect_simple_just", label: "Hiện tại hoàn thành (vừa mới xảy ra)", reason: "Diễn tả một sự việc vừa mới xảy ra, thường đi với just.", example: { text: "I have just met Ronaldo.", underline: null } }] : []),
+            ] : []),
+          ],
+        };
+      }
+
+      // Nhánh mặc định: chưa chọn thì, không rõ trường hợp
       const defaultAlternatives = [
         tenseRef("past_simple", "Một trong các sự kiện chính, kể theo trình tự thời gian."),
         tenseRef("past_perfect_simple", "Đã hoàn tất trước một mốc quá khứ khác, muốn nhấn mạnh trình tự trước-sau."),
@@ -816,7 +841,7 @@
       return {
         suggested: null,
         reason: "Có một sự kiện quá khứ khác không lồng vào sự kiện này. Nếu đây chỉ là một sự kiện tiếp theo trong chuỗi câu chuyện, dùng Quá khứ đơn cho cả hai; nếu muốn nhấn mạnh sự kiện này đã xảy ra/hoàn tất TRƯỚC sự kiện quá khứ kia, dùng Quá khứ hoàn thành.",
-        example: bothPastSimple ? { text: exampleText, underline: exampleUnderline } : null,
+        example: null,
         alternatives: defaultAlternatives,
       };
     }
