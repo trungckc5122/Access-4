@@ -176,10 +176,13 @@ const TENSE_GROUP_LABELS = { past: "Quá khứ", present: "Hiện tại", future
 
 function buildTenseSelectHtml(item) {
   const suggestion = TimelineMath.suggestTense(item, state.events, state.nowX);
-  const effective = item.tense || suggestion || "";
+  // "selected" phải bám theo lựa chọn THẬT của người dùng (item.tense), không
+  // phải theo effective/suggestion — nếu không, một sự kiện mới (tense = null)
+  // sẽ hiển thị như thể đã được chọn sẵn là thì được gợi ý (vd. Quá khứ đơn)
+  // ngay khi vừa thêm vào, dù người dùng chưa hề bấm chọn gì.
   const placeholder = suggestion
-    ? `<option value="">— Dùng gợi ý tự động —</option>`
-    : `<option value="" disabled ${effective ? "" : "selected"}>— Chọn thì —</option>`;
+    ? `<option value="" ${item.tense ? "" : "selected"}>— Dùng gợi ý tự động —</option>`
+    : `<option value="" disabled ${item.tense ? "" : "selected"}>— Chọn thì —</option>`;
 
   // Ở chế độ tự suy luận: chỉ hiện thì được gợi ý + các thì thay thế
   if (state.showTenseExplain) {
@@ -193,7 +196,7 @@ function buildTenseSelectHtml(item) {
     } else {
       const options = [...allowedIds]
         .filter((id) => TimelineMath.TENSES[id])
-        .map((id) => `<option value="${id}" ${id === effective ? "selected" : ""}>${escapeHtml(TimelineMath.TENSES[id].label)}</option>`)
+        .map((id) => `<option value="${id}" ${item.tense === id ? "selected" : ""}>${escapeHtml(TimelineMath.TENSES[id].label)}</option>`)
         .join("");
       return `<select class="tense-select" aria-label="Chọn thì cho sự kiện">${placeholder}${options}</select>`;
     }
@@ -202,7 +205,7 @@ function buildTenseSelectHtml(item) {
   const groups = ["past", "present", "future"].map((group) => {
     const options = Object.entries(TimelineMath.TENSES)
       .filter(([, meta]) => meta.group === group)
-      .map(([id, meta]) => `<option value="${id}" ${id === effective ? "selected" : ""}>${escapeHtml(meta.label)}</option>`)
+      .map(([id, meta]) => `<option value="${id}" ${item.tense === id ? "selected" : ""}>${escapeHtml(meta.label)}</option>`)
       .join("");
     return `<optgroup label="${TENSE_GROUP_LABELS[group]}">${options}</optgroup>`;
   }).join("");
@@ -320,21 +323,16 @@ function renderTimeline() {
         if (moc) moc.tense = "future_present_simple";
       }
       // Cặp quá khứ: điểm-điểm trong quá khứ
+      // Chỉ tự động điền thì cho sự kiện đứng sau (gần NOW hơn) khi sự kiện đó
+      // CHƯA được người dùng tự chọn thì (e.tense rỗng) — nếu đã chọn rồi thì
+      // phải giữ nguyên, không được ghi đè lựa chọn của người dùng.
       if (item.shape === "point" && TimelineMath.classifyEventTime(item, state.nowX) === "past") {
-        // Điểm A chọn past_perfect_simple → điểm B đứng sau A tự set past_simple
-        if (item.tense === "past_perfect_simple") {
+        if (item.tense === "past_perfect_simple" || item.tense === "past_simple") {
           const laterPoint = state.events.find((e) => e.id !== item.id
             && e.shape === "point"
             && TimelineMath.classifyEventTime(e, state.nowX) === "past"
-            && Number(e.x) > Number(item.x));
-          if (laterPoint) laterPoint.tense = "past_simple";
-        }
-        // Điểm A chọn past_simple → điểm B đứng sau A cũng set past_simple (chuỗi quá khứ đơn)
-        if (item.tense === "past_simple") {
-          const laterPoint = state.events.find((e) => e.id !== item.id
-            && e.shape === "point"
-            && TimelineMath.classifyEventTime(e, state.nowX) === "past"
-            && Number(e.x) > Number(item.x));
+            && Number(e.x) > Number(item.x)
+            && !e.tense);
           if (laterPoint) laterPoint.tense = "past_simple";
         }
       }
@@ -629,10 +627,16 @@ function autoResetTenses() {
     if (suggested && suggested !== item.tense) { item.tense = null; return; }
     // Reset nếu tense đang chọn thuộc nhóm sai timeframe
     // (vd: kéo event từ quá khứ sang tương lai mà vẫn giữ tense quá khứ)
+    // Ngoại lệ: Hiện tại hoàn thành (present_perfect_simple/_just) thuộc nhóm
+    // "present" nhưng là lựa chọn HỢP LỆ có chủ đích cho một sự kiện đang ở
+    // vùng quá khứ (tách thành sự kiện độc lập, không nêu mốc cụ thể) — không
+    // được reset chỉ vì nhóm không khớp timeframe quá khứ.
+    const isPresentPerfectVariant = item.tense === "present_perfect_simple" || item.tense === "present_perfect_simple_just";
     const tenseGroup = TimelineMath.TENSES[item.tense]?.group;
     const timeFrame = TimelineMath.classifyEventTime(item, state.nowX);
     const expectedGroup = timeFrame === "past" ? "past" : timeFrame === "future" ? "future" : "present";
-    if (tenseGroup && tenseGroup !== expectedGroup) item.tense = null;
+    const groupMismatch = tenseGroup && tenseGroup !== expectedGroup && !(isPresentPerfectVariant && timeFrame !== "future");
+    if (groupMismatch) item.tense = null;
   });
 }
 
