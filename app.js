@@ -690,9 +690,10 @@ function autoResetTenses() {
   if (!state.showTenseExplain) return;
   state.events.forEach((item) => {
     if (!item.tense) return; // đang dùng gợi ý tự động, không cần reset
-    const suggested = TimelineMath.suggestTense(item, state.events, state.nowX);
-    // Reset nếu gợi ý tự động rõ ràng và khác với thì đang chọn
-    if (suggested && suggested !== item.tense) { item.tense = null; return; }
+    const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
+    const isValid = (explanation.suggested === item.tense) || 
+                    (explanation.alternatives && explanation.alternatives.some(alt => alt.id === item.tense));
+    if (!isValid) { item.tense = null; return; }
     // Reset nếu tense đang chọn thuộc nhóm sai timeframe
     // (vd: kéo event từ quá khứ sang tương lai mà vẫn giữ tense quá khứ)
     // Ngoại lệ: Hiện tại hoàn thành (present_perfect_simple/_just) thuộc nhóm
