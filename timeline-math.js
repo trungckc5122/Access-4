@@ -266,7 +266,7 @@
     future_present_simple: "Ronaldo's flight leaves at nine.",
     future_continuous: "Ronaldo will be training at this time tomorrow.",
     future_continuous_course: "Ronaldo's team will be arriving on Thursday.",
-    future_perfect_simple: "Ronaldo will have scored 900 goals by next year.",
+    future_perfect_simple: "Ronaldo will have scored 900 goals by 2030.",
     future_perfect_continuous: "Ronaldo will have been playing for 25 years by 2030.",
   };
 

@@ -255,6 +255,7 @@ function buildEventExampleHtml(item) {
 }
 
 function renderTimeline() {
+  els.stage.querySelectorAll(".timeline-marker-2030").forEach((el) => el.remove());
   const waveTracks = TimelineMath.assignWaveTracks(state.events);
   els.layer.innerHTML = state.events.map((item) => {
     const lane = item.lane === "above" ? "is-above" : "is-below";
@@ -328,14 +329,6 @@ function renderTimeline() {
         if (partner) {
           partner.tense = item.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
         }
-      }
-      // Nếu chọn future_perfect_continuous/simple → mốc tham chiếu tự set future_present_simple
-      if (item.tense === "future_perfect_continuous" || item.tense === "future_perfect_simple") {
-        const itemEnd = item.shape === "range" ? Number(item.endX) : Number(item.x);
-        const moc = state.events.find((e) => e.id !== item.id
-          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
-          && itemEnd < (e.shape === "range" ? Number(e.x) : Number(e.x)));
-        if (moc) moc.tense = "future_present_simple";
       }
       // Cặp quá khứ: điểm-điểm trong quá khứ
       // Chỉ tự động điền thì cho sự kiện đứng sau (gần NOW hơn) khi sự kiện đó
@@ -414,6 +407,19 @@ function renderTimeline() {
       }
     });
   });
+
+  // Vẽ các nhãn 2030 gần vị trí các sự kiện tương lai hoàn thành / tương lai hoàn thành tiếp diễn
+  state.events.forEach((item) => {
+    if (item.tense === "future_perfect_simple" || item.tense === "future_perfect_continuous") {
+      const label = document.createElement("div");
+      label.className = "timeline-marker-2030";
+      label.textContent = "2030";
+      const posX = item.shape === "range" ? (Number(item.x) + Number(item.endX)) / 2 : Number(item.x);
+      label.style.left = `${posX}%`;
+      els.stage.appendChild(label);
+    }
+  });
+
   scheduleCollisionLayout();
   renderConceptQuestions();
   updateTenseWarnings();
@@ -758,14 +764,6 @@ function renderConceptQuestions() {
         if (partner) {
           partner.tense = eventItem.tense === "future_continuous" ? "future_present_simple" : "future_continuous";
         }
-      }
-      // Nếu chọn future_perfect_continuous/simple → mốc tham chiếu tự set future_present_simple
-      if (eventItem.tense === "future_perfect_continuous" || eventItem.tense === "future_perfect_simple") {
-        const itemEnd = eventItem.shape === "range" ? Number(eventItem.endX) : Number(eventItem.x);
-        const moc = state.events.find((e) => e.id !== eventItem.id
-          && TimelineMath.classifyEventTime(e, state.nowX) === "future"
-          && itemEnd < Number(e.x));
-        if (moc) moc.tense = "future_present_simple";
       }
       renderTimeline();
       scheduleSave();
