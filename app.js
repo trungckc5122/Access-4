@@ -59,7 +59,7 @@ function loadState() {
       stored.showTenseExplain = Boolean(stored.showTenseExplain);
       return stored;
     }
-  } catch (_) {}
+  } catch (_) { }
   const initial = starterState();
   const first = initial.sentence.indexOf("had cooked dinner");
   const second = initial.sentence.indexOf("got home");
@@ -269,7 +269,7 @@ function buildResultBridgesHtml() {
     past_perfect_continuous_result: "8 hours",
     past_perfect_continuous: "2 hours",
   };
-  return state.events
+  const pastBridges = state.events
     .filter((event) => event.shape === "range" && bridgeTenseLabels[event.tense])
     .map((range) => {
       const linkedPoint = findResultLinkedPoint(range);
@@ -278,21 +278,42 @@ function buildResultBridgesHtml() {
       const right = Math.max(Number(range.x), Number(linkedPoint.x));
       const width = right - left;
       if (!(width > 0)) return "";
-      // Móc { nằm ngang (dạng underbrace): hai đầu bám vào 2 mốc, chụm nhọn ở
-      // giữa — không overlay lên timeline, luôn nằm bên dưới trục.
-      const bracePath = "M0,0 C8,0 4,10 16,10 L84,10 C92,10 92,20 100,20 C108,20 108,10 116,10 L184,10 C196,10 192,0 200,0";
-      return `<div class="result-bridge" style="--bridge-x:${left}%;--bridge-width:${width}%" aria-hidden="true">
-        <svg class="result-bridge-svg" viewBox="0 0 200 20" preserveAspectRatio="none"><path d="${bracePath}" /></svg>
-        <span class="result-bridge-label">${bridgeTenseLabels[range.tense]}</span>
-      </div>`;
+      return buildBraceHtml(left, width, bridgeTenseLabels[range.tense]);
     })
     .join("");
+
+  // Range đang là Hiện tại hoàn thành tiếp diễn và đã VƯỢT QUA mốc NOW (bắt
+  // đầu ở quá khứ, kéo dài tới hiện tại) → móc nối từ mép trái range tới NOW.
+  const nowBridges = state.events
+    .filter((event) => event.shape === "range"
+      && event.tense === "present_perfect_continuous"
+      && TimelineMath.classifyEventTime(event, state.nowX) === "present")
+    .map((range) => {
+      const left = Number(range.x);
+      const width = Number(state.nowX) - left;
+      if (!(width > 0)) return "";
+      return buildBraceHtml(left, width, "20 years");
+    })
+    .join("");
+
+  return pastBridges + nowBridges;
+}
+
+function buildBraceHtml(leftPercent, widthPercent, label) {
+  // Móc { nằm ngang (dạng underbrace): hai đầu bám vào 2 mốc, chụm nhọn ở
+  // giữa — không overlay lên timeline, luôn nằm bên dưới trục.
+  const bracePath = "M0,0 C8,0 4,10 16,10 L84,10 C92,10 92,20 100,20 C108,20 108,10 116,10 L184,10 C196,10 192,0 200,0";
+  return `<div class="result-bridge" style="--bridge-x:${leftPercent}%;--bridge-width:${widthPercent}%" aria-hidden="true">
+    <svg class="result-bridge-svg" viewBox="0 0 200 20" preserveAspectRatio="none"><path d="${bracePath}" /></svg>
+    <span class="result-bridge-label">${escapeHtml(label)}</span>
+  </div>`;
 }
 
 function renderTimeline() {
   els.stage.querySelectorAll(".timeline-marker-2030").forEach((el) => el.remove());
   els.stage.querySelectorAll(".timeline-marker-2006").forEach((el) => el.remove());
   els.stage.querySelectorAll(".timeline-marker-halftime").forEach((el) => el.remove());
+  els.stage.querySelectorAll(".timeline-marker-nowresult").forEach((el) => el.remove());
   const waveTracks = TimelineMath.assignWaveTracks(state.events);
   els.layer.innerHTML = state.events.map((item) => {
     const lane = item.lane === "above" ? "is-above" : "is-below";
@@ -519,7 +540,7 @@ function renderTimeline() {
     }
   });
 
-  // Vẽ nhãn "half-time" lệch bên phải các sự kiện điểm quá khứ chọn Quá khứ hoàn thành
+  // Vẽ nhãn "half time" lệch bên phải các sự kiện điểm quá khứ chọn Quá khứ hoàn thành
   state.events.forEach((item) => {
     if (
       item.shape !== "range"
@@ -528,11 +549,41 @@ function renderTimeline() {
     ) {
       const label = document.createElement("div");
       label.className = "timeline-marker-halftime";
-      label.textContent = "half-time";
+      label.textContent = "half time";
       label.style.left = `${Number(item.x)}%`;
       els.stage.appendChild(label);
     }
   });
+
+  // Vẽ nhãn "Kết quả ở hiện tại" ngay tại mốc NOW khi range đã vượt qua NOW
+  // và chọn Hiện tại hoàn thành (nhấn mạnh kết quả/sự liên quan đến hiện tại,
+  // không phải khoảng thời gian tiếp diễn nên không cần móc nối).
+  const hasNowResultRange = state.events.some((item) =>
+    item.shape === "range"
+    && item.tense === "present_perfect_simple"
+    && TimelineMath.classifyEventTime(item, state.nowX) === "present"
+  );
+  if (hasNowResultRange) {
+    const marker = document.createElement("div");
+    marker.className = "timeline-marker-nowresult";
+    marker.style.left = `${Number(state.nowX)}%`;
+    marker.innerHTML = `<span class="now-result-line" aria-hidden="true"></span><span class="now-result-text">Sự việc còn đúng ở hiện tại</span>`;
+    els.stage.appendChild(marker);
+  }
+
+  // Vẽ nhãn "Thời điểm đang nói" ngay tại mốc NOW khi chọn Hiện tại tiếp diễn và range chứa mốc NOW
+  const hasPresentContinuousRange = state.events.some((item) =>
+    item.shape === "range"
+    && item.tense === "present_continuous"
+    && TimelineMath.classifyEventTime(item, state.nowX) === "present"
+  );
+  if (hasPresentContinuousRange) {
+    const marker = document.createElement("div");
+    marker.className = "timeline-marker-nowresult";
+    marker.style.left = `${Number(state.nowX)}%`;
+    marker.innerHTML = `<span class="now-result-line" aria-hidden="true"></span><span class="now-result-text">Thời điểm đang nói</span>`;
+    els.stage.appendChild(marker);
+  }
 
   scheduleCollisionLayout();
   renderConceptQuestions();
@@ -758,8 +809,8 @@ function autoResetTenses() {
   state.events.forEach((item) => {
     if (!item.tense) return; // đang dùng gợi ý tự động, không cần reset
     const explanation = TimelineMath.explainTense(item, state.events, state.nowX);
-    const isValid = (explanation.suggested === item.tense) || 
-                    (explanation.alternatives && explanation.alternatives.some(alt => alt.id === item.tense));
+    const isValid = (explanation.suggested === item.tense) ||
+      (explanation.alternatives && explanation.alternatives.some(alt => alt.id === item.tense));
     if (!isValid) { item.tense = null; return; }
     // Reset nếu tense đang chọn thuộc nhóm sai timeframe
     // (vd: kéo event từ quá khứ sang tương lai mà vẫn giữ tense quá khứ)
