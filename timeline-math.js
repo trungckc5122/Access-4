@@ -284,6 +284,14 @@
     return Math.abs(px - re) <= TOUCH_TOLERANCE;
   }
 
+  // Returns true if a point event "touches" the LEFT edge (start) of a range —
+  // the point coincides with the moment the continuous action started.
+  function pointTouchesRangeLeft(point, range) {
+    const px = Number(point.x);
+    const rs = Number(range.x);
+    return Math.abs(px - rs) <= TOUCH_TOLERANCE;
+  }
+
   // Suggests a tense from structural signals only (shape, position vs NOW, containment).
   // Returns null whenever the correct tense genuinely depends on teacher intent
   // (all future events, and past events whose relationship to another past event
@@ -636,6 +644,21 @@
 
     // timeFrame === "past"
     if (isRange) {
+      // Range whose LEFT edge (start) is touched by a past point → the point
+      // coincides with the moment the continuous action started. Chỉ cho
+      // phép Quá khứ tiếp diễn cho range, Quá khứ đơn cho điểm — không có
+      // lựa chọn nào khác (không phải trường hợp nhấn mạnh thời lượng/kết quả).
+      const touchingLeftPoint = others.find((event) => event.shape !== "range"
+        && pointTouchesRangeLeft(event, item));
+      if (touchingLeftPoint) {
+        return {
+          suggested: "past_continuous",
+          reason: "Dùng để diễn tả sự việc, hành động diễn ra ở một thời điểm cụ thể trong quá khứ, chia quá khứ tiếp diễn.",
+          example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" },
+          alternatives: [],
+        };
+      }
+
       // Range whose RIGHT edge is touched by a past point → past_perfect_continuous.
       // The touching point gets past_simple (handled in the point branch below).
       const touchingPoint = others.find((event) => event.shape !== "range"
@@ -644,26 +667,27 @@
         const touchExample = item.tense === "past_continuous"
           ? { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
           : item.tense === "past_perfect_continuous_result"
-            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing" }
             : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" };
         return {
           suggested: "past_perfect_continuous",
           reason: "Hành động này đã diễn ra liên tục và kết thúc đúng lúc một sự kiện khác xảy ra. Dùng Quá khứ hoàn thành tiếp diễn khi muốn nhấn mạnh khoảng thời gian đã tiếp diễn trước đó; nếu không cần nhấn mạnh khoảng thời gian đó, Quá khứ tiếp diễn đơn giản vẫn chấp nhận được.",
           example: touchExample,
           alternatives: [
-            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" } },
+            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing" } },
           ],
         };
       }
 
       const containsPoint = others.some((event) => event.shape !== "range"
         && Number(event.x) >= Number(item.x) && Number(event.x) <= Number(item.endX)
-        && !pointTouchesRangeRight(event, item));
+        && !pointTouchesRangeRight(event, item)
+        && !pointTouchesRangeLeft(event, item));
       if (containsPoint) {
         const ppcExample = item.tense === "past_perfect_continuous"
-          ? { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training for two hours" }
+          ? { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training" }
           : item.tense === "past_perfect_continuous_result"
-            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing" }
             : { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" };
 
         let reasonText = "Hành động đang diễn ra trong quá khứ thì bị một sự kiện khác (điểm mốc nằm bên trong) xen vào, làm gián đoạn.";
@@ -681,20 +705,20 @@
             {
               id: "past_continuous",
               label: TENSES["past_continuous"].label,
-              reason: "Hành động đang diễn ra trong quá khứ, bị sự kiện điểm xen vào gián đoạn.",
+              reason: "Hành động đang diễn ra trong quá khứ, bị sự kiện đơn lẻ xen vào gián đoạn hoặc 1 sự việc đang xảy ra tại 1 thời điểm xác định trong quá khứ",
               example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
             },
             {
               id: "past_perfect_continuous",
               label: TENSES["past_perfect_continuous"].label,
               reason: "Nếu muốn nhấn mạnh hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó.",
-              example: { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training for two hours" }
+              example: { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training" }
             },
             {
               id: "past_perfect_continuous_result",
               label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)",
               reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.",
-              example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
+              example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing" }
             },
           ],
         };
@@ -759,9 +783,24 @@
       };
     }
 
+    // Point touching the LEFT edge (start) of a past range → the point
+    // coincides with the moment the continuous action started. Chỉ cho phép
+    // Quá khứ đơn cho điểm này — không có lựa chọn nào khác.
+    const touchingRangeLeft = others.find((event) => event.shape === "range"
+      && pointTouchesRangeLeft(item, event));
+    if (touchingRangeLeft) {
+      return {
+        suggested: "past_simple",
+        reason: "Một thời điểm cụ thể trong quá khứ, chia quá khứ đơn",
+        example: { text: "Ronaldo was training when the coach arrived.", underline: "the coach arrived" },
+        alternatives: [],
+      };
+    }
+
     const containingRange = others.find((event) => event.shape === "range"
       && Number(item.x) >= Number(event.x) && Number(item.x) <= Number(event.endX)
-      && !pointTouchesRangeRight(item, event));
+      && !pointTouchesRangeRight(item, event)
+      && !pointTouchesRangeLeft(item, event));
     if (containingRange) {
       const rangeTense = containingRange.tense;
       let exampleText, exampleUnderline, reasonText;
@@ -802,7 +841,7 @@
       } else {
         exampleText = "Ronaldo was training when the coach arrived.";
         exampleUnderline = "the coach arrived";
-        reasonText = "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ.";
+        reasonText = "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ hoặc nó có thể là 1 thời điểm xác định trong quá khứ.";
         alts = [
           {
             id: "past_simple",
@@ -1034,6 +1073,6 @@
   return {
     assignWaveTracks, rangeFromDrag, isAlongTimeline, buildConceptQuestions, classifyEventTime,
     createHistory, nextUniqueColor, TENSES, TENSE_EXAMPLES, suggestTense, explainTense,
-    pointTouchesRangeRight,
+    pointTouchesRangeRight, pointTouchesRangeLeft,
   };
 });

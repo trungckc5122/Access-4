@@ -255,9 +255,44 @@ function buildEventExampleHtml(item) {
   return `Ví dụ: <em>${highlighted}</em>`;
 }
 
+function findResultLinkedPoint(range) {
+  return state.events.find((e) =>
+    e.id !== range.id
+    && e.shape !== "range"
+    && TimelineMath.classifyEventTime(e, state.nowX) === "past"
+    && (TimelineMath.pointTouchesRangeRight(e, range) || (Number(e.x) >= Number(range.x) && Number(e.x) <= Number(range.endX)))
+  );
+}
+
+function buildResultBridgesHtml() {
+  const bridgeTenseLabels = {
+    past_perfect_continuous_result: "8 hours",
+    past_perfect_continuous: "2 hours",
+  };
+  return state.events
+    .filter((event) => event.shape === "range" && bridgeTenseLabels[event.tense])
+    .map((range) => {
+      const linkedPoint = findResultLinkedPoint(range);
+      if (!linkedPoint) return "";
+      const left = Math.min(Number(range.x), Number(linkedPoint.x));
+      const right = Math.max(Number(range.x), Number(linkedPoint.x));
+      const width = right - left;
+      if (!(width > 0)) return "";
+      // Móc { nằm ngang (dạng underbrace): hai đầu bám vào 2 mốc, chụm nhọn ở
+      // giữa — không overlay lên timeline, luôn nằm bên dưới trục.
+      const bracePath = "M0,0 C8,0 4,10 16,10 L84,10 C92,10 92,20 100,20 C108,20 108,10 116,10 L184,10 C196,10 192,0 200,0";
+      return `<div class="result-bridge" style="--bridge-x:${left}%;--bridge-width:${width}%" aria-hidden="true">
+        <svg class="result-bridge-svg" viewBox="0 0 200 20" preserveAspectRatio="none"><path d="${bracePath}" /></svg>
+        <span class="result-bridge-label">${bridgeTenseLabels[range.tense]}</span>
+      </div>`;
+    })
+    .join("");
+}
+
 function renderTimeline() {
   els.stage.querySelectorAll(".timeline-marker-2030").forEach((el) => el.remove());
   els.stage.querySelectorAll(".timeline-marker-2006").forEach((el) => el.remove());
+  els.stage.querySelectorAll(".timeline-marker-halftime").forEach((el) => el.remove());
   const waveTracks = TimelineMath.assignWaveTracks(state.events);
   els.layer.innerHTML = state.events.map((item) => {
     const lane = item.lane === "above" ? "is-above" : "is-below";
@@ -290,7 +325,7 @@ function renderTimeline() {
         <button class="event-node event-start" type="button" aria-label="${item.shape === "range" ? "Kéo điểm bắt đầu của" : "Kéo"} ${escapeAttribute(item.label)}"></button>
         ${item.shape === "range" ? `<button class="event-node event-end" type="button" aria-label="Kéo điểm kết thúc của ${escapeAttribute(item.label)}"></button>` : ""}
       </article>`;
-  }).join("");
+  }).join("") + buildResultBridgesHtml();
 
   els.layer.querySelectorAll(".timeline-event").forEach((node) => {
     const item = state.events.find((entry) => entry.id === node.dataset.id);
@@ -481,6 +516,21 @@ function renderTimeline() {
         label.style.left = `${Number(item.endX)}%`;
         els.stage.appendChild(label);
       }
+    }
+  });
+
+  // Vẽ nhãn "half-time" lệch bên phải các sự kiện điểm quá khứ chọn Quá khứ hoàn thành
+  state.events.forEach((item) => {
+    if (
+      item.shape !== "range"
+      && TimelineMath.classifyEventTime(item, state.nowX) === "past"
+      && item.tense === "past_perfect_simple"
+    ) {
+      const label = document.createElement("div");
+      label.className = "timeline-marker-halftime";
+      label.textContent = "half-time";
+      label.style.left = `${Number(item.x)}%`;
+      els.stage.appendChild(label);
     }
   });
 
