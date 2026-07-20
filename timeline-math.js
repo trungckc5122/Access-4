@@ -252,11 +252,11 @@
   // used verbatim whenever a teacher manually picks a tense from the dropdown.
   const TENSE_EXAMPLES = {
     past_simple: "Ronaldo scored a hat-trick yesterday.",
-    past_simple_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.",
+    past_simple_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.",
     past_continuous: "Ronaldo was training at the gym.",
     past_perfect_simple: "Ronaldo had already scored before half-time.",
     past_perfect_continuous: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.",
-    past_perfect_continuous_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.",
+    past_perfect_continuous_result: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.",
     present_simple: "Ronaldo trains every morning.",
     present_continuous: "Ronaldo is warming up right now.",
     present_continuous_habit: "Ronaldo is always arriving late to training.",
@@ -644,14 +644,14 @@
         const touchExample = item.tense === "past_continuous"
           ? { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
           : item.tense === "past_perfect_continuous_result"
-            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" }
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
             : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "Ronaldo had been playing for Manchester United for 6 years" };
         return {
           suggested: "past_perfect_continuous",
           reason: "Hành động này đã diễn ra liên tục và kết thúc đúng lúc một sự kiện khác xảy ra. Dùng Quá khứ hoàn thành tiếp diễn khi muốn nhấn mạnh khoảng thời gian đã tiếp diễn trước đó; nếu không cần nhấn mạnh khoảng thời gian đó, Quá khứ tiếp diễn đơn giản vẫn chấp nhận được.",
           example: touchExample,
           alternatives: [
-            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" } },
+            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" } },
           ],
         };
       }
@@ -663,16 +663,39 @@
         const ppcExample = item.tense === "past_perfect_continuous"
           ? { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training for two hours" }
           : item.tense === "past_perfect_continuous_result"
-            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" }
+            ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
             : { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" };
+
+        let reasonText = "Hành động đang diễn ra trong quá khứ thì bị một sự kiện khác (điểm mốc nằm bên trong) xen vào, làm gián đoạn.";
+        if (item.tense === "past_perfect_continuous_result") {
+          reasonText = "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.";
+        } else if (item.tense === "past_perfect_continuous") {
+          reasonText = "Hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó.";
+        }
+
         return {
           suggested: "past_continuous",
-          reason: "Hành động đang diễn ra trong quá khứ thì bị một sự kiện khác (điểm mốc nằm bên trong) xen vào, làm gián đoạn.",
+          reason: reasonText,
           example: ppcExample,
           alternatives: [
-            tenseRef("past_continuous", "Hành động đang diễn ra trong quá khứ, bị sự kiện điểm xen vào gián đoạn."),
-            tenseRef("past_perfect_continuous", "Nếu muốn nhấn mạnh hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó."),
-            { id: "past_perfect_continuous_result", label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)", reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.", example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he had been practicing for 8 hours before" } },
+            {
+              id: "past_continuous",
+              label: TENSES["past_continuous"].label,
+              reason: "Hành động đang diễn ra trong quá khứ, bị sự kiện điểm xen vào gián đoạn.",
+              example: { text: "Ronaldo was training when the coach arrived.", underline: "Ronaldo was training" }
+            },
+            {
+              id: "past_perfect_continuous",
+              label: TENSES["past_perfect_continuous"].label,
+              reason: "Nếu muốn nhấn mạnh hành động này đã tiếp diễn một khoảng thời gian tính đến mốc gián đoạn đó.",
+              example: { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "Ronaldo had been training for two hours" }
+            },
+            {
+              id: "past_perfect_continuous_result",
+              label: "Quá khứ hoàn thành tiếp diễn (để lại kết quả)",
+              reason: "Nhấn mạnh khoảng thời gian kéo dài của hành động để lại kết quả rõ rệt ở quá khứ.",
+              example: { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he had been practicing for 8 hours" }
+            },
           ],
         };
       }
@@ -741,17 +764,60 @@
       && !pointTouchesRangeRight(item, event));
     if (containingRange) {
       const rangeTense = containingRange.tense;
-      const exampleText = rangeTense === "past_perfect_continuous"
-        ? "Ronaldo had been training for two hours when the coach arrived."
-        : "Ronaldo was training when the coach arrived.";
-      const exampleUnderline = "the coach arrived";
+      let exampleText, exampleUnderline, reasonText;
+      let suggestedTense = "past_simple";
+      let alts = [];
+
+      if (rangeTense === "past_perfect_continuous_result") {
+        suggestedTense = "past_simple_result";
+        exampleText = "Yesterday evening, he was exhausted because he had been practicing for 8 hours.";
+        exampleUnderline = "he was exhausted";
+        reasonText = "Trạng thái ngắn/kết quả ở quá khứ gây ra bởi một hành động kéo dài liên tục trước đó.";
+        alts = [
+          {
+            id: "past_simple_result",
+            label: TENSES["past_simple_result"].label,
+            reason: reasonText,
+            example: { text: exampleText, underline: exampleUnderline }
+          },
+          {
+            id: "past_simple",
+            label: TENSES["past_simple"].label,
+            reason: "Quay lại ví dụ kể trình tự gián đoạn bình thường.",
+            example: { text: "Ronaldo had been training for two hours when the coach arrived.", underline: "the coach arrived" }
+          }
+        ];
+      } else if (rangeTense === "past_perfect_continuous") {
+        exampleText = "Ronaldo had been training for two hours when the coach arrived.";
+        exampleUnderline = "the coach arrived";
+        reasonText = "Đây là hành động ngắn, xen vào gián đoạn một hành động đã tiếp diễn một khoảng thời gian trước đó.";
+        alts = [
+          {
+            id: "past_simple",
+            label: TENSES["past_simple"].label,
+            reason: reasonText,
+            example: { text: exampleText, underline: exampleUnderline }
+          }
+        ];
+      } else {
+        exampleText = "Ronaldo was training when the coach arrived.";
+        exampleUnderline = "the coach arrived";
+        reasonText = "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ.";
+        alts = [
+          {
+            id: "past_simple",
+            label: TENSES["past_simple"].label,
+            reason: reasonText,
+            example: { text: exampleText, underline: exampleUnderline }
+          }
+        ];
+      }
+
       return {
-        suggested: "past_simple",
-        reason: "Đây là một hành động ngắn, xen vào và làm gián đoạn một hành động khác đang diễn ra liên tục trong quá khứ.",
+        suggested: suggestedTense,
+        reason: reasonText,
         example: { text: exampleText, underline: exampleUnderline },
-        alternatives: [
-          tenseRef("past_simple", "Hành động ngắn xen vào, làm gián đoạn hành động tiếp diễn."),
-        ],
+        alternatives: alts,
       };
     }
 
@@ -766,10 +832,10 @@
 
       let exampleObj;
       if (isResult) {
-        exampleObj = { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he was exhausted" };
+        exampleObj = { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he was exhausted" };
       } else if (isPpc) {
         exampleObj = (item.tense === "past_simple_result"
-          ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours before.", underline: "he was exhausted" }
+          ? { text: "Yesterday evening, he was exhausted because he had been practicing for 8 hours.", underline: "he was exhausted" }
           : { text: "Ronaldo had been playing for Manchester United for 6 years before he left in 2006.", underline: "he left in 2006" });
       } else {
         exampleObj = { text: "Ronaldo was training when the coach arrived.", underline: "the coach arrived" };
