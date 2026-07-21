@@ -556,7 +556,196 @@ class PETNoteManager {
 
 }
 
+/**
+ * AnswerSheetManager - Draggable, resizable panel showing a 3-column
+ * answer sheet (question no. / your answer / correct answer) after submit.
+ */
+class AnswerSheetManager {
+    constructor(core) {
+        this.core = core;
+        this.panel = null;
+        this.tbody = null;
+        this.dragData = { isDragging: false, startX: 0, startY: 0, initialX: 0, initialY: 0 };
+        this.resizeData = { isResizing: false, startWidth: 0, startHeight: 0, startX: 0, startY: 0 };
+    }
 
+    getPosKey() {
+        return this.core.getStorageKey() + '_answersheet_pos';
+    }
+
+    init() {
+        if (document.querySelector('.answer-sheet-panel')) return;
+        this.createPanel();
+        this.setupEvents();
+    }
+
+    createPanel() {
+        const panel = document.createElement('div');
+        panel.className = 'answer-sheet-panel';
+        panel.innerHTML = `
+            <div class="answer-sheet-header">
+                <div class="answer-sheet-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    Bảng đáp án
+                    <span class="answer-sheet-summary" id="answerSheetSummary"></span>
+                </div>
+                <div class="answer-sheet-controls">
+                    <button class="answer-sheet-btn close-btn" title="Đóng">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="answer-sheet-content">
+                <table class="answer-sheet-table">
+                    <thead>
+                        <tr>
+                            <th>Câu</th>
+                            <th>Câu lựa chọn</th>
+                            <th>Đáp án</th>
+                        </tr>
+                    </thead>
+                    <tbody id="answerSheetBody"></tbody>
+                </table>
+            </div>
+            <div class="answer-sheet-resize-handle"></div>
+        `;
+        document.body.appendChild(panel);
+        this.panel = panel;
+        this.tbody = panel.querySelector('#answerSheetBody');
+
+        try {
+            const posStr = localStorage.getItem(this.getPosKey());
+            if (posStr) Object.assign(this.panel.style, JSON.parse(posStr));
+        } catch (e) { }
+    }
+
+    setupEvents() {
+        const header = this.panel.querySelector('.answer-sheet-header');
+        const closeBtn = this.panel.querySelector('.close-btn');
+        const handle = this.panel.querySelector('.answer-sheet-resize-handle');
+
+        const onDrag = (e) => {
+            if (!this.dragData.isDragging) return;
+            const dx = e.clientX - this.dragData.startX;
+            const dy = e.clientY - this.dragData.startY;
+            this.panel.style.left = `${this.dragData.initialX + dx}px`;
+            this.panel.style.top = `${this.dragData.initialY + dy}px`;
+            this.panel.style.right = 'auto';
+        };
+
+        const onResize = (e) => {
+            if (!this.resizeData.isResizing) return;
+            const dw = e.clientX - this.resizeData.startX;
+            const dh = e.clientY - this.resizeData.startY;
+            const newW = Math.max(300, this.resizeData.startWidth + dw);
+            const newH = Math.max(220, this.resizeData.startHeight + dh);
+            this.panel.style.width = `${newW}px`;
+            this.panel.style.height = `${newH}px`;
+        };
+
+        const stopActions = () => {
+            if (this.dragData.isDragging || this.resizeData.isResizing) {
+                this.dragData.isDragging = false;
+                this.resizeData.isResizing = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('mousemove', onResize);
+                document.removeEventListener('mouseup', stopActions);
+
+                const rect = this.panel.getBoundingClientRect();
+                try {
+                    localStorage.setItem(this.getPosKey(), JSON.stringify({
+                        left: `${rect.left}px`,
+                        top: `${rect.top}px`,
+                        width: `${this.panel.style.width}`,
+                        height: `${this.panel.style.height}`
+                    }));
+                } catch (e) { }
+            }
+        };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.answer-sheet-btn')) return;
+            this.dragData.isDragging = true;
+            this.dragData.startX = e.clientX;
+            this.dragData.startY = e.clientY;
+            const rect = this.panel.getBoundingClientRect();
+            this.dragData.initialX = rect.left;
+            this.dragData.initialY = rect.top;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopActions);
+        });
+
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.resizeData.isResizing = true;
+            this.resizeData.startX = e.clientX;
+            this.resizeData.startY = e.clientY;
+            this.resizeData.startWidth = this.panel.offsetWidth;
+            this.resizeData.startHeight = this.panel.offsetHeight;
+            document.addEventListener('mousemove', onResize);
+            document.addEventListener('mouseup', stopActions);
+        });
+
+        closeBtn.addEventListener('click', () => this.hide());
+    }
+
+    resolveOptionText(qNum, rawValue) {
+        if (rawValue === null || rawValue === undefined || rawValue === '') return '(chưa chọn)';
+        const questions = this.core.currentTestData?.questions;
+        const qData = Array.isArray(questions) ? questions.find(q => q.num === qNum || q.num === Number(qNum)) : null;
+        if (qData && Array.isArray(qData.options)) {
+            const idx = 'ABCDEFGH'.indexOf(String(rawValue).toUpperCase());
+            if (idx >= 0 && qData.options[idx] !== undefined) {
+                return `${String(rawValue).toUpperCase()}. ${qData.options[idx]}`;
+            }
+        }
+        return String(rawValue);
+    }
+
+    render() {
+        if (!this.tbody || !this.core.currentTestData) return;
+        const range = this.core.getQuestionRange();
+        let correctCount = 0;
+        let rowsHtml = '';
+
+        for (let i = range.start; i <= range.end; i++) {
+            const userAnswer = this.core.getUserAnswer(i);
+            const isCorrect = this.core.isAnswerCorrect(i, userAnswer);
+            const correctAnswer = this.core.currentTestData.displayAnswers?.[`q${i}`] ?? this.core.currentTestData.displayAnswers?.[i] ?? this.core.currentTestData.answerKey?.[`q${i}`] ?? this.core.currentTestData.answerKey?.[i] ?? '';
+
+            if (isCorrect) correctCount++;
+
+            const rowClass = !userAnswer ? 'as-unanswered' : (isCorrect ? 'as-correct' : 'as-incorrect');
+
+            rowsHtml += `
+                <tr class="${rowClass}">
+                    <td>${i}</td>
+                    <td class="as-user-answer">${this.resolveOptionText(i, userAnswer)}</td>
+                    <td class="as-correct-answer">${this.resolveOptionText(i, correctAnswer)}</td>
+                </tr>
+            `;
+        }
+
+        this.tbody.innerHTML = rowsHtml;
+        const total = range.end - range.start + 1;
+        const summaryEl = this.panel.querySelector('#answerSheetSummary');
+        if (summaryEl) summaryEl.textContent = `${correctCount}/${total} đúng`;
+    }
+
+    show() {
+        this.render();
+        this.panel.classList.add('show');
+    }
+
+    hide() {
+        this.panel.classList.remove('show');
+    }
+
+    toggle() {
+        if (this.panel.classList.contains('show')) this.hide();
+        else this.show();
+    }
+}
 
 /**
 
@@ -1528,6 +1717,10 @@ class ReadingCore {
         this.noteManager = new PETNoteManager(this);
 
         this.noteManager.init();
+
+        this.answerSheetManager = new AnswerSheetManager(this);
+
+        this.answerSheetManager.init();
 
 
 
@@ -4108,7 +4301,13 @@ class ReadingCore {
 
     handleSubmit() {
 
-        if (this.examSubmitted) return;
+        if (this.examSubmitted) {
+
+            this.answerSheetManager?.toggle();
+
+            return;
+
+        }
 
         const questionRange = this.getQuestionRange();
 
@@ -4198,7 +4397,7 @@ class ReadingCore {
 
         const submitBtn = document.getElementById('submitBtn');
 
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đã nộp bài'; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Xem đáp án'; submitBtn.classList.add('view-answers-mode'); }
 
         const explainBtn = document.getElementById('explainBtn');
 
@@ -5015,7 +5214,7 @@ class ReadingCore {
 
         const submitBtn = document.getElementById('submitBtn');
 
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Nộp bài'; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Nộp bài'; submitBtn.classList.remove('view-answers-mode'); }
 
         const explainBtn = document.getElementById('explainBtn');
 
@@ -5024,6 +5223,8 @@ class ReadingCore {
         const explanationPanel = document.getElementById('explanationPanel');
 
         if (explanationPanel) explanationPanel.classList.remove('show');
+
+        this.answerSheetManager?.hide();
 
 
 
