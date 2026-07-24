@@ -393,8 +393,8 @@
                 },
                 {
                     text: "4. It's a nice day. You've decided to sit in the garden. Before going outside, you tell your friend.\nYou: The weather's too nice to stay indoors. I ___0___ (sit) in the garden.\nYour friend: That's a good idea. I think I ___1___ (join) you.",
-                    answers: ["will sit|'ll sit", "will join|'ll join"],
-                    hint: "<div class='hint-detail'><span class='key-word'>will sit</span>: quyết định ngay tại thời điểm nói → dùng <strong>will</strong>.</div><div class='hint-detail'><span class='key-word'>will join</span>: dự đoán/ý kiến cá nhân sau 'I think' → dùng <strong>will</strong>.</div>"
+                    answers: ["am going to sit|'m going to sit", "will join|'ll join"],
+                    hint: "<div class='hint-detail'><span class='key-word'>am going to sit sit</span>: quyết định này đã có kế hoạch (the weather's too nice to stay indoor → dùng <strong>will</strong>.</div><div class='hint-detail'><span class='key-word'>will join</span>: quyết định nhất thời → dùng <strong>will</strong>.</div>"
                 },
                 {
                     text: "5. Your friend is worried because she has lost an important letter.\nYou: Don't worry about the letter. I'm sure you ___0___ (find) it.\nYour friend: I hope so.",
@@ -489,6 +489,12 @@
             }
 
             /* ==================== RENDER: MULTI-BLANK (multiple verbs per sentence) ==================== */
+            function splitHintDetails(hintHtml) {
+                if (!hintHtml) return [''];
+                const matches = hintHtml.match(/<div class='hint-detail'>[\s\S]*?<\/div>/g);
+                return matches && matches.length ? matches : [hintHtml];
+            }
+
             function renderMultiBlank(id, data) {
                 const container = document.getElementById(`questions-${id}`);
                 container.innerHTML = '';
@@ -500,19 +506,24 @@
                     if (nm) { text = text.replace(/^\d+\.\s+/, ''); numberHtml = `<span class="existing-number">${nm[1]}.</span>`; }
                     else { numberHtml = `<span class="exercise-number">${i + 1}</span>`; }
                     text = text.replace(/\n/g, '<br>');
+                    const hintParts = splitHintDetails(it.hint);
+                    const hintMap = it.hintMap || it.answers.map((_, idx) => Math.min(idx, hintParts.length - 1));
                     const html = text.replace(/___(\d+)___/g, (m, p1) => {
                         const bIdx = parseInt(p1, 10);
+                        const bqid = `${qid}-b${bIdx}`;
                         const ans = it.answers[bIdx];
-                        return `<input type="text" class="verb-input-sm" id="${qid}-b${bIdx}" data-type="input" data-ans="${ans}" oninput="adjustWidth(this)" style="min-width:170px;width:170px;">`;
+                        return `<input type="text" class="verb-input-sm" id="${bqid}" data-type="input" data-ans="${ans}" oninput="adjustWidth(this)" style="min-width:170px;width:170px;"><span class="row-btns"><button class="btn-small" id="${bqid}-eye" onclick="toggleSingleAns('${bqid}')">👁️</button><button class="info-btn" id="${bqid}-info" onclick="toggleHint('${bqid}')">i</button></span>`;
+                    });
+                    let hintBoxesHtml = '';
+                    it.answers.forEach((_, bIdx) => {
+                        const bqid = `${qid}-b${bIdx}`;
+                        const part = hintParts[hintMap[bIdx]] || '';
+                        hintBoxesHtml += `<div class="hint-box" id="${bqid}-hint">${part}</div>`;
                     });
                     container.innerHTML += `
                 <div class="question-row">
                     ${numberHtml} <span class="tense-sentence">${html}</span>
-                    <div class="row-btns">
-                        <button class="btn-small" id="${qid}-eye" onclick="toggleMultiAns('${qid}', ${it.answers.length})">👁️</button>
-                        <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
-                    </div>
-                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    ${hintBoxesHtml}
                 </div>`;
                 });
             }
@@ -572,24 +583,6 @@
                 }
                 const taskId = id.split('-q')[0];
                 if (taskId === 't2') updateWordBank(taskId);
-            }
-
-            function toggleMultiAns(qid, count) {
-                const stateKey = `${qid}-state`;
-                const isShown = answerStates.get(stateKey) || false;
-                const eyeBtn = document.getElementById(qid + '-eye');
-                for (let k = 0; k < count; k++) {
-                    const el = document.getElementById(`${qid}-b${k}`);
-                    if (!el) continue;
-                    if (isShown) {
-                        el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el);
-                    } else {
-                        const ans = el.dataset.ans;
-                        if (ans) { el.value = ans.split('|')[0]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); }
-                    }
-                }
-                if (isShown) { if (eyeBtn) eyeBtn.classList.remove('active'); answerStates.set(stateKey, false); }
-                else { if (eyeBtn) eyeBtn.classList.add('active'); answerStates.set(stateKey, true); }
             }
 
             function showAnswers(prefix) {
