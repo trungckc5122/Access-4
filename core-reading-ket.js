@@ -169,39 +169,61 @@ class KETNoteManager {
         const body = this.panel.querySelector('.note-list-body');
         const empty = this.panel.querySelector('.note-list-empty');
         if (!body) return;
-        const spans = document.querySelectorAll('.highlight-pink[data-note]');
+        // Collect all pink spans with data-note (lead spans of single or grouped)
+        const allSpans = Array.from(document.querySelectorAll('.highlight-pink[data-note]'));
         body.innerHTML = '';
-        if (spans.length === 0) {
+        if (allSpans.length === 0) {
             if (empty) empty.style.display = 'flex';
             this.updateBadge();
             return;
         }
         if (empty) empty.style.display = 'none';
-        spans.forEach((span, idx) => {
+
+        // Group spans by data-note-group. Spans without a group are standalone.
+        const groups = new Map(); // groupId -> { leadSpan, allSpans[] }
+        allSpans.forEach(span => {
+            const gid = span.dataset.noteGroup || null;
+            if (gid) {
+                if (!groups.has(gid)) groups.set(gid, { leadSpan: span, allSpansInGroup: [] });
+                groups.get(gid).allSpansInGroup.push(span);
+            } else {
+                // No group: standalone, use span itself as unique key
+                const uid = 'solo_' + Math.random();
+                groups.set(uid, { leadSpan: span, allSpansInGroup: [span] });
+            }
+        });
+
+        let idx = 0;
+        groups.forEach(({ leadSpan, allSpansInGroup }) => {
+            // Combine text from all spans in the group
+            const combinedText = allSpansInGroup.map(s => s.textContent).join('');
             const row = document.createElement('div');
             row.className = 'note-list-row';
-            row.dataset.idx = idx;
+            row.dataset.idx = idx++;
             const textCell = document.createElement('div');
             textCell.className = 'note-list-text';
             textCell.title = 'Nh\u1ea5n \u0111\u1ec3 cu\u1ed9n \u0111\u1ebfn v\u1ecb tr\u00ed trong v\u0103n b\u1ea3n';
-            textCell.textContent = span.textContent;
+            textCell.textContent = combinedText;
             textCell.addEventListener('click', () => {
                 this.panel.style.display = 'none';
                 setTimeout(() => {
-                    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    span.classList.add('note-flash');
-                    setTimeout(() => span.classList.remove('note-flash'), 1200);
+                    leadSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    allSpansInGroup.forEach(s => {
+                        s.classList.add('note-flash');
+                        setTimeout(() => s.classList.remove('note-flash'), 1200);
+                    });
                 }, 100);
             });
             const noteCell = document.createElement('div');
             noteCell.className = 'note-list-note';
             const noteInput = document.createElement('textarea');
             noteInput.className = 'note-list-input';
-            noteInput.value = span.dataset.note || '';
+            noteInput.value = leadSpan.dataset.note || '';
             noteInput.placeholder = 'Ghi ch\u00fa...';
             noteInput.rows = 2;
             noteInput.addEventListener('input', () => {
-                span.dataset.note = noteInput.value;
+                // Update note text on all spans in group (lead span holds the value)
+                leadSpan.dataset.note = noteInput.value;
                 if (window.readingCore) window.readingCore.saveHighlightDraft();
             });
             const delBtn = document.createElement('button');
@@ -210,11 +232,14 @@ class KETNoteManager {
             delBtn.innerHTML = '\u00d7';
             delBtn.addEventListener('click', () => {
                 if (confirm('X\u00f3a ghi ch\u00fa n\u00e0y?')) {
-                    const parent = span.parentNode;
-                    if (parent) {
-                        while (span.firstChild) parent.insertBefore(span.firstChild, span);
-                        parent.removeChild(span);
-                    }
+                    // Remove all spans in the group
+                    allSpansInGroup.forEach(span => {
+                        const parent = span.parentNode;
+                        if (parent) {
+                            while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                            parent.removeChild(span);
+                        }
+                    });
                     if (window.readingCore) window.readingCore.saveHighlightDraft();
                     this.renderNotesList();
                 }
@@ -235,7 +260,13 @@ class KETNoteManager {
     updateBadge() {
         const toggleBtn = document.querySelector('.note-toggle-btn');
         if (!toggleBtn) return;
-        const count = document.querySelectorAll('.highlight-pink[data-note]').length;
+        const allSpans = Array.from(document.querySelectorAll('.highlight-pink[data-note]'));
+        // Count unique notes: group by data-note-group, solo spans count as 1 each
+        const uniqueGroups = new Set();
+        allSpans.forEach(span => {
+            uniqueGroups.add(span.dataset.noteGroup || ('solo_' + span.dataset.note + span.textContent));
+        });
+        const count = uniqueGroups.size;
         toggleBtn.classList.toggle('has-content', count > 0);
     }
 
@@ -3228,6 +3259,9 @@ class ReadingHighlightManager {
 
     _applyNoteComplex(range, noteText) {
         const textNodes = this.getTextNodesInRange(range);
+        // Generate a unique group ID so all sub-spans are linked
+        const groupId = 'ng_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        let isFirstSpan = true;
         textNodes.forEach(textNode => {
             const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
             const endOffset = (range.endContainer === textNode) ? range.endOffset : textNode.length;
@@ -3238,13 +3272,18 @@ class ReadingHighlightManager {
             try {
                 const span = document.createElement('span');
                 span.className = 'highlight-pink';
-                if (noteText) span.dataset.note = noteText;
+                span.dataset.noteGroup = groupId;
+                // Only the first span carries data-note (the panel reads from it)
+                if (isFirstSpan && noteText) span.dataset.note = noteText;
+                isFirstSpan = false;
                 subRange.surroundContents(span);
             } catch (e) {
                 const fragment = subRange.extractContents();
                 const span = document.createElement('span');
                 span.className = 'highlight-pink';
-                if (noteText) span.dataset.note = noteText;
+                span.dataset.noteGroup = groupId;
+                if (isFirstSpan && noteText) span.dataset.note = noteText;
+                isFirstSpan = false;
                 span.appendChild(fragment);
                 subRange.insertNode(span);
             }
@@ -3937,10 +3976,23 @@ class ReadingUIManager {
 
         // Đăng ký hàm dọn dẹp toàn cục (cross-module: pet & ket, reading & listening)
         window.__petKetCleanStorage = () => {
-            // Đã tắt tính năng tự động xóa draft/highlight cũ để tránh mất ghi chú/bài làm của học viên.
-            // Nếu bộ nhớ trình duyệt đầy, giải pháp là chuyển sang chế độ Cloud-Only (nút "Chuyển sang Cloud").
-            console.log('[Auto-Clean] Đã tắt: không xóa dữ liệu tự động. Hãy dùng Cloud-Only nếu bộ nhớ đầy.');
-            return 0;
+            const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+                    keys.push(key);
+                }
+            }
+            keys.sort();
+            // Giữ lại 10 mục mới nhất, xóa phần còn lại
+            const toRemove = keys.length > 10 ? keys.slice(0, keys.length - 10) : [];
+            toRemove.forEach(k => {
+                localStorage.removeItem(k);
+                console.log('[Auto-Clean] Removed:', k);
+            });
+            console.log(`[Auto-Clean] Cleaned ${toRemove.length} item(s). Kept ${Math.min(keys.length, 10)} recent draft(s).`);
+            return toRemove.length;
         };
 
         this.updateStorageIndicator();
@@ -4068,13 +4120,32 @@ class ReadingUIManager {
                 warningEl.id = 'storageWarningMsg';
                 warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: white; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff5252; animation: storageSlideUp 0.4s ease; min-width: 340px;';
                 warningEl.innerHTML = `
-                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Ghi chú và bài làm của bạn không bị xóa tự động. Hãy chuyển sang Cloud để lưu an toàn hơn.</span></div>
+                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Draft và highlight cũ sẽ bị mất nếu không dọn dẹp.</span></div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <button id="storageAutoCleanBtn" style="background: #fff176; border: none; color: #5d4037; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">🧹 Tự dọn dẹp</button>
                         <button id="storageCloudBtn" style="background: #0d9488; border: none; color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">☁️ Chuyển sang Cloud</button>
                         <button onclick="document.getElementById('storageWarningMsg')?.remove()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-size: 13px;">Đã hiểu</button>
                     </div>
                 `;
                 document.body.appendChild(warningEl);
+
+                // Gắn sự kiện nút Tự dọn dẹp
+                const cleanBtn = document.getElementById('storageAutoCleanBtn');
+                if (cleanBtn) {
+                    cleanBtn.addEventListener('click', () => {
+                        const removed = window.__petKetCleanStorage?.() ?? 0;
+                        document.getElementById('storageWarningMsg')?.remove();
+                        this.updateStorageIndicator();
+                        // Toast xác nhận
+                        const toast = document.createElement('div');
+                        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1b5e20; color: white; padding: 10px 22px; border-radius: 8px; z-index: 10000; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 12px rgba(0,0,0,0.3); animation: storageSlideUp 0.4s ease;';
+                        toast.textContent = removed > 0
+                            ? `✅ Đã dọn ${removed} file cũ. Bộ nhớ được giải phóng!`
+                            : `ℹ️ Không có file cũ nào cần dọn.`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3500);
+                    });
+                }
 
                 // Gắn sự kiện nút Chuyển sang Cloud
                 const cloudBtn = document.getElementById('storageCloudBtn');
@@ -4119,14 +4190,28 @@ class ReadingUIManager {
             <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
                 <div style="font-size: 42px; margin-bottom: 12px;">💾</div>
                 <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Bộ nhớ đã đầy!</h3>
-                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Ghi chú/bài làm cũ sẽ không bị xóa tự động — hãy chuyển sang chế độ Cloud-Only để tiếp tục lưu.</p>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Bạn có thể dọn dẹp hoặc chuyển sang chế độ Cloud-Only.</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="quotaCleanBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Tự dọn dẹp và thử lại</button>
                     <button id="quotaCloudBtn" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
                     <button id="quotaCancelBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Hủy</button>
                 </div>
             </div>
         `;
         document.body.appendChild(overlay);
+        document.getElementById('quotaCleanBtn').addEventListener('click', () => {
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+            overlay.remove();
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+            if (this._pendingQuotaKey) {
+                try {
+                    localStorage.setItem(this._pendingQuotaKey, this._pendingQuotaValue);
+                    this._showStorageToast('✅ Đã lưu thành công!');
+                } catch (e) {
+                    this._showCriticalStorageError();
+                }
+            }
+        });
         document.getElementById('quotaCloudBtn').addEventListener('click', () => {
             overlay.remove();
             this._showCloudOnlyActivateModal();
@@ -4191,6 +4276,7 @@ class ReadingUIManager {
                 <p style="margin: 0 0 16px; font-size: 13px; color: #6b7280;">Đang dùng: <strong>${usedMB} MB</strong> (Hybrid Mode)</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button id="hmmActivateCloudBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
+                    <button id="hmmCleanNowBtn" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Dọn bản nháp cũ ngay</button>
                     <button id="hmmCloseBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Đóng</button>
                 </div>
             </div>
@@ -4199,6 +4285,12 @@ class ReadingUIManager {
         document.getElementById('hmmActivateCloudBtn').addEventListener('click', async () => {
             overlay.remove();
             await this._activateCloudOnly();
+        });
+        document.getElementById('hmmCleanNowBtn').addEventListener('click', () => {
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+            overlay.remove();
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+            this.updateStorageIndicator();
         });
         document.getElementById('hmmCloseBtn').addEventListener('click', () => {
             overlay.remove();

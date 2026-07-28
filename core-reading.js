@@ -382,13 +382,13 @@ class PETNoteManager {
 
 
 
-        const spans = document.querySelectorAll('.highlight-pink[data-note]');
-
+        // Collect all pink spans with data-note (lead spans of single or grouped)
+        const allSpans = Array.from(document.querySelectorAll('.highlight-pink[data-note]'));
         body.innerHTML = '';
 
 
 
-        if (spans.length === 0) {
+        if (allSpans.length === 0) {
 
             if (empty) empty.style.display = 'flex';
 
@@ -402,13 +402,31 @@ class PETNoteManager {
 
 
 
-        spans.forEach((span, idx) => {
+        // Group spans by data-note-group. Spans without a group are standalone.
+        const groups = new Map(); // groupId -> { leadSpan, allSpansInGroup[] }
+        allSpans.forEach(span => {
+            const gid = span.dataset.noteGroup || null;
+            if (gid) {
+                if (!groups.has(gid)) groups.set(gid, { leadSpan: span, allSpansInGroup: [] });
+                groups.get(gid).allSpansInGroup.push(span);
+            } else {
+                // No group: standalone
+                const uid = 'solo_' + Math.random();
+                groups.set(uid, { leadSpan: span, allSpansInGroup: [span] });
+            }
+        });
+
+        let idx = 0;
+        groups.forEach(({ leadSpan, allSpansInGroup }) => {
+
+            // Combine text from all spans in the group
+            const combinedText = allSpansInGroup.map(s => s.textContent).join('');
 
             const row = document.createElement('div');
 
             row.className = 'note-list-row';
 
-            row.dataset.idx = idx;
+            row.dataset.idx = idx++;
 
 
 
@@ -418,7 +436,7 @@ class PETNoteManager {
 
             textCell.title = 'Nh\u1ea5n \u0111\u1ec3 cu\u1ed9n \u0111\u1ebfn v\u1ecb tr\u00ed trong v\u0103n b\u1ea3n';
 
-            textCell.textContent = span.textContent;
+            textCell.textContent = combinedText;
 
             textCell.addEventListener('click', () => {
 
@@ -426,11 +444,12 @@ class PETNoteManager {
 
                 setTimeout(() => {
 
-                    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    leadSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-                    span.classList.add('note-flash');
-
-                    setTimeout(() => span.classList.remove('note-flash'), 1200);
+                    allSpansInGroup.forEach(s => {
+                        s.classList.add('note-flash');
+                        setTimeout(() => s.classList.remove('note-flash'), 1200);
+                    });
 
                 }, 100);
 
@@ -448,7 +467,7 @@ class PETNoteManager {
 
             noteInput.className = 'note-list-input';
 
-            noteInput.value = span.dataset.note || '';
+            noteInput.value = leadSpan.dataset.note || '';
 
             noteInput.placeholder = 'Ghi ch\u00fa...';
 
@@ -456,7 +475,8 @@ class PETNoteManager {
 
             noteInput.addEventListener('input', () => {
 
-                span.dataset.note = noteInput.value;
+                // Only update lead span (which carries data-note)
+                leadSpan.dataset.note = noteInput.value;
 
                 if (window.readingCore) window.readingCore.saveHighlightDraft();
 
@@ -476,15 +496,20 @@ class PETNoteManager {
 
                 if (confirm('X\u00f3a ghi ch\u00fa n\u00e0y?')) {
 
-                    const parent = span.parentNode;
+                    // Remove all spans in the group
+                    allSpansInGroup.forEach(span => {
 
-                    if (parent) {
+                        const parent = span.parentNode;
 
-                        while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                        if (parent) {
 
-                        parent.removeChild(span);
+                            while (span.firstChild) parent.insertBefore(span.firstChild, span);
 
-                    }
+                            parent.removeChild(span);
+
+                        }
+
+                    });
 
                     if (window.readingCore) window.readingCore.saveHighlightDraft();
 
@@ -530,7 +555,13 @@ class PETNoteManager {
 
         if (!toggleBtn) return;
 
-        const count = document.querySelectorAll('.highlight-pink[data-note]').length;
+        const allSpans = Array.from(document.querySelectorAll('.highlight-pink[data-note]'));
+        // Count unique notes: group by data-note-group, solo spans count as 1 each
+        const uniqueGroups = new Set();
+        allSpans.forEach(span => {
+            uniqueGroups.add(span.dataset.noteGroup || ('solo_' + span.dataset.note + span.textContent));
+        });
+        const count = uniqueGroups.size;
 
         toggleBtn.classList.toggle('has-content', count > 0);
 
@@ -6127,6 +6158,10 @@ class ReadingHighlightManager {
 
         const textNodes = this.getTextNodesInRange(range);
 
+        // Generate a unique group ID so all sub-spans are linked
+        const groupId = 'ng_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        let isFirstSpan = true;
+
         textNodes.forEach(textNode => {
 
             const startOffset = (range.startContainer === textNode) ? range.startOffset : 0;
@@ -6147,7 +6182,11 @@ class ReadingHighlightManager {
 
                 span.className = 'highlight-pink';
 
-                if (noteText) span.dataset.note = noteText;
+                span.dataset.noteGroup = groupId;
+
+                // Only the first span carries data-note (the panel reads from it)
+                if (isFirstSpan && noteText) span.dataset.note = noteText;
+                isFirstSpan = false;
 
                 subRange.surroundContents(span);
 
@@ -6159,7 +6198,10 @@ class ReadingHighlightManager {
 
                 span.className = 'highlight-pink';
 
-                if (noteText) span.dataset.note = noteText;
+                span.dataset.noteGroup = groupId;
+
+                if (isFirstSpan && noteText) span.dataset.note = noteText;
+                isFirstSpan = false;
 
                 span.appendChild(fragment);
 
@@ -7513,13 +7555,23 @@ class ReadingUIManager {
 
         window.__petKetCleanStorage = () => {
 
-            // Đã tắt tính năng tự động xóa draft/highlight cũ để tránh mất ghi chú/bài làm của học viên.
-
-            // Nếu bộ nhớ trình duyệt đầy, giải pháp là chuyển sang chế độ Cloud-Only (nút "Chuyển sang Cloud").
-
-            console.log('[Auto-Clean] Đã tắt: không xóa dữ liệu tự động. Hãy dùng Cloud-Only nếu bộ nhớ đầy.');
-
-            return 0;
+            const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
+                    keys.push(key);
+                }
+            }
+            keys.sort();
+            // Giữ lại 10 mục mới nhất, xóa phần còn lại
+            const toRemove = keys.length > 10 ? keys.slice(0, keys.length - 10) : [];
+            toRemove.forEach(k => {
+                localStorage.removeItem(k);
+                console.log('[Auto-Clean] Removed:', k);
+            });
+            console.log(`[Auto-Clean] Cleaned ${toRemove.length} item(s). Kept ${Math.min(keys.length, 10)} recent draft(s).`);
+            return toRemove.length;
 
         };
 
@@ -7718,9 +7770,11 @@ class ReadingUIManager {
 
                 warningEl.innerHTML = `
 
-                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Ghi chú và bài làm của bạn không bị xóa tự động. Hãy chuyển sang Cloud để lưu an toàn hơn.</span></div>
+                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Draft và highlight cũ sẽ bị mất nếu không dọn dẹp.</span></div>
 
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+
+                        <button id="storageAutoCleanBtn" style="background: #fff176; border: none; color: #5d4037; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">🧹 Tự dọn dẹp</button>
 
                         <button id="storageCloudBtn" style="background: #0d9488; border: none; color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">☁️ Chuyển sang Cloud</button>
 
@@ -7731,6 +7785,38 @@ class ReadingUIManager {
                 `;
 
                 document.body.appendChild(warningEl);
+
+
+
+                // Gắn sự kiện nút Tự dọn dẹp
+
+                const cleanBtn = document.getElementById('storageAutoCleanBtn');
+
+                if (cleanBtn) {
+
+                    cleanBtn.addEventListener('click', () => {
+
+                        const removed = window.__petKetCleanStorage?.() ?? 0;
+
+                        document.getElementById('storageWarningMsg')?.remove();
+
+                        this.updateStorageIndicator();
+
+                        const toast = document.createElement('div');
+
+                        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1b5e20; color: white; padding: 10px 22px; border-radius: 8px; z-index: 10000; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 12px rgba(0,0,0,0.3); animation: storageSlideUp 0.4s ease;';
+
+                        toast.textContent = removed > 0
+                            ? `✅ Đã dọn ${removed} file cũ. Bộ nhớ được giải phóng!`
+                            : `ℹ️ Không có file cũ nào cần dọn.`;
+
+                        document.body.appendChild(toast);
+
+                        setTimeout(() => toast.remove(), 3500);
+
+                    });
+
+                }
 
 
 
@@ -7828,9 +7914,11 @@ class ReadingUIManager {
 
                 <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Bộ nhớ đã đầy!</h3>
 
-                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Ghi chú/bài làm cũ sẽ không bị xóa tự động — hãy chuyển sang chế độ Cloud-Only để tiếp tục lưu.</p>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Bạn có thể dọn dẹp hoặc chuyển sang chế độ Cloud-Only.</p>
 
                 <div style="display: flex; flex-direction: column; gap: 10px;">
+
+                    <button id="quotaCleanBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Tự dọn dẹp và thử lại</button>
 
                     <button id="quotaCloudBtn" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
 
@@ -7845,6 +7933,32 @@ class ReadingUIManager {
         document.body.appendChild(overlay);
 
 
+
+        document.getElementById('quotaCleanBtn').addEventListener('click', () => {
+
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+
+            overlay.remove();
+
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+
+            if (this._pendingQuotaKey) {
+
+                try {
+
+                    localStorage.setItem(this._pendingQuotaKey, this._pendingQuotaValue);
+
+                    this._showStorageToast('✅ Đã lưu thành công!');
+
+                } catch (e) {
+
+                    this._showCriticalStorageError();
+
+                }
+
+            }
+
+        });
 
         document.getElementById('quotaCloudBtn').addEventListener('click', () => {
 
@@ -7998,6 +8112,8 @@ class ReadingUIManager {
 
                     <button id="hmmActivateCloudBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
 
+                    <button id="hmmCleanNowBtn" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Dọn bản nháp cũ ngay</button>
+
                     <button id="hmmCloseBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Đóng</button>
 
                 </div>
@@ -8018,7 +8134,17 @@ class ReadingUIManager {
 
         });
 
+        document.getElementById('hmmCleanNowBtn').addEventListener('click', () => {
 
+            const removed = window.__petKetCleanStorage?.() ?? 0;
+
+            overlay.remove();
+
+            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
+
+            this.updateStorageIndicator();
+
+        });
 
         document.getElementById('hmmCloseBtn').addEventListener('click', () => {
 
