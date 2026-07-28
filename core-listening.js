@@ -921,7 +921,6 @@ class ListeningCore {
         this.setupUI();
         this.renderQuestions();
 
-        await this.loadHighlightDraft();
         this.setupEventListeners();
         this.setupBeforeUnload();
         this.createNavigation();
@@ -934,6 +933,10 @@ class ListeningCore {
         } else if (!(await this.isCompleted())) {
             await this.loadDraft();
         }
+
+        // Luôn load highlight SAU khi transcript đã được render
+        // (restoreSubmittedState → submitExam → showTranscript ghi đè innerHTML trước)
+        await this.loadHighlightDraft();
 
         this.noteManager = new PETNoteManager(this);
         this.noteManager.init();
@@ -1004,6 +1007,9 @@ class ListeningCore {
                     }
                 }
             }
+
+            // Reload highlight sau cloud sync (transcript có thể đã được re-render)
+            await this.loadHighlightDraft();
 
             // ── Parity Check on Focus ──
             window.addEventListener('focus', async () => {
@@ -2302,7 +2308,11 @@ class ListeningCore {
         }
 
         // Gọi submitExam để hiển thị trạng thái đã nộp
+        // submitExam → showTranscript → ghi đè innerHTML transcript
         this.submitExam();
+
+        // Sau khi transcript đã được render, reload highlight
+        this.loadHighlightDraft();
 
         console.log('[Restore] Submitted state restored successfully');
     }
