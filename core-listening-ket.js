@@ -221,8 +221,20 @@ class PETNoteManager {
         }
     }
 
-    loadNote() {
-        const saved = localStorage.getItem(this.getNoteKey());
+    async loadNote() {
+        const key = this.getNoteKey();
+        let saved = localStorage.getItem(key);
+        if (!saved && window.CloudStorage) {
+            try {
+                const cloudData = await window.CloudStorage.load(key);
+                if (cloudData) {
+                    saved = JSON.stringify(cloudData);
+                    localStorage.setItem(key, saved);
+                }
+            } catch (e) {
+                console.error('[Note] Cloud load failed:', e);
+            }
+        }
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -1482,21 +1494,26 @@ class ListeningCore {
 
     _cleanOldDrafts() {
         const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
-        const keys = [];
+        const entries = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
-                keys.push(key);
+                let ts = 0;
+                try {
+                    const parsed = JSON.parse(localStorage.getItem(key));
+                    ts = (parsed && parsed.timestamp) ? parsed.timestamp : 0;
+                } catch (e) { }
+                entries.push({ key, ts });
             }
         }
-        if (keys.length > 10) {
-            keys.sort();
-            const toRemove = keys.slice(0, keys.length - 10);
-            toRemove.forEach(k => {
+        if (entries.length > 10) {
+            entries.sort((a, b) => a.ts - b.ts); // oldest (by actual save time) first
+            const toRemove = entries.slice(0, entries.length - 10);
+            toRemove.forEach(({ key: k }) => {
                 localStorage.removeItem(k);
                 console.log('[Cleanup] Removed old draft/highlight:', k);
             });
-            console.log(`[Cleanup] Freed ${toRemove.length} old item(s), kept ${Math.min(keys.length, 10)} recent.`);
+            console.log(`[Cleanup] Freed ${toRemove.length} old item(s), kept ${Math.min(entries.length, 10)} recent.`);
         }
     }
 
@@ -2721,16 +2738,28 @@ class HighlightManager {
         if (!this.selectedRange) { this.hideContextMenu(); return; }
         try {
             const range = this.selectedRange.cloneRange();
-            const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
-                acceptNode: (node) => {
-                    if (node.classList && (node.classList.contains('highlight-yellow') || node.classList.contains('highlight-green') || node.classList.contains('highlight-pink')))
-                        return NodeFilter.FILTER_ACCEPT;
-                    return NodeFilter.FILTER_SKIP;
-                }
-            });
+            const isHighlightEl = (el) => el && el.classList && (el.classList.contains('highlight-yellow') || el.classList.contains('highlight-green') || el.classList.contains('highlight-pink'));
+
+            let container = range.commonAncestorContainer;
+            if (container.nodeType === Node.TEXT_NODE) container = container.parentNode;
+            const closestHighlight = container.closest ? container.closest('.highlight-yellow, .highlight-green, .highlight-pink') : null;
+            const walkRoot = closestHighlight || container;
+
             const toRemove = [];
+            if (closestHighlight) toRemove.push(closestHighlight);
+
+            const walker = document.createTreeWalker(walkRoot, NodeFilter.SHOW_ELEMENT, {
+                acceptNode: (node) => isHighlightEl(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP
+            });
             let node;
-            while (node = walker.nextNode()) if (range.intersectsNode(node)) toRemove.push(node);
+            while (node = walker.nextNode()) if (range.intersectsNode(node) && !toRemove.includes(node)) toRemove.push(node);
+
+            [range.startContainer, range.endContainer].forEach(n => {
+                const el = n.nodeType === Node.TEXT_NODE ? n.parentElement : n;
+                const hl = el && el.closest ? el.closest('.highlight-yellow, .highlight-green, .highlight-pink') : null;
+                if (hl && !toRemove.includes(hl)) toRemove.push(hl);
+            });
+
             toRemove.forEach(span => {
                 const parent = span.parentNode;
                 while (span.firstChild) parent.insertBefore(span.firstChild, span);
@@ -3206,23 +3235,10 @@ class UIManager {
 
         // Đăng ký hàm dọn dẹp toàn cục (cross-module: pet & ket, reading & listening)
         window.__petKetCleanStorage = () => {
-            const prefixes = ['pet_reading_book', 'pet_listening_book', 'ket_reading_book', 'ket_listening_book'];
-            const keys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && prefixes.some(p => key.startsWith(p)) && (key.endsWith('_draft') || key.endsWith('_highlights'))) {
-                    keys.push(key);
-                }
-            }
-            keys.sort();
-            // Giữ lại 10 mục mới nhất, xóa phần còn lại
-            const toRemove = keys.length > 10 ? keys.slice(0, keys.length - 10) : [];
-            toRemove.forEach(k => {
-                localStorage.removeItem(k);
-                console.log('[Auto-Clean] Removed:', k);
-            });
-            console.log(`[Auto-Clean] Cleaned ${toRemove.length} item(s). Kept ${Math.min(keys.length, 10)} recent draft(s).`);
-            return toRemove.length;
+            // Đã tắt tính năng tự động xóa draft/highlight cũ để tránh mất ghi chú/bài làm của học viên.
+            // Nếu bộ nhớ trình duyệt đầy, giải pháp là chuyển sang chế độ Cloud-Only (nút "Chuyển sang Cloud").
+            console.log('[Auto-Clean] Đã tắt: không xóa dữ liệu tự động. Hãy dùng Cloud-Only nếu bộ nhớ đầy.');
+            return 0;
         };
 
         this.updateStorageIndicator();
@@ -3350,32 +3366,13 @@ class UIManager {
                 warningEl.id = 'storageWarningMsg';
                 warningEl.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: white; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.45); z-index: 10000; font-family: sans-serif; font-size: 14px; text-align: center; border: 2px solid #ff5252; animation: storageSlideUp 0.4s ease; min-width: 340px;';
                 warningEl.innerHTML = `
-                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Draft và highlight cũ sẽ bị mất nếu không dọn dẹp.</span></div>
+                    <div style="margin-bottom: 12px; font-weight: bold; font-size: 15px;">⚠️ Bộ nhớ trình duyệt sắp đầy!<br><span style="font-weight:normal;font-size:13px;">Ghi chú và bài làm của bạn không bị xóa tự động. Hãy chuyển sang Cloud để lưu an toàn hơn.</span></div>
                     <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                        <button id="storageAutoCleanBtn" style="background: #fff176; border: none; color: #5d4037; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">🧹 Tự dọn dẹp</button>
                         <button id="storageCloudBtn" style="background: #0d9488; border: none; color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 13px;">☁️ Chuyển sang Cloud</button>
                         <button onclick="document.getElementById('storageWarningMsg')?.remove()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); color: white; padding: 7px 18px; cursor: pointer; border-radius: 5px; font-size: 13px;">Đã hiểu</button>
                     </div>
                 `;
                 document.body.appendChild(warningEl);
-
-                // Gắn sự kiện nút Tự dọn dẹp
-                const cleanBtn = document.getElementById('storageAutoCleanBtn');
-                if (cleanBtn) {
-                    cleanBtn.addEventListener('click', () => {
-                        const removed = window.__petKetCleanStorage?.() ?? 0;
-                        document.getElementById('storageWarningMsg')?.remove();
-                        this.updateStorageIndicator();
-                        // Toast xác nhận
-                        const toast = document.createElement('div');
-                        toast.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1b5e20; color: white; padding: 10px 22px; border-radius: 8px; z-index: 10000; font-family: sans-serif; font-size: 14px; box-shadow: 0 3px 12px rgba(0,0,0,0.3); animation: storageSlideUp 0.4s ease;';
-                        toast.textContent = removed > 0
-                            ? `✅ Đã dọn ${removed} file cũ. Bộ nhớ được giải phóng!`
-                            : `ℹ️ Không có file cũ nào cần dọn.`;
-                        document.body.appendChild(toast);
-                        setTimeout(() => toast.remove(), 3500);
-                    });
-                }
 
                 // Gắn sự kiện nút Chuyển sang Cloud
                 const cloudBtn = document.getElementById('storageCloudBtn');
@@ -3420,28 +3417,14 @@ class UIManager {
             <div style="background: white; padding: 28px; border-radius: 16px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
                 <div style="font-size: 42px; margin-bottom: 12px;">💾</div>
                 <h3 style="margin: 0 0 12px; font-size: 20px; color: #1f2937;">Bộ nhớ đã đầy!</h3>
-                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Bạn có thể dọn dẹp hoặc chuyển sang chế độ Cloud-Only.</p>
+                <p style="margin: 0 0 20px; font-size: 14px; color: #4b5563; line-height: 1.5;">Không thể lưu dữ liệu. Ghi chú/bài làm cũ sẽ không bị xóa tự động — hãy chuyển sang chế độ Cloud-Only để tiếp tục lưu.</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button id="quotaCleanBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Tự dọn dẹp và thử lại</button>
                     <button id="quotaCloudBtn" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
                     <button id="quotaCancelBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Hủy</button>
                 </div>
             </div>
         `;
         document.body.appendChild(overlay);
-        document.getElementById('quotaCleanBtn').addEventListener('click', () => {
-            const removed = window.__petKetCleanStorage?.() ?? 0;
-            overlay.remove();
-            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
-            if (this._pendingQuotaKey) {
-                try {
-                    localStorage.setItem(this._pendingQuotaKey, this._pendingQuotaValue);
-                    this._showStorageToast('✅ Đã lưu thành công!');
-                } catch (e) {
-                    this._showCriticalStorageError();
-                }
-            }
-        });
         document.getElementById('quotaCloudBtn').addEventListener('click', () => {
             overlay.remove();
             this._showCloudOnlyActivateModal();
@@ -3506,7 +3489,6 @@ class UIManager {
                 <p style="margin: 0 0 16px; font-size: 13px; color: #6b7280;">Đang dùng: <strong>${usedMB} MB</strong> (Hybrid Mode)</p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button id="hmmActivateCloudBtn" style="background: #0d9488; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">☁️ Chuyển sang Cloud-Only</button>
-                    <button id="hmmCleanNowBtn" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">🧹 Dọn bản nháp cũ ngay</button>
                     <button id="hmmCloseBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Đóng</button>
                 </div>
             </div>
@@ -3515,12 +3497,6 @@ class UIManager {
         document.getElementById('hmmActivateCloudBtn').addEventListener('click', async () => {
             overlay.remove();
             await this._activateCloudOnly();
-        });
-        document.getElementById('hmmCleanNowBtn').addEventListener('click', () => {
-            const removed = window.__petKetCleanStorage?.() ?? 0;
-            overlay.remove();
-            this._showStorageToast(removed > 0 ? `✅ Đã dọn ${removed} file cũ` : 'ℹ️ Không có file cũ');
-            this.updateStorageIndicator();
         });
         document.getElementById('hmmCloseBtn').addEventListener('click', () => {
             overlay.remove();
