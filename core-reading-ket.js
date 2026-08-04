@@ -2033,11 +2033,18 @@ class ReadingCore {
             };
             container.addEventListener('input', this._boundInputHandler);
 
+            const questionRange = this.getQuestionRange();
             container.querySelectorAll('.gap-input').forEach(inp => {
                 if (this.examSubmitted) {
                     inp.disabled = true;
+                    const qNum = parseInt(inp.dataset.q);
+                    // Bỏ qua ô câu mẫu (không có data-q hợp lệ hoặc nằm ngoài khoảng câu hỏi hiện tại)
+                    if (isNaN(qNum) || qNum < questionRange.start || qNum > questionRange.end) {
+                        return;
+                    }
                     const val = inp.value.trim();
-                    const correct = this.isAnswerCorrect(parseInt(inp.dataset.q), val);
+                    const correct = this.isAnswerCorrect(qNum, val);
+                    inp.classList.remove('correct', 'incorrect');
                     inp.classList.add(correct ? 'correct' : 'incorrect');
                 }
             });
