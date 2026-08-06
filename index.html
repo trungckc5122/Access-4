@@ -3125,7 +3125,10 @@
           if (queue.length === 0) return;
           const batch = queue.splice(0, batchSize);
           await Promise.all(batch.map(async (link) => {
-            const cacheKey = `broken_link_${link.href}`;
+            // Dùng CHỈ TÊN FILE làm key (khớp với isLinkBroken() ở Smart Search),
+            // trước đây dùng link.href (URL đầy đủ) nên 2 nơi không bao giờ khớp nhau.
+            const filename = decodeURIComponent((link.getAttribute('href') || '').split('/').pop());
+            const cacheKey = `broken_link_${filename}`;
             const cached = sessionStorage.getItem(cacheKey);
             if (cached === 'broken') { link.classList.add('broken-link'); return; }
             if (cached === 'ok') return;
@@ -3731,12 +3734,6 @@
               }
             }
           }
-          // Kiểm tra URL có broken không (qua sessionStorage cache từ checkBrokenLinks)
-          function isLinkBroken(url) {
-            const cacheKey = `broken_link_${url}`;
-            return sessionStorage.getItem(cacheKey) === 'broken';
-          }
-
           // Kiểm tra broken link cho các cấp độ: đầy đủ (Part), Test (chưa có Part), Book (chưa có Test)
           function hasAnyValidPart(suggestion, maxParts) {
             let match = suggestion.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)/i);
@@ -3747,7 +3744,7 @@
             let test = match[4];
             for (let p = 1; p <= maxParts; p++) {
               let url = `${prefix}-${exam}${book}-test${test}-part${p}.html`;
-              if (existingLinks.has(url) && !isLinkBroken(url)) {
+              if (existingLinks.has(url)) {
                 return true;
               }
             }
@@ -3758,14 +3755,14 @@
             let acc3Match = s.match(/ACCESS\s*3\s+MODULE\s+(\d+)\s+([ABC])/i);
             if (acc3Match) {
               let url = `Access 3-${acc3Match[1]}${acc3Match[2].toLowerCase()}.html`;
-              return existingLinks.has(url) && !isLinkBroken(url);
+              return existingLinks.has(url);
             }
             let match = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)\s+PART\s+(\d)/i);
             if (match) {
               let prefix = match[1].toLowerCase().startsWith('r') ? 'read' : 'lis';
               let exam = match[2].toLowerCase();
               let url = `${prefix}-${exam}${match[3]}-test${match[4]}-part${match[5]}.html`;
-              return existingLinks.has(url) && !isLinkBroken(url);
+              return existingLinks.has(url);
             }
             let testMatch = s.match(/(READING|LISTENING)\s+(PET|KET)\s+(\d)\s+TEST\s+(\d)$/i);
             if (testMatch) {
@@ -3801,7 +3798,7 @@
                   else return true;
                 }
               }
-              return url ? (existingLinks.has(url) && !isLinkBroken(url)) : true;
+              return url ? (existingLinks.has(url)) : true;
             }
             return true;
           });
@@ -3947,9 +3944,8 @@
             }
           }
           // Kiểm tra link tồn tại và không bị broken
-          const isBroken = selectedUrl && sessionStorage.getItem(`broken_link_${selectedUrl}`) === 'broken';
           const filename = selectedUrl ? selectedUrl.split('/').pop() : '';
-          if (selectedUrl && existingLinks.has(filename) && !isBroken) goBtn.classList.add('active');
+          if (selectedUrl && existingLinks.has(filename)) goBtn.classList.add('active');
           else { selectedUrl = ''; goBtn.classList.remove('active'); }
         }
         input.addEventListener('input', (e) => updateSuggestions(e.inputType?.includes('delete')));
