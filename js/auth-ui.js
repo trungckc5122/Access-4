@@ -12,6 +12,17 @@ export class AuthUI {
 
   async init(options = { injectButton: true }) {
     window._authUI = this;
+
+    // ── AUTH READY GATE ────────────────────────────────────
+    // Promise được resolve khi trạng thái đăng nhập (session) đã được xác nhận
+    // ổn định (kể cả xử lý sync/migrate ban đầu nếu có). CloudStorage.save()
+    // sẽ đợi promise này trước khi quyết định "guest hay đã đăng nhập", để
+    // tránh đụng độ lúc trang vừa load xong và người dùng bấm chọn đáp án
+    // ngay trong lúc session Supabase chưa kịp khôi phục xong (dẫn tới việc
+    // bị hiểu nhầm là "guest vừa sửa dữ liệu" và bật modal xác nhận đồng bộ
+    // dù chưa từng đăng xuất/offline).
+    let _resolveAuthReady;
+    window._authReady = new Promise((resolve) => { _resolveAuthReady = resolve; });
     window.togglePasswordVisibility = function(inputId, btn) {
       const input = document.getElementById(inputId);
       if (!input) return;
@@ -53,9 +64,16 @@ export class AuthUI {
       if (event === 'SIGNED_OUT') this.onSignedOut();
     });
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user && localStorage.getItem('_user_signed_out') !== '1') {
-      this.onSignedIn(session.user);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && localStorage.getItem('_user_signed_out') !== '1') {
+        // Đợi onSignedIn (bao gồm handleAuthSync) chạy xong trước khi mở cổng,
+        // để CloudStorage.save() chỉ chạy sau khi owner/dirty flags đã ổn định.
+        await this.onSignedIn(session.user);
+      }
+    } finally {
+      // Luôn mở cổng dù có lỗi, tránh việc lưu bài bị treo vĩnh viễn.
+      _resolveAuthReady();
     }
   }
 

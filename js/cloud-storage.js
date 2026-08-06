@@ -7,10 +7,28 @@ export class CloudStorage {
   // SAVE PROGRESS (draft hoặc completed)
   // Gọi thay cho: localStorage.setItem(key, JSON.stringify(data))
   // ─────────────────────────────────────────────
-  static async save(localStorageKey, data) {
+  // _skipAuthGate = true khi được gọi từ chính nội bộ luồng xử lý auth
+  // (migrateLocalStorageToCloud / syncCloudToLocal bên trong handleAuthSync),
+  // để tránh việc save() tự đợi cổng _authReady mà chính luồng đó đang giữ.
+  static async save(localStorageKey, data, _skipAuthGate = false) {
     // 1. Chỉ ghi localStorage khi KHÔNG phải Cloud-Only mode
     if (localStorage.getItem('_storage_mode') !== 'cloud_only') {
       try { localStorage.setItem(localStorageKey, JSON.stringify(data)); } catch { }
+    }
+
+    // ── ĐỢI AUTH READY GATE ────────────────────────────────────
+    // Nếu auth-ui.js đang trong quá trình khôi phục session (vd. người dùng
+    // vừa load trang / chuyển part và bấm chọn đáp án ngay lập tức), đợi
+    // cho tới khi trạng thái đăng nhập được xác nhận ổn định trước khi
+    // quyết định "guest hay đã đăng nhập" bên dưới. Có timeout fallback để
+    // không bao giờ treo vĩnh viễn nếu auth-ui chưa được load / gặp lỗi.
+    if (!_skipAuthGate && window._authReady) {
+      try {
+        await Promise.race([
+          window._authReady,
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      } catch { }
     }
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
@@ -423,7 +441,7 @@ export class CloudStorage {
     for (const key of keysToMigrate) {
       try {
         const value = localStorage.getItem(key);
-        await CloudStorage.save(key, JSON.parse(value));
+        await CloudStorage.save(key, JSON.parse(value), true);
         migrated++;
       } catch { }
     }
@@ -523,7 +541,7 @@ export class CloudStorage {
               const raw = localStorage.getItem(localKey);
               const parsed = JSON.parse(raw);
               console.log('[CloudStorage] Uploading offline data:', localKey);
-              uploadPromises.push(CloudStorage.save(localKey, parsed));
+              uploadPromises.push(CloudStorage.save(localKey, parsed, true));
             } catch { }
           }
         }
@@ -622,7 +640,7 @@ export class CloudStorage {
             synced++;
           } else if (localTimestamp > cloudTimestamp) {
             // Local mới hơn (vừa làm xong offline) → Đẩy lên cloud
-            CloudStorage.save(baseKey, localData);
+            CloudStorage.save(baseKey, localData, true);
             console.log('[CloudStorage] Local newer than cloud, pushed up:', baseKey);
           }
         }
@@ -641,7 +659,7 @@ export class CloudStorage {
             synced++;
           } else if (localDraftTimestamp > cloudDraftTimestamp) {
             // Local mới hơn → Đẩy lên
-            CloudStorage.save(draftKey, localDraftData);
+            CloudStorage.save(draftKey, localDraftData, true);
             console.log('[CloudStorage] Local draft newer than cloud, pushed up:', draftKey);
           }
         }
@@ -659,7 +677,7 @@ export class CloudStorage {
             localStorage.setItem(highlightKey, JSON.stringify(row.highlights));
             synced++;
           } else if (localHighlightTimestamp > cloudHighlightTimestamp) {
-            CloudStorage.save(highlightKey, JSON.parse(localHighlight));
+            CloudStorage.save(highlightKey, JSON.parse(localHighlight), true);
           }
         }
 
@@ -676,7 +694,7 @@ export class CloudStorage {
             localStorage.setItem(noteKey, row.note);
             synced++;
           } else if (localNoteTimestamp > cloudNoteTimestamp) {
-            CloudStorage.save(noteKey, JSON.parse(localNote));
+            CloudStorage.save(noteKey, JSON.parse(localNote), true);
           }
         }
       });
