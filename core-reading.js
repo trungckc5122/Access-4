@@ -43,6 +43,61 @@
 
 
 /**
+ * XSS PROTECTION - DOMPurify loader & sanitize helper
+ * Chỉ cho phép các thẻ/thuộc tính cần thiết cho highlight và reading content.
+ * Transcript là hardcoded nên không cần sanitize, nhưng tất cả
+ * dữ liệu từ localStorage/cloud đều phải đi qua _sanitizeHTML().
+ */
+(function () {
+    if (!document.getElementById('_dompurify_script')) {
+        const s = document.createElement('script');
+        s.id = '_dompurify_script';
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js';
+        s.integrity = 'sha512-H+rglffZ6f5gF7UJgvH4Naa+fGCgjrHKMgoFOGmcPTRwR6oILo5R+gtzNrpDp7iMV3udbymBVjkeZGNz1Em6A==';
+        s.crossOrigin = 'anonymous';
+        document.head.appendChild(s);
+    }
+})();
+
+/**
+ * Sanitize HTML trước khi gán vào DOM (dùng cho dữ liệu từ localStorage/cloud).
+ * Giữ nguyên các thẻ cần thiết cho highlight, reading content và fill-blank inputs.
+ * Nếu DOMPurify chưa load thì fallback về strip script/event attributes bằng regex.
+ * @param {string} html
+ * @returns {string}
+ */
+function _sanitizeHTML(html) {
+    if (!html) return '';
+    if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: [
+                'span', 'div', 'p', 'br', 'strong', 'em', 'b', 'i', 'u',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'ul', 'ol', 'li', 'blockquote', 'mark',
+                'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                'input', 'select', 'option', 'textarea', 'label',
+                'img', 'a'
+            ],
+            ALLOWED_ATTR: [
+                'class', 'id', 'style',
+                'data-note', 'data-note-group', 'data-q', 'data-index',
+                'type', 'name', 'value', 'checked', 'selected', 'disabled',
+                'placeholder', 'rows', 'cols', 'maxlength',
+                'href', 'src', 'alt', 'title',
+                'for', 'tabindex'
+            ],
+            FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit']
+        });
+    }
+    // Fallback: strip script tags và event handler attributes
+    return html
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+        .replace(/javascript:/gi, '');
+}
+
+/**
 
  * CORE READING ENGINE - PET B1 PRELIMINARY
 
@@ -2098,7 +2153,7 @@ class ReadingCore {
 
                         const inputValues = captureInputValues(container);
 
-                        container.innerHTML = item.html;
+                        container.innerHTML = _sanitizeHTML(item.html);
 
                         restoreInputValues(container, inputValues);
 
@@ -2126,7 +2181,7 @@ class ReadingCore {
 
                     const inputValues = captureInputValues(container);
 
-                    container.innerHTML = savedHtml;
+                    container.innerHTML = _sanitizeHTML(savedHtml);
 
                     restoreInputValues(container, inputValues);
 
@@ -2146,7 +2201,7 @@ class ReadingCore {
 
                 const inputValues = captureInputValues(container);
 
-                container.innerHTML = savedData;
+                container.innerHTML = _sanitizeHTML(savedData);
 
                 restoreInputValues(container, inputValues);
 
