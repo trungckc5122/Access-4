@@ -1007,6 +1007,15 @@ class ReadingCore {
         this.isLoadingDraft = true;
         this.currentTestData = testData;
         this.examSubmitted = false;
+        // Theo dõi xem người dùng đã tự gõ/chọn đáp án nào sau khi trang tương tác được
+        // chưa — dùng để tránh việc load lại draft sau cloud-sync (post-sync reload) ghi
+        // đè lên đáp án người dùng vừa mới gõ trong lúc chờ cloud đồng bộ xong.
+        this._userTypedSincePageLoad = false;
+        if (!this._draftInputWatcherAttached) {
+            this._draftInputWatcherAttached = true;
+            document.addEventListener('input', () => { if (!this.isLoadingDraft) this._userTypedSincePageLoad = true; }, true);
+            document.addEventListener('change', () => { if (!this.isLoadingDraft) this._userTypedSincePageLoad = true; }, true);
+        }
         this.explanationMode = false;
         this.currentSplit = false;
         this.flagsVisible = true;
@@ -1120,7 +1129,7 @@ class ReadingCore {
                     // việc áp dữ liệu mới vào form — phải F5 thêm 1 lần nữa mới thấy đúng.
                     // → Luôn load lại (áp lại vào form) khi đang ở cloud-only, bất kể hasDraft.
                     const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
-                    if (!hasDraft || isCloudOnly) {
+                    if (!hasDraft || (isCloudOnly && !this._userTypedSincePageLoad)) {
                         console.log('[Cloud] Post-sync: reloading draft to reflect latest cloud data...');
                         await this.loadDraft();
                     }

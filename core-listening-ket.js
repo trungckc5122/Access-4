@@ -1035,6 +1035,15 @@ class ListeningCore {
         this.isLoadingDraft = true; // Chặn lưu nháp đè dữ liệu trống khi đang load
         this.currentTestData = testData;
         this.examSubmitted = false;
+        // Theo doi xem nguoi dung da tu go/chon dap an nao sau khi trang tuong tac duoc
+        // chua - dung de tranh viec load lai draft sau cloud-sync (post-sync reload) ghi
+        // de len dap an nguoi dung vua moi go trong luc cho cloud dong bo xong.
+        this._userTypedSincePageLoad = false;
+        if (!this._draftInputWatcherAttached) {
+            this._draftInputWatcherAttached = true;
+            document.addEventListener('input', () => { if (!this.isLoadingDraft) this._userTypedSincePageLoad = true; }, true);
+            document.addEventListener('change', () => { if (!this.isLoadingDraft) this._userTypedSincePageLoad = true; }, true);
+        }
         this.explanationMode = false;
 
         // Inject dummy inputs để browser đổ autofill vào đây thay vì ô câu hỏi
@@ -1134,7 +1143,7 @@ class ListeningCore {
                     // viec ap du lieu moi vao form - phai F5 them 1 lan nua moi thay dung.
                     // -> Luon load lai (ap lai vao form) khi dang o cloud-only, bat ke hasDraft.
                     const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
-                    if (!hasDraft || isCloudOnly) {
+                    if (!hasDraft || (isCloudOnly && !this._userTypedSincePageLoad)) {
                         console.log('[Cloud] Post-sync: reloading draft to reflect latest cloud data...');
                         await this.loadDraft();
                     }
