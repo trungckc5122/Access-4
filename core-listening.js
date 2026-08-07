@@ -1055,8 +1055,15 @@ class ListeningCore {
                     const draftKey = this.getStorageKey(true);
                     const localDraft = localStorage.getItem(draftKey);
                     const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                    if (!hasDraft) {
-                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    // O che do cloud-only, syncCloudToLocal() vua chay o tren CO THE da ghi de
+                    // key draft nay bang du lieu MOI tu cloud - nhung UI da render voi du lieu
+                    // CU tu lan loadDraft() dau tien (chay truoc khi CloudStorage ton tai).
+                    // Neu chi dua vao hasDraft de quyet dinh co load lai hay khong, se bo lo
+                    // viec ap du lieu moi vao form - phai F5 them 1 lan nua moi thay dung.
+                    // -> Luon load lai (ap lai vao form) khi dang o cloud-only, bat ke hasDraft.
+                    const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
+                    if (!hasDraft || isCloudOnly) {
+                        console.log('[Cloud] Post-sync: reloading draft to reflect latest cloud data...');
                         await this.loadDraft();
                     }
                 }

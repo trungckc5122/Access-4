@@ -1113,8 +1113,15 @@ class ReadingCore {
                     const draftKey = this.getStorageKey(true);
                     const localDraft = localStorage.getItem(draftKey);
                     const hasDraft = localDraft && this.draftHasAnswers(JSON.parse(localDraft));
-                    if (!hasDraft) {
-                        console.log('[Cloud] Post-sync: reloading draft from cloud...');
+                    // Ở chế độ cloud-only, syncCloudToLocal() vừa chạy ở trên CÓ THỂ đã ghi đè
+                    // key draft này bằng dữ liệu MỚI từ cloud — nhưng UI đã render với dữ liệu
+                    // CŨ từ lần loadDraft() đầu tiên (chạy trước khi CloudStorage tồn tại).
+                    // Nếu chỉ dựa vào hasDraft để quyết định có load lại hay không, ta sẽ bỏ lỡ
+                    // việc áp dữ liệu mới vào form — phải F5 thêm 1 lần nữa mới thấy đúng.
+                    // → Luôn load lại (áp lại vào form) khi đang ở cloud-only, bất kể hasDraft.
+                    const isCloudOnly = localStorage.getItem('_storage_mode') === 'cloud_only';
+                    if (!hasDraft || isCloudOnly) {
+                        console.log('[Cloud] Post-sync: reloading draft to reflect latest cloud data...');
                         await this.loadDraft();
                     }
                 }
