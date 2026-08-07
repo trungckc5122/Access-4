@@ -4,6 +4,22 @@ import { supabase, getCurrentUser, parseStorageKey } from './supabase-client.js'
 export class CloudStorage {
 
   // ─────────────────────────────────────────────
+  // Đọc user hiện tại, có retry 2 lần (500ms, 1500ms) nếu lần đầu null,
+  // để tránh nhầm "chưa đăng nhập" trong lúc session Supabase đang khôi
+  // phục lại sau F5 reload / mở tab mới.
+  // ─────────────────────────────────────────────
+  static async _resolveUserWithRetry() {
+    let user = await getCurrentUser();
+    if (user) return user;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    user = await getCurrentUser();
+    if (user) return user;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    user = await getCurrentUser();
+    return user;
+  }
+
+  // ─────────────────────────────────────────────
   // SAVE PROGRESS (draft hoặc completed)
   // Gọi thay cho: localStorage.setItem(key, JSON.stringify(data))
   // ─────────────────────────────────────────────
@@ -32,7 +48,13 @@ export class CloudStorage {
     }
 
     // 2. Nếu đã đăng nhập → sync lên Supabase
-    const user = await getCurrentUser();
+    // Xác nhận lại (retry) nếu lần đọc đầu trả về null: sau khi F5 reload,
+    // supabase-js đôi khi báo "chưa có session" trong một khoảnh khắc trước
+    // khi thật sự khôi phục xong session từ storage — nếu tin ngay kết quả
+    // null này, ta sẽ đánh dấu nhầm là "guest" dù người dùng vẫn đang đăng
+    // nhập, gây ra modal xác nhận đồng bộ giả. Đợi thêm 2 lần trước khi
+    // kết luận chắc chắn là chưa đăng nhập.
+    const user = await CloudStorage._resolveUserWithRetry();
     if (!user) {
       // Guest đang làm bài — đánh dấu owner là 'guest' nếu chưa có owner
       // hoặc nếu owner hiện tại là của một user đã logout (để tránh sync đè khi user cũ đăng nhập lại)
