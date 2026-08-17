@@ -793,6 +793,7 @@ class AnswerSheetManager {
         const range = this.core.getQuestionRange();
         let correctCount = 0;
         let rowsHtml = '';
+        const submitted = this.core.examSubmitted;
 
         for (let i = range.start; i <= range.end; i++) {
             const userAnswer = this.core.getUserAnswer(i);
@@ -803,11 +804,13 @@ class AnswerSheetManager {
 
             const rowClass = !userAnswer ? 'as-unanswered' : (isCorrect ? 'as-correct' : 'as-incorrect');
 
+            const eyeBtn = submitted ? `<span class="as-sheet-eye" data-question="${i}" style="cursor:pointer;display:inline-block;">👁️</span>` : '';
+
             rowsHtml += `
                 <tr class="${rowClass}">
                     <td>${i}</td>
                     <td class="as-user-answer">${this.resolveOptionText(i, userAnswer)}</td>
-                    <td class="as-correct-answer">${this.resolveOptionText(i, correctAnswer)}</td>
+                    <td class="as-correct-answer">${this.resolveOptionText(i, correctAnswer)}${eyeBtn}</td>
                 </tr>
             `;
         }
@@ -816,6 +819,15 @@ class AnswerSheetManager {
         const total = range.end - range.start + 1;
         const summaryEl = this.panel.querySelector('#answerSheetSummary');
         if (summaryEl) summaryEl.textContent = `${correctCount}/${total} đúng`;
+
+        this.tbody.querySelectorAll('.as-sheet-eye').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const qNum = parseInt(btn.dataset.question, 10);
+                this.core.scrollToQuestion(qNum);
+                this.core.showExplanation(qNum);
+            });
+        });
     }
 
     show() {
@@ -3805,9 +3817,9 @@ class ReadingCore {
 
         document.getElementById('submitBtn')?.addEventListener('click', () => this.handleSubmit());
 
-        document.getElementById('explainBtn')?.addEventListener('click', () => this.handleExplain());
-
         document.getElementById('resetBtn')?.addEventListener('click', () => this.handleReset());
+
+        document.getElementById('explainBtn')?.remove();
 
 
 
@@ -4511,13 +4523,11 @@ class ReadingCore {
 
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Xem đáp án'; submitBtn.classList.add('view-answers-mode'); }
 
-        const explainBtn = document.getElementById('explainBtn');
-
-        if (explainBtn) explainBtn.disabled = false;
-
 
 
         this.showResults();
+
+        this.handleExplain();
 
         const userAnswers = this.getUserAnswers();
 
@@ -4741,15 +4751,9 @@ class ReadingCore {
 
         this.explanationMode = true;
 
-        // Chỉ hiện eye-icon, ẩn tất cả badge đáp án
-
         document.querySelectorAll('.eye-icon').forEach(el => el.style.display = 'inline-block');
 
         document.querySelectorAll('.correct-answer-badge').forEach(el => el.style.display = 'none');
-
-        const explainBtn = document.getElementById('explainBtn');
-
-        if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Đang xem giải thích'; }
 
 
 
@@ -4761,7 +4765,6 @@ class ReadingCore {
 
                 const vals = this.getUserAnswers();
 
-                // Save highlights BEFORE re-rendering to prevent them being wiped
                 this.saveHighlightDraft();
 
                 this.renderSplitColumn();
@@ -4784,25 +4787,17 @@ class ReadingCore {
 
                         el.classList.remove('correct', 'incorrect');
 
-                        // Tô đỏ câu sai hoặc chưa điền, tô xanh câu đúng
-
                         el.classList.add(correct ? 'correct' : 'incorrect');
 
                     }
-
-                    // Không hiện badge ngay, chỉ tạo nhưng ẩn
 
                     this.addBadgeForQuestion(i);
 
                 }
 
-                // Ẩn tất cả badge, chỉ hiện eye-icon
-
                 document.querySelectorAll('.correct-answer-badge').forEach(badge => badge.style.display = 'none');
 
-                // Restore personal highlights AFTER restoring values (only affects readingContent, not leftCol)
                 this.loadHighlightDraft().then(() => {
-                    // Re-apply disabled/correct/incorrect after highlight restore may have reset DOM
                     const qr = this.getQuestionRange();
                     for (let j = qr.start; j <= qr.end; j++) {
                         const inp = document.getElementById(`q${j}`);
@@ -5327,10 +5322,6 @@ class ReadingCore {
         const submitBtn = document.getElementById('submitBtn');
 
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Nộp bài'; submitBtn.classList.remove('view-answers-mode'); }
-
-        const explainBtn = document.getElementById('explainBtn');
-
-        if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Xem giải thích'; }
 
         const explanationPanel = document.getElementById('explanationPanel');
 

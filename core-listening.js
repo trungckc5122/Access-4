@@ -1751,8 +1751,8 @@ class ListeningCore {
         document.addEventListener('input', this._boundInputHandler);
 
         document.getElementById('submitBtn')?.addEventListener('click', () => this.handleSubmit());
-        document.getElementById('explainBtn')?.addEventListener('click', () => this.handleExplain());
         document.getElementById('resetBtn')?.addEventListener('click', () => this.handleReset());
+        document.getElementById('explainBtn')?.remove();
 
         const logoEl = document.querySelector('.ielts-logo');
         if (logoEl) {
@@ -1985,10 +1985,9 @@ class ListeningCore {
 
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Xem đáp án'; submitBtn.classList.add('view-answers-mode'); }
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) explainBtn.disabled = false;
 
         this.showResults();
+        this.handleExplain();
         const userAnswers = this.getUserAnswers();
         this.storageManager.saveResults(this.currentTestData, userAnswers);
         // LƯU TRẠNG THÁI SUBMITTED
@@ -2090,11 +2089,8 @@ class ListeningCore {
     handleExplain() {
         if (!this.examSubmitted) return;
         this.explanationMode = true;
-        // Chỉ hiện eye-icon, ẩn tất cả badge đáp án
         document.querySelectorAll('.eye-icon').forEach(el => el.style.display = 'inline-block');
         document.querySelectorAll('.correct-answer-badge').forEach(el => el.style.display = 'none');
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Đang xem giải thích'; }
         const explanationPanel = document.getElementById('explanationPanel');
         if (explanationPanel) explanationPanel.classList.remove('show');
     }
@@ -2260,8 +2256,6 @@ class ListeningCore {
 
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Nộp bài'; submitBtn.classList.remove('view-answers-mode'); }
-        const explainBtn = document.getElementById('explainBtn');
-        if (explainBtn) { explainBtn.disabled = true; explainBtn.textContent = 'Xem giải thích'; }
         const explanationPanel = document.getElementById('explanationPanel');
         if (explanationPanel) explanationPanel.classList.remove('show');
         this.answerSheetManager?.hide();
