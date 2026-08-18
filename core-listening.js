@@ -571,6 +571,7 @@ class AnswerSheetManager {
         const range = this.core.getQuestionRange();
         let correctCount = 0;
         let rowsHtml = '';
+        const submitted = this.core.examSubmitted;
 
         for (let i = range.start; i <= range.end; i++) {
             const userAnswer = this.core.getUserAnswer(i);
@@ -581,11 +582,13 @@ class AnswerSheetManager {
 
             const rowClass = !userAnswer ? 'as-unanswered' : (isCorrect ? 'as-correct' : 'as-incorrect');
 
+            const eyeBtn = submitted ? `<span class="as-sheet-eye" data-question="${i}" style="cursor:pointer;display:inline-block;">👁️</span>` : '';
+
             rowsHtml += `
                 <tr class="${rowClass}">
                     <td>${i}</td>
                     <td class="as-user-answer">${this.resolveOptionText(i, userAnswer)}</td>
-                    <td class="as-correct-answer">${this.resolveOptionText(i, correctAnswer)}</td>
+                    <td class="as-correct-answer">${this.resolveOptionText(i, correctAnswer)}${eyeBtn}</td>
                 </tr>
             `;
         }
@@ -594,6 +597,16 @@ class AnswerSheetManager {
         const total = range.end - range.start + 1;
         const summaryEl = this.panel.querySelector('#answerSheetSummary');
         if (summaryEl) summaryEl.textContent = `${correctCount}/${total} đúng`;
+
+        // Gắn sự kiện cho các nút mắt
+        this.tbody.querySelectorAll('.as-sheet-eye').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const qNum = parseInt(btn.dataset.question, 10);
+                this.core.scrollToQuestion(qNum);
+                this.core.showExplanation(qNum);
+            });
+        });
     }
 
     show() {
