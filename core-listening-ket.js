@@ -1697,6 +1697,14 @@ class ListeningCore {
                     if (input) input.value = ans;
                 }
             }
+            // Sync chip gray state after restoring match-pairs answers
+            if (this.currentTestData.type === 'match-pairs') {
+                const container = document.getElementById('questionsContainer');
+                if (container) {
+                    this._syncChipStateFromInputs(container);
+                    this._syncSlotDraggability(container);
+                }
+            }
             this.updateAnswerCount();
             return true;
         } catch (e) {
@@ -1877,11 +1885,11 @@ class ListeningCore {
             <div class="ket-match-row" id="question-${p.num}">
                 <span class="ket-match-num">${p.num}</span>
                 <span class="ket-match-place">${p.label}</span>
-                <span class="ket-match-input-wrap">
+                <span class="ket-match-input-wrap ket-drop-zone" data-qnum="${p.num}">
                     <input type="text" id="q${p.num}" class="fill-input ket-match-input" 
                            maxlength="1" autocomplete="off" 
                            placeholder="" 
-                           title="Nhập một chữ cái (A–H)">
+                           title="Nhập hoặc kéo thả chữ cái (A–H)">
                 </span>
                 <span class="eye-icon" data-question="${p.num}">👁️</span>
             </div>`;
@@ -1892,13 +1900,13 @@ class ListeningCore {
         // Divider
         html += `<div class="ket-match-divider"></div>`;
 
-        // Right column: Things
+        // Right column: Things (draggable letter buttons)
         html += `<div class="ket-match-right">`;
         html += `<div class="ket-match-col-header">Things</div>`;
 
         things.forEach(t => {
             html += `<div class="ket-match-thing">
-                <span class="ket-match-letter">${t.letter}</span>
+                <span class="ket-match-letter ket-drag-chip" draggable="true" data-letter="${t.letter}" title="Kéo thả vào ô đáp án">${t.letter}</span>
                 <span class="ket-match-thing-label">${t.label}</span>
             </div>`;
         });
@@ -1908,11 +1916,207 @@ class ListeningCore {
 
         container.innerHTML = html;
 
-        // Uppercase enforcement + validation (A-H only)
+        // Uppercase enforcement + validation (A-H only) for typed input
         container.querySelectorAll('.ket-match-input').forEach(input => {
             input.addEventListener('input', () => {
-                input.value = input.value.toUpperCase().replace(/[^A-H]/g, '');
+                const val = input.value.toUpperCase().replace(/[^A-H]/g, '');
+                input.value = val;
+                // Sync chip state when user types manually
+                this._syncChipStateFromInputs(container);
             });
+        });
+
+        // Setup drag-and-drop
+        this.setupMatchPairsDragDrop(container);
+        // Init slot draggability (all empty at start)
+        this._syncSlotDraggability(container);
+    }
+
+    /**
+     * Setup drag-and-drop for Part 5 match-pairs.
+     * - Chips (A-H buttons) on the right are draggable.
+     * - Filled answer slots (left column) are also draggable — lets users swap answers.
+     * - Drop zones (input wrappers) on the left accept drops from both sources.
+     * - When a chip is placed, it grays out on the right.
+     * - Dropping on an occupied slot swaps/returns letters correctly.
+     */
+    setupMatchPairsDragDrop(container) {
+        // Track which slot is the current drag source (for slot→slot moves)
+        let sourceSlotInput = null;
+
+        // --- Drag start: from chip (right column) ---
+        container.addEventListener('dragstart', (e) => {
+            // Priority: check slot drag first, then chip
+            const zone = e.target.closest('.ket-drop-zone');
+            const chip = e.target.closest('.ket-drag-chip');
+
+            if (zone && !e.target.closest('.ket-drag-chip')) {
+                // Dragging from a filled answer slot
+                if (this.examSubmitted || zone.classList.contains('drop-zone-locked')) {
+                    e.preventDefault();
+                    return;
+                }
+                const input = zone.querySelector('.ket-match-input');
+                const val = input ? input.value.toUpperCase() : '';
+                if (!val) { e.preventDefault(); return; } // empty slot — nothing to drag
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', val);
+                e.dataTransfer.setData('text/x-source', 'slot');
+                sourceSlotInput = input;
+                zone.classList.add('dragging-slot');
+                return;
+            }
+
+            if (chip) {
+                // Dragging from a chip on the right column
+                if (this.examSubmitted || chip.classList.contains('chip-locked') || chip.classList.contains('chip-used')) {
+                    e.preventDefault();
+                    return;
+                }
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', chip.dataset.letter);
+                e.dataTransfer.setData('text/x-source', 'chip');
+                sourceSlotInput = null;
+                chip.classList.add('dragging');
+            }
+        });
+
+        container.addEventListener('dragend', (e) => {
+            const chip = e.target.closest('.ket-drag-chip');
+            if (chip) chip.classList.remove('dragging');
+            const zone = e.target.closest('.ket-drop-zone');
+            if (zone) zone.classList.remove('dragging-slot');
+
+            // Kéo từ slot ra ngoài (không drop vào đâu) → xóa ô, trả chip về
+            if (e.dataTransfer.dropEffect === 'none' && sourceSlotInput) {
+                const clearedLetter = sourceSlotInput.value.toUpperCase();
+                sourceSlotInput.value = '';
+                sourceSlotInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (clearedLetter) {
+                    const chip = container.querySelector(`.ket-drag-chip[data-letter="${clearedLetter}"]`);
+                    if (chip) {
+                        chip.classList.remove('chip-used');
+                        chip.setAttribute('draggable', 'true');
+                    }
+                }
+                this._syncChipStateFromInputs(container);
+                this._syncSlotDraggability(container);
+            }
+
+            sourceSlotInput = null;
+        });
+
+        // --- Drop zones ---
+        container.addEventListener('dragover', (e) => {
+            const zone = e.target.closest('.ket-drop-zone');
+            if (!zone || this.examSubmitted || zone.classList.contains('drop-zone-locked')) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            zone.classList.add('drag-over');
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            const zone = e.target.closest('.ket-drop-zone');
+            if (zone && !zone.contains(e.relatedTarget)) {
+                zone.classList.remove('drag-over');
+            }
+        });
+
+        container.addEventListener('drop', (e) => {
+            const zone = e.target.closest('.ket-drop-zone');
+            if (!zone) return;
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+
+            // Block drop if exam submitted or zone is locked
+            if (this.examSubmitted || zone.classList.contains('drop-zone-locked')) return;
+
+            const droppedLetter = e.dataTransfer.getData('text/plain');
+            const dragSource = e.dataTransfer.getData('text/x-source'); // 'chip' or 'slot'
+            if (!droppedLetter) return;
+
+            const destInput = zone.querySelector('.ket-match-input');
+            if (!destInput) return;
+
+            const destPrevLetter = destInput.value.toUpperCase();
+
+            if (dragSource === 'slot' && sourceSlotInput && sourceSlotInput !== destInput) {
+                // Slot → Slot: swap values
+                const srcPrevLetter = sourceSlotInput.value.toUpperCase();
+
+                // Move dest's old value back to source slot (swap)
+                sourceSlotInput.value = destPrevLetter;
+                sourceSlotInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+                destInput.value = srcPrevLetter;
+                destInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                // Chip → Slot (or same-slot drop, ignored)
+                if (destPrevLetter === droppedLetter) return; // dropped onto same value, nothing to do
+
+                // Restore the chip of the previous occupant
+                if (destPrevLetter) {
+                    const oldChip = container.querySelector(`.ket-drag-chip[data-letter="${destPrevLetter}"]`);
+                    if (oldChip) {
+                        oldChip.classList.remove('chip-used');
+                        oldChip.setAttribute('draggable', 'true');
+                    }
+                }
+
+                destInput.value = droppedLetter;
+                destInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // Gray out the dropped chip
+                const usedChip = container.querySelector(`.ket-drag-chip[data-letter="${droppedLetter}"]`);
+                if (usedChip) {
+                    usedChip.classList.add('chip-used');
+                    usedChip.setAttribute('draggable', 'false');
+                }
+            }
+
+            // Full chip sync to keep everything consistent
+            this._syncChipStateFromInputs(container);
+            // Update slot draggability
+            this._syncSlotDraggability(container);
+        });
+
+        // When user manually edits an input, re-sync chips and slot draggability
+        container.addEventListener('input', (e) => {
+            const input = e.target;
+            if (!input.classList.contains('ket-match-input')) return;
+            this._syncChipStateFromInputs(container);
+            this._syncSlotDraggability(container);
+        });
+    }
+
+    /** Make filled answer slots draggable, empty ones not draggable */
+    _syncSlotDraggability(container) {
+        container.querySelectorAll('.ket-drop-zone').forEach(zone => {
+            if (zone.classList.contains('drop-zone-locked')) return;
+            const input = zone.querySelector('.ket-match-input');
+            const haval = input && input.value.trim() !== '';
+            zone.setAttribute('draggable', haval ? 'true' : 'false');
+            zone.classList.toggle('slot-filled', haval);
+        });
+    }
+
+    /** Re-sync all chip gray states based on current input values */
+    _syncChipStateFromInputs(container) {
+        // First restore all chips
+        container.querySelectorAll('.ket-drag-chip').forEach(chip => {
+            chip.classList.remove('chip-used');
+            chip.setAttribute('draggable', 'true');
+        });
+        // Then gray out ones that are currently used
+        container.querySelectorAll('.ket-match-input').forEach(input => {
+            const val = input.value.toUpperCase();
+            if (val) {
+                const chip = container.querySelector(`.ket-drag-chip[data-letter="${val}"]`);
+                if (chip) {
+                    chip.classList.add('chip-used');
+                    chip.setAttribute('draggable', 'false');
+                }
+            }
         });
     }
 
@@ -2458,6 +2662,22 @@ class ListeningCore {
             }
         }
 
+        // Restore all drag chips when resetting match-pairs
+        if (this.currentTestData.type === 'match-pairs') {
+            const container = document.getElementById('questionsContainer');
+            if (container) {
+                container.querySelectorAll('.ket-drag-chip').forEach(chip => {
+                    chip.classList.remove('chip-used');
+                    chip.setAttribute('draggable', 'true');
+                });
+                // All slots are now empty — none should be draggable
+                container.querySelectorAll('.ket-drop-zone').forEach(zone => {
+                    zone.setAttribute('draggable', 'false');
+                    zone.classList.remove('slot-filled', 'drop-zone-locked');
+                });
+            }
+        }
+
         const mainArea = document.getElementById('mainArea');
         const transcriptContent = document.getElementById('transcriptContent');
         if (mainArea && transcriptContent) {
@@ -2551,6 +2771,15 @@ class ListeningCore {
             document.querySelectorAll('.fill-input').forEach(input => input.disabled = true);
         } else if (this.currentTestData.type === 'match-pairs') {
             document.querySelectorAll('.ket-match-input').forEach(input => input.disabled = true);
+            // Lock all drag chips — no dragging after submit
+            document.querySelectorAll('.ket-drag-chip').forEach(chip => {
+                chip.setAttribute('draggable', 'false');
+                chip.classList.add('chip-locked');
+            });
+            // Remove drop zone capability
+            document.querySelectorAll('.ket-drop-zone').forEach(zone => {
+                zone.classList.add('drop-zone-locked');
+            });
         }
     }
 
@@ -2584,6 +2813,14 @@ class ListeningCore {
                 const input = document.getElementById(`q${i}`);
                 if (input && submittedState.answers[i]) {
                     input.value = submittedState.answers[i];
+                }
+            }
+            // Sync chip gray state for match-pairs
+            if (this.currentTestData.type === 'match-pairs') {
+                const container = document.getElementById('questionsContainer');
+                if (container) {
+                    this._syncChipStateFromInputs(container);
+                    this._syncSlotDraggability(container);
                 }
             }
         }
