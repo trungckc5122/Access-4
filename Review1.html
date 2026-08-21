@@ -51,6 +51,7 @@
     <div class="exercise-card">
         <div class="exercise-title">Adjectives</div>
         <div class="instructions">3. Fill in: impatient, frustrated, reliable, confused, annoyed, honest, stubborn, sensitive.</div>
+        <div class="sticky-bank" id="bank-t4"></div>
         <div id="questions-t4"></div>
         <div class="controls-row">
             <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
@@ -350,35 +351,36 @@ function renderTask3() {
     const container = document.getElementById('questions-t3');
     container.innerHTML = t3_data.map((item, i) => {
         const qid = `t3-q${i}`;
-        const opts = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('');
-        return `<div class="question-row"><strong>${i+1}.</strong> ${item.q}<div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+        const opts = '<span class="option-container-inline" style="display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle;margin:2px 4px;">' +
+            item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('') +
+            '</span>';
+        const questionText = item.q.replace(/<span class='bold-option'>[^<]*<\/span>\s*\/\s*<span class='bold-option'>[^<]*<\/span>/, opts);
+        return `<div class="question-row"><strong>${i+1}.</strong> <span class="sentence-text">${questionText}</span><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
     }).join('');
 }
 
 function renderTask4() {
+    const t4_wordBank = ["impatient", "frustrated", "reliable", "confused", "annoyed", "honest", "stubborn", "sensitive"];
+    const bank = document.getElementById('bank-t4');
+    bank.innerHTML = t4_wordBank.map((w, i) => `<div class="word-item" id="t4-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('t4-word-${i}')">${w}</div>`).join('');
     const container = document.getElementById('questions-t4');
     container.innerHTML = t4_data.map((item, i) => {
         const qid = `t4-q${i}`;
         const parts = item.q.split('______');
-        return `<div class="question-row"><strong>${i+1}.</strong> ${parts[0]}<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)">${parts[1]}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+        return `<div class="question-row"><strong>${i+1}.</strong> ${parts[0]}<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)">${parts[1]}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
     }).join('');
+    addWordBankEventListeners('t4');
 }
 
 function renderTask5() {
     const container = document.getElementById('questions-t5');
-    const namedGaps = t5_data.map((gap, idx) => {
-        const qid = gap.id;
-        return `<span style="display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; position: relative;">
-            <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${gap.ans}" oninput="adjustWidth(this)">
-            <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" style="padding: 2px 5px; font-size: 14px;">👁️</button>
-            <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" style="width: 22px; height: 22px; line-height: 22px;">i</button>
-            <span class="hint-box" id="${qid}-hint" style="left: 0; top: 100%;">${gap.hint}</span>
-        </span>`;
-    });
+    const gap = (idx) => {
+        const qid = t5_data[idx].id;
+        const d = t5_data[idx];
+        return `<span style="display:inline-block;position:relative;vertical-align:middle;"><input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${d.ans}" oninput="adjustWidth(this)" style="vertical-align:middle;"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" style="padding:2px 5px;font-size:13px;vertical-align:middle;margin-left:2px;">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')" style="width:22px;height:22px;line-height:22px;vertical-align:middle;margin-left:2px;">i</button><div class="hint-box floating" id="${qid}-hint">${d.hint}</div></span>`;
+    };
 
-    container.innerHTML = `<div class="paragraph-exercise" style="line-height: 2.5; padding: 20px; background: rgba(var(--primary-color-rgb), 0.05); border-radius: 12px; border: 1px solid var(--border-color);">
-        <p>Lisa and Helen 1) ${namedGaps[0]} (live) in the city. However, today they 2) ${namedGaps[1]} (visit) their grandmother, Ms. Peterson, in her cottage. They 3) ${namedGaps[2]} (usually/not have) free time to visit her. But, today 4) ${namedGaps[3]} (be) a special day for Ms. Peterson because she 5) ${namedGaps[4]} (celebrate) her 75th birthday. They always 6) ${namedGaps[5]} (have) a great time together. They really 7) ${namedGaps[6]} (miss) their grandmother when they 8) ${namedGaps[7]} (be) in the city. The girls 9) ${namedGaps[8]} (think) of moving to the country, too. They 10) ${namedGaps[9]} (think) that people who 11) ${namedGaps[10]} (live) far from the city 12) ${namedGaps[11]} (have) a better quality of life.</p>
-    </div>`;
+    container.innerHTML = `<div class="paragraph-exercise" style="line-height:3;padding:20px;background:rgba(var(--primary-color-rgb),0.05);border-radius:12px;border:1px solid var(--border-color);overflow:visible;">Lisa and Helen 1) ${gap(0)} (live) in the city. However, today they 2) ${gap(1)} (visit) their grandmother, Ms. Peterson, in her cottage. They 3) ${gap(2)} (usually/not have) free time to visit her. But, today 4) ${gap(3)} (be) a special day for Ms. Peterson because she 5) ${gap(4)} (celebrate) her 75th birthday. They always 6) ${gap(5)} (have) a great time together. They really 7) ${gap(6)} (miss) their grandmother when they 8) ${gap(7)} (be) in the city. The girls 9) ${gap(8)} (think) of moving to the country, too. They 10) ${gap(9)} (think) that people who 11) ${gap(10)} (live) far from the city 12) ${gap(11)} (have) a better quality of life.</div>`;
 }
 
 function renderTask6() {
@@ -414,8 +416,22 @@ function renderTask9() {
     const container = document.getElementById('questions-t9');
     container.innerHTML = t9_data.map((item, i) => {
         const qid = `t9-q${i}`;
-        const opts = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('');
-        return `<div class="question-row"><strong>${i+1}.</strong> ${item.q}<div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+        const opts = '<span class="option-container-inline" style="display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle;margin:2px 4px;">' +
+            item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('') +
+            '</span>';
+        // Count gaps
+        const gapCount = (item.q.match(/\.\.\.\.\.\./g) || []).length;
+        let questionText;
+        if (gapCount > 1) {
+            // Multiple gaps: append options after sentence
+            questionText = item.q + ' ' + opts;
+        } else if (gapCount === 1) {
+            questionText = item.q.replace('......', opts);
+        } else {
+            // No gap marker - append options at end
+            questionText = item.q + ' ' + opts;
+        }
+        return `<div class="question-row"><strong>${i+1}.</strong> <span class="sentence-text">${questionText}</span><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
     }).join('');
 }
 
@@ -433,8 +449,11 @@ function renderTask11() {
     const container = document.getElementById('questions-t11');
     container.innerHTML = t11_data.map((item, i) => {
         const qid = `t11-q${i}`;
-        const opts = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('');
-        return `<div class="question-row"><strong>${i+1}.</strong> ${item.q}<div class="option-container">${opts}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+        const opts = '<span class="option-container-inline" style="display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle;margin:2px 4px;">' +
+            item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}', '${opt}')" id="${qid}-opt${j}">${opt}</button>`).join('') +
+            '</span>';
+        const questionText = item.q.replace(/<span class='bold-option'>[^<]*<\/span>\s*\/\s*<span class='bold-option'>[^<]*<\/span>/, opts);
+        return `<div class="question-row"><strong>${i+1}.</strong> <span class="sentence-text">${questionText}</span><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
     }).join('');
 }
 
@@ -459,7 +478,19 @@ function toggleHint(id) {
     let h = document.getElementById(id + '-hint');
     let info = document.getElementById(id + '-info');
     if (h) {
-        if (h.style.display === 'block') {
+        const isOpen = h.style.display === 'block';
+        // Nếu là floating hint, đóng tất cả floating hints khác trước
+        if (h.classList.contains('floating')) {
+            document.querySelectorAll('.hint-box.floating').forEach(fh => {
+                if (fh !== h) {
+                    fh.style.display = 'none';
+                    const otherId = fh.id.replace('-hint', '');
+                    const otherInfo = document.getElementById(otherId + '-info');
+                    if (otherInfo) otherInfo.classList.remove('active');
+                }
+            });
+        }
+        if (isOpen) {
             h.style.display = 'none';
             if (info) info.classList.remove('active');
         } else {
@@ -480,6 +511,34 @@ function toggleSingleAns(id) {
         });
         document.getElementById(id)?.classList.add('active');
         answerStates.set(`${qid}-state`, true);
+        return;
+    }
+    // Option-button tasks
+    const prefix = qid.split('-q')[0];
+    if (prefix === 't3' || prefix === 't9' || prefix === 't11') {
+        const data = prefix === 't3' ? t3_data : (prefix === 't9' ? t9_data : t11_data);
+        const idx = parseInt(qid.split('-q')[1]);
+        const item = data[idx];
+        if (!item) return;
+        const eye = document.getElementById(id);
+        const shown = answerStates.get(`${qid}-state`);
+        const btns = document.querySelectorAll(`[id^="${qid}-opt"]`);
+        if (shown) {
+            const sel = optionSelections.get(qid);
+            btns.forEach(btn => {
+                btn.classList.remove('correct-option', 'incorrect-option', 'selected');
+                if (sel && btn.textContent === sel) btn.classList.add('selected');
+            });
+            eye?.classList.remove('active');
+            answerStates.set(`${qid}-state`, false);
+        } else {
+            btns.forEach(btn => {
+                btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+                if (btn.textContent === item.ans) btn.classList.add('correct-option');
+            });
+            eye?.classList.add('active');
+            answerStates.set(`${qid}-state`, true);
+        }
         return;
     }
     const el = document.getElementById(qid);
@@ -576,9 +635,14 @@ function resetSection(prefix) {
         document.querySelectorAll(`#reading-questions-t10 .mcq-option`).forEach(opt => opt.classList.remove('selected', 'correct', 'incorrect'));
         readingSelections.clear();
     }
-    if (prefix === 't2' || prefix === 't7') {
+    if (prefix === 't2' || prefix === 't4' || prefix === 't7') {
         document.querySelectorAll(`#bank-${prefix} .word-item`).forEach(item => item.classList.remove('used'));
         if (wordUsageCount[prefix]) Object.keys(wordUsageCount[prefix]).forEach(w => wordUsageCount[prefix][w] = 0);
+    }
+    if (prefix === 't3' || prefix === 't9' || prefix === 't11') {
+        document.querySelectorAll(`[id^="${prefix}-q"][id$="-opt0"], [id^="${prefix}-q"][id$="-opt1"], [id^="${prefix}-q"][id$="-opt2"]`).forEach(btn => {
+            btn.classList.remove('selected', 'correct-option', 'incorrect-option');
+        });
     }
     optionSelections.forEach((val, key) => { if (key.startsWith(prefix + '-')) optionSelections.delete(key); });
 }
@@ -725,6 +789,19 @@ window.onload = () => {
     renderTask9(); renderTask10(); renderTask11(); renderTask12();
     initializeResizer();
     initHighlighting();
+    // Đóng floating hint khi click ra ngoài
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.info-btn') && !e.target.closest('.hint-box.floating')) {
+            document.querySelectorAll('.hint-box.floating').forEach(fh => {
+                if (fh.style.display === 'block') {
+                    fh.style.display = 'none';
+                    const otherId = fh.id.replace('-hint', '');
+                    const otherInfo = document.getElementById(otherId + '-info');
+                    if (otherInfo) otherInfo.classList.remove('active');
+                }
+            });
+        }
+    });
 };
 document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
 </script>
