@@ -3275,17 +3275,62 @@
         if (typeof window.scanExistingLinks === 'function') window.scanExistingLinks();
         if (typeof initStatusBadges === 'function') setTimeout(() => initStatusBadges(), 200);
       };
+
+      // Kiểm tra broken links chỉ khi người dùng chuyển tab (click), không clear cache khi focus lại
+      // Cache dùng localStorage với TTL 1 ngày để tránh quét lại không cần thiết
+      const BROKEN_LINK_TTL_MS = 24 * 60 * 60 * 1000; // 1 ngày
+      function getBrokenLinkCache(key) {
+        try {
+          const raw = localStorage.getItem('blc_' + key);
+          if (!raw) return null;
+          const { value, ts } = JSON.parse(raw);
+          if (Date.now() - ts > BROKEN_LINK_TTL_MS) { localStorage.removeItem('blc_' + key); return null; }
+          return value;
+        } catch { return null; }
+      }
+      function setBrokenLinkCache(key, value) {
+        try { localStorage.setItem('blc_' + key, JSON.stringify({ value, ts: Date.now() })); } catch { }
+      }
+      // Patch processBatchWithPriority để dùng localStorage TTL cache thay vì sessionStorage thuần
+      const _origProcess = window._processBatchWithPriorityPatched;
+      if (!_origProcess) {
+        window._processBatchWithPriorityPatched = true;
+        // Override cache check trong processBatchWithPriority bằng TTL cache
+        // (processBatchWithPriority vẫn dùng sessionStorage nội bộ nhưng ta bổ sung kiểm tra localStorage)
+        const _origFetch = window._brokenLinkFetchPatched;
+        if (!_origFetch) {
+          window._brokenLinkFetchPatched = true;
+          // Bổ sung: trước khi processBatch fetch, kiểm tra localStorage TTL cache
+          const _patchLink = (link) => {
+            const filename = decodeURIComponent((link.getAttribute('href') || '').split('/').pop());
+            const cached = getBrokenLinkCache(filename);
+            if (cached === 'broken') { link.classList.add('broken-link'); link.dataset.checked = 'true'; }
+            else if (cached === 'ok') { link.dataset.checked = 'true'; }
+          };
+          document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('main a').forEach(_patchLink);
+          });
+        }
+      }
       document.addEventListener('visibilitychange', async function () {
         if (!document.hidden) {
-          window.forceBrokenLinksRecheck();  // kiểm tra broken links như cũ
-          // Thêm: sync cloud trước khi cập nhật badge
+          // Khi tab được focus lại: KHÔNG xóa cache, chỉ quét link chưa được check
+          if (typeof checkBrokenLinks === 'function') checkBrokenLinks();
+          // Sync cloud và refresh badge
           if (window.CloudStorage && window._supabase) {
             try {
+              const sessionOk = await ensureValidSession();
+              if (!sessionOk) {
+                // Token hết hạn hoặc bị revoke — đăng xuất để tránh trạng thái giả
+                console.warn('[Auth] Session expired on visibility change, signing out');
+                await window._supabase.auth.signOut({ scope: 'local' });
+                return;
+              }
               const { data: { user } } = await window._supabase.auth.getUser();
               if (user) {
                 await window.CloudStorage.syncCloudToLocal();
                 if (typeof window.initStatusBadges === 'function') {
-                  window.initStatusBadges();
+                  window.initStatusBadges(true); // forceRefresh = true sau sync
                 }
               }
             } catch (e) { /* offline, bỏ qua */ }
@@ -3294,11 +3339,23 @@
       });
 
       // --- 3. Status badges & progress (cho cả PET và KET) ---
-      window.initStatusBadges = async function initStatusBadges() {
+      let _cachedProgressMap = null;
+      let _cachedProgressTs = 0;
+      const PROGRESS_CACHE_TTL = 2000; // 2 giây: tránh fetch cloud dồn dập khi nhiều event cùng lúc
+      window.initStatusBadges = async function initStatusBadges(forceRefresh = false) {
         // Lấy dữ liệu từ nguồn phù hợp (Cloud nếu có user, nếu không thì Local)
-        const progressMap = window.CloudStorage
-          ? await window.CloudStorage.getAllProgress()
-          : {};
+        // Dùng cache ngắn hạn để tránh gọi getAllProgress() nhiều lần trong cùng 1 burst event
+        const now = Date.now();
+        let progressMap;
+        if (!forceRefresh && _cachedProgressMap && (now - _cachedProgressTs) < PROGRESS_CACHE_TTL) {
+          progressMap = _cachedProgressMap;
+        } else {
+          progressMap = window.CloudStorage
+            ? await window.CloudStorage.getAllProgress()
+            : {};
+          _cachedProgressMap = progressMap;
+          _cachedProgressTs = now;
+        }
 
         // Xóa các badge cũ sau khi đã fetch xong dữ liệu (tránh race condition duplicate/xóa sạch)
         const badges = document.querySelectorAll('.status-badge, .score-badge');
@@ -4214,25 +4271,14 @@
         checkBrokenLinks();
         // Gọi ngay để load badges và resume banner khi trang vừa load
         syncAndRefreshBadges();
-        window.addEventListener('focus', async () => {
-          // Cloud-Only: không cần syncCloudToLocal, chỉ refresh badge từ cloud
-          if (typeof window.initStatusBadges === 'function') {
-            await window.initStatusBadges();
-          }
-          if (typeof window.initResumeButtons === 'function') {
-            window.initResumeButtons();
-          }
-        });
-        window.addEventListener('storage', async () => {
-          if (typeof window.initStatusBadges === 'function') {
-            await window.initStatusBadges();
-          }
-          if (typeof window.initResumeButtons === 'function') {
-            window.initResumeButtons();
-          }
-        });
+        // Dùng syncAndRefreshBadges (có debounce 500ms) thay vì gọi thẳng initStatusBadges
+        // để tránh nhiều tab cùng gọi API cloud dồn dập
+        window.addEventListener('focus', () => syncAndRefreshBadges());
+        window.addEventListener('storage', () => syncAndRefreshBadges());
 
         // ── Debounced sync + badge refresh ──────────────────────────────────────
+        // Mỗi tab có một ID ngẫu nhiên để bridge channel nhận diện và bỏ qua echo của chính mình
+        if (!window._appTabId) window._appTabId = Math.random().toString(36).slice(2);
         let _badgeRefreshTimer;
         async function syncAndRefreshBadges() {
           clearTimeout(_badgeRefreshTimer);
@@ -4250,30 +4296,40 @@
         window.syncAndRefreshBadges = syncAndRefreshBadges; // expose để dùng ở nơi khác
 
         // ── BroadcastChannel listeners ───────────────────────────────────────────
+        // Dùng một channel duy nhất để tránh trùng lặp listener khi mở nhiều tab index.
+        // Các engine (core-listening-ket.js, v.v.) vẫn gửi vào channel cũ →
+        // app_sync_channel đóng vai trò hub trung gian duy nhất phía index.
         try {
-          // PET: nộp bài / cập nhật trạng thái
-          const petUpdateCh = new BroadcastChannel('pet_update_channel');
-          petUpdateCh.onmessage = (e) => {
-            if (e.data.action === 'status_updated') syncAndRefreshBadges();
+          const appSyncCh = new BroadcastChannel('app_sync_channel');
+          appSyncCh.onmessage = (e) => {
+            const { action, _tabId } = e.data || {};
+            // Bỏ qua nếu là message tự mình gửi (tab id khớp)
+            if (_tabId && _tabId === window._appTabId) return;
+            if (
+              action === 'status_updated' ||
+              action === 'reset' ||
+              action === 'reset_full'
+            ) {
+              syncAndRefreshBadges();
+            }
           };
 
-          // KET: nộp bài / cập nhật trạng thái
-          const ketUpdateCh = new BroadcastChannel('ket_update_channel');
-          ketUpdateCh.onmessage = (e) => {
-            if (e.data.action === 'status_updated') syncAndRefreshBadges();
+          // Bridge: chuyển tiếp các channel cũ sang app_sync_channel
+          // để tương thích với các engine chưa được cập nhật
+          const _bridge = (chName) => {
+            const ch = new BroadcastChannel(chName);
+            ch.onmessage = (e) => {
+              try {
+                const bridgeCh = new BroadcastChannel('app_sync_channel');
+                bridgeCh.postMessage({ ...e.data, _source: chName });
+                bridgeCh.close();
+              } catch (_) { }
+            };
           };
-
-          // PET: reset bài
-          const petResetCh = new BroadcastChannel('pet_reset_channel');
-          petResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
-          };
-
-          // KET: reset bài
-          const ketResetCh = new BroadcastChannel('ket_reset_channel');
-          ketResetCh.onmessage = (e) => {
-            if (e.data.action === 'reset' || e.data.action === 'reset_full') syncAndRefreshBadges();
-          };
+          _bridge('pet_update_channel');
+          _bridge('ket_update_channel');
+          _bridge('pet_reset_channel');
+          _bridge('ket_reset_channel');
         } catch (e) { /* BroadcastChannel not supported */ }
       });
     })();
@@ -5356,14 +5412,11 @@
       window.skipWelcome = function () {
         localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
         document.getElementById('welcomeOverlay').classList.remove('show');
-        // Show widget (not icon) so user can continue onboarding
+        // Chỉ hiện widget, KHÔNG tự khởi động guided tour (intro.js)
+        // Tránh 3 tầng hướng dẫn chạy nối tiếp khi user bấm "Bỏ qua"
         isCollapsedToIcon = false;
         document.getElementById('helpButton').classList.add('hidden');
         document.getElementById('onboardingWidget').classList.add('show');
-        // When skipping welcoming during "xem lại tour", go to tour immediately
-        setTimeout(() => {
-          if (window.startGuidedTour) window.startGuidedTour();
-        }, 300);
       };
       window.goToOnboardingStep = function (index) {
         if (window.onboarding) window.onboarding.goToStep(index);
@@ -5659,6 +5712,20 @@
     import { AuthUI } from './js/auth-ui.js';
     import { CloudStorage } from './js/cloud-storage.js';
 
+    // ── Helper: kiểm tra session còn hợp lệ trước khi gọi CloudStorage ──
+    // Nếu token đã hết hạn và không tự refresh được → đăng xuất, tránh lỗi 401 silent
+    async function ensureValidSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) return false;
+        // Supabase tự refresh token khi còn < 60s → getSession() đã handle
+        return true;
+      } catch (e) {
+        console.warn('[Auth] Session check failed:', e);
+        return false;
+      }
+    }
+
     // ── Expose CloudStorage & supabase to window for non-module scripts ──
     window.CloudStorage = CloudStorage;
     window._supabase = supabase;
@@ -5836,11 +5903,12 @@
 
       const { data: cls, error } = await supabase
         .from('classes')
-        .select('id, name')
+        .select('id, name, is_active')
         .eq('join_code', joinCode.toUpperCase().trim())
         .single();
 
       if (error || !cls) { alert('❌ Mã lớp không đúng hoặc không tồn tại!'); return; }
+      if (cls.is_active === false) { alert('❌ Lớp học này đã đóng và không nhận thêm học sinh.'); return; }
 
       const { error: joinError } = await supabase
         .from('class_students')
