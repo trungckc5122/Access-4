@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tổng hợp Ghi chú - PET & KET</title>
+    <link rel="icon" type="image/svg+xml"
+      href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOSIgZmlsbD0iIzBkOTQ4OCIvPjxwYXRoIGQ9Ik02IDEwaDEydjNoLTQuNXYxMWgtM3YtMTFINnYtM3ptMTQgNnY4aC0zdi01YzAtMS41IDEtMi41IDIuNS0yLjVoMi41djNoLTJ6IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iMjYiIGN5PSI2IiByPSIzIiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         :root {
@@ -217,11 +219,14 @@
 
 <script>
 (function() {
-    const STORAGE_PATTERN = /^(pet|ket)_(reading|listening)_book(\d+)_test(\d+)_part(\d+)_note$/;
+    // Pattern cho listening notes (key kết thúc _note)
+    const NOTE_PATTERN = /^(pet|ket)_(reading|listening)_book(\d+)_test(\d+)_part(\d+)_note$/;
+    // Pattern cho reading highlights (key kết thúc _highlights)
+    const HIGHLIGHTS_PATTERN = /^(pet|ket)_(reading)_book(\d+)_test(\d+)_part(\d+)_highlights$/;
     let allNotes = [];
 
     function parseNoteKey(key) {
-        const match = key.match(STORAGE_PATTERN);
+        const match = key.match(NOTE_PATTERN);
         if (!match) return null;
         return {
             exam: match[1],
@@ -229,21 +234,91 @@
             book: parseInt(match[3]),
             test: parseInt(match[4]),
             part: parseInt(match[5]),
-            key: key
+            key: key,
+            type: 'note'
         };
+    }
+
+    // Trích xuất notes từ highlights: đọc data-note trên các span
+    function parseHighlightsKey(key) {
+        const match = key.match(HIGHLIGHTS_PATTERN);
+        if (!match) return [];
+        const meta = {
+            exam: match[1],
+            skill: match[2],
+            book: parseInt(match[3]),
+            test: parseInt(match[4]),
+            part: parseInt(match[5])
+        };
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return [];
+            const data = JSON.parse(raw);
+            const containers = data.containers || [];
+            const seenGroups = new Set();
+            const results = [];
+            containers.forEach(c => {
+                // Parse HTML để tìm span có data-note
+                const div = document.createElement('div');
+                div.innerHTML = c.html;
+                div.querySelectorAll('[data-note]').forEach(span => {
+                    const noteText = span.getAttribute('data-note');
+                    const group = span.getAttribute('data-note-group') || Math.random().toString();
+                    if (!noteText || seenGroups.has(group)) return;
+                    seenGroups.add(group);
+                    // Lấy toàn bộ text của các span cùng group (tránh bị cắt vụn)
+                    let highlighted = '';
+                    const siblings = div.querySelectorAll(`[data-note-group="${group}"]`);
+                    if (siblings.length > 0) {
+                        siblings.forEach(s => highlighted += s.textContent);
+                    } else {
+                        highlighted = span.textContent;
+                    }
+                    results.push({
+                        ...meta,
+                        // Hiển thị: "Đoạn highlight: ... | Ghi chú: ..."
+                        content: (highlighted.trim() ? '📌 ' + highlighted.trim() + '\n' : '') + noteText,
+                        key: key + '__group__' + group,
+                        type: 'highlight'
+                    });
+                });
+            });
+            return results;
+        } catch (e) { return []; }
+    }
+
+    // Trích nội dung text thuần từ listening note (JSON hoặc plain string)
+    function extractNoteText(raw) {
+        if (!raw) return '';
+        try {
+            const parsed = JSON.parse(raw);
+            // Dạng {text: "...", timestamp: ...}
+            if (parsed && typeof parsed.text === 'string') return parsed.text;
+            // Dạng string thuần
+            if (typeof parsed === 'string') return parsed;
+        } catch (e) { /* không phải JSON */ }
+        return raw;
     }
 
     function loadAllNotes() {
         allNotes = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            const parsed = parseNoteKey(key);
-            if (parsed) {
-                const content = localStorage.getItem(key);
-                if (content && content.trim().length > 0) {
-                    allNotes.push({ ...parsed, content });
+
+            // Listening / reading quick-note (key _note)
+            const parsedNote = parseNoteKey(key);
+            if (parsedNote) {
+                const raw = localStorage.getItem(key);
+                const text = extractNoteText(raw);
+                if (text.trim().length > 0) {
+                    allNotes.push({ ...parsedNote, content: text });
                 }
+                continue;
             }
+
+            // Reading highlights có data-note
+            const highlightNotes = parseHighlightsKey(key);
+            highlightNotes.forEach(n => allNotes.push(n));
         }
         // Sắp xếp mặc định: exam, book, test, part
         allNotes.sort((a,b) => {
@@ -266,19 +341,50 @@
             return;
         }
         emptyState.style.display = 'none';
+
+        // Gom các note cùng exam+skill+book+test+part thành 1 hàng
+        const groups = [];
+        const groupMap = {};
         notes.forEach(note => {
+            const gk = `${note.exam}|${note.skill}|${note.book}|${note.test}|${note.part}`;
+            if (!groupMap[gk]) {
+                groupMap[gk] = { meta: note, items: [] };
+                groups.push(groupMap[gk]);
+            }
+            groupMap[gk].items.push(note);
+        });
+
+        groups.forEach(({ meta, items }) => {
             const row = document.createElement('tr');
+
+            // Ghép nội dung, mỗi note cách nhau 1 dòng trống
+            const combinedContent = items.map(n => n.content).join('\n\n');
+
+            // Có ít nhất 1 note type=note → cho phép edit/xóa
+            const editableNote = items.find(n => n.type === 'note');
+            const hasHighlight = items.some(n => n.type === 'highlight');
+
+            let actions;
+            if (editableNote) {
+                actions = `<td class="actions">
+                    <button class="edit-btn" title="Sửa" onclick="startEdit(this, '${editableNote.key}')">✏️</button>
+                    <button class="delete-btn" title="Xóa" onclick="deleteNote('${editableNote.key}')">🗑️</button>
+                   </td>`;
+            } else {
+                actions = `<td class="actions"><span style="font-size:11px;color:var(--text-muted);">📖 Reading</span></td>`;
+            }
+
+            const cellClass = `note-cell${hasHighlight ? ' highlight-note' : ''}`;
+            const dataKey = editableNote ? editableNote.key : items[0].key;
+
             row.innerHTML = `
-                <td>${getExamLabel(note.exam)}</td>
-                <td>${getSkillLabel(note.skill)}</td>
-                <td>${note.exam.toUpperCase()} ${note.book}</td>
-                <td>Test ${note.test}</td>
-                <td>Part ${note.part}</td>
-                <td class="note-cell" data-key="${note.key}">${escapeHtml(note.content)}</td>
-                <td class="actions">
-                    <button class="edit-btn" title="Sửa" onclick="startEdit(this, '${note.key}')">✏️</button>
-                    <button class="delete-btn" title="Xóa" onclick="deleteNote('${note.key}')">🗑️</button>
-                </td>
+                <td>${getExamLabel(meta.exam)}</td>
+                <td>${getSkillLabel(meta.skill)}</td>
+                <td>${meta.exam.toUpperCase()} ${meta.book}</td>
+                <td>Test ${meta.test}</td>
+                <td>Part ${meta.part}</td>
+                <td class="${cellClass}" data-key="${dataKey}" style="white-space:pre-wrap;">${escapeHtml(combinedContent)}</td>
+                ${actions}
             `;
             tbody.appendChild(row);
         });
@@ -314,7 +420,7 @@
         // Nếu đã ở chế độ sửa thì không làm gì
         if (cell.classList.contains('editing')) return;
         
-        const original = localStorage.getItem(key) || '';
+        const original = extractNoteText(localStorage.getItem(key) || '');
         cell.classList.add('editing');
         cell.innerHTML = `<textarea>${escapeHtml(original)}</textarea>`;
         const textarea = cell.querySelector('textarea');
@@ -334,7 +440,20 @@
                     cell.innerHTML = escapeHtml(original);
                 }
             } else {
-                localStorage.setItem(key, newContent);
+                // Lưu lại đúng format JSON (để core-listening đọc được)
+                const existing = localStorage.getItem(key);
+                let saveValue;
+                try {
+                    const p = JSON.parse(existing);
+                    if (p && typeof p.text === 'string') {
+                        saveValue = JSON.stringify({ text: newContent, timestamp: p.timestamp || Date.now() });
+                    } else {
+                        saveValue = JSON.stringify({ text: newContent, timestamp: Date.now() });
+                    }
+                } catch(e) {
+                    saveValue = JSON.stringify({ text: newContent, timestamp: Date.now() });
+                }
+                localStorage.setItem(key, saveValue);
                 cell.innerHTML = escapeHtml(newContent);
                 showToast('Đã lưu ghi chú');
             }
