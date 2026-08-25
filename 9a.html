@@ -558,7 +558,6 @@
         let currentActiveIPA = null;
         let currentActiveHint = null;
         let answerStates = new Map();
-        let wordUsageCount = {};
 
         // Hàm phát âm từ vựng bằng Web Speech API
         function speakText(text) {
@@ -608,12 +607,7 @@
             const bankContainer = document.getElementById(`bank-${id}`);
             container.innerHTML = '';
             bankContainer.innerHTML = '';
-            wordUsageCount[id] = {};
-            wordBank.forEach(word => { wordUsageCount[id][word] = 0; });
-            wordBank.forEach((word, i) => {
-                const wordId = `${id}-word-${i}`;
-                bankContainer.innerHTML += `<div class="word-item" id="${wordId}" data-word="${word}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${wordId}')">${word.toLowerCase()}</div>`;
-            });
+            wordBank.forEach(word => { bankContainer.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${word.toLowerCase()}</div>`; });
             data.forEach((it, i) => {
                 const qid = `${id}-q${i}`;
                 let sentence = it.q;
@@ -621,17 +615,16 @@
                 const numberMatch = sentence.match(/^(\d+)\.\s+/);
                 if (numberMatch) { sentence = sentence.replace(/^\d+\.\s+/, ''); numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`; }
                 else { numberHtml = `<span class="exercise-number">${i + 1}</span>`; }
-                const parts = sentence.split('______');
-                container.innerHTML += `
-            <div class="question-row" id="${qid}-row">
-                ${numberHtml} ${parts[0]}
-                <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" data-word-bank-index="${it.wordBankIndex}" oninput="adjustWidth(this); updateWordBank('${id}')" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)" onclick="this.select()">
-                ${parts[1]}
-                <div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
-            </div>`;
+                const gapCount = (sentence.match(/_{2,}/g) || []).length;
+                let inputIndex = 0;
+                sentence = sentence.replace(/_{2,}/g, () => {
+                    const inputId = `${qid}-${inputIndex}`;
+                    inputIndex++;
+                    return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" data-ans="${it.ans}" oninput="adjustWidth(this); updateWordBank()" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()">`;
+                });
+                container.innerHTML += `<div class="question-row" id="${qid}-row">${numberHtml} ${sentence}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
             });
-            addWordBankEventListeners(id);
+            updateWordBank();
         }
 
         function renderReportedSpeech(id, data) {
@@ -681,6 +674,7 @@
             else if (el.classList.contains('grammar-input')) maxWidth = 500;
             else maxWidth = 300;
             el.style.width = Math.min(newWidth, maxWidth) + "px";
+            if (el.classList.contains('word-input')) updateWordBank();
         }
 
         function toggleHint(id, wordToSpeak = null) {
@@ -764,6 +758,28 @@
         }
 
         function showAnswers(prefix) {
+            if (prefix === 't2') {
+                document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+                    if (el.dataset.type === 'input' && !el.dataset.parent) {
+                        const stateKey = `${el.id}-state`; const ans = el.dataset.ans; const eyeBtn = document.getElementById(el.id + '-eye');
+                        if (ans) { const firstAns = ans.split('|')[0]; el.value = firstAns; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); if (eyeBtn) eyeBtn.classList.add('active'); answerStates.set(stateKey, true); }
+                    }
+                });
+                document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+                    if (el.dataset.type === 'input' && el.dataset.parent) {
+                        const parentId = el.dataset.parent;
+                        const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
+                        const answers = [];
+                        inputs.forEach(input => { if (input.dataset.ans) { const ansParts = input.dataset.ans.split('|'); answers[parseInt(input.dataset.gapIndex)] = ansParts[parseInt(input.dataset.gapIndex)] || ansParts[0]; } });
+                        inputs.forEach(input => { const idx = parseInt(input.dataset.gapIndex); if (answers[idx]) { input.value = answers[idx]; input.classList.add('correct'); input.classList.remove('incorrect-marked'); adjustWidth(input); } });
+                        const eyeBtn = document.getElementById(parentId + '-eye');
+                        if (eyeBtn) eyeBtn.classList.add('active');
+                        answerStates.set(`${parentId}-state`, true);
+                    }
+                });
+                updateWordBank();
+                return;
+            }
             document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
                 if (el.dataset.type === 'input') {
                     const ans = el.dataset.ans;
@@ -808,7 +824,7 @@
             if (prefix === 't2') {
                 const wordItems = document.querySelectorAll('#bank-t2 .word-item');
                 wordItems.forEach(item => { item.classList.remove('used'); item.style.display = 'flex'; });
-                if (wordUsageCount['t2']) Object.keys(wordUsageCount['t2']).forEach(word => { wordUsageCount['t2'][word] = 0; });
+                updateWordBank();
             }
         }
 
@@ -826,25 +842,15 @@
             });
         }
 
-        function addWordBankEventListeners(id) {
-            const wordItems = document.querySelectorAll(`#bank-${id} .word-item`);
-            const inputs = document.querySelectorAll(`#questions-${id} input.word-input`);
-            wordItems.forEach(item => {
-                item.addEventListener('click', function () { selectWordFromBank(this.id); });
-                item.addEventListener('dragstart', function (e) { dragWord(e); });
-            });
-            inputs.forEach(input => {
-                input.addEventListener('dragover', function (e) { allowDrop(e); });
-                input.addEventListener('drop', function (e) { dropWord(e, this.id); });
-            });
-        }
-        function dragWord(event) { event.dataTransfer.setData("text/plain", event.target.dataset.word); event.dataTransfer.setData("wordId", event.target.id); }
-        function allowDrop(event) { event.preventDefault(); }
-        function dropWord(event, inputId) { event.preventDefault(); const word = event.dataTransfer.getData("text/plain"); const input = document.getElementById(inputId); if (input) { input.value = word; adjustWidth(input); updateWordBankUsage(word, inputId.split('-')[0]); } }
-        function selectWordFromBank(wordId) { const wordItem = document.getElementById(wordId); if (!wordItem) return; const word = wordItem.dataset.word; const taskId = wordId.split('-word-')[0]; const inputs = document.querySelectorAll(`#questions-t${taskId} input.word-input`); let emptyInput = null; for (const input of inputs) { if (!input.value.trim()) { emptyInput = input; break; } } if (emptyInput) { emptyInput.value = word; adjustWidth(emptyInput); updateWordBankUsage(word, `t${taskId}`); } else { alert('All gaps are filled. You can click on a gap to replace its content.'); } }
-        function updateWordBankUsage(word, taskId) { if (!wordUsageCount[taskId]) wordUsageCount[taskId] = {}; if (!wordUsageCount[taskId][word]) wordUsageCount[taskId][word] = 0; const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`); let count = 0; inputs.forEach(input => { if (normalizeAnswer(input.value) === normalizeAnswer(word)) count++; }); wordUsageCount[taskId][word] = count; updateWordBankDisplay(taskId); }
-        function updateWordBankDisplay(taskId) { const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`); wordItems.forEach(item => { const word = item.dataset.word; const count = wordUsageCount[taskId][word] || 0; if (count > 0) item.classList.add('used'); else item.classList.remove('used'); }); }
-        function updateWordBank(taskId) { const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`); if (wordUsageCount[taskId]) Object.keys(wordUsageCount[taskId]).forEach(word => { wordUsageCount[taskId][word] = 0; }); inputs.forEach(input => { const word = input.value.trim(); if (word) { const wordItems = document.querySelectorAll(`#bank-${taskId} .word-item`); let foundWord = null; wordItems.forEach(item => { if (normalizeAnswer(item.dataset.word) === normalizeAnswer(word)) foundWord = item.dataset.word; }); if (foundWord && wordUsageCount[taskId][foundWord] !== undefined) wordUsageCount[taskId][foundWord]++; } }); updateWordBankDisplay(taskId); }
+        /* --- WORD BANK FUNCTIONS (pattern from 8b) --- */
+        let selectedWordEl = null;
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); selectedWordEl = ev.target; }
+        function drop(ev) { ev.preventDefault(); const data = ev.dataTransfer.getData("text"); if (ev.target.tagName === 'INPUT') { ev.target.value = data; adjustWidth(ev.target); updateWordBank(); } }
+        function clickSelect(el) { if (selectedWordEl) { selectedWordEl.style.background = "#eef2f7"; } selectedWordEl = el; el.style.background = "#ffeaa7"; }
+        document.addEventListener('click', (e) => { if (e.target.tagName === 'INPUT' && selectedWordEl) { e.target.value = selectedWordEl.innerText; adjustWidth(e.target); selectedWordEl.style.background = "#eef2f7"; selectedWordEl = null; updateWordBank(); } });
+        function updateWordBank() { const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value)); document.querySelectorAll('.word-item').forEach(item => { const word = item.innerText.toLowerCase().trim(); const usedCount = inputs.filter(v => v === word).length; if (usedCount >= 1) item.classList.add('used'); else item.classList.remove('used'); }); }
+        function toggleMultiGapAns(parentId, gapCount, answersStr) { const eyeBtn = document.getElementById(parentId + '-eye'); const stateKey = `${parentId}-state`; const isCurrentlyShown = answerStates.get(stateKey) || false; const answers = answersStr.split('|'); if (isCurrentlyShown) { for (let i = 0; i < gapCount; i++) { const el = document.getElementById(`${parentId}-${i}`); if (el) { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); } } if (eyeBtn) eyeBtn.classList.remove('active'); answerStates.set(stateKey, false); } else { for (let i = 0; i < gapCount; i++) { const el = document.getElementById(`${parentId}-${i}`); if (el && answers[i]) { el.value = answers[i]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); } } if (eyeBtn) eyeBtn.classList.add('active'); answerStates.set(stateKey, true); } updateWordBank(); }
 
         function toggleGrammarSection(section) {
             const content = document.getElementById('content' + section.charAt(0).toUpperCase() + section.slice(1));

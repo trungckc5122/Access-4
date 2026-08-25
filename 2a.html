@@ -229,6 +229,7 @@
                 task 1</div>
             <div class="instructions">Use the vocabulary words from Task 1. Pay attention to the context (some words may
                 need to be in past tense).</div>
+            <div class="sticky-bank" id="bank-t2"></div>
             <div id="questions-t2"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('t2')">Show All</button>
@@ -438,9 +439,17 @@
             });
         }
 
-        function renderFillBlank(id, data) {
+        function renderGapFillWithWordBank(id, data) {
             const container = document.getElementById(`questions-${id}`);
+            const bankContainer = document.getElementById(`bank-${id}`);
             container.innerHTML = '';
+            if (bankContainer) {
+                bankContainer.innerHTML = '';
+                const words = [...new Set(data.map(item => item.ans.toLowerCase()))].sort();
+                words.forEach(w => {
+                    bankContainer.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
+                });
+            }
             data.forEach((it, i) => {
                 const qid = `${id}-q${i}`;
                 let sentence = it.q;
@@ -449,8 +458,9 @@
                 if (numberMatch) { sentence = sentence.replace(/^\d+\.\s+/, ''); numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`; }
                 else { numberHtml = `<span class="exercise-number">${i + 1}.</span>`; }
                 const parts = sentence.split('______');
-                container.innerHTML += `<div class="question-row">${numberHtml} <span>${parts[0]}<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this)">${parts[1]}</span><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="question-row">${numberHtml} <span>${parts[0]}<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" oninput="adjustWidth(this); updateWordBank()" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()">${parts[1]}</span><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
             });
+            if (bankContainer) updateWordBank();
         }
 
         function renderVerbForms(id, data) {
@@ -535,6 +545,7 @@
         function showAnswers(prefix) {
             document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => { if (el.dataset.type === 'input') { const stateKey = `${el.id}-state`; const ans = el.dataset.ans; const eyeBtn = document.getElementById(el.id + '-eye'); if (ans) { el.value = ans.split('|')[0]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); if (eyeBtn) eyeBtn.classList.add('active'); answerStates.set(stateKey, true); } } });
             document.querySelectorAll(`[id^="${prefix}-row"]`).forEach(row => { const rowBase = row.id.replace('-row', ''); toggleMultiAns(rowBase); });
+            updateWordBank();
         }
 
         function resetSection(prefix) {
@@ -542,7 +553,17 @@
             document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => { if (btn.id.includes(prefix)) btn.classList.remove('active'); });
             if (currentActiveHint && currentActiveHint.id.includes(prefix)) { currentActiveHint = null; }
             for (const [key] of answerStates.entries()) { if (key.startsWith(`${prefix}-`)) answerStates.delete(key); }
+            updateWordBank();
         }
+
+        /* --- WORD BANK FUNCTIONS (pattern from 1a/5b) --- */
+        let selectedWordEl = null;
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); selectedWordEl = ev.target; }
+        function drop(ev) { ev.preventDefault(); const data = ev.dataTransfer.getData("text"); if (ev.target.tagName === 'INPUT') { ev.target.value = data; adjustWidth(ev.target); updateWordBank(); } }
+        function clickSelect(el) { if (selectedWordEl) { selectedWordEl.style.background = "#eef2f7"; } selectedWordEl = el; el.style.background = "#ffeaa7"; }
+        document.addEventListener('click', (e) => { if (e.target.tagName === 'INPUT' && selectedWordEl) { e.target.value = selectedWordEl.innerText; adjustWidth(e.target); selectedWordEl.style.background = "#eef2f7"; selectedWordEl = null; updateWordBank(); } });
+        function updateWordBank() { const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value)); document.querySelectorAll('.word-item').forEach(item => { const word = item.innerText.toLowerCase().trim(); const usedCount = inputs.filter(v => v === word).length; if (usedCount >= 1) item.classList.add('used'); else item.classList.remove('used'); }); }
 
         function normalizeAnswer(answer) { return answer.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, ''); }
         function validateMultipleAnswers(userAnswer, correctAnswers) { const answers = correctAnswers.split('|').map(ans => normalizeAnswer(ans)); const normalizedUser = normalizeAnswer(userAnswer); return answers.some(ans => ans === normalizedUser); }
@@ -588,7 +609,7 @@
         /* --- INITIALIZATION --- */
         window.onload = () => {
             renderMatching('t1', t1_data);
-            renderFillBlank('t2', t2_data);
+            renderGapFillWithWordBank('t2', t2_data);
             renderVerbForms('t3', t3_data);
             document.getElementById('grammar-ref-content').style.display = 'none';
         };

@@ -337,7 +337,7 @@
             { q: "1. Students can really ______ from working in groups.", ans: "benefit", hint: "<div class='hint-detail'><span class='key-word'>benefit</span> (hưởng lợi)</div><div class='hint-detail'>Học tập nhóm mang lại lợi ích, học sinh nhận được kiến thức và kỹ năng.</div>", wordBankIndex: 8 },
             { q: "2. I usually tell a joke to ______ and make everyone relax.", ans: "break the ice", hint: "<div class='hint-detail'><span class='key-word'>break the ice</span> (tạo không khí thoải mái)</div><div class='hint-detail'>Dùng câu chuyện vui để bắt đầu cuộc trò chuyện một cách tự nhiên.</div>", wordBankIndex: 0 },
             { q: "3. Don't ______ the conversation — let others share ideas.", ans: "take over", hint: "<div class='hint-detail'><span class='key-word'>take over</span> (tiếp quản)</div><div class='hint-detail'>Tránh độc thoại, hãy để người khác tham gia.</div>", wordBankIndex: 9 },
-            { q: "4. I promised to help him, so I can't ______ him ______.", ans: "let down", hint: "<div class='hint-detail'><span class='key-word'>let someone down</span> (làm thất vọng)</div><div class='hint-detail'>Không giữ lời hứa sẽ khiến người khác thất vọng.</div>", wordBankIndex: 7 },
+            { q: "4. I promised to help him, so I can't ______.", ans: "let him down", hint: "<div class='hint-detail'><span class='key-word'>let someone down</span> (làm thất vọng)</div><div class='hint-detail'>Không giữ lời hứa sẽ khiến người khác thất vọng.</div>", wordBankIndex: 7 },
             { q: "5. At first, living alone was hard, but I'll soon ______ it.", ans: "get used to", hint: "<div class='hint-detail'><span class='key-word'>get used to</span> (quen với)</div><div class='hint-detail'>Cần thời gian để thích nghi với hoàn cảnh mới.</div>", wordBankIndex: 10 },
             { q: "6. You shouldn't waste this ______ to study abroad.", ans: "opportunity", hint: "<div class='hint-detail'><span class='key-word'>opportunity</span> (cơ hội)</div><div class='hint-detail'>Cơ hội tốt để phát triển, không nên bỏ lỡ.</div>", wordBankIndex: 1 },
             { q: "7. Don't be afraid to ______ your teacher and ask questions.", ans: "approach", hint: "<div class='hint-detail'><span class='key-word'>approach</span> (tiếp cận)</div><div class='hint-detail'>Đến gần để hỏi han, thể hiện sự chủ động.</div>", wordBankIndex: 4 },
@@ -346,7 +346,7 @@
             { q: "10. How did your parents ______ when you told them the news?", ans: "react", hint: "<div class='hint-detail'><span class='key-word'>react</span> (phản ứng)</div><div class='hint-detail'>Cách họ thể hiện cảm xúc trước thông tin.</div>", wordBankIndex: 6 },
             { q: "11. We had a long ______ about our summer plans.", ans: "conversation", hint: "<div class='hint-detail'><span class='key-word'>conversation</span> (cuộc trò chuyện)</div><div class='hint-detail'>Trao đổi chi tiết về dự định.</div>", wordBankIndex: 5 }
         ];
-        const task2_bank = ["break the ice", "opportunity", "sweat", "blush", "approach", "conversation", "react", "let down", "benefit", "take over", "get used to"];
+        const task2_bank = ["break the ice", "opportunity", "sweat", "blush", "approach", "conversation", "react", "let him down", "benefit", "take over", "get used to"];
 
         const task3_match = [
             { v: "1. sociable", letter: "A", def: "enjoying being with other people", hint: "<div class='hint-detail'><span class='key-word'>sociable</span> /ˈsəʊʃəbl/: hòa đồng</div><div class='hint-detail'>Thích giao tiếp, dễ kết bạn.</div>", ipa: "/ˈsəʊʃəbl/" },
@@ -417,7 +417,6 @@
         // ========== RENDER FUNCTIONS (identical to previous detailed version) ==========
         let currentActiveHint = null;
         let answerStates = new Map();
-        let wordUsageCount = {};
 
         // Hàm phát âm từ vựng bằng Web Speech API
         function speakText(text) {
@@ -450,9 +449,9 @@
             const container = document.getElementById(containerId);
             const bankContainer = document.getElementById(bankId);
             container.innerHTML = ''; bankContainer.innerHTML = '';
-            wordUsageCount[taskPrefix] = {};
-            wordBank.forEach(word => { wordUsageCount[taskPrefix][word] = 0; });
-            wordBank.forEach((word, i) => { bankContainer.innerHTML += `<div class="word-item" id="${taskPrefix}-word-${i}" data-word="${word}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${taskPrefix}-word-${i}')">${word.toLowerCase()}</div>`; });
+            wordBank.forEach(word => {
+                bankContainer.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${word.toLowerCase()}</div>`;
+            });
             data.forEach((it, idx) => {
                 const qid = `${taskPrefix}-q${idx}`;
                 let sentence = it.q;
@@ -460,10 +459,10 @@
                 let numberHtml = '';
                 if (numberMatch) { sentence = sentence.replace(/^\d+\.\s+/, ''); numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`; }
                 else { numberHtml = `<span class="exercise-number">${idx + 1}</span>`; }
-                const parts = sentence.split('______');
-                container.innerHTML += `<div class="question-row" id="${qid}-row">${numberHtml} ${parts[0]}<input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" data-word-bank-index="${it.wordBankIndex}" oninput="adjustWidth(this); updateWordBank('${taskPrefix}')" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)">${parts[1]}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                const inputId = `${qid}-0`;
+                sentence = sentence.replace('______', `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="0" data-ans="${it.ans}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`);
+                container.innerHTML += `<div class="question-row" id="${qid}-row">${numberHtml} ${sentence}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', 1, '${it.ans}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
             });
-            addWordBankEventListeners(taskPrefix);
         }
         function renderWordFormationTable() {
             const container = document.getElementById('task5-table-container');
@@ -494,20 +493,86 @@
                 }
             });
         }
-        function addWordBankEventListeners(prefix) { /* already bound */ }
-        window.adjustWidth = (el) => { let base = 60; if (el.classList.contains('letter-input')) base = 45; else if (el.classList.contains('word-input')) base = 120; else base = 150; let w = Math.max(el.value.length * 9 + 20, base); el.style.width = Math.min(w, 500) + "px"; };
+        function addWordBankEventListeners(prefix) { /* no-op: replaced by 5b-style drag/drop */ }
+        window.adjustWidth = (el) => { let base = 60; if (el.classList.contains('letter-input')) base = 45; else if (el.classList.contains('word-input')) base = 120; else base = 150; let w = Math.max(el.value.length * 9 + 20, base); el.style.width = Math.min(w, 500) + "px"; updateWordBank(); };
         window.toggleHint = (id, wordToSpeak = null) => { let h = document.getElementById(id + '-hint'); let btn = document.getElementById(id + '-info'); if (h) { if (currentActiveHint === h) { h.style.display = 'none'; if (btn) btn.classList.remove('active'); currentActiveHint = null; } else { if (currentActiveHint) { currentActiveHint.style.display = 'none'; let oldBtn = document.getElementById(currentActiveHint.id.replace('-hint', '-info')); if (oldBtn) oldBtn.classList.remove('active'); } h.style.display = 'block'; if (btn) btn.classList.add('active'); currentActiveHint = h; if (wordToSpeak) speakText(wordToSpeak); } } };
         window.toggleSingleAns = (id) => { let el = document.getElementById(id); if (!el) return; let ans = el.dataset.ans; let eye = document.getElementById(id + '-eye'); let shown = answerStates.get(id) || false; if (shown) { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); if (eye) eye.classList.remove('active'); answerStates.set(id, false); } else { if (ans) { el.value = ans.split('|')[0]; el.classList.add('correct'); if (eye) eye.classList.add('active'); answerStates.set(id, true); let vocabItem = el.closest('.vocab-item'); if (vocabItem) { let vocabText = vocabItem.querySelector('.vocab-text')?.textContent; if (vocabText) speakText(vocabText); } } } };
-        window.showAnswers = (prefix) => { document.querySelectorAll(`[id^="${prefix}-q"],[id^="task5-row-"]`).forEach(el => { if (el.dataset.type === 'input') { let ans = el.dataset.ans; if (ans) { el.value = ans.split('|')[0]; el.classList.add('correct'); answerStates.set(el.id, true); let eye = document.getElementById(el.id + '-eye'); if (eye) eye.classList.add('active'); } } }); };
-        window.resetSection = (prefix) => { document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => { if (el.tagName === 'INPUT') { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); } }); document.querySelectorAll(`[id$="-eye"],[id$="-info"]`).forEach(btn => { if (btn.id.includes(prefix)) btn.classList.remove('active'); }); if (currentActiveHint && currentActiveHint.id.includes(prefix)) { currentActiveHint = null; } for (let k of answerStates.keys()) { if (k.startsWith(prefix)) answerStates.delete(k); } if (wordUsageCount[prefix]) Object.keys(wordUsageCount[prefix]).forEach(w => wordUsageCount[prefix][w] = 0); if (prefix === 'task2' || prefix === 'task4' || prefix === 'task6') { let bankDiv = document.getElementById(`bank-${prefix}`); if (bankDiv) Array.from(bankDiv.querySelectorAll('.word-item')).forEach(w => { w.classList.remove('used'); w.style.display = 'flex'; }); } };
+        window.showAnswers = (prefix) => {
+            if (prefix === 'task2' || prefix === 'task4' || prefix === 'task6') {
+                const data = prefix === 'task2' ? task2_gap : prefix === 'task4' ? task4_gap : task6_gap;
+                data.forEach((it, idx) => {
+                    const qid = `${prefix}-q${idx}`;
+                    const el = document.getElementById(`${qid}-0`);
+                    if (el) { el.value = it.ans.split('|')[0]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); }
+                    const eye = document.getElementById(`${qid}-eye`);
+                    if (eye) eye.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                });
+                updateWordBank();
+                return;
+            }
+            document.querySelectorAll(`[id^="${prefix}-q"],[id^="task5-row-"]`).forEach(el => { if (el.dataset.type === 'input') { let ans = el.dataset.ans; if (ans) { el.value = ans.split('|')[0]; el.classList.add('correct'); answerStates.set(el.id, true); let eye = document.getElementById(el.id + '-eye'); if (eye) eye.classList.add('active'); } } });
+        };
+        window.resetSection = (prefix) => {
+            document.querySelectorAll(`[id^="${prefix}"]`).forEach(el => { if (el.tagName === 'INPUT') { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); } });
+            document.querySelectorAll(`[id$="-eye"],[id$="-info"]`).forEach(btn => { if (btn.id.includes(prefix)) btn.classList.remove('active'); });
+            if (currentActiveHint && currentActiveHint.id.includes(prefix)) { currentActiveHint = null; }
+            for (let k of answerStates.keys()) { if (k.startsWith(prefix)) answerStates.delete(k); }
+            if (prefix === 'task2' || prefix === 'task4' || prefix === 'task6') {
+                const bankEl = document.getElementById(`bank-${prefix}`);
+                if (bankEl) bankEl.querySelectorAll('.word-item').forEach(w => { w.classList.remove('used'); w.style.background = ''; });
+                if (selectedWordEl) { selectedWordEl.style.background = ''; selectedWordEl = null; }
+                updateWordBank();
+            }
+        };
         window.checkAll = () => { document.querySelectorAll('[data-type="input"]').forEach(el => { let user = el.value.trim(); let correct = el.dataset.ans; el.classList.remove('correct', 'incorrect-marked'); if (user === '') return; let match = false; correct.split('|').forEach(c => { if (user.toLowerCase().trim() === c.toLowerCase().trim()) match = true; }); if (match) el.classList.add('correct'); else el.classList.add('incorrect-marked'); }); };
-        function dragWord(e) { e.dataTransfer.setData("text/plain", e.target.dataset.word); }
+        /* --- WORD BANK (5b-style: đơn giản, ổn định) --- */
+        let selectedWordEl = null;
         function allowDrop(e) { e.preventDefault(); }
-        function dropWord(e, inputId) { e.preventDefault(); let word = e.dataTransfer.getData("text/plain"); let inp = document.getElementById(inputId); if (inp) { inp.value = word; adjustWidth(inp); updateWordBankUsage(word, inputId.split('-')[0]); } }
-        function selectWordFromBank(wordId) { let w = document.getElementById(wordId); if (!w) return; let word = w.dataset.word; let taskId = wordId.split('-word-')[0]; let inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`); let empty = null; for (let inp of inputs) if (!inp.value.trim()) { empty = inp; break; } if (empty) { empty.value = word; adjustWidth(empty); updateWordBankUsage(word, taskId); } else alert('All gaps filled. Click on a gap to replace.'); }
-        function updateWordBankUsage(word, taskId) { if (!wordUsageCount[taskId]) wordUsageCount[taskId] = {}; let inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`); let cnt = 0; inputs.forEach(inp => { if (inp.value.trim().toLowerCase() === word.toLowerCase()) cnt++; }); wordUsageCount[taskId][word] = cnt; updateWordBankDisplay(taskId); }
-        function updateWordBankDisplay(taskId) { let items = document.querySelectorAll(`#bank-${taskId} .word-item`); items.forEach(item => { let w = item.dataset.word; let count = wordUsageCount[taskId]?.[w] || 0; if (count > 0) item.classList.add('used'); else item.classList.remove('used'); }); }
-        function updateWordBank(taskId) { if (wordUsageCount[taskId]) Object.keys(wordUsageCount[taskId]).forEach(w => wordUsageCount[taskId][w] = 0); let inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`); inputs.forEach(inp => { let val = inp.value.trim(); if (val) { let found = null; document.querySelectorAll(`#bank-${taskId} .word-item`).forEach(it => { if (it.dataset.word.toLowerCase() === val.toLowerCase()) found = it.dataset.word; }); if (found && wordUsageCount[taskId][found] !== undefined) wordUsageCount[taskId][found]++; } }); updateWordBankDisplay(taskId); }
+        function drag(e) { e.dataTransfer.setData("text", e.target.innerText); selectedWordEl = e.target; }
+        function drop(e) {
+            e.preventDefault();
+            const data = e.dataTransfer.getData("text");
+            if (e.target.tagName === 'INPUT') { e.target.value = data; adjustWidth(e.target); updateWordBank(); }
+        }
+        function clickSelect(el) {
+            if (selectedWordEl) selectedWordEl.style.background = "";
+            selectedWordEl = el;
+            el.style.background = "#ffeaa7";
+        }
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.classList.contains('word-input') && selectedWordEl) {
+                e.target.value = selectedWordEl.innerText;
+                adjustWidth(e.target);
+                selectedWordEl.style.background = "";
+                selectedWordEl = null;
+                updateWordBank();
+            }
+        });
+        function updateWordBank() {
+            const inputs = Array.from(document.querySelectorAll('input.word-input')).map(i => i.value.toLowerCase().trim());
+            document.querySelectorAll('.word-item').forEach(item => {
+                const word = item.innerText.toLowerCase().trim();
+                if (inputs.filter(v => v === word).length >= 1) item.classList.add('used');
+                else item.classList.remove('used');
+            });
+        }
+        function toggleMultiGapAns(parentId, gapCount, answersStr) {
+            const eyeBtn = document.getElementById(parentId + '-eye');
+            const stateKey = `${parentId}-state`;
+            const isShown = answerStates.get(stateKey) || false;
+            const answers = answersStr.split('|');
+            if (isShown) {
+                for (let i = 0; i < gapCount; i++) { const el = document.getElementById(`${parentId}-${i}`); if (el) { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); } }
+                if (eyeBtn) eyeBtn.classList.remove('active');
+                answerStates.set(stateKey, false);
+            } else {
+                for (let i = 0; i < gapCount; i++) { const el = document.getElementById(`${parentId}-${i}`); if (el && answers[i]) { el.value = answers[i]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); } }
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(stateKey, true);
+            }
+            updateWordBank();
+        }
         function toggleGrammarGroup(id) { let grp = document.getElementById(`grammar-${id}`); if (grp) { let btn = grp.querySelector('.group-toggle'); if (grp.classList.contains('expanded')) { grp.classList.remove('expanded'); grp.classList.add('collapsed'); btn.textContent = '+'; } else { grp.classList.remove('collapsed'); grp.classList.add('expanded'); btn.textContent = '−'; } } }
         function toggleReferenceGrammar() { let c = document.getElementById('grammar-ref-content'); let t = document.getElementById('grammar-ref-toggle'); if (c.style.display === 'none') { c.style.display = 'block'; t.textContent = '−'; } else { c.style.display = 'none'; t.textContent = '+'; } }
         function toggleGrammarSection(section) { let cont = document.getElementById('content' + section.charAt(0).toUpperCase() + section.slice(1)); let icon = document.getElementById('icon' + section.charAt(0).toUpperCase() + section.slice(1)); if (cont && icon) { cont.classList.toggle('active'); icon.classList.toggle('active'); } }

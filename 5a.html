@@ -431,7 +431,6 @@
         /* --- GLOBAL STATE (giữ nguyên) --- */
         let currentActiveHint = null;
         let answerStates = new Map();
-        let wordUsageCount = {};
         let optionSelections = new Map();
 
         // Hàm phát âm từ vựng bằng Web Speech API
@@ -488,12 +487,9 @@
             container.innerHTML = '';
             bankContainer.innerHTML = '';
 
-            wordUsageCount[id] = {};
-            wordBank.forEach(word => wordUsageCount[id][word] = 0);
-
-            wordBank.forEach((word, i) => {
-                const wordId = `${id}-word-${i}`;
-                bankContainer.innerHTML += `<div class="word-item" id="${wordId}" data-word="${word}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('${wordId}')">${word.toLowerCase()}</div>`;
+            // Render word bank (style giống 5b)
+            wordBank.forEach(word => {
+                bankContainer.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${word.toLowerCase()}</div>`;
             });
 
             data.forEach((it, i) => {
@@ -506,20 +502,19 @@
                     numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
                 } else numberHtml = `<span class="exercise-number">${i + 1}</span>`;
 
-                const parts = sentence.split('______');
+                const inputId = `${qid}-0`;
+                sentence = sentence.replace('______', `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="0" data-ans="${it.ans}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`);
+
                 container.innerHTML += `
             <div class="question-row" id="${qid}-row">
-                ${numberHtml} ${parts[0]}
-                <input type="text" class="word-input" id="${qid}" data-type="input" data-ans="${it.ans}" data-word-bank-index="${it.wordBankIndex}" oninput="adjustWidth(this); updateWordBank('${id}')" ondrop="dropWord(event, '${qid}')" ondragover="allowDrop(event)" onclick="this.select()">
-                ${parts[1]}
+                ${numberHtml} ${sentence}
                 <div class="row-btns">
-                    <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button>
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', 1, '${it.ans}')">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
                 </div>
                 <div class="hint-box" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
-            addWordBankEventListeners(id);
         }
 
         function renderPastTenses(id, data) {
@@ -606,6 +601,7 @@
             else if (el.classList.contains('grammar-input')) maxWidth = 500;
             else maxWidth = 300;
             el.style.width = Math.min(newWidth, maxWidth) + "px";
+            updateWordBank();
         }
 
         function toggleHint(id, wordToSpeak = null) {
@@ -697,6 +693,20 @@
                 });
                 return;
             }
+            if (prefix === 't2') {
+                t2_data.forEach((item, i) => {
+                    const qid = `${prefix}-q${i}`;
+                    toggleMultiGapAns(qid, 1, item.ans);
+                    // force shown state
+                    const el = document.getElementById(`${qid}-0`);
+                    if (el) { el.value = item.ans.split('|')[0]; el.classList.add('correct'); adjustWidth(el); }
+                    const eyeBtn = document.getElementById(`${qid}-eye`);
+                    if (eyeBtn) eyeBtn.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                });
+                updateWordBank();
+                return;
+            }
             if (prefix === 't3' || prefix === 't4') {
                 const data = prefix === 't3' ? t3_data : t4_data;
                 data.forEach((item, i) => {
@@ -732,8 +742,9 @@
             }
             for (const [key, value] of answerStates.entries()) { if (key.startsWith(`${prefix}-`)) answerStates.delete(key); }
             if (prefix === 't2') {
-                document.querySelectorAll('#bank-t2 .word-item').forEach(item => { item.classList.remove('used'); item.style.display = 'flex'; });
-                if (wordUsageCount['t2']) Object.keys(wordUsageCount['t2']).forEach(word => wordUsageCount['t2'][word] = 0);
+                document.querySelectorAll('#bank-t2 .word-item').forEach(item => { item.classList.remove('used'); item.style.background = ''; });
+                if (selectedWordEl) { selectedWordEl.style.background = ''; selectedWordEl = null; }
+                updateWordBank();
             }
             if (prefix === 't5') {
                 const allOptionBtns = document.querySelectorAll('#questions-t5 .option-btn');
@@ -786,67 +797,73 @@
             optionSelections.set(qid, option);
         }
 
-        // Word bank functions (unchanged)
-        function addWordBankEventListeners(id) {
-            document.querySelectorAll(`#bank-${id} .word-item`).forEach(item => {
-                item.addEventListener('click', function () { selectWordFromBank(this.id); });
-                item.addEventListener('dragstart', e => dragWord(e));
-            });
-            document.querySelectorAll(`#questions-${id} input.word-input`).forEach(input => {
-                input.addEventListener('dragover', e => allowDrop(e));
-                input.addEventListener('drop', e => dropWord(e, this.id));
-            });
+        /* --- WORD BANK FUNCTIONS (kiểu 5b – đơn giản, ổn định) --- */
+        let selectedWordEl = null;
+
+        function allowDrop(ev) { ev.preventDefault(); }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.innerText);
+            selectedWordEl = ev.target;
         }
-        function dragWord(event) { event.dataTransfer.setData("text/plain", event.target.dataset.word); event.dataTransfer.setData("wordId", event.target.id); }
-        function allowDrop(event) { event.preventDefault(); }
-        function dropWord(event, inputId) {
-            event.preventDefault();
-            const word = event.dataTransfer.getData("text/plain");
-            const wordId = event.dataTransfer.getData("wordId");
-            const input = document.getElementById(inputId);
-            if (input) { input.value = word; adjustWidth(input); updateWordBankUsage(word, inputId.split('-')[0]); }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            if (ev.target.tagName === 'INPUT') {
+                ev.target.value = data;
+                adjustWidth(ev.target);
+                updateWordBank();
+            }
         }
-        function selectWordFromBank(wordId) {
-            const wordItem = document.getElementById(wordId);
-            if (!wordItem) return;
-            const word = wordItem.dataset.word;
-            const taskId = wordId.split('-')[1];
-            const inputs = document.querySelectorAll(`#questions-t${taskId} input.word-input`);
-            let emptyInput = null;
-            for (const input of inputs) { if (!input.value.trim()) { emptyInput = input; break; } }
-            if (emptyInput) { emptyInput.value = word; adjustWidth(emptyInput); updateWordBankUsage(word, `t${taskId}`); }
-            else alert('All gaps are filled. You can click on a gap to replace its content.');
+
+        function clickSelect(el) {
+            if (selectedWordEl) selectedWordEl.style.background = "";
+            selectedWordEl = el;
+            el.style.background = "#ffeaa7";
         }
-        function updateWordBankUsage(word, taskId) {
-            if (!wordUsageCount[taskId]) wordUsageCount[taskId] = {};
-            if (!wordUsageCount[taskId][word]) wordUsageCount[taskId][word] = 0;
-            const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
-            let count = 0;
-            inputs.forEach(input => { if (normalizeAnswer(input.value) === normalizeAnswer(word)) count++; });
-            wordUsageCount[taskId][word] = count;
-            updateWordBankDisplay(taskId);
-        }
-        function updateWordBankDisplay(taskId) {
-            document.querySelectorAll(`#bank-${taskId} .word-item`).forEach(item => {
-                const word = item.dataset.word;
-                const count = wordUsageCount[taskId][word] || 0;
-                if (count > 0) item.classList.add('used'); else item.classList.remove('used');
+
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.classList.contains('word-input') && selectedWordEl) {
+                e.target.value = selectedWordEl.innerText;
+                adjustWidth(e.target);
+                selectedWordEl.style.background = "";
+                selectedWordEl = null;
+                updateWordBank();
+            }
+        });
+
+        function updateWordBank() {
+            const inputs = Array.from(document.querySelectorAll('input.word-input')).map(i => normalizeAnswer(i.value));
+            document.querySelectorAll('#bank-t2 .word-item').forEach(item => {
+                const word = item.innerText.toLowerCase().trim();
+                if (inputs.filter(v => v === word).length >= 1) item.classList.add('used');
+                else item.classList.remove('used');
             });
         }
-        function updateWordBank(taskId) {
-            const inputs = document.querySelectorAll(`#questions-${taskId} input.word-input`);
-            if (wordUsageCount[taskId]) Object.keys(wordUsageCount[taskId]).forEach(word => wordUsageCount[taskId][word] = 0);
-            inputs.forEach(input => {
-                const word = input.value.trim();
-                if (word) {
-                    let foundWord = null;
-                    document.querySelectorAll(`#bank-${taskId} .word-item`).forEach(item => {
-                        if (normalizeAnswer(item.dataset.word) === normalizeAnswer(word)) foundWord = item.dataset.word;
-                    });
-                    if (foundWord && wordUsageCount[taskId][foundWord] !== undefined) wordUsageCount[taskId][foundWord]++;
+
+        function toggleMultiGapAns(parentId, gapCount, answersStr) {
+            const eyeBtn = document.getElementById(parentId + '-eye');
+            const stateKey = `${parentId}-state`;
+            const isCurrentlyShown = answerStates.get(stateKey) || false;
+            const answers = answersStr.split('|');
+
+            if (isCurrentlyShown) {
+                for (let i = 0; i < gapCount; i++) {
+                    const el = document.getElementById(`${parentId}-${i}`);
+                    if (el) { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }
                 }
-            });
-            updateWordBankDisplay(taskId);
+                if (eyeBtn) eyeBtn.classList.remove('active');
+                answerStates.set(stateKey, false);
+            } else {
+                for (let i = 0; i < gapCount; i++) {
+                    const el = document.getElementById(`${parentId}-${i}`);
+                    if (el && answers[i]) { el.value = answers[i]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); }
+                }
+                if (eyeBtn) eyeBtn.classList.add('active');
+                answerStates.set(stateKey, true);
+            }
+            updateWordBank();
         }
 
         window.onload = () => {
