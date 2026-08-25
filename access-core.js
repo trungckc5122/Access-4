@@ -151,3 +151,411 @@
         init();
     }
 })();
+
+
+/* ============================================================
+   GAP-FILL DROP-ZONE ENGINE  (renderGapFillDrop)
+   Replaces the old <input>-based renderGapFillWithWordBank.
+
+   API:
+     renderGapFillDrop(taskId, data, wordBank)
+       taskId   – string, e.g. 't2'
+       data     – array of { q, ans, hint, wordBankIndex? }
+       wordBank – array of word strings (same index order as before)
+
+   Exported globals:
+     window._gapDrop.showAnswers(prefix)
+     window._gapDrop.resetSection(prefix)
+     window._gapDrop.toggleSingleAns(id)  → returns true if handled
+     window._gapDrop.checkAll()
+     window._gapDrop.hasTask(prefix)
+============================================================ */
+
+(function () {
+
+    /* ── internal state ─────────────────────────────────────── */
+    // Map: taskId → { wordBank[], gapStates: Map<gapId, word|null> }
+    const _tasks = {};
+
+    // track which gapId is being dragged (pill → pill transfer)
+    let _draggingFromGap = null;  // gapId string or null
+    let _draggingWord    = null;  // the word string being dragged
+
+    /* ── helpers ─────────────────────────────────────────────── */
+    function _normWord(w) {
+        return (w || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    }
+
+    function _getBankItem(taskId, word) {
+        const bank = document.getElementById(`bank-${taskId}`);
+        if (!bank) return null;
+        // Use querySelectorAll + filter to avoid CSS.escape issues with spaces/special chars
+        return Array.from(bank.querySelectorAll('.word-item')).find(
+            el => el.dataset.word === word
+        ) || null;
+    }
+
+    function _refreshBank(taskId) {
+        const state = _tasks[taskId];
+        if (!state) return;
+        // Build set of words currently used in gaps (normalized for comparison)
+        const usedNorm = new Set(
+            [...state.gapStates.values()].filter(Boolean).map(_normWord)
+        );
+        state.wordBank.forEach(w => {
+            const el = _getBankItem(taskId, w);
+            if (!el) return;
+            if (usedNorm.has(_normWord(w))) {
+                el.classList.add('used');
+            } else {
+                el.classList.remove('used');
+            }
+        });
+    }
+
+    /* build a pill element */
+    function _makePill(word, gapId, taskId) {
+        const pill = document.createElement('span');
+        pill.className = 'gap-pill';
+        pill.draggable = true;
+        pill.dataset.word = word;
+        pill.dataset.gapId = gapId;
+        pill.dataset.taskId = taskId;
+
+        const label = document.createElement('span');
+        label.textContent = word;
+        pill.appendChild(label);
+
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'pill-remove';
+        removeBtn.textContent = '✕';
+        removeBtn.title = 'Xóa';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            _clearGap(taskId, gapId);
+            _refreshBank(taskId);
+        });
+        pill.appendChild(removeBtn);
+
+        /* drag START from pill */
+        pill.addEventListener('dragstart', (e) => {
+            _draggingFromGap = gapId;
+            _draggingWord    = word;
+            e.dataTransfer.setData('text/plain', word);
+            e.dataTransfer.setData('source-gap', gapId);
+            e.dataTransfer.setData('task-id', taskId);
+            e.dataTransfer.effectAllowed = 'move';
+            // show return-zone
+            const rz = document.getElementById('_return-zone');
+            if (rz) rz.classList.add('active');
+            setTimeout(() => pill.style.opacity = '0.4', 0);
+        });
+
+        pill.addEventListener('dragend', () => {
+            pill.style.opacity = '';
+            _draggingFromGap = null;
+            _draggingWord    = null;
+            const rz = document.getElementById('_return-zone');
+            if (rz) { rz.classList.remove('active'); rz.classList.remove('drag-over'); }
+        });
+
+        return pill;
+    }
+
+    /* place a word into a gap */
+    function _fillGap(taskId, gapId, word) {
+        const state = _tasks[taskId];
+        if (!state) return;
+        // gapStates already has the old word at this point — just overwrite.
+        // _refreshBank will recompute used/free correctly from the new state.
+        state.gapStates.set(gapId, word);
+
+        const zone = document.getElementById(gapId);
+        if (!zone) return;
+        zone.innerHTML = '';
+        zone.classList.remove('correct', 'incorrect-marked', 'drag-over');
+        zone.appendChild(_makePill(word, gapId, taskId));
+    }
+
+    /* clear a gap */
+    function _clearGap(taskId, gapId) {
+        const state = _tasks[taskId];
+        if (state) state.gapStates.set(gapId, null);
+        const zone = document.getElementById(gapId);
+        if (zone) {
+            zone.innerHTML = '';
+            zone.classList.remove('correct', 'incorrect-marked');
+        }
+    }
+
+    /* attach drop events to a gap zone */
+    function _bindZone(zone, taskId, gapId) {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drag-over');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const word      = e.dataTransfer.getData('text/plain');
+            const sourceGap = e.dataTransfer.getData('source-gap');
+            const srcTaskId = e.dataTransfer.getData('task-id') || taskId;
+
+            if (!word) return;
+
+            // if dragging from another gap in same task, clear the source gap
+            if (sourceGap && sourceGap !== gapId && srcTaskId === taskId) {
+                _clearGap(taskId, sourceGap);
+            }
+
+            _fillGap(taskId, gapId, word);
+            _refreshBank(taskId);
+        });
+
+        // also allow click on empty zone to select from bank
+        zone.addEventListener('click', () => {
+            const state = _tasks[taskId];
+            if (!state) return;
+            // if already filled, do nothing (pill's ✕ handles clear)
+            if (state.gapStates.get(gapId)) return;
+            // find first unused word in bank and fill
+            const usedWords = new Set(
+                [...state.gapStates.values()].filter(Boolean).map(_normWord)
+            );
+            // we won't auto-fill on click of empty zone (could be confusing);
+            // clicking a bank word auto-fills the first empty zone (see below)
+        });
+    }
+
+    /* ── public: renderGapFillDrop ──────────────────────────── */
+    window.renderGapFillDrop = function (taskId, data, wordBank) {
+        const bankContainer = document.getElementById(`bank-${taskId}`);
+        const qContainer    = document.getElementById(`questions-${taskId}`);
+        if (!bankContainer || !qContainer) return;
+
+        // init state
+        _tasks[taskId] = {
+            wordBank: wordBank.slice(),
+            gapStates: new Map(),
+            data: data
+        };
+
+        /* ── render bank ── */
+        bankContainer.innerHTML = '';
+        wordBank.forEach((word, i) => {
+            const item = document.createElement('div');
+            item.className = 'word-item';
+            item.id        = `${taskId}-word-${i}`;
+            item.dataset.word = word;
+            item.draggable   = true;
+            item.textContent = word.toLowerCase();
+
+            /* drag from bank */
+            item.addEventListener('dragstart', (e) => {
+                // If this word is already in a gap, mark the source gap so it gets cleared on drop
+                let sourceGapId = null;
+                const state = _tasks[taskId];
+                if (state && item.classList.contains('used')) {
+                    for (const [gid, val] of state.gapStates.entries()) {
+                        if (val && _normWord(val) === _normWord(word)) {
+                            sourceGapId = gid;
+                            break;
+                        }
+                    }
+                }
+                _draggingFromGap = sourceGapId;
+                _draggingWord    = word;
+                e.dataTransfer.setData('text/plain', word);
+                e.dataTransfer.setData('task-id', taskId);
+                if (sourceGapId) e.dataTransfer.setData('source-gap', sourceGapId);
+                e.dataTransfer.effectAllowed = 'move';
+                // Show return-zone only when dragging from a gap (via bank re-drag)
+                if (sourceGapId) {
+                    const rz = document.getElementById('_return-zone');
+                    if (rz) rz.classList.add('active');
+                }
+                setTimeout(() => item.style.opacity = '0.4', 0);
+            });
+            item.addEventListener('dragend', () => {
+                item.style.opacity = '';
+                _draggingFromGap = null;
+                _draggingWord = null;
+                const rz = document.getElementById('_return-zone');
+                if (rz) { rz.classList.remove('active'); rz.classList.remove('drag-over'); }
+            });
+
+            /* click bank word → fill first empty gap */
+            item.addEventListener('click', () => {
+                if (item.classList.contains('used')) return;
+                const state = _tasks[taskId];
+                for (const [gid, val] of state.gapStates.entries()) {
+                    if (!val) {
+                        _fillGap(taskId, gid, word);
+                        _refreshBank(taskId);
+                        return;
+                    }
+                }
+            });
+
+            bankContainer.appendChild(item);
+        });
+
+        /* ── render questions ── */
+        qContainer.innerHTML = '';
+        data.forEach((item, i) => {
+            const gapId = `${taskId}-q${i}`;
+            _tasks[taskId].gapStates.set(gapId, null);
+
+            let sentence = item.q;
+            let numberHtml = '';
+            const numMatch = sentence.match(/^(\d+)\.\s+/);
+            if (numMatch) {
+                sentence   = sentence.replace(/^\d+\.\s+/, '');
+                numberHtml = `<span class="existing-number">${numMatch[1]}.</span>`;
+            } else {
+                numberHtml = `<span class="exercise-number">${i + 1}</span>`;
+            }
+
+            // split on ______
+            const parts = sentence.split('______');
+            let sentenceHtml = parts[0];
+            sentenceHtml += `<span class="gap-drop-zone" id="${gapId}" data-task="${taskId}" data-ans="${item.ans}"></span>`;
+            if (parts[1]) sentenceHtml += parts[1];
+
+            const row = document.createElement('div');
+            row.className = 'question-row';
+            row.id = `${gapId}-row`;
+            row.innerHTML = `
+                ${numberHtml} ${sentenceHtml}
+                <div class="row-btns">
+                    <button class="btn-small" id="${gapId}-eye" onclick="toggleSingleAns('${gapId}')" title="Show/Hide">👁️</button>
+                    <button class="info-btn" id="${gapId}-info" onclick="toggleHint('${gapId}')">i</button>
+                </div>
+                <div class="hint-box" id="${gapId}-hint">${item.hint || ''}</div>
+            `;
+            qContainer.appendChild(row);
+
+            // bind drop zone
+            const zone = document.getElementById(gapId);
+            if (zone) _bindZone(zone, taskId, gapId);
+        });
+
+        /* ── global return-zone (drop pill here to return to bank) ── */
+        let rz = document.getElementById('_return-zone');
+        if (!rz) {
+            rz = document.createElement('div');
+            rz.id        = '_return-zone';
+            rz.className = 'return-to-bank-zone';
+            rz.innerHTML = '↩ Thả để trả về Word Bank';
+            document.body.appendChild(rz);
+
+            rz.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                rz.classList.add('drag-over');
+            });
+            rz.addEventListener('dragleave', () => {
+                rz.classList.remove('drag-over');
+            });
+            rz.addEventListener('drop', (e) => {
+                e.preventDefault();
+                rz.classList.remove('drag-over');
+                rz.classList.remove('active');
+                const srcGap    = e.dataTransfer.getData('source-gap');
+                const srcTaskId = e.dataTransfer.getData('task-id');
+                if (srcGap && srcTaskId) {
+                    _clearGap(srcTaskId, srcGap);
+                    _refreshBank(srcTaskId);
+                }
+            });
+        }
+    };
+
+    /* ── expose public API via window._gapDrop ──────────────── */
+    window._gapDrop = {
+
+        showAnswers: function (prefix) {
+            const state = _tasks[prefix];
+            if (!state) return;
+            state.data.forEach((item, i) => {
+                const gapId = `${prefix}-q${i}`;
+                const ans   = item.ans ? item.ans.split('|')[0] : '';
+                if (ans) {
+                    _fillGap(prefix, gapId, ans);
+                    const zone = document.getElementById(gapId);
+                    if (zone) zone.classList.add('correct');
+                    const pill = zone && zone.querySelector('.gap-pill');
+                    if (pill) pill.classList.add('correct');
+                }
+                const eyeBtn = document.getElementById(`${gapId}-eye`);
+                if (eyeBtn) eyeBtn.classList.add('active');
+            });
+            _refreshBank(prefix);
+        },
+
+        resetSection: function (prefix) {
+            const state = _tasks[prefix];
+            if (!state) return;
+            state.gapStates.forEach((_, gapId) => _clearGap(prefix, gapId));
+            _refreshBank(prefix);
+            const qc = document.getElementById(`questions-${prefix}`);
+            if (qc) {
+                qc.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+                qc.querySelectorAll('[id$="-eye"]').forEach(b => b.classList.remove('active'));
+                qc.querySelectorAll('[id$="-info"]').forEach(b => b.classList.remove('active'));
+            }
+        },
+
+        toggleSingleAns: function (id) {
+            const taskId = id.split('-')[0];
+            const state  = _tasks[taskId];
+            if (!state || !state.gapStates.has(id)) return false;
+
+            const eyeBtn  = document.getElementById(`${id}-eye`);
+            const isShown = eyeBtn && eyeBtn.classList.contains('active');
+            const zone    = document.getElementById(id);
+            const ans     = zone && zone.dataset.ans ? zone.dataset.ans.split('|')[0] : '';
+
+            if (isShown) {
+                _clearGap(taskId, id);
+                _refreshBank(taskId);
+                if (eyeBtn) eyeBtn.classList.remove('active');
+            } else if (ans) {
+                _fillGap(taskId, id, ans);
+                if (zone) zone.classList.add('correct');
+                const pill = zone && zone.querySelector('.gap-pill');
+                if (pill) pill.classList.add('correct');
+                _refreshBank(taskId);
+                if (eyeBtn) eyeBtn.classList.add('active');
+            }
+            return true; // handled
+        },
+
+        checkAll: function () {
+            Object.entries(_tasks).forEach(([taskId, state]) => {
+                state.gapStates.forEach((word, gapId) => {
+                    const zone = document.getElementById(gapId);
+                    if (!zone) return;
+                    zone.classList.remove('correct', 'incorrect-marked');
+                    const pill = zone.querySelector('.gap-pill');
+                    if (pill) pill.classList.remove('correct', 'incorrect-marked');
+                    if (!word) return;
+                    const ans = zone.dataset.ans || '';
+                    const correct = ans.split('|').some(a => _normWord(a) === _normWord(word));
+                    zone.classList.add(correct ? 'correct' : 'incorrect-marked');
+                    if (pill) pill.classList.add(correct ? 'correct' : 'incorrect-marked');
+                });
+            });
+        },
+
+        hasTask: function (prefix) {
+            return !!_tasks[prefix];
+        }
+    };
+
+})();
