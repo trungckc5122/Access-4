@@ -245,10 +245,11 @@
         .ex4-row {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             padding: 15px;
             border-bottom: 1px solid var(--glass-border);
             transition: background 0.2s;
+            flex-wrap: wrap;
         }
 
         .ex4-row:hover {
@@ -256,18 +257,15 @@
         }
 
         .ex4-question {
-            flex: 1;
             font-weight: 500;
             font-size: 1rem;
             color: var(--text);
         }
 
         .ex4-answer {
-            flex: 0 0 280px;
             display: flex;
             align-items: center;
             gap: 10px;
-            justify-content: flex-end;
         }
 
         @media (max-width: 768px) {
@@ -689,11 +687,13 @@
                 <div class="question-row" style="margin-bottom: 15px;">
                     <span style="width: 25px; display: inline-block;">${i + 1}</span>
                     <span style="color: var(--text-muted); font-family: monospace; width: 80px; display: inline-block;">${it.scrambled}</span> 
-                    <input type="text" id="${qid}-adj" data-ans="${it.ansAdj}" class="task5-input" oninput="adjustWidth(this)" style="margin-right: 20px;">
+                    <input type="text" id="${qid}-adj" data-ans="${it.ansAdj}" class="task5-input" oninput="adjustWidth(this)" style="margin-right: 5px;">
+                    <button class="eye-btn" onclick="showSingleAns('${qid}-adj')" style="margin-right: 20px;">👁️</button>
                     <span class="word-choice" data-ans-group="${qid}" data-ans-val="${it.optA}" onclick="selectChoice(this, '${it.ansOpt}')">${it.optA}</span> / 
-                    <span class="word-choice" data-ans-group="${qid}" data-ans-val="${it.optB}" onclick="selectChoice(this, '${it.ansOpt}')">${it.optB}</span>
+                    <span class="word-choice" data-ans-group="${qid}" data-ans-val="${it.optB}" onclick="selectChoice(this, '${it.ansOpt}')">${it.optB}</span> / 
+                    <span class="word-choice" data-ans-group="${qid}" data-ans-val="both" onclick="selectChoice(this, '${it.ansOpt}')">both</span>
                     <div class="row-btns">
-                        <button class="eye-btn" onclick="showSingleAns('${qid}-adj')">👁️</button>
+                        <button class="eye-btn" onclick="showSingleAnsChoice('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
                     <div class="hint-box" id="${qid}-hint">${it.hint}</div>
@@ -791,6 +791,22 @@
             adjustWidth(el);
         }
 
+        function showSingleAnsChoice(qid) {
+            const idx = parseInt(qid.split('-q')[1]);
+            const it = ex2Data[idx];
+            const correctChoice = Array.from(document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`))
+                .find(s => s.dataset.ansVal === it.ansOpt);
+            if (correctChoice) {
+                const isSelected = correctChoice.classList.contains('selected');
+                document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`).forEach(s => {
+                    s.classList.remove('selected', 'correct-select', 'incorrect-select');
+                });
+                if (!isSelected) {
+                    correctChoice.classList.add('selected');
+                }
+            }
+        }
+
         function checkAll() {
             document.querySelectorAll('input[type="text"]').forEach(el => {
                 if (!el.value) return;
@@ -804,7 +820,7 @@
                 const choices = document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`);
                 choices.forEach(span => {
                     if (span.classList.contains('selected')) {
-                        const isCorrect = (it.ansOpt === "both") || (span.dataset.ansVal === it.ansOpt);
+                        const isCorrect = (span.dataset.ansVal === it.ansOpt);
                         span.classList.add(isCorrect ? 'correct-select' : 'incorrect-select');
                     }
                 });
@@ -818,7 +834,7 @@
                     const adjInput = document.getElementById(`${qid}-adj`);
                     adjInput.value = it.ansAdj; adjInput.classList.add('correct'); adjustWidth(adjInput);
                     const correctChoice = Array.from(document.querySelectorAll(`.word-choice[data-ans-group="${qid}"]`))
-                        .find(s => s.dataset.ansVal === it.ansOpt || it.ansOpt === "both");
+                        .find(s => s.dataset.ansVal === it.ansOpt);
                     if (correctChoice) correctChoice.classList.add('selected');
                 });
                 return;
