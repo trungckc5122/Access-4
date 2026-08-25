@@ -241,10 +241,37 @@
         .matching-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
+            flex-wrap: wrap;
             gap: 15px;
             padding: 12px;
             border-bottom: 1px solid var(--glass-border);
+        }
+
+        .matching-row .hint-box {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Exercise 2: Click-to-select */
+        .word-choice {
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .word-choice:hover { background: var(--primary-light); }
+        .word-choice.selected { background: var(--primary); color: #fff; }
+        .word-choice.correct-select { background: var(--success); color: #fff; }
+        .word-choice.incorrect-select { background: var(--error); color: #fff; }
+
+        /* Close button for transcript panel */
+        .close-transcript-btn:hover {
+            color: #e74c3c !important;
+            transform: scale(1.1);
         }
 
         .ex1-slogan-img {
@@ -333,8 +360,10 @@
         <div class="reading-split-container">
             <!-- Left Panel: Transcript -->
             <div class="transcript-panel" id="transcript-panel">
-                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
-                    Listening Scripts</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px;">
+                    <h2 style="margin: 0; border: none; padding: 0;">Listening Scripts</h2>
+                    <button class="close-transcript-btn" onclick="closeTranscript()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text, #333); transition: all 0.2s;">✕</button>
+                </div>
 
                 <div id="script-1-10" class="script-section">
                     <h3 style="color: var(--primary); margin-bottom: 15px;">Transcript 1.10</h3>
@@ -495,6 +524,12 @@
                 <!-- Exercise 4 -->
                 <div class="exercise-card">
                     <div class="exercise-title">4. 🎧 1.10 Listen again. Which words from Exercise 2 did you hear?</div>
+                    <button class="transcript-toggle-btn" onclick="toggleTranscript('1.10')">📜 Transcript 1.10</button>
+                    <div class="audio-player-container">
+                        <audio controls>
+                            <source src="audio-pre/1_Track10.mp3" type="audio/mpeg">
+                        </audio>
+                    </div>
                     <div id="questions-ex4"></div>
                     <div class="controls-row">
                         <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -596,6 +631,31 @@
             { q: "Dialogue 4", ans: "B", target: "text-ex6-4", hint: "<strong>Đáp án: B</strong><br><em>Bằng chứng:</em> <em>'It's just not good enough...'</em><br><em>Giải thích:</em> Khách hàng đang phàn nàn về chiếc đĩa DVD bị lỗi." }
         ];
 
+        function closeTranscript() {
+            const panel = document.getElementById('transcript-panel');
+            if (panel) {
+                panel.classList.remove('active');
+            }
+        }
+
+        function selectChoice(span) {
+            const row = span.closest('.question-row');
+            row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            span.classList.add('selected');
+        }
+
+        function showSingleAnsSelect(rowId) {
+            const row = document.getElementById(rowId).closest('.question-row');
+            const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
+            if (correct) {
+                const isCorrectSelect = correct.classList.contains('correct-select');
+                row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                if (!isCorrectSelect) {
+                    correct.classList.add('correct-select');
+                }
+            }
+        }
+
         function renderEx1() {
             const container = document.getElementById('questions-ex1');
             ex1Data.forEach((it, i) => {
@@ -608,8 +668,16 @@
             const container = document.getElementById('questions-ex2');
             ex2Data.forEach((it, i) => {
                 const qid = `ex2-q${i + 1}`;
-                let optsHtml = it.opts.map(o => `<label class="option-card"><input type="radio" name="${qid}" value="${o}"> ${o}</label>`).join('');
-                container.innerHTML += `<div class="question-row" style="margin-bottom:20px;"><span><strong>${it.q}:</strong></span><div class="option-group">${optsHtml}</div><div class="row-btns" style="margin-top:10px;"><button class="btn-small eye-btn" onclick="showSingleAnsRadio('${qid}','${it.ans}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                const choicesHtml = it.opts.map(o => `<span class="word-choice" data-ans="${it.ans}" onclick="selectChoice(this)">${o}</span>`).join(' / ');
+                container.innerHTML += `<div class="question-row" style="margin-bottom:20px;">
+                    <span><strong>${it.q}:</strong> ${choicesHtml}</span>
+                    <div class="row-btns" style="display:inline-flex; margin-left:10px;">
+                        <button class="btn-small eye-btn" onclick="showSingleAnsSelect('${qid}-select')">👁️</button>
+                        <button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button>
+                    </div>
+                    <span id="${qid}-select" style="display:none;"></span>
+                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                </div>`;
             });
         }
 
@@ -641,7 +709,7 @@
             const container = document.getElementById('questions-ex6');
             ex6Data.forEach((it, i) => {
                 const qid = `ex6-q${i + 1}`;
-                container.innerHTML += `<div class="matching-row"><span><strong>Dialogue ${i + 1}:</strong> sentence ____</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="matching-box"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','1.11')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="matching-row"><span><strong>Dialogue ${i + 1}:</strong></span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="matching-box"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="showReadingHint(event,'${it.target}','${qid}-hint','1.11')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -720,27 +788,22 @@
                 el.classList.toggle('correct', ok);
                 el.classList.toggle('incorrect-marked', !ok);
             });
-            document.querySelectorAll('.option-group').forEach(grp => {
-                const checked = grp.querySelector('input:checked');
-                if (checked) {
-                    const qname = checked.name;
-                    const prefix = qname.split('-')[0];
-                    const index = parseInt(qname.split('-q')[1]) - 1;
-                    const dataMap = { ex2: ex2Data };
-                    const correctAns = dataMap[prefix][index].ans;
-                    const card = checked.closest('.option-card');
-                    const ok = checked.value === correctAns;
-
-                    card.classList.remove('selected');
-                    card.classList.add(ok ? 'correct-card' : 'incorrect-card');
+            document.querySelectorAll('.word-choice').forEach(span => {
+                if (span.classList.contains('selected')) {
+                    const isCorrect = span.textContent.toLowerCase() === span.dataset.ans.toLowerCase();
+                    span.classList.add(isCorrect ? 'correct-select' : 'incorrect-select');
                 }
             });
         }
 
         function showAnswers(prefix) {
             if (prefix === 'ex2') {
-                ex2Data.forEach((it, i) => {
-                    showSingleAnsRadio(`ex2-q${i + 1}`, it.ans);
+                document.querySelectorAll('#questions-ex2 .question-row').forEach(row => {
+                    const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
+                    if (correct) {
+                        row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                        correct.classList.add('selected');
+                    }
                 });
             } else {
                 document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
@@ -753,15 +816,7 @@
 
         function resetSection(prefix) {
             if (prefix === 'ex2') {
-                ex2Data.forEach((it, i) => {
-                    const qname = `ex2-q${i + 1}`;
-                    document.querySelectorAll(`input[name="${qname}"]`).forEach(r => {
-                        r.checked = false;
-                        const card = r.closest('.option-card');
-                        card.classList.remove('selected');
-                        card.style = "";
-                    });
-                });
+                document.querySelectorAll('#questions-ex2 .word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
             } else {
                 document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                     el.value = "";

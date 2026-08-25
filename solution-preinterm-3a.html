@@ -106,27 +106,65 @@
             color: var(--primary-dark);
         }
 
-        .inline-bank {
+        /* ── Drag-and-Drop Word Bank ── */
+        .dnd-bank {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin: 12px 0 18px;
-        }
-
-        .bank-chip {
+            padding: 14px 16px;
             background: var(--grammar-bg);
-            border: 1px solid var(--primary);
-            color: var(--primary-dark);
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
+            border: 1px dashed var(--primary);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            min-height: 48px;
         }
 
-        .bank-chip.selected {
-            background: var(--highlight-yellow);
-            color: var(--text);
+        .dnd-chip {
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            color: var(--primary-dark);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.18s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
+        .dnd-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.14); }
+        .dnd-chip.dragging { opacity: 0.4; cursor: grabbing; }
+        .dnd-chip.used { display: none; }
+
+        .dnd-drop-zone {
+            display: inline-flex;
+            align-items: center;
+            min-width: 140px;
+            height: 34px;
+            border: 2px dashed var(--border-medium);
+            border-radius: 8px;
+            padding: 0 10px;
+            background: var(--bg);
+            transition: all 0.18s;
+            vertical-align: middle;
+            font-weight: 700;
+            color: var(--primary-dark);
+            cursor: pointer;
+            position: relative;
+        }
+        .dnd-drop-zone.dragover { border-color: var(--primary); background: var(--grammar-bg); }
+        .dnd-drop-zone.filled { border-color: var(--primary); background: var(--grammar-bg); }
+        .dnd-drop-zone.correct { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+        .dnd-drop-zone.incorrect { border-color: var(--error); background: var(--error-bg); color: var(--error); }
+        .dnd-drop-zone .dz-clear {
+            position: absolute;
+            right: 5px;
+            top: 50%; transform: translateY(-50%);
+            font-size: 0.7rem; line-height: 1;
+            background: none; border: none;
+            color: var(--text-secondary, #888); cursor: pointer; opacity: 0.6;
+            display: none;
+        }
+        .dnd-drop-zone.filled .dz-clear { display: block; }
 
         .question-row {
             margin-bottom: 16px;
@@ -190,20 +228,27 @@
         }
 
         .choice-options {
-            display: grid;
+            display: flex;
+            flex-direction: column;
             gap: 8px;
             margin-top: 6px;
+            align-items: flex-start;
         }
 
         .choice-options label {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 10px;
+            padding: 8px 18px 8px 12px;
             border: 1px solid var(--border-light);
             border-radius: 8px;
             background: var(--bg);
+            cursor: pointer;
+            min-width: 0;
+            max-width: 500px;
+            width: 500px;
         }
+        .choice-options label:hover { border-color: var(--primary); background: var(--grammar-bg); }
 
         .choice-options label.correct-choice {
             border-color: var(--success);
@@ -271,6 +316,19 @@
             padding: 24px;
             border-right-width: 1px;
         }
+
+        .transcript-close-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: var(--text);
+            transition: all 0.2s;
+            line-height: 1;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .transcript-close-btn:hover { color: #e74c3c; transform: scale(1.15); background: var(--error-bg, #fee2e2); }
 
         .reading-resizer {
             width: 0;
@@ -470,11 +528,11 @@
         <div class="exercise-card">
             <div class="exercise-title">2. Identify the kinds of TV programme and film. Choose from the words below.
             </div>
-            <div class="inline-bank" id="ex2-bank"></div>
+            <div class="dnd-bank" id="ex2-bank"></div>
             <div id="ex2-questions"></div>
             <div class="controls-row">
-                <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
-                <button class="btn btn-reset" onclick="resetSection('ex2')">Reset</button>
+                <button class="btn btn-show-all" onclick="showAnswersDnd()">Show All</button>
+                <button class="btn btn-reset" onclick="resetDnd()">Reset</button>
             </div>
         </div>
 
@@ -509,8 +567,10 @@
 
         <div class="reading-split-container">
             <div class="transcript-panel" id="transcript-panel">
-                <h2 style="margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">Listening
-                    Script</h2>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;">
+                    <h2 style="margin:0;border:none;padding:0;">Listening Script</h2>
+                    <button class="transcript-close-btn" onclick="closeTranscript3a()" title="Đóng">✕</button>
+                </div>
                 <div id="script-1-09" class="script-section">
                     <h3 style="color:var(--primary);margin-bottom:15px;">Transcript 1.09 (Exercises 5 & 6)</h3>
                     <span class="speaker-line"><span class="speaker-name">Anna:</span> Did you enjoy that film,
@@ -742,9 +802,23 @@
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
         }
 
+        /* ── Drag-and-Drop for Ex2 ── */
+        let draggedChip = null;
+
         function renderEx2() {
             const bank = document.getElementById('ex2-bank');
-            ex2Bank.forEach(word => bank.innerHTML += `<button class="bank-chip" onclick="selectChip(this)">${word}</button>`);
+            // Shuffle bank order for variety
+            const shuffled = [...ex2Bank].sort(() => Math.random() - 0.5);
+            shuffled.forEach(word => {
+                const chip = document.createElement('div');
+                chip.className = 'dnd-chip';
+                chip.textContent = word;
+                chip.draggable = true;
+                chip.dataset.word = word;
+                chip.addEventListener('dragstart', onChipDragStart);
+                chip.addEventListener('dragend', onChipDragEnd);
+                bank.appendChild(chip);
+            });
 
             const container = document.getElementById('ex2-questions');
             ex2Data.forEach((item, i) => {
@@ -752,9 +826,12 @@
                 container.innerHTML += `
                 <div class="question-row">
                     <strong>${i + 1}</strong> This kind of film or TV programme ${item.q}
-                    <input type="text" id="${id}" data-type="input" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                    <span class="dnd-drop-zone" id="${id}" data-ans="${item.ans}" ondragover="onDzDragOver(event)" ondragleave="onDzDragLeave(event)" ondrop="onDzDrop(event, '${id}')" onclick="onDzClick(event, '${id}')">
+                        <span class="dz-text"></span>
+                        <button class="dz-clear" onclick="clearDz(event, '${id}')" title="Xóa">✕</button>
+                    </span>
                     <span class="row-btns">
-                        <button class="eye-btn" onclick="showSingleAns('${id}')">👁️</button>
+                        <button class="eye-btn" onclick="showDndOne('${id}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
                     </span>
                     <div class="hint-box" id="${id}-hint">
@@ -765,6 +842,97 @@
                 </div>`;
             });
         }
+
+        function onChipDragStart(e) {
+            draggedChip = e.target;
+            draggedChip.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', draggedChip.dataset.word);
+        }
+        function onChipDragEnd(e) {
+            if (draggedChip) draggedChip.classList.remove('dragging');
+            draggedChip = null;
+        }
+        function onDzDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('dragover'); }
+        function onDzDragLeave(e) { e.currentTarget.classList.remove('dragover'); }
+        function onDzDrop(e, id) {
+            e.preventDefault();
+            const dz = document.getElementById(id);
+            dz.classList.remove('dragover');
+            const word = e.dataTransfer.getData('text/plain');
+            if (!word) return;
+            // Return previously filled chip to bank
+            const prevWord = dz.dataset.filled;
+            if (prevWord) returnChipToBank(prevWord);
+            fillDropZone(dz, word);
+            if (draggedChip) draggedChip.classList.add('used');
+        }
+        function onDzClick(e, id) {
+            // Click to fill if a chip was tapped on mobile — fallback handled by chipClick
+        }
+        function clearDz(e, id) {
+            e.stopPropagation();
+            const dz = document.getElementById(id);
+            const word = dz.dataset.filled;
+            if (word) returnChipToBank(word);
+            emptyDropZone(dz);
+        }
+        function fillDropZone(dz, word) {
+            dz.dataset.filled = word;
+            dz.querySelector('.dz-text').textContent = word;
+            dz.classList.add('filled');
+            dz.classList.remove('correct', 'incorrect');
+        }
+        function emptyDropZone(dz) {
+            dz.dataset.filled = '';
+            dz.querySelector('.dz-text').textContent = '';
+            dz.classList.remove('filled', 'correct', 'incorrect');
+        }
+        function returnChipToBank(word) {
+            const chip = document.querySelector(`#ex2-bank .dnd-chip[data-word="${word}"]`);
+            if (chip) chip.classList.remove('used');
+        }
+        function showDndOne(id) {
+            const dz = document.getElementById(id);
+            const ans = dz.dataset.ans;
+            const prevWord = dz.dataset.filled;
+            if (prevWord === ans) { clearDz({ stopPropagation: () => {} }, id); return; }
+            if (prevWord) returnChipToBank(prevWord);
+            fillDropZone(dz, ans);
+            const chip = document.querySelector(`#ex2-bank .dnd-chip[data-word="${ans}"]`);
+            if (chip) chip.classList.add('used');
+        }
+        function showAnswersDnd() { ex2Data.forEach((_, i) => showDndOne(`ex2-${i}`)); }
+        function resetDnd() {
+            document.querySelectorAll('.dnd-drop-zone').forEach(dz => emptyDropZone(dz));
+            document.querySelectorAll('#ex2-bank .dnd-chip').forEach(chip => chip.classList.remove('used'));
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+        }
+
+        // Touch/click support: tap a chip then tap a drop zone
+        let tappedChip = null;
+        document.addEventListener('click', e => {
+            const chip = e.target.closest('#ex2-bank .dnd-chip');
+            if (chip && !chip.classList.contains('used')) {
+                document.querySelectorAll('#ex2-bank .dnd-chip').forEach(c => c.style.outline = '');
+                if (tappedChip === chip) { tappedChip = null; return; }
+                tappedChip = chip;
+                chip.style.outline = '3px solid var(--primary)';
+                return;
+            }
+            const dz = e.target.closest('.dnd-drop-zone');
+            if (dz && tappedChip) {
+                const word = tappedChip.dataset.word;
+                const prevWord = dz.dataset.filled;
+                if (prevWord) returnChipToBank(prevWord);
+                fillDropZone(dz, word);
+                tappedChip.classList.add('used');
+                tappedChip.style.outline = '';
+                tappedChip = null;
+            } else if (!chip) {
+                // Deselect
+                if (tappedChip) { tappedChip.style.outline = ''; tappedChip = null; }
+            }
+        });
 
         function renderEx3() {
             const tv = document.getElementById('ex3-tv');
@@ -957,6 +1125,11 @@
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
         }
 
+        function closeTranscript3a() {
+            const panel = document.getElementById('transcript-panel');
+            if (panel) panel.classList.remove('active');
+        }
+
         function toggleTranscript(track, forceOpen = false) {
             const panel = document.getElementById('transcript-panel');
             const sections = document.querySelectorAll('.script-section');
@@ -1005,6 +1178,14 @@
                 el.classList.toggle('correct', user === ans);
                 el.classList.toggle('incorrect-marked', user !== ans);
             });
+            // Check DnD drop zones (Ex2)
+            document.querySelectorAll('.dnd-drop-zone[data-ans]').forEach(dz => {
+                const filled = (dz.dataset.filled || '').toLowerCase().trim();
+                if (!filled) return;
+                const ans = dz.dataset.ans.toLowerCase().trim();
+                dz.classList.toggle('correct', filled === ans);
+                dz.classList.toggle('incorrect', filled !== ans);
+            });
             ex4Data.forEach((_, i) => {
                 const input = document.getElementById(`ex4-${i}`);
                 const btn = document.getElementById(`ex4-${i}-sent`);
@@ -1022,14 +1203,7 @@
             icon.classList.toggle('active');
         }
 
-        document.addEventListener('click', e => {
-            if (e.target.tagName === 'INPUT' && selectedChip && e.target.dataset.type === 'input') {
-                e.target.value = selectedChip.textContent;
-                adjustWidth(e.target);
-                selectedChip.classList.remove('selected');
-                selectedChip = null;
-            }
-        });
+        // (chip click handler now managed by the DnD system above)
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Enter') checkAll();

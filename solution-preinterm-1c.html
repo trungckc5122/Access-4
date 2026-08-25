@@ -111,21 +111,25 @@
         .word-choice.incorrect-select { background: var(--error); color: #fff; }
 
         /* Exercise 4: Radio Cards */
-        .option-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .option-group { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; align-items: flex-start; }
         .option-card {
             border: 1px solid var(--glass-border);
-            padding: 12px 15px;
+            padding: 10px 20px 10px 14px;
             border-radius: 12px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 12px;
             background: var(--card-bg);
             transition: all 0.2s;
             font-size: 0.95rem;
+            max-width: 500px;
+            width: 500px;
         }
         .option-card:hover { border-color: var(--primary); background: var(--primary-light); }
         .option-card.selected { background: var(--primary-light); border-color: var(--primary); font-weight: bold; }
+        .option-card.correct-card { border-color: var(--success) !important; background: rgba(var(--success-rgb), 0.1) !important; color: var(--success) !important; font-weight: bold; }
+        .option-card.incorrect-card { border-color: var(--error) !important; background: rgba(var(--error-rgb), 0.1) !important; color: var(--error) !important; font-weight: bold; }
         .option-card input { width: 18px; height: 18px; cursor: pointer; }
 
         /* Exercise 5: Matching */
@@ -528,10 +532,17 @@
     function showSingleAnsRadio(qid, ans) {
         const radio = document.querySelector(`input[name="${qid}"][value="${ans}"]`);
         if (radio) {
-            radio.checked = true;
+            const card = radio.closest('.option-card');
             const group = radio.closest('.option-group');
-            group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-            radio.closest('.option-card').classList.add('selected');
+            const isAlreadyCorrect = card.classList.contains('correct-card');
+            group.querySelectorAll('.option-card').forEach(c => {
+                c.classList.remove('selected', 'correct-card', 'incorrect-card');
+                c.querySelector('input').checked = false;
+            });
+            if (!isAlreadyCorrect) {
+                radio.checked = true;
+                card.classList.add('correct-card');
+            }
         }
     }
 
@@ -539,8 +550,11 @@
         const row = document.getElementById(rowId).closest('.question-row');
         const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
         if (correct) {
+            const isCorrectSelect = correct.classList.contains('correct-select');
             row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
-            correct.classList.add('selected');
+            if (!isCorrectSelect) {
+                correct.classList.add('correct-select');
+            }
         }
     }
 
@@ -690,7 +704,7 @@
                 const r = card.querySelector('input');
                 r.checked = true;
                 const group = card.closest('.option-group');
-                group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected', 'correct-card', 'incorrect-card'));
                 card.classList.add('selected');
             }
         });
