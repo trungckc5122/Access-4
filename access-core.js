@@ -2,7 +2,7 @@
  * ACCESS 4 CORE ENGINE - Standardized Home Button & Favicon
  * Injects the academic 'Tr' favicon and a premium Home navigation button.
  */
-(function() {
+(function () {
     // 1. Premium 'Tr' Favicon Data URI
     const faviconUri = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOSIgZmlsbD0iIzBkOTQ4OCIvPjxwYXRoIGQ9Ik02IDEwaDEydjNoLTQuNXYxMWgtM3YtMTFINnYtM3ptMTQgNnY4aC0zdi01YzAtMS41IDEtMi41IDIuNS0yLjVoMi41djNoLTJ6IiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iMjYiIGN5PSI2IiByPSIzIiBmaWxsPSIjZmJiZjI0Ii8+PC9zdmc+";
 
@@ -27,21 +27,21 @@
         const h1 = document.querySelector('h1');
         if (h1 && !document.querySelector('.home-btn')) {
             const homeBtn = document.createElement('a');
-            
+
             // Logic: 
             // - If on a lesson/review page: Link to access 4/index.html
             // - If on access 4/index.html: Link to main root index.html
             const filename = window.location.pathname.split('/').pop().toLowerCase();
             const isIndex = filename === 'index.html' || filename === '';
-            
+
             if (isIndex) {
                 homeBtn.href = '../index.html';
                 homeBtn.title = 'Về trang chủ chính';
             } else {
-                homeBtn.href = 'index.html'; 
+                homeBtn.href = 'index.html';
                 homeBtn.title = 'Về danh sách bài học';
             }
-            
+
             homeBtn.className = 'home-btn';
             homeBtn.innerHTML = `
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -68,7 +68,7 @@
             btn.id = 'theme-toggle';
             btn.className = 'theme-toggle-btn';
             btn.title = 'Chế độ Sáng/Tối';
-            
+
             // Set initial theme from localStorage or default
             const savedTheme = localStorage.getItem('access-theme') || 'light';
             document.documentElement.setAttribute('data-theme', savedTheme);
@@ -81,7 +81,7 @@
                 btn.innerHTML = next === 'dark' ? '☀️' : '🌙';
                 localStorage.setItem('access-theme', next);
             };
-            
+
             document.body.prepend(btn);
         }
     };
@@ -100,7 +100,7 @@
         const targets = document.querySelectorAll('.question-row, .ex4-question, .par-num, .dialogue-line, .syn-opp-label, .row-number');
         targets.forEach(el => {
             if (el.dataset.numbered === "true" || el.querySelector('.q-number')) return;
-            
+
             let first = el.firstChild;
             if (first && first.nodeType === 3) {
                 const m = first.nodeValue.match(/^\s*(\d+[\.\)]?\s*)/);
@@ -137,7 +137,7 @@
         injectHomeBtn();
         injectThemeToggle();
         boldNumbers();
-        
+
         // Watch for dynamic content (exercises rendered via JS)
         const observer = new MutationObserver(() => {
             boldNumbers();
@@ -177,41 +177,9 @@
     // Map: taskId → { wordBank[], gapStates: Map<gapId, word|null> }
     const _tasks = {};
 
-    // track pill being dragged out of a gap
+    // track which gapId is being dragged (pill → pill transfer)
     let _draggingFromGap = null;  // gapId string or null
-    let _draggingWord    = null;  // the word string being dragged
-    let _dropWasHandled  = false; // set true by any valid drop target
-
-    /* ── document-level catch-all: thả pill ra ngoài → về bank ── */
-    // Only attached once, handles the case where user drops on non-drop-target area
-    let _docDropBound = false;
-    function _ensureDocDrop() {
-        if (_docDropBound) return;
-        _docDropBound = true;
-
-        // Accept dragover everywhere so drop fires even outside defined zones
-        document.addEventListener('dragover', (e) => {
-            if (_draggingFromGap !== null) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-            }
-        });
-
-        // Drop anywhere on page = return to bank (zones stop propagation if they handle it)
-        document.addEventListener('drop', (e) => {
-            if (_draggingFromGap === null) return;
-            e.preventDefault();
-            // If a zone/bank handler already ran, it set _dropWasHandled and stopped propagation
-            // This handler only reaches here when dropped on a non-zone area
-            const srcGap    = _draggingFromGap;
-            const srcTaskId = e.dataTransfer.getData('task-id');
-            if (srcGap && srcTaskId && !_dropWasHandled) {
-                _clearGap(srcTaskId, srcGap);
-                _refreshBank(srcTaskId);
-            }
-            _dropWasHandled = false;
-        });
-    }
+    let _draggingWord = null;  // the word string being dragged
 
     /* ── helpers ─────────────────────────────────────────────── */
     function _normWord(w) {
@@ -253,21 +221,15 @@
         pill.dataset.word = word;
         pill.dataset.gapId = gapId;
         pill.dataset.taskId = taskId;
-        // Prevent browser from treating drag as text-selection drag
-        pill.style.userSelect = 'none';
-        pill.style.webkitUserSelect = 'none';
-        pill.style.cursor = 'grab';
 
         const label = document.createElement('span');
         label.textContent = word;
-        label.style.pointerEvents = 'none'; // clicks/drags pass through to pill
         pill.appendChild(label);
 
         const removeBtn = document.createElement('span');
         removeBtn.className = 'pill-remove';
         removeBtn.textContent = '✕';
         removeBtn.title = 'Xóa';
-        removeBtn.style.pointerEvents = 'auto'; // keep click working
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             _clearGap(taskId, gapId);
@@ -278,7 +240,7 @@
         /* drag START from pill */
         pill.addEventListener('dragstart', (e) => {
             _draggingFromGap = gapId;
-            _draggingWord    = word;
+            _draggingWord = word;
             e.dataTransfer.setData('text/plain', word);
             e.dataTransfer.setData('source-gap', gapId);
             e.dataTransfer.setData('task-id', taskId);
@@ -291,13 +253,10 @@
 
         pill.addEventListener('dragend', () => {
             pill.style.opacity = '';
-            pill.style.cursor = 'grab';
+            _draggingFromGap = null;
+            _draggingWord = null;
             const rz = document.getElementById('_return-zone');
             if (rz) { rz.classList.remove('active'); rz.classList.remove('drag-over'); }
-            // Note: actual "return to bank" logic lives in the document-level drop handler
-            _dropWasHandled  = false;
-            _draggingFromGap = null;
-            _draggingWord    = null;
         });
 
         return pill;
@@ -343,34 +302,16 @@
 
         zone.addEventListener('drop', (e) => {
             e.preventDefault();
-            _dropWasHandled = true;
             zone.classList.remove('drag-over');
-            const word      = e.dataTransfer.getData('text/plain');
+            const word = e.dataTransfer.getData('text/plain');
             const sourceGap = e.dataTransfer.getData('source-gap');
             const srcTaskId = e.dataTransfer.getData('task-id') || taskId;
 
             if (!word) return;
 
-            // dropped back onto its own gap → no-op (pill stays, nothing changes)
-            if (sourceGap === gapId) {
-                // Re-render pill to restore it (dragend may have faded opacity)
-                _fillGap(taskId, gapId, word);
-                _refreshBank(taskId);
-                return;
-            }
-
-            const state      = _tasks[taskId];
-            const targetWord = state ? state.gapStates.get(gapId) : null;
-
-            // dragging from another gap in the same task
-            if (sourceGap && srcTaskId === taskId) {
-                if (targetWord) {
-                    // target gap already has a word → SWAP the two gaps
-                    _fillGap(taskId, sourceGap, targetWord);
-                } else {
-                    // target gap empty → just move (clear the source)
-                    _clearGap(taskId, sourceGap);
-                }
+            // if dragging from another gap in same task, clear the source gap
+            if (sourceGap && sourceGap !== gapId && srcTaskId === taskId) {
+                _clearGap(taskId, sourceGap);
             }
 
             _fillGap(taskId, gapId, word);
@@ -395,11 +336,8 @@
     /* ── public: renderGapFillDrop ──────────────────────────── */
     window.renderGapFillDrop = function (taskId, data, wordBank) {
         const bankContainer = document.getElementById(`bank-${taskId}`);
-        const qContainer    = document.getElementById(`questions-${taskId}`);
+        const qContainer = document.getElementById(`questions-${taskId}`);
         if (!bankContainer || !qContainer) return;
-
-        // Ensure document-level catch-all drop is bound (once per page)
-        _ensureDocDrop();
 
         // init state
         _tasks[taskId] = {
@@ -410,43 +348,12 @@
 
         /* ── render bank ── */
         bankContainer.innerHTML = '';
-
-        // allow dropping a gap's pill directly back onto the bank itself
-        // (in addition to the floating return-zone) to return it
-        if (!bankContainer.dataset.dropBound) {
-            bankContainer.dataset.dropBound = 'true';
-            bankContainer.addEventListener('dragover', (e) => {
-                // types is DOMStringList in some browsers — use Array.from for .includes compatibility
-                const types = Array.from(e.dataTransfer.types);
-                if (!types.includes('source-gap')) return;
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                bankContainer.classList.add('drag-over');
-            });
-            bankContainer.addEventListener('dragleave', (e) => {
-                // only remove highlight when truly leaving the bank container
-                if (!bankContainer.contains(e.relatedTarget)) {
-                    bankContainer.classList.remove('drag-over');
-                }
-            });
-            bankContainer.addEventListener('drop', (e) => {
-                e.preventDefault();
-                _dropWasHandled = true;
-                bankContainer.classList.remove('drag-over');
-                const srcGap    = e.dataTransfer.getData('source-gap');
-                const srcTaskId = e.dataTransfer.getData('task-id');
-                if (!srcGap || !srcTaskId) return;
-                _clearGap(srcTaskId, srcGap);
-                _refreshBank(srcTaskId);
-            });
-        }
-
         wordBank.forEach((word, i) => {
             const item = document.createElement('div');
             item.className = 'word-item';
-            item.id        = `${taskId}-word-${i}`;
+            item.id = `${taskId}-word-${i}`;
             item.dataset.word = word;
-            item.draggable   = true;
+            item.draggable = true;
             item.textContent = word.toLowerCase();
 
             /* drag from bank */
@@ -463,7 +370,7 @@
                     }
                 }
                 _draggingFromGap = sourceGapId;
-                _draggingWord    = word;
+                _draggingWord = word;
                 e.dataTransfer.setData('text/plain', word);
                 e.dataTransfer.setData('task-id', taskId);
                 if (sourceGapId) e.dataTransfer.setData('source-gap', sourceGapId);
@@ -509,7 +416,7 @@
             let numberHtml = '';
             const numMatch = sentence.match(/^(\d+)\.\s+/);
             if (numMatch) {
-                sentence   = sentence.replace(/^\d+\.\s+/, '');
+                sentence = sentence.replace(/^\d+\.\s+/, '');
                 numberHtml = `<span class="existing-number">${numMatch[1]}.</span>`;
             } else {
                 numberHtml = `<span class="exercise-number">${i + 1}</span>`;
@@ -543,7 +450,7 @@
         let rz = document.getElementById('_return-zone');
         if (!rz) {
             rz = document.createElement('div');
-            rz.id        = '_return-zone';
+            rz.id = '_return-zone';
             rz.className = 'return-to-bank-zone';
             rz.innerHTML = '↩ Thả để trả về Word Bank';
             document.body.appendChild(rz);
@@ -557,10 +464,9 @@
             });
             rz.addEventListener('drop', (e) => {
                 e.preventDefault();
-                _dropWasHandled = true;
                 rz.classList.remove('drag-over');
                 rz.classList.remove('active');
-                const srcGap    = e.dataTransfer.getData('source-gap');
+                const srcGap = e.dataTransfer.getData('source-gap');
                 const srcTaskId = e.dataTransfer.getData('task-id');
                 if (srcGap && srcTaskId) {
                     _clearGap(srcTaskId, srcGap);
@@ -578,7 +484,7 @@
             if (!state) return;
             state.data.forEach((item, i) => {
                 const gapId = `${prefix}-q${i}`;
-                const ans   = item.ans ? item.ans.split('|')[0] : '';
+                const ans = item.ans ? item.ans.split('|')[0] : '';
                 if (ans) {
                     _fillGap(prefix, gapId, ans);
                     const zone = document.getElementById(gapId);
@@ -607,13 +513,13 @@
 
         toggleSingleAns: function (id) {
             const taskId = id.split('-')[0];
-            const state  = _tasks[taskId];
+            const state = _tasks[taskId];
             if (!state || !state.gapStates.has(id)) return false;
 
-            const eyeBtn  = document.getElementById(`${id}-eye`);
+            const eyeBtn = document.getElementById(`${id}-eye`);
             const isShown = eyeBtn && eyeBtn.classList.contains('active');
-            const zone    = document.getElementById(id);
-            const ans     = zone && zone.dataset.ans ? zone.dataset.ans.split('|')[0] : '';
+            const zone = document.getElementById(id);
+            const ans = zone && zone.dataset.ans ? zone.dataset.ans.split('|')[0] : '';
 
             if (isShown) {
                 _clearGap(taskId, id);
@@ -656,187 +562,75 @@
 
 
 /* ============================================================
-   INPUT-BASED WORD-BANK ENGINE (shared by 5b / 10a / 10b style pages)
-   Renders an <input> per gap plus a draggable/clickable word bank.
-   Pages only need to keep their own: adjustWidth(), normalizeAnswer(),
-   toggleHint(), toggleMultiGapAns() — everything about how the word
-   bank itself is filled, dragged, swapped, and returned lives here.
+   SHARED INLINE-HINT TOOLTIP FIX (scroll/resize tracking)
 
-   Exported globals:
-     window.renderGapFill(id, data, bankId)
-     window.allowDrop(ev)
-     window.drag(ev)
-     window.dragFromGap(ev)
-     window.drop(ev)
-     window.dropToBank(ev)
-     window.clickSelect(el)
-     window.updateWordBank()
+   Every exercise file defines its own local `toggleHint(event, id)`
+   in its own <script> block, BEFORE this file loads. Since
+   `<script src="access-core.js">` always comes LAST in every file,
+   assigning `window.toggleHint` here overrides that local (buggy)
+   copy automatically — no need to edit each file individually.
+
+   The bug being fixed: `.inline-hint` tooltips use
+   `position: fixed`, with top/left computed once at click time.
+   On scroll, the tooltip used to stay glued to the viewport instead
+   of following its anchor button, making it appear to "float away"
+   from the question it explains. This version recomputes the
+   position on every scroll/resize while a tooltip is open.
+
+   Files that only use `.hint-box` (not `.inline-hint`) are
+   unaffected — this function preserves that original show/hide
+   behavior unchanged.
 ============================================================ */
-
 (function () {
+    let activeInlineHint = null; // { hintEl, btnEl }
 
-    let selectedWordEl  = null;
-    let dragSourceEl    = null;   // element the current drag started from (word-item OR a filled gap input)
-    let dragSourceType  = null;   // 'bank' | 'gap'
-
-    function allowDrop(ev) {
-        ev.preventDefault();
+    function positionInlineHint(h, btn) {
+        const rect = btn.getBoundingClientRect();
+        const hintW = 260;
+        let left = rect.left + rect.width / 2 - hintW / 2;
+        if (left < 8) left = 8;
+        if (left + hintW > window.innerWidth - 8) left = window.innerWidth - hintW - 8;
+        h.style.left = left + 'px';
+        h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
     }
 
-    // Drag start from a word-bank pill
-    function drag(ev) {
-        ev.dataTransfer.setData("text", ev.target.innerText);
-        dragSourceEl = ev.target;
-        dragSourceType = 'bank';
-        selectedWordEl = ev.target;
-    }
-
-    // Drag start from a filled gap (dragging the answer back out)
-    function dragFromGap(ev) {
-        if (!ev.target.value || !ev.target.value.trim()) {
-            ev.preventDefault();
-            return;
-        }
-        ev.dataTransfer.setData("text", ev.target.value);
-        dragSourceEl = ev.target;
-        dragSourceType = 'gap';
-    }
-
-    function drop(ev) {
-        ev.preventDefault();
-        const data = ev.dataTransfer.getData("text");
-        if (!data) return;
-
-        if (ev.target.tagName === 'INPUT') {
-            const targetOldValue = ev.target.value;
-            ev.target.value = data;
-            if (typeof window.adjustWidth === 'function') window.adjustWidth(ev.target);
-
-            if (dragSourceType === 'gap' && dragSourceEl && dragSourceEl !== ev.target) {
-                // Dragging gap → gap: if the target already had an answer, swap it
-                // back into the source gap; otherwise the source is simply moved (cleared).
-                dragSourceEl.value = targetOldValue;
-                if (typeof window.adjustWidth === 'function') window.adjustWidth(dragSourceEl);
+    window.toggleHint = function (event, id) {
+        if (event) event.stopPropagation();
+        const h = document.getElementById(id + '-hint');
+        if (!h) return;
+        const isVisible = h.style.display === 'block';
+        document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+        activeInlineHint = null;
+        if (!isVisible) {
+            if (h.classList.contains('inline-hint')) {
+                const btn = event ? event.currentTarget : null;
+                h.style.display = 'block';
+                if (btn) {
+                    positionInlineHint(h, btn);
+                    activeInlineHint = { hintEl: h, btnEl: btn };
+                }
+            } else {
+                h.style.display = 'block';
             }
-
-            updateWordBank();
         }
+    };
 
-        dragSourceEl = null;
-        dragSourceType = null;
-    }
-
-    // Drop target: the word bank itself — dragging a filled gap here returns it
-    function dropToBank(ev) {
-        ev.preventDefault();
-        if (dragSourceType === 'gap' && dragSourceEl) {
-            dragSourceEl.value = '';
-            if (typeof window.adjustWidth === 'function') window.adjustWidth(dragSourceEl);
+    window.addEventListener('scroll', () => {
+        if (activeInlineHint && activeInlineHint.hintEl.style.display === 'block') {
+            positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
         }
-        dragSourceEl = null;
-        dragSourceType = null;
-        updateWordBank();
-    }
+    }, true);
 
-    function clickSelect(el) {
-        if (selectedWordEl) {
-            selectedWordEl.style.background = "#eef2f7";
-        }
-        selectedWordEl = el;
-        el.style.background = "#ffeaa7";
-    }
-
-    // Handle word bank click to input
-    document.addEventListener('click', (e) => {
-        if (e.target.tagName === 'INPUT' && selectedWordEl) {
-            e.target.value = selectedWordEl.innerText;
-            if (typeof window.adjustWidth === 'function') window.adjustWidth(e.target);
-            selectedWordEl.style.background = "#eef2f7";
-            selectedWordEl = null;
-            updateWordBank();
+    window.addEventListener('resize', () => {
+        if (activeInlineHint && activeInlineHint.hintEl.style.display === 'block') {
+            positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
         }
     });
 
-    function updateWordBank() {
-        const normalize = typeof window.normalizeAnswer === 'function'
-            ? window.normalizeAnswer
-            : (s) => (s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, '');
-        const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalize(i.value));
-        document.querySelectorAll('.word-item').forEach(item => {
-            const word = item.innerText.toLowerCase().trim();
-            const usedCount = inputs.filter(v => v === word).length;
-            item.classList.toggle('used', usedCount >= 1);
-        });
-    }
-
-    function renderGapFill(id, data, bankId) {
-        const container = document.getElementById(`questions-${id}`);
-        const bank = document.getElementById(bankId);
-        if (!container || !bank) return;
-
-        container.innerHTML = '';
-        bank.innerHTML = '';
-
-        // Allow dragging a filled gap and dropping it back onto the word bank to return it
-        bank.ondragover = allowDrop;
-        bank.ondrop = dropToBank;
-
-        const words = [...new Set(data.map(item => item.ans.toLowerCase()))].sort();
-        words.forEach(w => {
-            bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
-        });
-
-        data.forEach((it, i) => {
-            const qid = `${id}-q${i}`;
-
-            let sentence = it.q;
-            let numberHtml = '';
-            const numberMatch = sentence.match(/^(\d+)\.\s+/);
-
-            if (numberMatch) {
-                sentence = sentence.replace(/^\d+\.\s+/, '');
-                numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
-            } else {
-                numberHtml = `<span class="exercise-number">${i + 1}</span>`;
-            }
-
-            const gapCount = (sentence.match(/_{2,}/g) || []).length;
-            let inputIndex = 0;
-
-            sentence = sentence.replace(/_{2,}/g, () => {
-                const inputId = `${qid}-${inputIndex}`;
-                inputIndex++;
-                return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" draggable="true" oninput="adjustWidth(this)" ondragstart="dragFromGap(event)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
-            });
-
-            container.innerHTML += `
-            <div class="question-row" id="${qid}-row">
-                ${numberHtml} ${sentence}
-                <div class="row-btns">
-                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
-                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
-                </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
-            </div>`;
-
-            setTimeout(() => {
-                for (let j = 0; j < gapCount; j++) {
-                    const input = document.getElementById(`${qid}-${j}`);
-                    if (input && it.ans) {
-                        input.setAttribute('data-ans', it.ans);
-                    }
-                }
-            }, 0);
-        });
-    }
-
-    window.allowDrop = allowDrop;
-    window.drag = drag;
-    window.dragFromGap = dragFromGap;
-    window.drop = drop;
-    window.dropToBank = dropToBank;
-    window.clickSelect = clickSelect;
-    window.updateWordBank = updateWordBank;
-    window.renderGapFill = renderGapFill;
-
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.hint-btn') && !e.target.closest('.eye-btn') && !e.target.closest('.hint-box') && !e.target.closest('.inline-hint')) {
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            activeInlineHint = null;
+        }
+    });
 })();
