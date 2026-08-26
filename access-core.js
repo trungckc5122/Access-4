@@ -131,16 +131,151 @@
         }
     });
 
+    // 6. Transcript Panel: auto-inject close button & fix sticky scope
+    const initTranscriptPanels = () => {
+        document.querySelectorAll('.transcript-panel').forEach(panel => {
+            // Skip if already processed
+            if (panel.dataset.transcriptInit === '1') return;
+            panel.dataset.transcriptInit = '1';
+
+            // ── (a) Inject ✕ close button if not already present ──
+            if (!panel.querySelector('.transcript-close-injected') &&
+                !panel.querySelector('.close-transcript-btn')) {
+                let header = panel.querySelector('h2, h3');
+                if (header) {
+                    const parent = header.parentElement;
+                    // Skip if parent already has a button (close button already exists)
+                    const parentHasClose = parent !== panel &&
+                        parent.querySelector('button') !== null;
+
+                    if (!parentHasClose) {
+                        const isAlreadyFlex =
+                            parent !== panel &&
+                            (window.getComputedStyle(parent).display === 'flex' ||
+                             parent.style.display === 'flex');
+
+                        const closeBtn = document.createElement('button');
+                        closeBtn.className = 'transcript-close-injected';
+                        closeBtn.title = 'Đóng transcript';
+                        closeBtn.innerHTML = '✕';
+                        closeBtn.style.cssText = [
+                            'background:none', 'border:none', 'cursor:pointer',
+                            'font-size:1.3rem', 'color:var(--primary)', 'line-height:1',
+                            'padding:2px 6px', 'border-radius:6px', 'flex-shrink:0',
+                            'transition:background 0.2s', 'margin-left:auto'
+                        ].join(';');
+                        closeBtn.addEventListener('mouseover', () => closeBtn.style.background = 'var(--primary-light)');
+                        closeBtn.addEventListener('mouseout',  () => closeBtn.style.background = 'none');
+                        closeBtn.addEventListener('click', () => panel.classList.remove('active'));
+
+                        if (isAlreadyFlex) {
+                            parent.appendChild(closeBtn);
+                        } else {
+                            const row = document.createElement('div');
+                            row.style.cssText = [
+                                'display:flex', 'align-items:center',
+                                'justify-content:space-between',
+                                'border-bottom:2px solid var(--primary)',
+                                'padding-bottom:10px', 'margin-bottom:20px'
+                            ].join(';');
+                            header.style.margin = '0';
+                            header.style.border = 'none';
+                            header.style.padding = '0';
+                            header.parentNode.insertBefore(row, header);
+                            row.appendChild(header);
+                            row.appendChild(closeBtn);
+                        }
+                    }
+                }
+            }
+
+            // ── (b) Fix sticky scope with position:fixed bounded to container ──
+            const container = panel.closest('.reading-split-container');
+            if (!container) return;
+
+            // Placeholder keeps the flex layout width when panel goes fixed
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = 'flex-shrink:0;width:0;transition:width 0.3s;';
+            container.insertBefore(placeholder, panel);
+
+            // Force panel out of normal flow so sticky doesn't leak beyond container
+            panel.style.position = 'fixed';
+            panel.style.overflowY = 'auto';
+            panel.style.zIndex = '200';
+            panel.style.boxShadow = '2px 0 12px rgba(0,0,0,0.10)';
+            panel.style.display = 'none'; // hidden until active
+
+            const updateFixedPanel = () => {
+                if (!panel.classList.contains('active')) {
+                    panel.style.display = 'none';
+                    placeholder.style.width = '0';
+                    return;
+                }
+
+                const cRect = container.getBoundingClientRect();
+                const vh = window.innerHeight;
+
+                // If container is not visible at all, hide panel
+                if (cRect.bottom < 0 || cRect.top > vh) {
+                    panel.style.display = 'none';
+                    return;
+                }
+
+                panel.style.display = '';
+
+                // Clamp panel top/bottom inside viewport AND container bounds
+                const panelTop = Math.max(cRect.top, 20);
+                const panelBottom = Math.min(cRect.bottom, vh - 10);
+                const panelH = Math.max(panelBottom - panelTop, 100);
+
+                // Width: 45% of container, max 480px
+                const panelW = Math.min(cRect.width * 0.45, 480);
+
+                panel.style.top = panelTop + 'px';
+                panel.style.left = cRect.left + 'px';
+                panel.style.width = panelW + 'px';
+                panel.style.height = panelH + 'px';
+                // Ensure padding is set (CSS .active rule may not apply on fixed)
+                if (!panel.style.padding) panel.style.padding = '25px';
+
+                // Sync placeholder width to reserve space in the flex row
+                placeholder.style.width = panelW + 'px';
+            };
+
+            // Watch active class changes
+            const mo = new MutationObserver(updateFixedPanel);
+            mo.observe(panel, { attributes: true, attributeFilter: ['class'] });
+
+            // Update on scroll and resize
+            window.addEventListener('scroll', updateFixedPanel, { passive: true });
+            window.addEventListener('resize', updateFixedPanel, { passive: true });
+
+            // Run once now
+            updateFixedPanel();
+        });
+    };
+
     // Initialize on load
     const init = () => {
         injectFavicon();
         injectHomeBtn();
         injectThemeToggle();
         boldNumbers();
+        initTranscriptPanels();
 
         // Watch for dynamic content (exercises rendered via JS)
-        const observer = new MutationObserver(() => {
+        const observer = new MutationObserver((mutations) => {
             boldNumbers();
+            // Re-scan for any newly added transcript panels
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+                    const panels = node.classList && node.classList.contains('transcript-panel')
+                        ? [node]
+                        : [...node.querySelectorAll('.transcript-panel')];
+                    if (panels.length) initTranscriptPanels();
+                });
+            });
         });
         observer.observe(document.body, { childList: true, subtree: true });
     };
