@@ -519,7 +519,7 @@
                         <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot7" data-q="7"><span class="slot-content">[ 7 ]</span><span class="remove-chip" onclick="removeSlot(7)">✕</span></span></span> 
                         – in a cupboard under the stairs.</span> He couldn't breathe, so they had to get him out quickly. Moments after they pulled him out, the whole house collapsed. The family survived a terrifying experience with only small injuries. <span id="slot8-context" class="highlightable">But other people in the town 
                         <span class="inline-drop-zone"><span class="inline-drop-slot" id="readingSlot8" data-q="8"><span class="slot-content">[ 8 ]</span><span class="remove-chip" onclick="removeSlot(8)">✕</span></span></span> 
-                        as the Palmores.</span> Twenty-four people died in the tornado.
+                        as the Palmores.</span> <span id="ex2q5-context" class="highlightable">Twenty-four people died in the tornado.</span>
                     </p>
                 </div>
             </div>
@@ -561,6 +561,16 @@
 
         const ex3AnswerKey = { 1: 'D', 2: 'B', 3: 'G', 4: 'I', 5: 'A', 6: 'C', 7: 'H', 8: 'E' };
 
+        // Map each Ex2 question (by index) to the reading-panel span that contains its answer
+        const ex2ContextMap = {
+            0: 'slot1-context',   // What kind of natural disaster... -> a tornado
+            1: 'slot1-context',   // Where were they when they realised... -> at home
+            2: 'slot2-context',   // Where was Monica? -> at school
+            3: 'slot4-context',   // In which room did Monica and Diana hide? -> a bathroom
+            4: 'slot7-context',   // Where did Pete hide? -> in a cupboard under the stairs
+            5: 'ex2q5-context'    // How many people died? -> twenty-four
+        };
+
         // --- Render Ex 1 & 2 ---
         function renderEx1() {
             const container = document.getElementById('questions-ex1');
@@ -595,7 +605,7 @@
                     <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="width: auto; min-width: 150px; text-align: left; padding: 2px 5px; margin-left: 10px;">
                     <div class="row-btns" style="display: inline-flex; gap: 5px; margin-left: 10px;">
                         <button class="btn-small eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
-                        <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                        <button class="btn-small info-btn" onclick="toggleHintEx2(event, '${qid}')">i</button>
                     </div>
                     <div class="hint-box" id="${qid}-hint">${it.hint}</div>
                 </div>`;
@@ -630,6 +640,41 @@
             const isVisible = window.getComputedStyle(h).display === 'block';
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             if (!isVisible) h.style.display = 'block';
+        }
+
+        // Dedicated handler for Ex2 (kept separate from the generic `toggleHint`
+        // because access-core.js loads after this script and overwrites
+        // `window.toggleHint` globally, which would silently strip out the
+        // highlight/scroll behaviour below if we reused that name).
+        function toggleHintEx2(ev, id) {
+            ev.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            const isVisible = window.getComputedStyle(h).display === 'block';
+
+            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+
+            if (!isVisible) {
+                h.style.display = 'block';
+
+                const match = id.match(/^ex2-q(\d+)$/);
+                if (match) {
+                    const targetId = ex2ContextMap[parseInt(match[1])];
+                    if (targetId) scrollAndHighlightById(targetId);
+                }
+            }
+        }
+
+        function scrollAndHighlightById(targetId) {
+            const contextSpan = document.getElementById(targetId);
+            if (contextSpan) {
+                contextSpan.classList.add('active-highlight');
+                const textPanel = document.getElementById('readingPanel');
+                if (textPanel) {
+                    const scrollOffset = contextSpan.offsetTop - 80;
+                    textPanel.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+                }
+            }
         }
 
         function toggleBilingual(cb) {
@@ -918,6 +963,7 @@
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.info-btn') && !e.target.closest('.hint-box')) {
                 document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
             }
         });
     </script>
