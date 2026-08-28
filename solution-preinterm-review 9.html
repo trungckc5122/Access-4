@@ -20,7 +20,6 @@
             font-weight: 700;
             margin-bottom: 20px;
             font-size: 1.1rem;
-            color: var(--text);
             border-left: 4px solid var(--primary);
             padding-left: 15px;
         }
@@ -31,7 +30,6 @@
             padding-bottom: 14px;
             line-height: 1.8;
             font-size: 1.05rem;
-            color: var(--text);
         }
 
         .row-btns {
@@ -136,55 +134,13 @@
             user-select: none;
         }
 
-        .word-item:hover,
-        .word-item.active-word {
+        .word-item:hover {
             background: var(--primary);
             color: white;
         }
 
         .word-item.used {
-            opacity: 0.35;
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .drop-slot {
-            display: inline-flex;
-            min-width: 110px;
-            min-height: 30px;
-            background: rgba(13, 148, 136, 0.05);
-            border-bottom: 2px solid var(--primary);
-            margin: 0 4px;
-            vertical-align: middle;
-            border-radius: 4px 4px 0 0;
-            padding: 0 8px;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--primary);
-            transition: all 0.2s;
-        }
-
-        .drop-slot.drag-over {
-            background: var(--primary-light);
-            border-bottom-color: var(--primary-dark);
-        }
-
-        .drop-slot.filled {
-            background: var(--primary-light);
-        }
-
-        .drop-slot.correct {
-            background: #dcfce7 !important;
-            color: #166534 !important;
-            border-bottom-color: #16a34a !important;
-        }
-
-        .drop-slot.incorrect-marked {
-            background: #fee2e2 !important;
-            color: #991b1b !important;
-            border-bottom-color: #dc2626 !important;
+            display: none;
         }
 
         .choice-group {
@@ -380,6 +336,7 @@
                 input.classList.remove('incorrect-marked');
             }
             adjustWidth(input);
+            updateWordBank();
         }
 
         // Hàm mới: luôn hiển thị đáp án (không toggle)
@@ -390,175 +347,75 @@
             input.classList.add('correct');
             input.classList.remove('incorrect-marked');
             adjustWidth(input);
+            updateWordBank();
         }
 
-        // ========== DRAG & DROP (hỗ trợ allowDuplicates cho ex5) ==========
-        let activeWord = null, activeSection = null;
-        let dragWordEl = null, dragSection = null;
+        // ================= WORD BANK (canonical drag / click-select / auto-input pattern) =================
+        let selectedWordEl = null;
 
-        function getWordItem(wordValue, section) {
-            const bank = document.getElementById(`bank-${section}`);
-            return bank ? bank.querySelector(`.word-item[data-value="${CSS.escape(wordValue)}"]`) : null;
-        }
-
-        function getAvailableWordItem(wordValue, section) {
-            const bank = document.getElementById(`bank-${section}`);
-            if (!bank) return null;
-            const items = bank.querySelectorAll(`.word-item[data-value="${CSS.escape(wordValue)}"]`);
-            for (let item of items) {
-                if (!item.classList.contains('used')) return item;
-            }
-            return null;
-        }
-
-        function getUsedWordItem(wordValue, section) {
-            const bank = document.getElementById(`bank-${section}`);
-            if (!bank) return null;
-            const items = bank.querySelectorAll(`.word-item[data-value="${CSS.escape(wordValue)}"]`);
-            for (let item of items) {
-                if (item.classList.contains('used')) return item;
-            }
-            return null;
-        }
-
-        function removeWord(slotId, section, allowDuplicates = false) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            const word = slot.innerText.trim();
-            if (!word) return;
-            slot.innerText = '';
-            slot.classList.remove('filled', 'correct', 'incorrect-marked');
-            slot.style.minWidth = '110px';
-            if (allowDuplicates) {
-                const wi = getUsedWordItem(word, section);
-                if (wi) wi.classList.remove('used');
-            } else {
-                const wi = getWordItem(word, section);
-                if (wi) wi.classList.remove('used');
-            }
-        }
-
-        function placeWord(slotId, wordValue, section, allowDuplicates = false) {
-            const slot = document.getElementById(slotId);
-            if (!slot || !wordValue) return;
-            if (slot.classList.contains('filled') && slot.innerText.trim()) {
-                removeWord(slotId, section, allowDuplicates);
-            }
-            if (!allowDuplicates) {
-                document.querySelectorAll(`[data-section="${section}"]`).forEach(otherSlot => {
-                    if (otherSlot.id !== slotId && otherSlot.innerText.trim() === wordValue) {
-                        removeWord(otherSlot.id, section, allowDuplicates);
-                    }
-                });
-            }
-            slot.innerText = wordValue;
-            slot.classList.add('filled');
-            slot.classList.remove('correct', 'incorrect-marked');
-            slot.style.minWidth = Math.max(wordValue.length * 10 + 20, 110) + 'px';
-            if (allowDuplicates) {
-                const wi = getAvailableWordItem(wordValue, section);
-                if (wi) wi.classList.add('used');
-            } else {
-                const wi = getWordItem(wordValue, section);
-                if (wi) wi.classList.add('used');
-            }
-        }
-
-        function handleWordClick(el, section) {
-            if (el.classList.contains('used')) return;
-            if (activeWord === el.dataset.value && activeSection === section) {
-                el.classList.remove('active-word');
-                activeWord = null; activeSection = null;
-            } else {
-                document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('active-word'));
-                el.classList.add('active-word');
-                activeWord = el.dataset.value;
-                activeSection = section;
-            }
-        }
-
-        function handleSlotClick(slotId, section, allowDuplicates = false) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            if (activeWord && activeSection === section) {
-                placeWord(slotId, activeWord, section, allowDuplicates);
-                const activeItem = getWordItem(activeWord, section);
-                if (activeItem) activeItem.classList.remove('active-word');
-                activeWord = null; activeSection = null;
-            } else if (slot.innerText.trim()) {
-                removeWord(slotId, section, allowDuplicates);
-            }
-        }
-
-        function handleDragStart(e, section) {
-            const el = e.target;
-            if (el.classList.contains('used')) {
-                e.preventDefault();
-                return false;
-            }
-            dragWordEl = el;
-            dragSection = section;
-            el.classList.add('active-word');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', el.dataset.value);
-        }
-
-        function handleDragOver(e) { e.preventDefault(); }
-        function handleDragEnter(e) { e.preventDefault(); e.target.classList.add('drag-over'); }
-        function handleDragLeave(e) { e.target.classList.remove('drag-over'); }
-
-        function handleDrop(e, section, allowDuplicates = false) {
-            e.preventDefault();
-            const slot = e.target.closest('.drop-slot');
-            if (!slot) return;
-            slot.classList.remove('drag-over');
-            if (dragWordEl && dragSection === section) {
-                placeWord(slot.id, dragWordEl.dataset.value, section, allowDuplicates);
-                dragWordEl.classList.remove('active-word');
-                dragWordEl = null; dragSection = null;
-            }
-        }
-
-        function createWordBank(bankId, words, section) {
+        function initWordBank(bankId, words) {
             const bank = document.getElementById(bankId);
             if (!bank) return;
             bank.innerHTML = words.map(w =>
-                `<div class="word-item" data-value="${w}" draggable="true" 
-                  ondragstart="handleDragStart(event, '${section}')" 
-                  onclick="handleWordClick(this, '${section}')">${w}</div>`
+                `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`
             ).join('');
         }
 
-        function toggleSlot(id, ans, section, allowDuplicates = false) {
-            const slot = document.getElementById(id);
-            if (!slot) return;
-            const current = slot.innerText.trim();
-            if (current === ans && slot.classList.contains('correct')) {
-                if (allowDuplicates) {
-                    const wi = getUsedWordItem(ans, section);
-                    if (wi) wi.classList.remove('used');
-                } else {
-                    const wi = getWordItem(ans, section);
-                    if (wi) wi.classList.remove('used');
-                }
-                slot.innerText = ''; slot.classList.remove('filled', 'correct', 'incorrect-marked');
-                slot.style.minWidth = '110px';
-            } else {
-                if (section && !allowDuplicates) {
-                    document.querySelectorAll(`[data-section="${section}"]`).forEach(s => {
-                        if (s.id !== id && s.innerText.trim() === ans) removeWord(s.id, section, allowDuplicates);
-                    });
-                }
-                if (allowDuplicates) {
-                    const wi = getAvailableWordItem(ans, section);
-                    if (wi) wi.classList.add('used');
-                } else {
-                    const wi = getWordItem(ans, section);
-                    if (wi) wi.classList.add('used');
-                }
-                slot.innerText = ans; slot.classList.add('filled', 'correct'); slot.classList.remove('incorrect-marked');
-                slot.style.minWidth = Math.max(ans.length * 10 + 20, 110) + 'px';
+        // Giữ createWordBank làm alias để tương thích ngược với các lời gọi cũ
+        function createWordBank(bankId, words) { initWordBank(bankId, words); }
+
+        function allowDrop(e) { e.preventDefault(); }
+
+        function drag(e) {
+            e.dataTransfer.setData('text', e.target.innerText);
+            selectedWordEl = e.target;
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const data = e.dataTransfer.getData('text');
+            if (e.target.tagName === 'INPUT') {
+                e.target.value = data;
+                adjustWidth(e.target);
+                updateWordBank();
             }
+        }
+
+        function clickSelect(el) {
+            if (selectedWordEl) selectedWordEl.style.background = '';
+            selectedWordEl = el;
+            el.style.background = '#ffeaa7';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' && selectedWordEl) {
+                e.target.value = selectedWordEl.innerText;
+                adjustWidth(e.target);
+                selectedWordEl.style.background = '';
+                selectedWordEl = null;
+                updateWordBank();
+            }
+        });
+
+        function normalizeAnswer(str) { return str.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, ''); }
+
+        // Bản mở rộng của updateWordBank chuẩn: đếm theo số lượng (multiset) để xử lý
+        // đúng trường hợp word-bank có từ trùng lặp nhiều lần (VD: Ex5 có 4 chữ "about").
+        function updateWordBank() {
+            const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value));
+            const need = {};
+            inputs.forEach(v => { if (v) need[v] = (need[v] || 0) + 1; });
+            const usedSoFar = {};
+            document.querySelectorAll('.word-item').forEach(item => {
+                const word = normalizeAnswer(item.innerText);
+                usedSoFar[word] = usedSoFar[word] || 0;
+                if (usedSoFar[word] < (need[word] || 0)) {
+                    item.classList.add('used');
+                    usedSoFar[word]++;
+                } else {
+                    item.classList.remove('used');
+                }
+            });
         }
 
         // ----- Choice buttons (Ex1) -----
@@ -571,6 +428,17 @@
             const alreadyShown = correctBtn && correctBtn.classList.contains('correct-highlight');
             group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
             if (!alreadyShown && correctBtn) correctBtn.classList.add('correct-highlight');
+        }
+
+        // Hàm KHÔNG toggle dùng riêng cho "Show All": luôn hiển thị đáp án đúng,
+        // không quan tâm trạng thái hiện tại (khác với toggleChoiceGroup dùng cho nút mắt 👁️ từng câu)
+        function showChoiceGroupAns(groupId) {
+            const group = document.querySelector(`.choice-group[data-id="${groupId}"]`);
+            if (!group) return;
+            const ans = group.dataset.ans;
+            const correctBtn = Array.from(group.querySelectorAll('.choice-btn')).find(b => b.innerText.trim() === ans);
+            group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+            if (correctBtn) correctBtn.classList.add('correct-highlight');
         }
 
         // ========== DATA ==========
@@ -685,50 +553,49 @@
         }
 
         function renderEx2() {
-            createWordBank('bank-ex2', ex2Words, 'ex2');
+            initWordBank('bank-ex2', ex2Words);
             let html = '';
             ex2Items.forEach((item, i) => {
-                let sentence = item.text.replace('______', `<span class="drop-slot" id="ex2-q${i}" data-section="ex2" data-ans="${item.ans}" onclick="handleSlotClick('ex2-q${i}','ex2')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex2')"></span>`);
+                let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex2-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
-                <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex2-q${i}','${item.ans}','ex2')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span>
+                <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex2-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span>
                 <div class="hint-box" id="ex2-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex2-container').innerHTML = html;
         }
 
         function renderEx3() {
-            createWordBank('bank-ex3', ex3Words, 'ex3');
+            initWordBank('bank-ex3', ex3Words);
             let html = '';
             ex3Items.forEach((item, i) => {
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.text} <span class="drop-slot" id="ex3-q${i}" data-section="ex3" data-ans="${item.ans}"
-                onclick="handleSlotClick('ex3-q${i}', 'ex3')"
-                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" 
-                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex3')"></span>
-                <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex3-q${i}','${item.ans}','ex3')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button></span>
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.text} <input type="text" class="task5-input" id="ex3-q${i}" data-ans="${item.ans}" data-type="input"
+                ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()"
+                oninput="adjustWidth(this); updateWordBank()">
+                <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex3-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button></span>
                 <div class="hint-box" id="ex3-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex3-container').innerHTML = html;
         }
 
         function renderEx4() {
-            createWordBank('bank-ex4', ex4Words, 'ex4');
+            initWordBank('bank-ex4', ex4Words);
             let html = '';
             ex4Items.forEach((item, i) => {
-                let sentence = item.text.replace('______', `<span class="drop-slot" id="ex4-q${i}" data-section="ex4" data-ans="${item.ans}" onclick="handleSlotClick('ex4-q${i}','ex4')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex4')"></span>`);
+                let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex4-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
-                <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex4-q${i}','${item.ans}','ex4')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button></span>
+                <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex4-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button></span>
                 <div class="hint-box" id="ex4-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex4-container').innerHTML = html;
         }
 
         function renderEx5() {
-            createWordBank('bank-ex5', ex5Prepositions, 'ex5');
+            initWordBank('bank-ex5', ex5Prepositions);
             let html = '';
             ex5Sentences.forEach((item, i) => {
-                let sentence = item.text.replace('______', `<span class="drop-slot" id="ex5-q${i}" data-section="ex5" data-ans="${item.ans}" onclick="handleSlotClick('ex5-q${i}','ex5', true)" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event,'ex5', true)"></span>`);
+                let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex5-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
-                <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex5-q${i}','${item.ans}','ex5', true)">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button></span>
+                <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex5-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button></span>
                 <div class="hint-box" id="ex5-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex5-container').innerHTML = html;
@@ -789,33 +656,25 @@
 
         // ========== SHOW ALL / RESET ==========
         window.showAnswers = function (section) {
-            if (section === 'ex1') ex1Data.forEach((item, i) => toggleChoiceGroup(`ex1-${i}`));
-            if (section === 'ex2') ex2Items.forEach((item, i) => toggleSlot(`ex2-q${i}`, item.ans, 'ex2'));
-            if (section === 'ex3') ex3Items.forEach((item, i) => toggleSlot(`ex3-q${i}`, item.ans, 'ex3'));
-            if (section === 'ex4') ex4Items.forEach((item, i) => toggleSlot(`ex4-q${i}`, item.ans, 'ex4'));
-            if (section === 'ex5') ex5Sentences.forEach((item, i) => toggleSlot(`ex5-q${i}`, item.ans, 'ex5', true));
-            // SỬA: ex6 dùng showInputAns thay vì toggleInputAns
+            if (section === 'ex1') ex1Data.forEach((item, i) => showChoiceGroupAns(`ex1-${i}`));
+            if (section === 'ex2') ex2Items.forEach((item, i) => showInputAns(document.getElementById(`ex2-q${i}`)));
+            if (section === 'ex3') ex3Items.forEach((item, i) => showInputAns(document.getElementById(`ex3-q${i}`)));
+            if (section === 'ex4') ex4Items.forEach((item, i) => showInputAns(document.getElementById(`ex4-q${i}`)));
+            if (section === 'ex5') ex5Sentences.forEach((item, i) => showInputAns(document.getElementById(`ex5-q${i}`)));
             if (section === 'ex6') ex6Data.forEach((item, i) => showInputAns(document.getElementById(`ex6-${i}`)));
-            // SỬA: ex7 dùng showInputAns thay vì toggleInputAns
             if (section === 'ex7') ex7Data.forEach((item, i) => showInputAns(document.getElementById(`ex7-${i}`)));
             if (section === 'ex8') {
-                ex8Data.forEach((item, i) => {
-                    const inp = document.getElementById(`ex8-${i}`);
-                    if (inp) showInputAns(inp);
-                });
+                document.querySelectorAll('#ex8-container .task5-input').forEach(inp => showInputAns(inp));
             }
         };
 
         window.resetSection = function (section) {
             closeAllHints();
             if (section === 'ex1') document.querySelectorAll('#ex1-container .choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
-            if (['ex2', 'ex3', 'ex4', 'ex5'].includes(section)) {
-                document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => { if (slot.classList.contains('filled')) removeWord(slot.id, section, (section === 'ex5')); });
-                document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('used', 'active-word'));
-            }
-            if (['ex6', 'ex7', 'ex8'].includes(section)) {
+            if (['ex2', 'ex3', 'ex4', 'ex5', 'ex6', 'ex7', 'ex8'].includes(section)) {
                 document.querySelectorAll(`#${section}-container .task5-input`).forEach(inp => { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); });
             }
+            updateWordBank();
         };
 
         function checkAll() {
@@ -825,12 +684,6 @@
                 const answers = inp.dataset.ans.split('|').map(a => normaliseText(a));
                 inp.classList.remove('correct', 'incorrect-marked');
                 inp.classList.add(answers.includes(val) ? 'correct' : 'incorrect-marked');
-            });
-            document.querySelectorAll('.drop-slot').forEach(slot => {
-                if (!slot.innerText.trim()) return;
-                const ans = slot.dataset.ans ? normaliseText(slot.dataset.ans) : '';
-                slot.classList.remove('correct', 'incorrect-marked');
-                slot.classList.add(normaliseText(slot.innerText) === ans ? 'correct' : 'incorrect-marked');
             });
             document.querySelectorAll('.choice-group').forEach(group => {
                 const selected = group.querySelector('.choice-btn.selected');
@@ -849,6 +702,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderEx1(); renderEx2(); renderEx3(); renderEx4();
             renderEx5(); renderEx6(); renderEx7(); renderEx8();
+            updateWordBank();
         });
     </script>
 </body>

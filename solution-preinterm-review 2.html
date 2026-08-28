@@ -661,136 +661,87 @@
         ];
 
         // ---------- Global helpers ----------
-        let activeWord2 = null, activeSection2 = null;
-        let dragWord2 = null, dragSection2 = null;
+        // ================= WORD BANK (canonical drag / click-select / auto-input pattern) =================
+        let selectedWordEl = null;
 
-        function safeId2(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
-
-        function initWordBank2(bankId, words, section) {
+        function initWordBank(bankId, words) {
             const bank = document.getElementById(bankId);
             if (!bank) return;
             bank.innerHTML = words.map(w =>
-                `<div class="word-item" draggable="true" id="word2-${section}-${safeId2(w)}" ondragstart="handleDragStart2(event,'${section}')" onclick="handleWordClick2(this,'${section}')">${w}</div>`
+                `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`
             ).join('');
         }
 
-        function handleDragStart2(e, section) {
-            dragWord2 = e.target.innerText.trim();
-            dragSection2 = section;
-            e.target.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', dragWord2);
-        }
-        function handleDragOver(e) { e.preventDefault(); }
-        function handleDragEnter2(e) { e.target.classList.add('over'); }
-        function handleDragLeave2(e) { e.target.classList.remove('over'); }
+        function allowDrop(e) { e.preventDefault(); }
 
-        function handleDrop2(e, section) {
+        function drag(e) {
+            e.dataTransfer.setData('text', e.target.innerText);
+            selectedWordEl = e.target;
+        }
+
+        function drop(e) {
             e.preventDefault();
-            const slot = e.target.closest('.drop-slot');
-            if (!slot) return;
-            slot.classList.remove('over');
-            if (section !== dragSection2) return;
-            placeWord2(slot.id, e.dataTransfer.getData('text/plain'), section);
-            document.querySelectorAll('.word-item').forEach(el => el.classList.remove('dragging'));
-            dragWord2 = null; dragSection2 = null;
-        }
-
-        function handleWordClick2(el, section) {
-            if (section !== activeSection2) {
-                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
-            }
-            if (el.classList.contains('used')) return;
-            if (el.classList.contains('active-word')) {
-                el.classList.remove('active-word');
-                activeWord2 = null; activeSection2 = null;
-            } else {
-                document.querySelectorAll(`.word-item[id^="word2-${section}-"]`).forEach(i => i.classList.remove('active-word'));
-                el.classList.add('active-word');
-                activeWord2 = el.innerText.trim();
-                activeSection2 = section;
+            const data = e.dataTransfer.getData('text');
+            if (e.target.tagName === 'INPUT') {
+                e.target.value = data;
+                adjustWidth(e.target);
+                updateWordBank();
             }
         }
 
-        function handleSlotClick2(slotId, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            if (activeWord2 && activeSection2 === section) {
-                placeWord2(slotId, activeWord2, section);
-                document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active-word'));
-                activeWord2 = null; activeSection2 = null;
-            } else if (slot.innerText.trim()) {
-                removeWord2(slotId, section);
-            }
+        function clickSelect(el) {
+            if (selectedWordEl) selectedWordEl.style.background = '';
+            selectedWordEl = el;
+            el.style.background = '#ffeaa7';
         }
 
-        function placeWord2(slotId, word, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            const oldWord = slot.innerText.trim();
-            document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
-                if (s.innerText.trim() === word && s.id !== slotId) {
-                    s.innerText = ''; s.classList.remove('filled', 'correct', 'incorrect-marked');
-                }
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' && selectedWordEl) {
+                e.target.value = selectedWordEl.innerText;
+                adjustWidth(e.target);
+                selectedWordEl.style.background = '';
+                selectedWordEl = null;
+                updateWordBank();
+            }
+        });
+
+        function normalizeAnswer(str) { return str.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, ''); }
+
+        function updateWordBank() {
+            const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value));
+            document.querySelectorAll('.word-item').forEach(item => {
+                const word = item.innerText.toLowerCase().trim();
+                item.classList.toggle('used', inputs.filter(v => v === word).length >= 1);
             });
-            if (oldWord) {
-                const oldEl = document.getElementById(`word2-${section}-${safeId2(oldWord)}`);
-                if (oldEl) oldEl.classList.remove('used');
-            }
-            slot.innerText = word;
-            slot.classList.add('filled');
-            slot.classList.remove('correct', 'incorrect-marked');
-            const wordEl = document.getElementById(`word2-${section}-${safeId2(word)}`);
-            if (wordEl) wordEl.classList.add('used');
-        }
-
-        function removeWord2(slotId, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            const word = slot.innerText.trim();
-            if (!word) return;
-            slot.innerText = ''; slot.classList.remove('filled', 'correct', 'incorrect-marked');
-            const wordEl = document.getElementById(`word2-${section}-${safeId2(word)}`);
-            if (wordEl) wordEl.classList.remove('used');
-        }
-
-        function showSingleSlot2(slotId, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            const ans = slot.dataset.ans.split('|')[0];
-            if (slot.innerText.trim().toLowerCase() === ans.toLowerCase()) {
-                removeWord2(slotId, section);
-            } else {
-                placeWord2(slotId, ans, section);
-                slot.classList.add('correct'); slot.classList.remove('incorrect-marked');
-            }
         }
 
         function adjustWidth(el) { if (el) { let text = el.value || el.placeholder || ''; let w = Math.max(text.length * 12 + 40, 80); el.style.width = w + 'px'; } }
         function toggleHint(id) { let h = document.getElementById(id); if (!h) return; if (h.style.display === 'block') h.style.display = 'none'; else { document.querySelectorAll('.hint-box').forEach(b => b.style.display = 'none'); h.style.display = 'block'; } }
-        function toggleSlot(id, ans) { let el = document.getElementById(id); if (!el) return; if (el.tagName === 'INPUT') { let primaryAns = ans.split('|')[0]; if (el.value === primaryAns) { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); } else { el.value = primaryAns; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); } } else { showSingleSlot2(id, el.dataset.section || ''); } }
+        function toggleSlot(id) { let el = document.getElementById(id); if (!el) return; if (el.tagName === 'INPUT') { let primaryAns = (el.dataset.ans || '').split('|')[0]; if (el.value === primaryAns) { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); } else { el.value = primaryAns; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); } if (typeof updateWordBank === 'function') updateWordBank(); } }
+        function revealSlot(id) { let el = document.getElementById(id); if (!el) return; if (el.tagName === 'INPUT') { let primaryAns = (el.dataset.ans || '').split('|')[0]; el.value = primaryAns; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); if (typeof updateWordBank === 'function') updateWordBank(); } }
 
         // ---------- RENDER FUNCTIONS ----------
         function renderEx1() {
-            initWordBank2('bank-ex1', ex1Words, 'ex1');
+            initWordBank('bank-ex1', ex1Words);
             let html = '';
             ex1Sentences.forEach((s, i) => {
-                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<span class="drop-slot" id="ex1-${i}" data-id="ex1-${i}" data-ans="${s.ans}" data-section="ex1" onclick="handleSlotClick2('ex1-${i}','ex1')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter2(event)" ondragleave="handleDragLeave2(event)" ondrop="handleDrop2(event,'ex1')"></span>`)}<span class="row-btns"><button class="eye-btn" onclick="showSingleSlot2('ex1-${i}','ex1')">👁️</button><button class="hint-btn" onclick="toggleHint('ex1-h${i}')">i</button></span><div class="hint-box" id="ex1-h${i}">${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex1-${i}" data-ans="${s.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)}<span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex1-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint('ex1-h${i}')">i</button></span><div class="hint-box" id="ex1-h${i}">${s.hint}</div></div>`;
             });
             document.getElementById('ex1-container').innerHTML = html;
         }
         function renderEx2() {
-            initWordBank2('bank-ex2', ex2Words, 'ex2');
+            initWordBank('bank-ex2', ex2Words);
             let html = '';
             ex2Sentences.forEach((s, i) => {
-                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<span class="drop-slot" id="ex2-${i}" data-id="ex2-${i}" data-ans="${s.ans}" data-section="ex2" onclick="handleSlotClick2('ex2-${i}','ex2')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter2(event)" ondragleave="handleDragLeave2(event)" ondrop="handleDrop2(event,'ex2')"></span>`)}<span class="row-btns"><button class="eye-btn" onclick="showSingleSlot2('ex2-${i}','ex2')">👁️</button><button class="hint-btn" onclick="toggleHint('ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}">${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex2-${i}" data-ans="${s.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)}<span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex2-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint('ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}">${s.hint}</div></div>`;
             });
             document.getElementById('ex2-container').innerHTML = html;
         }
         function renderEx4() {
-            initWordBank2('bank-ex4', ex4Words, 'ex4');
+            initWordBank('bank-ex4', ex4Words);
             let html = '';
             ex4Sentences.forEach((s, i) => {
-                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<span class="drop-slot" id="ex4-${i}" data-id="ex4-${i}" data-ans="${s.ans}" data-section="ex4" onclick="handleSlotClick2('ex4-${i}','ex4')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter2(event)" ondragleave="handleDragLeave2(event)" ondrop="handleDrop2(event,'ex4')"></span>`)}<span class="row-btns"><button class="eye-btn" onclick="showSingleSlot2('ex4-${i}','ex4')">👁️</button><button class="hint-btn" onclick="toggleHint('ex4-h${i}')">i</button></span><div class="hint-box" id="ex4-h${i}">${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex4-${i}" data-ans="${s.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)}<span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex4-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint('ex4-h${i}')">i</button></span><div class="hint-box" id="ex4-h${i}">${s.hint}</div></div>`;
             });
             document.getElementById('ex4-container').innerHTML = html;
         }
@@ -810,7 +761,7 @@
         function renderEx5() {
             let html = '';
             ex5Data.forEach((item, i) => {
-                html += `<div class="question-row">${i + 1}. ${item.text.replace('______', `<input type="text" id="ex5-${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}<span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex5-${i}','${item.ans}')">👁️</button><button class="hint-btn" onclick="toggleHint('ex5-h${i}')">i</button></span><div class="hint-box" id="ex5-h${i}">${item.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${item.text.replace('______', `<input type="text" id="ex5-${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}<span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex5-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint('ex5-h${i}')">i</button></span><div class="hint-box" id="ex5-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex5-container').innerHTML = html;
         }
@@ -827,13 +778,13 @@
                     const qid = `ex6-${idx}-${gapIdx}`;
                     const gap = item.gaps[gapIdx];
                     const currentAns = gap.ans;
-                    const primaryAns = currentAns.split('|')[0].replace(/'/g, "\\'"); // escape single quotes for onclick
+                    const primaryAns = currentAns.split('|')[0];
                     const vHint = verbHint ? `<span class="verb-hint-inline" style="font-weight: normal; color: var(--text-muted); margin-left: 4px;">${verbHint}</span>` : '';
                     const replaced = `<span class="inline-input-group" style="position:relative; white-space:nowrap;">
                         <span class="q-number-inline" style="font-weight:bold; margin-right:4px;">${qIdx}</span>
                         <input type="text" id="${qid}" data-ans="${currentAns}" class="task5-input" oninput="adjustWidth(this)">${vHint}
                         <span class="row-btns" style="margin-left: 2px;">
-                            <button class="eye-btn" onclick="toggleSlot('${qid}','${primaryAns}')">👁️</button>
+                            <button class="eye-btn" onclick="toggleSlot('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint('${qid}-hint')">i</button>
                         </span>
                         <div class="hint-box" id="${qid}-hint" style="position:absolute; left:0; top:100%; min-width: 250px; z-index:100; white-space:normal; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 5px;">
@@ -865,13 +816,13 @@
                     const qid = `ex7-${idx}-${gapIdx}`;
                     const gap = item.gaps[gapIdx];
                     const currentAns = gap.ans;
-                    const primaryAns = currentAns.split('|')[0].replace(/'/g, "\\'"); // escape single quotes for onclick
+                    const primaryAns = currentAns.split('|')[0];
                     const vHint = verbHint ? `<span class="verb-hint-inline" style="font-weight: normal; color: var(--text-muted); margin-left: 4px;">${verbHint}</span>` : '';
                     const replaced = `<span class="inline-input-group" style="position:relative; white-space:nowrap;">
                         <span class="q-number-inline" style="font-weight:bold; margin-right:4px;">${qIdx}</span>
                         <input type="text" id="${qid}" data-ans="${currentAns}" class="task5-input" oninput="adjustWidth(this)">${vHint}
                         <span class="row-btns" style="margin-left: 2px;">
-                            <button class="eye-btn" onclick="toggleSlot('${qid}','${primaryAns}')">👁️</button>
+                            <button class="eye-btn" onclick="toggleSlot('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint('${qid}-hint')">i</button>
                         </span>
                         <div class="hint-box" id="${qid}-hint" style="position:absolute; left:0; top:100%; min-width: 250px; z-index:100; white-space:normal; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 5px;">
@@ -907,28 +858,24 @@
             document.getElementById('ex8-container').innerHTML = html;
         }
         window.revealEx8 = function (idx) {
-            const inp = document.getElementById('ex8-' + idx);
-            if (inp) {
-                let ans = inp.dataset.ans.split('|')[0];
-                toggleSlot('ex8-' + idx, ans);
-            }
+            toggleSlot('ex8-' + idx);
         };
 
         // ---------- SHOW / RESET / CHECK ----------
         window.showAnswers = function (section) {
-            if (section === 'ex1') ex1Sentences.forEach((_, i) => { placeWord2(`ex1-${i}`, ex1Sentences[i].ans, 'ex1'); document.getElementById(`ex1-${i}`).classList.add('correct'); });
-            if (section === 'ex2') ex2Sentences.forEach((_, i) => { placeWord2(`ex2-${i}`, ex2Sentences[i].ans, 'ex2'); document.getElementById(`ex2-${i}`).classList.add('correct'); });
-            if (section === 'ex4') ex4Sentences.forEach((_, i) => { placeWord2(`ex4-${i}`, ex4Sentences[i].ans, 'ex4'); document.getElementById(`ex4-${i}`).classList.add('correct'); });
-            if (section === 'ex5') ex5Data.forEach((_, i) => toggleSlot(`ex5-${i}`, ex5Data[i].ans));
-            if (section === 'ex8') ex8Data.forEach((_, i) => toggleSlot(`ex8-${i}`, ex8Data[i].ans));
-            if (section === 'ex6') { let qIdx = 1; ex6Data.forEach((item, idx) => { for (let g = 0; g < item.gaps.length; g++) { toggleSlot(`ex6-${idx}-${g}`, item.gaps[g].ans.split('|')[0]); } }); }
-            if (section === 'ex7') { let qIdx = 1; ex7Data.forEach((item, idx) => { for (let g = 0; g < item.gaps.length; g++) { toggleSlot(`ex7-${idx}-${g}`, item.gaps[g].ans.split('|')[0]); } }); }
+            if (section === 'ex1') ex1Sentences.forEach((_, i) => { const el = document.getElementById(`ex1-${i}`); el.value = ex1Sentences[i].ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); }); if (section === 'ex1') updateWordBank();
+            if (section === 'ex2') ex2Sentences.forEach((_, i) => { const el = document.getElementById(`ex2-${i}`); el.value = ex2Sentences[i].ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); }); if (section === 'ex2') updateWordBank();
+            if (section === 'ex4') ex4Sentences.forEach((_, i) => { const el = document.getElementById(`ex4-${i}`); el.value = ex4Sentences[i].ans; el.classList.remove('incorrect-marked'); el.classList.add('correct'); adjustWidth(el); }); if (section === 'ex4') updateWordBank();
+            if (section === 'ex5') ex5Data.forEach((_, i) => revealSlot(`ex5-${i}`));
+            if (section === 'ex8') ex8Data.forEach((_, i) => revealSlot(`ex8-${i}`));
+            if (section === 'ex6') { ex6Data.forEach((item, idx) => { for (let g = 0; g < item.gaps.length; g++) { revealSlot(`ex6-${idx}-${g}`); } }); }
+            if (section === 'ex7') { ex7Data.forEach((item, idx) => { for (let g = 0; g < item.gaps.length; g++) { revealSlot(`ex7-${idx}-${g}`); } }); }
             if (section === 'ex3') { ex3Items.forEach((it, idx) => { let inp = document.getElementById(`ex3-spell-${idx}`); if (inp) { inp.value = it.full; inp.classList.add('correct'); adjustWidth(inp); } let sel = document.getElementById(`ex3-cat-${idx}`); if (sel) { if (it.full === 'boots') sel.value = 'Orienteering'; else if (it.full === 'life jacket' || it.full === 'paddles') sel.value = 'Kayaking'; else if (it.full === 'helmet') sel.value = 'Mountain biking'; else if (it.full === 'safety harness') sel.value = 'Rock climbing'; } }); }
         };
         window.resetSection = function (section) {
-            if (section === 'ex1') { ex1Sentences.forEach((_, i) => removeWord2(`ex1-${i}`, 'ex1')); }
-            if (section === 'ex2') { ex2Sentences.forEach((_, i) => removeWord2(`ex2-${i}`, 'ex2')); }
-            if (section === 'ex4') { ex4Sentences.forEach((_, i) => removeWord2(`ex4-${i}`, 'ex4')); }
+            if (section === 'ex1') { document.querySelectorAll('#ex1-container .task5-input').forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }); updateWordBank(); }
+            if (section === 'ex2') { document.querySelectorAll('#ex2-container .task5-input').forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }); updateWordBank(); }
+            if (section === 'ex4') { document.querySelectorAll('#ex4-container .task5-input').forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }); updateWordBank(); }
             if (section === 'ex3') { ex3Items.forEach((_, idx) => { let inp = document.getElementById(`ex3-spell-${idx}`); if (inp) { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); } let sel = document.getElementById(`ex3-cat-${idx}`); if (sel) sel.value = ''; }); }
             if (section === 'ex5' || section === 'ex8') document.querySelectorAll(`#${section}-container .task5-input`).forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
             if (section === 'ex6') document.querySelectorAll(`#ex6-container .task5-input`).forEach(el => { el.value = ''; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
@@ -945,6 +892,7 @@
 
         // Initialize all
         renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6(); renderEx7(); renderEx8();
+        updateWordBank();
     </script>
 </body>
 

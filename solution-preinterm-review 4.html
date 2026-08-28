@@ -240,55 +240,8 @@
             color: white;
         }
 
-        .word-item.active-word {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
-        }
-
         .word-item.used {
-            opacity: 0.35;
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .drop-slot {
-            display: inline-flex;
-            min-width: 100px;
-            background: rgba(13, 148, 136, 0.05);
-            border-bottom: 2px solid var(--primary);
-            margin: 0 4px;
-            vertical-align: middle;
-            border-radius: 4px 4px 0 0;
-            padding: 0 8px;
-            height: 32px;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-weight: bold;
-            color: var(--primary);
-            transition: all 0.2s;
-        }
-
-        .drop-slot.drag-over {
-            background: var(--primary-light);
-            border-bottom-color: var(--primary-dark);
-        }
-
-        .drop-slot.filled {
-            background: var(--primary-light);
-        }
-
-        .drop-slot.correct {
-            background: #dcfce7 !important;
-            color: #166534 !important;
-            border-bottom-color: #16a34a !important;
-        }
-
-        .drop-slot.incorrect-marked {
-            background: #fee2e2 !important;
-            color: #991b1b !important;
-            border-bottom-color: #dc2626 !important;
+            display: none;
         }
 
         .inline-input-group {
@@ -329,7 +282,6 @@
             font-weight: 700;
             margin-bottom: 20px;
             font-size: 1.1rem;
-            color: var(--text);
             border-left: 4px solid var(--primary);
             padding-left: 15px;
         }
@@ -464,7 +416,7 @@
         </div>
     </div>
 
-    <button class="check-all-btn" onclick="checkAll()">✓ CHECK ALL ANSWERS (ENTER)</button>
+    <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
     <script src="access-core.js"></script>
     <script>
         // ========== GLOBAL HELPERS ==========
@@ -472,135 +424,64 @@
         function closeAllHints() { document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none'); }
         function toggleHint(event, id) { event.stopPropagation(); const h = document.getElementById(id); const isVisible = h && h.style.display === 'block'; closeAllHints(); if (h && !isVisible) h.style.display = 'block'; }
         function toggleInputAns(input) { if (!input || !input.dataset.ans) return; const answers = input.dataset.ans.split('|').map(a => a.trim()); const cur = input.value.trim(); if (answers.includes(cur) && input.classList.contains('correct')) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); } else { input.value = answers[0]; input.classList.remove('incorrect-marked'); input.classList.add('correct'); } adjustWidth(input); }
+        // Hàm KHÔNG toggle dùng riêng cho "Show All": luôn hiển thị đáp án đúng,
+        // không quan tâm trạng thái hiện tại (khác với toggleInputAns dùng cho nút mắt 👁️ từng câu)
+        function showInputAns(input) { if (!input || !input.dataset.ans) return; const answers = input.dataset.ans.split('|').map(a => a.trim()); input.value = answers[0]; input.classList.remove('incorrect-marked'); input.classList.add('correct'); adjustWidth(input); }
 
-        // ========== NEW DRAG & DROP SYSTEM (FROM REVIEW 1) ==========
-        let activeWord = null, activeSection = null;
-        let dragWordEl = null, dragSection = null;
+        // ================= WORD BANK (canonical drag / click-select / auto-input pattern) =================
+        let selectedWordEl = null;
 
-        function safeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '-'); }
-
-        function getWordItem(wordValue, section) {
-            const bank = document.getElementById(`bank-${section}`);
-            return bank ? bank.querySelector(`.word-item[data-value="${CSS.escape(wordValue)}"]`) : null;
-        }
-
-        function removeWord(slotId, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            const word = slot.innerText.trim();
-            if (!word) return;
-            slot.innerText = '';
-            slot.classList.remove('filled', 'correct', 'incorrect-marked');
-            slot.style.minWidth = '100px';
-            const wi = getWordItem(word, section);
-            if (wi) wi.classList.remove('used');
-        }
-
-        function placeWord(slotId, wordValue, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot || !wordValue) return;
-            if (slot.classList.contains('filled') && slot.innerText.trim()) {
-                removeWord(slotId, section);
-            }
-            document.querySelectorAll(`[data-section="${section}"]`).forEach(otherSlot => {
-                if (otherSlot.id !== slotId && otherSlot.innerText.trim() === wordValue) {
-                    removeWord(otherSlot.id, section);
-                }
-            });
-            slot.innerText = wordValue;
-            slot.classList.add('filled');
-            slot.classList.remove('correct', 'incorrect-marked');
-            slot.style.minWidth = Math.max(wordValue.length * 10 + 20, 100) + 'px';
-            const wi = getWordItem(wordValue, section);
-            if (wi) wi.classList.add('used');
-        }
-
-        function handleWordClick(el, section) {
-            if (el.classList.contains('used')) return;
-            if (activeWord === el.dataset.value && activeSection === section) {
-                el.classList.remove('active-word');
-                activeWord = null; activeSection = null;
-            } else {
-                document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('active-word'));
-                el.classList.add('active-word');
-                activeWord = el.dataset.value;
-                activeSection = section;
-            }
-        }
-
-        function handleSlotClick(slotId, section) {
-            const slot = document.getElementById(slotId);
-            if (!slot) return;
-            if (activeWord && activeSection === section) {
-                placeWord(slotId, activeWord, section);
-                const activeItem = getWordItem(activeWord, section);
-                if (activeItem) activeItem.classList.remove('active-word');
-                activeWord = null; activeSection = null;
-            } else if (slot.innerText.trim()) {
-                removeWord(slotId, section);
-            }
-        }
-
-        function handleDragStart(e, section) {
-            const el = e.target;
-            if (el.classList.contains('used')) {
-                e.preventDefault();
-                return false;
-            }
-            dragWordEl = el;
-            dragSection = section;
-            el.classList.add('active-word');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', el.dataset.value);
-        }
-
-        function handleDragOver(e) { e.preventDefault(); }
-        function handleDragEnter(e) { e.preventDefault(); e.target.classList.add('drag-over'); }
-        function handleDragLeave(e) { e.target.classList.remove('drag-over'); }
-
-        function handleDrop(e, section) {
-            e.preventDefault();
-            const slot = e.target.closest('.drop-slot');
-            if (!slot) return;
-            slot.classList.remove('drag-over');
-            if (dragWordEl && dragSection === section) {
-                placeWord(slot.id, dragWordEl.dataset.value, section);
-                dragWordEl.classList.remove('active-word');
-                dragWordEl = null; dragSection = null;
-            }
-        }
-
-        function createWordBank(bankId, words, section) {
+        function initWordBank(bankId, words) {
             const bank = document.getElementById(bankId);
             if (!bank) return;
             bank.innerHTML = words.map(w =>
-                `<div class="word-item" data-value="${w}" draggable="true" 
-                  ondragstart="handleDragStart(event, '${section}')" 
-                  onclick="handleWordClick(this, '${section}')">${w}</div>`
+                `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`
             ).join('');
         }
 
-        function toggleSlot(id, ans, section) {
-            const slot = document.getElementById(id);
-            if (!slot) return;
-            const current = slot.innerText.trim();
-            if (current === ans && slot.classList.contains('correct')) {
-                const wi = getWordItem(ans, section);
-                if (wi) wi.classList.remove('used');
-                slot.innerText = ''; slot.classList.remove('filled', 'correct', 'incorrect-marked');
-                slot.style.minWidth = '100px';
-            } else {
-                if (section) {
-                    document.querySelectorAll(`[data-section="${section}"]`).forEach(s => {
-                        if (s.id !== id && s.innerText.trim() === ans) removeWord(s.id, section);
-                    });
-                }
-                const wi = getWordItem(ans, section);
-                if (wi) wi.classList.add('used');
-                slot.innerText = ans; slot.classList.add('filled', 'correct'); slot.classList.remove('incorrect-marked');
-                slot.style.minWidth = Math.max(ans.length * 10 + 20, 100) + 'px';
+        function allowDrop(e) { e.preventDefault(); }
+
+        function drag(e) {
+            e.dataTransfer.setData('text', e.target.innerText);
+            selectedWordEl = e.target;
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const data = e.dataTransfer.getData('text');
+            if (e.target.tagName === 'INPUT') {
+                e.target.value = data;
+                adjustWidth(e.target);
+                updateWordBank();
             }
         }
+
+        function clickSelect(el) {
+            if (selectedWordEl) selectedWordEl.style.background = '';
+            selectedWordEl = el;
+            el.style.background = '#ffeaa7';
+        }
+
+        function normalizeAnswer(str) { return str.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,;:!?]$/, ''); }
+
+        function updateWordBank() {
+            const inputs = Array.from(document.querySelectorAll('input[data-type="wb"]')).map(i => normalizeAnswer(i.value));
+            document.querySelectorAll('.word-item').forEach(item => {
+                const word = item.innerText.toLowerCase().trim();
+                item.classList.toggle('used', inputs.filter(v => v === word).length >= 1);
+            });
+        }
+
+        // Click-on-input handler for word bank
+        document.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' && e.target.dataset.type === 'wb' && selectedWordEl) {
+                e.target.value = selectedWordEl.innerText;
+                adjustWidth(e.target);
+                selectedWordEl.style.background = '';
+                selectedWordEl = null;
+                updateWordBank();
+            }
+        });
 
         // Choice button handlers (unchanged)
         function selectChoiceBtn(btn) { const group = btn.closest('.choice-group'); group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight')); btn.classList.add('selected'); }
@@ -613,9 +494,20 @@
             else { group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight')); if (correctBtn) correctBtn.classList.add('correct-highlight'); }
         }
 
+        // Hàm KHÔNG toggle dùng riêng cho "Show All": luôn hiển thị đáp án đúng,
+        // không quan tâm trạng thái hiện tại (khác với toggleChoiceGroup dùng cho nút mắt 👁️ từng câu)
+        function showChoiceGroupAns(groupId) {
+            const group = document.querySelector(`.choice-group[data-id="${groupId}"]`);
+            if (!group) return;
+            const correctAns = group.dataset.ans;
+            const correctBtn = Array.from(group.querySelectorAll('.choice-btn')).find(b => b.innerText.trim() === correctAns);
+            group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
+            if (correctBtn) correctBtn.classList.add('correct-highlight');
+        }
+
         // ========== DATA (unchanged except hints now have 3 parts) ==========
         const ex1Sentences = [
-            { text: "The sky is full of clouds. It's very ______.", ans: "cloudy", hint: "<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “full of clouds” → trạng thái nhiều mây.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Cloud là danh từ (mây). Để miêu tả trời, ta dùng tính từ “cloudy” (có mây, u ám).</div>" },
+            { text: "The sky is full of <strong>clouds</strong>. It's very ______.", ans: "cloudy", hint: "<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “full of clouds” → trạng thái nhiều mây.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Cloud là danh từ (mây). Để miêu tả trời, ta dùng tính từ “cloudy” (có mây, u ám).</div>" },
             { text: "It's <strong>snowing</strong>! Did you know that every ______ is a different shape and pattern?", ans: "snowflake", hint: "<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “snowing” và “different shape and pattern” → nói về bông tuyết.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Snow là tuyết; snowflake là bông tuyết – mỗi bông có hình dạng riêng.</div>" },
             { text: "It's a <strong>frosty</strong> morning. There's ______ all over the car.", ans: "frost", hint: "<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “frosty morning” → buổi sáng có sương giá.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Frost là danh từ (sương giá). Tính từ frosty (có sương giá) được tạo bằng cách thêm -y.</div>" },
             { text: "There were <strong>showers</strong> yesterday. It was a ______ day.", ans: "showery", hint: "<div class=\"hint-detail\"><strong>Bằng chứng:</strong> “showers yesterday” → có mưa rào.</div><div class=\"hint-detail\"><strong>Giải thích:</strong> Shower (mưa rào) thêm -y thành showery (có mưa rào).</div>" },
@@ -705,12 +597,13 @@
         }
 
         function renderEx2() {
-            createWordBank('bank-ex2', ex2Words, 'ex2');
+            initWordBank('bank-ex2', ex2Words);
             let html = '';
             ex2Sentences.forEach((s, i) => {
-                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<span class="drop-slot" id="ex2-q${i}" data-section="ex2" data-ans="${s.ans}" onclick="handleSlotClick('ex2-q${i}', 'ex2')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex2')"></span>`)} <span class="row-btns"><button class="eye-btn" onclick="toggleSlot('ex2-q${i}','${s.ans}','ex2')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex2-q${i}" data-ans="${s.ans}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex2-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
             });
             document.getElementById('ex2-container').innerHTML = html;
+            document.querySelectorAll('#ex2-container .task5-input').forEach(adjustWidth);
         }
 
         function renderEx3() {
@@ -724,16 +617,26 @@
         }
 
         function renderEx4() {
-            createWordBank('bank-ex4', ex4Words, 'ex4');
-            let textA = ex4TextA.replace(/1______/, '<span class="drop-slot" id="ex4-q0" data-section="ex4" data-ans="took off" onclick="handleSlotClick(\'ex4-q0\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
-                .replace(/2______/, '<span class="drop-slot" id="ex4-q1" data-section="ex4" data-ans="headed" onclick="handleSlotClick(\'ex4-q1\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
-                .replace(/3______/, '<span class="drop-slot" id="ex4-q2" data-section="ex4" data-ans="landed" onclick="handleSlotClick(\'ex4-q2\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>');
-            let textB = ex4TextB.replace(/4______/, '<span class="drop-slot" id="ex4-q3" data-section="ex4" data-ans="approached" onclick="handleSlotClick(\'ex4-q3\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
-                .replace(/5______/, '<span class="drop-slot" id="ex4-q4" data-section="ex4" data-ans="spun" onclick="handleSlotClick(\'ex4-q4\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>')
-                .replace(/6______/, '<span class="drop-slot" id="ex4-q5" data-section="ex4" data-ans="reach" onclick="handleSlotClick(\'ex4-q5\', \'ex4\')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, \'ex4\')"></span>');
+            initWordBank('bank-ex4', ex4Words);
+            const ex4Slots = [
+                { num: '1______', id: 'ex4-q0', ans: 'took off' },
+                { num: '2______', id: 'ex4-q1', ans: 'headed' },
+                { num: '3______', id: 'ex4-q2', ans: 'landed' },
+                { num: '4______', id: 'ex4-q3', ans: 'approached' },
+                { num: '5______', id: 'ex4-q4', ans: 'spun' },
+                { num: '6______', id: 'ex4-q5', ans: 'reach' }
+            ];
+            let textA = ex4TextA;
+            let textB = ex4TextB;
+            ex4Slots.slice(0, 3).forEach(s => {
+                textA = textA.replace(s.num, `<input type="text" class="task5-input" id="${s.id}" data-ans="${s.ans}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
+            });
+            ex4Slots.slice(3).forEach(s => {
+                textB = textB.replace(s.num, `<input type="text" class="task5-input" id="${s.id}" data-ans="${s.ans}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
+            });
             let html = `<p><strong>A</strong><br>${textA}</p><p><strong>B</strong><br>${textB}</p>`;
             document.getElementById('ex4-container').innerHTML = html;
-            // Add buttons and hints manually
+            document.querySelectorAll('#ex4-container .task5-input').forEach(adjustWidth);
             const explanations = [
                 { word: 'took off', evidence: '“from the airport and rose into the air” → cất cánh.', explanation: 'Took off là quá khứ của take off, nghĩa là cất cánh.' },
                 { word: 'headed', evidence: '“back to the airport” → quay trở lại.', explanation: 'Headed là quá khứ của head (hướng về).' },
@@ -743,17 +646,17 @@
                 { word: 'reach', evidence: '“didn’t … us” → không chạm tới.', explanation: 'Reach có nghĩa là đến được, chạm tới.' }
             ];
             for (let i = 0; i < 6; i++) {
-                let slot = document.getElementById(`ex4-q${i}`);
-                if (slot) {
+                let inp = document.getElementById(`ex4-q${i}`);
+                if (inp) {
                     let btnSpan = document.createElement('span');
                     btnSpan.className = 'row-btns';
                     btnSpan.style.marginLeft = '5px';
-                    btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex4-q${i}','${explanations[i].word}','ex4')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>`;
+                    btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex4-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>`;
                     let hintDiv = document.createElement('div');
                     hintDiv.className = 'hint-box';
                     hintDiv.id = `ex4-h${i}`;
                     hintDiv.innerHTML = `<div class="hint-detail"><strong>Đáp án:</strong> ${explanations[i].word}</div><div class="hint-detail"><strong>Bằng chứng:</strong> ${explanations[i].evidence}</div><div class="hint-detail"><strong>Giải thích:</strong> ${explanations[i].explanation}</div>`;
-                    slot.insertAdjacentElement('afterend', btnSpan);
+                    inp.insertAdjacentElement('afterend', btnSpan);
                     btnSpan.insertAdjacentElement('afterend', hintDiv);
                 }
             }
@@ -770,23 +673,24 @@
         }
 
         function renderEx6() {
-            createWordBank('bank-ex6', ex6Words, 'ex6');
+            initWordBank('bank-ex6', ex6Words);
             let html = '';
             ex6Sentences.forEach((item, i) => {
                 html += `<div class="question-row">
                         <strong>${i + 1}</strong> ${item.text}
-                        <span class="drop-slot" id="ex6-q${i}" data-section="ex6" data-ans="${item.ans}" style="min-width:120px;"
-                            onclick="handleSlotClick('ex6-q${i}', 'ex6')"
-                            ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" 
-                            ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex6')"></span>
+                        <input type="text" class="task5-input" id="ex6-q${i}" data-ans="${item.ans}" data-type="wb"
+                            style="min-width:120px;"
+                            ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()"
+                            oninput="adjustWidth(this); updateWordBank()">
                         <span class="row-btns">
-                            <button class="eye-btn" onclick="toggleSlot('ex6-q${i}','${item.ans}','ex6')">👁️</button>
+                            <button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex6-q${i}'))">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'ex6-h${i}')">i</button>
                         </span>
                         <div class="hint-box" id="ex6-h${i}">${item.hint}</div>
                     </div>`;
             });
             document.getElementById('ex6-container').innerHTML = html;
+            document.querySelectorAll('#ex6-container .task5-input').forEach(adjustWidth);
         }
 
         function renderEx7() {
@@ -809,12 +713,13 @@
         }
 
         function renderEx9() {
-            createWordBank('bank-ex9', ex9Words, 'ex9');
+            initWordBank('bank-ex9', ex9Words);
             let filled = ex9Text;
             for (let i = 0; i < ex9Answers.length; i++) {
-                filled = filled.replace(`${i + 1} ______`, `<span class="drop-slot" id="ex9-q${i}" data-section="ex9" data-ans="${ex9Answers[i]}" onclick="handleSlotClick('ex9-q${i}', 'ex9')" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex9')"></span>`);
+                filled = filled.replace(`${i + 1} ______`, `<input type="text" class="task5-input" id="ex9-q${i}" data-ans="${ex9Answers[i]}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
             }
             document.getElementById('ex9-container').innerHTML = `<div style="background:var(--card-bg); padding:20px; border-radius:12px; line-height:2.2;">${filled}</div>`;
+            document.querySelectorAll('#ex9-container .task5-input').forEach(adjustWidth);
             const hints = [
                 { ans: 'the', evidence: '“one of … best views” → cần mạo từ “the” trước so sánh nhất.', explanation: 'Cụm “one of the + superlative” là cấu trúc cố định.' },
                 { ans: 'too', evidence: '“foggy to see very far” → cấu trúc too + adj + to V.', explanation: '“Too foggy” có nghĩa là quá nhiều sương mù để nhìn xa.' },
@@ -828,7 +733,7 @@
                     let btnSpan = document.createElement('span');
                     btnSpan.className = 'row-btns';
                     btnSpan.style.marginLeft = '5px';
-                    btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlot('ex9-q${i}','${ex9Answers[i]}','ex9')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>`;
+                    btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex9-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>`;
                     let hintDiv = document.createElement('div');
                     hintDiv.className = 'hint-box';
                     hintDiv.id = `ex9-h${i}`;
@@ -841,21 +746,21 @@
 
         // Show Answers & Reset
         window.showAnswers = function (section) {
-            if (section === 'ex1') for (let i = 0; i < ex1Sentences.length; i++) toggleInputAns(document.getElementById(`ex1-${i}`));
-            if (section === 'ex2') ex2Sentences.forEach((s, i) => toggleSlot(`ex2-q${i}`, s.ans, 'ex2'));
-            if (section === 'ex3') for (let i = 0; i < ex3Data.length; i++) toggleChoiceGroup(`ex3-${i}`);
-            if (section === 'ex4') for (let i = 0; i < 6; i++) toggleSlot(`ex4-q${i}`, ex4Words[i], 'ex4');
-            if (section === 'ex5') for (let i = 0; i < ex5Data.length; i++) toggleChoiceGroup(`ex5-${i}`);
-            if (section === 'ex6') ex6Sentences.forEach((s, i) => toggleSlot(`ex6-q${i}`, s.ans, 'ex6'));
-            if (section === 'ex7') for (let i = 0; i < ex7Data.length; i++) toggleInputAns(document.getElementById(`ex7-${i}`));
-            if (section === 'ex8') for (let i = 0; i < ex8Data.length; i++) toggleInputAns(document.getElementById(`ex8-${i}`));
-            if (section === 'ex9') ex9Answers.forEach((ans, i) => toggleSlot(`ex9-q${i}`, ans, 'ex9'));
+            if (section === 'ex1') for (let i = 0; i < ex1Sentences.length; i++) showInputAns(document.getElementById(`ex1-${i}`));
+            if (section === 'ex2') { ex2Sentences.forEach((s, i) => showInputAns(document.getElementById(`ex2-q${i}`))); updateWordBank(); }
+            if (section === 'ex3') for (let i = 0; i < ex3Data.length; i++) showChoiceGroupAns(`ex3-${i}`);
+            if (section === 'ex4') { for (let i = 0; i < 6; i++) showInputAns(document.getElementById(`ex4-q${i}`)); updateWordBank(); }
+            if (section === 'ex5') for (let i = 0; i < ex5Data.length; i++) showChoiceGroupAns(`ex5-${i}`);
+            if (section === 'ex6') { ex6Sentences.forEach((s, i) => showInputAns(document.getElementById(`ex6-q${i}`))); updateWordBank(); }
+            if (section === 'ex7') for (let i = 0; i < ex7Data.length; i++) showInputAns(document.getElementById(`ex7-${i}`));
+            if (section === 'ex8') for (let i = 0; i < ex8Data.length; i++) showInputAns(document.getElementById(`ex8-${i}`));
+            if (section === 'ex9') { ex9Answers.forEach((ans, i) => showInputAns(document.getElementById(`ex9-q${i}`))); updateWordBank(); }
         };
         window.resetSection = function (section) {
             if (section === 'ex1') document.querySelectorAll('#ex1-container .task5-input').forEach(inp => { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); });
             if (['ex2', 'ex4', 'ex6', 'ex9'].includes(section)) {
-                document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => { if (slot.classList.contains('filled')) removeWord(slot.id, section); });
-                document.querySelectorAll(`#bank-${section} .word-item`).forEach(w => w.classList.remove('used', 'active-word'));
+                document.querySelectorAll(`#${section}-container .task5-input`).forEach(inp => { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); });
+                updateWordBank();
             }
             if (section === 'ex3' || section === 'ex5') document.querySelectorAll(`#${section}-container .choice-btn`).forEach(b => b.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
             if (section === 'ex7') document.querySelectorAll('#ex7-container .task5-input').forEach(inp => { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); });
@@ -863,13 +768,28 @@
             closeAllHints();
         };
         function checkAll() {
-            document.querySelectorAll('.task5-input').forEach(inp => { let val = inp.value.trim().toLowerCase(); let ansSet = inp.dataset.ans.toLowerCase().split('|'); if (ansSet.includes(val)) inp.classList.add('correct'); else if (inp.value.trim()) inp.classList.add('incorrect-marked'); });
-            document.querySelectorAll('.drop-slot').forEach(slot => { if (slot.innerText.trim()) { let ok = slot.innerText.trim().toLowerCase() === slot.dataset.ans.toLowerCase(); slot.classList.remove('correct', 'incorrect-marked'); slot.classList.add(ok ? 'correct' : 'incorrect-marked'); } });
-            document.querySelectorAll('.choice-group').forEach(group => { let selected = group.querySelector('.choice-btn.selected'); if (selected) { let isCorrect = selected.innerText.trim() === group.dataset.ans; selected.classList.remove('correct-highlight', 'incorrect-highlight'); selected.classList.add(isCorrect ? 'correct-highlight' : 'incorrect-highlight'); } });
+            // Inputs (task5-input)
+            document.querySelectorAll('input.task5-input').forEach(inp => {
+                if (!inp.value.trim()) return;
+                const val = inp.value.trim().toLowerCase();
+                const answers = inp.dataset.ans.split('|').map(s => s.toLowerCase().trim());
+                const ok = answers.includes(val);
+                inp.classList.remove('correct', 'incorrect-marked');
+                inp.classList.add(ok ? 'correct' : 'incorrect-marked');
+            });
+            // Choice groups (ex3, ex5)
+            document.querySelectorAll('.choice-group').forEach(group => {
+                const selected = group.querySelector('.choice-btn.selected');
+                if (selected) {
+                    const isCorrect = selected.innerText.trim() === group.dataset.ans;
+                    selected.classList.remove('correct-highlight', 'incorrect-highlight');
+                    selected.classList.add(isCorrect ? 'correct-highlight' : 'incorrect-highlight');
+                }
+            });
         }
         window.checkAll = checkAll;
         document.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); checkAll(); } });
-        document.addEventListener('DOMContentLoaded', () => { renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6(); renderEx7(); renderEx8(); renderEx9(); });
+        document.addEventListener('DOMContentLoaded', () => { renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6(); renderEx7(); renderEx8(); renderEx9(); updateWordBank(); });
         document.addEventListener('click', (e) => { if (!e.target.closest('.hint-btn') && !e.target.closest('.inline-hint') && !e.target.closest('.hint-box')) closeAllHints(); });
     </script>
 </body>
