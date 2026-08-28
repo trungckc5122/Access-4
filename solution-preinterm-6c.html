@@ -65,6 +65,7 @@
             margin-bottom: 28px;
             color: var(--hint-text, #115e59);
         }
+
         .strategy-card .strategy-title {
             font-size: 1.05rem;
             font-weight: bold;
@@ -74,7 +75,13 @@
             align-items: center;
             gap: 8px;
         }
-        .strategy-card p { font-size: 0.97rem; line-height: 1.7; margin: 0 0 8px 0; }
+
+        .strategy-card p {
+            font-size: 0.97rem;
+            line-height: 1.7;
+            margin: 0 0 8px 0;
+        }
+
         .strategy-card .strategy-examples {
             margin-top: 10px;
             padding: 10px 14px;
@@ -85,10 +92,12 @@
             line-height: 1.9;
             color: var(--text);
         }
+
         .strategy-card .strategy-examples em {
             font-style: italic;
             color: var(--text-muted);
         }
+
         .strategy-card .strategy-examples u {
             text-decoration: underline;
             font-weight: 700;
@@ -144,12 +153,13 @@
         /* ── Highlights ── */
         .highlightable {
             transition: background-color 0.3s, box-shadow 0.3s;
-            border-radius: 4px;
+            cursor: pointer;
         }
 
         .highlightable.active-highlight {
             background-color: rgba(250, 204, 21, 0.4);
             box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.3);
+            border-radius: 4px;
             color: #000;
             font-weight: 500;
         }
@@ -611,7 +621,8 @@
         <div class="strategy-card">
             <div class="strategy-title">🎧 Chiến lược nghe (Listening Strategy)</div>
             <p>Chú ý cách người nói nhấn mạnh một số từ nhất định để nêu ra <strong>phương án thay thế</strong> hoặc
-                <strong>sửa lại thông tin sai</strong> mà ai đó đã nói:</p>
+                <strong>sửa lại thông tin sai</strong> mà ai đó đã nói:
+            </p>
             <div class="strategy-examples">
                 <em>'Would you like a double room or a single room?'</em><br>
                 '<u>A double</u> room, please.'<br><br>
@@ -1198,11 +1209,11 @@
             const qid = span.dataset.qid;
             const words = document.querySelectorAll(`[data-qid="${qid}"]`);
             const wasUnderlined = span.classList.contains('underlined');
-            
+
             words.forEach(w => {
                 w.classList.remove('underlined', 'correct-word', 'incorrect-word');
             });
-            
+
             if (!wasUnderlined) {
                 span.classList.add('underlined');
             }
@@ -1211,14 +1222,14 @@
         function revealEx3Ans(id) {
             const qid = `ex3-q${id}`;
             const words = document.querySelectorAll(`[data-qid="${qid}"]`);
-            const hasStatus = [...words].some(w => 
-                w.classList.contains('underlined') || 
-                w.classList.contains('correct-word') || 
+            const hasStatus = [...words].some(w =>
+                w.classList.contains('underlined') ||
+                w.classList.contains('correct-word') ||
                 w.classList.contains('incorrect-word')
             );
-            
+
             words.forEach(w => w.classList.remove('underlined', 'correct-word', 'incorrect-word'));
-            
+
             if (!hasStatus) {
                 words.forEach(w => {
                     if (w.dataset.isAnswer === 'true') {
@@ -1323,14 +1334,14 @@
 
         function showTFAns(qname, ans) {
             const correctEl = document.getElementById(`${qname}-${ans}`);
-            const alreadyShown = correctEl && (correctEl.classList.contains('selected') || correctEl.classList.contains('correct-card'));
+            const alreadyShown = correctEl && correctEl.classList.contains('correct-card');
             ['T', 'F'].forEach(v => {
                 const el = document.getElementById(`${qname}-${v}`);
                 if (el) { el.classList.remove('selected', 'correct-card', 'incorrect-card'); el.querySelector('input').checked = false; }
             });
             if (!alreadyShown && correctEl) {
                 correctEl.querySelector('input').checked = true;
-                correctEl.classList.add('selected');
+                correctEl.classList.add('correct-card');
             }
         }
 
@@ -1363,16 +1374,25 @@
             const h = document.getElementById(hintBoxId);
             if (!h) return;
             const isVisible = h.style.display === 'block';
+
+            if (isVisible) {
+                h.style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                return;
+            }
+
+            toggleTranscript(track, true);
+
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
-            if (!isVisible) {
-                h.style.display = 'block';
-                toggleTranscript(track, true);
-                const txt = document.getElementById(targetId);
-                if (txt) {
-                    txt.classList.add('active-highlight');
-                    setTimeout(() => txt.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
-                }
+
+            h.style.display = 'block';
+            const textEl = document.getElementById(targetId);
+            if (textEl) {
+                textEl.classList.add('active-highlight');
+                setTimeout(() => {
+                    textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
             }
         }
 
@@ -1418,7 +1438,18 @@
             } else if (prefix === 'ex5') {
                 showRouteAns();
             } else if (prefix === 'ex6') {
-                ex6Data.forEach(it => showTFAns(`ex6-q${it.id}`, it.ans));
+                ex6Data.forEach(it => {
+                    const qname = `ex6-q${it.id}`;
+                    ['T', 'F'].forEach(v => {
+                        const el = document.getElementById(`${qname}-${v}`);
+                        if (el) { el.classList.remove('selected', 'correct-card', 'incorrect-card'); el.querySelector('input').checked = false; }
+                    });
+                    const correctEl = document.getElementById(`${qname}-${it.ans}`);
+                    if (correctEl) {
+                        correctEl.querySelector('input').checked = true;
+                        correctEl.classList.add('correct-card');
+                    }
+                });
             }
         }
 
