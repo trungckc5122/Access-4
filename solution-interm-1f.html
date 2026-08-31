@@ -1146,7 +1146,7 @@
     <!-- ============================================================ -->
     <button onclick="checkAll()"
         style="position:fixed;bottom:20px;right:20px;padding:15px 30px;background:#27ae60;color:#fff;border:none;border-radius:30px;font-weight:bold;font-size:1rem;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.2);z-index:100;">
-        CHECK ALL (ENTER)
+        CHECK ALL ANSWERS (ENTER)
     </button>
 
     <script>
@@ -1252,7 +1252,7 @@
                         <td><span class="q-number">${i + 1}</span> ${pair.noun}</td>
                         <td>
                             <div style="display:flex;align-items:center;flex-wrap:wrap;">
-                                <span style="flex:1;">${slotHtml}</span>
+                                <span>${slotHtml}</span>
                                 <div class="row-btns">
                                     <button class="eye-btn" onclick="revealEx1Slot('${slotId}')">👁️</button>
                                     <button class="hint-btn" onclick="toggleSimpleHint(event,'${slotId}')">i</button>
@@ -1523,6 +1523,8 @@
                 });
                 ex3State = null;
                 document.getElementById('ex3-mcq-feedback').innerHTML = '';
+                document.getElementById('ex3-hint-box').style.display = 'none';
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
                 return;
             }
             all.forEach(el => {
@@ -1532,32 +1534,26 @@
                 }
             });
             ex3State = correctId;
-            document.getElementById('ex3-mcq-feedback').innerHTML = '<span style="color:#27ae60;">✓ Correct answer: 3</span>';
+            showMCQHint(true);
         }
 
-        function showMCQHint() {
+        function showMCQHint(forceShow) {
             const hintBox = document.getElementById('ex3-hint-box');
             if (!hintBox) return;
             const isVisible = hintBox.style.display === 'block';
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
 
-            if (!isVisible) {
-                let html = '';
-                if (ex3State && ex3Data.hint[ex3State]) {
-                    html = ex3Data.hint[ex3State];
-                    // highlight evidence in slot4-context
-                    const evidenceEl = document.getElementById('slot4-context');
-                    if (evidenceEl) {
-                        evidenceEl.classList.add('active-highlight');
-                        const panel = document.getElementById('text-panel');
-                        if (panel) panel.scrollTo({ top: evidenceEl.offsetTop - 80, behavior: 'smooth' });
-                    }
-                } else {
-                    html = '<strong>Hãy chọn một đáp án trước.</strong>';
-                }
-                hintBox.innerHTML = html;
+            if (forceShow || !isVisible) {
+                const correctId = ex3Data.correct;
+                hintBox.innerHTML = ex3Data.hint[correctId];
                 hintBox.style.display = 'block';
+                const evidenceEl = document.getElementById('slot4-context');
+                if (evidenceEl) {
+                    evidenceEl.classList.add('active-highlight');
+                    const panel = document.getElementById('text-panel');
+                    if (panel) panel.scrollTo({ top: evidenceEl.offsetTop - 80, behavior: 'smooth' });
+                }
             }
         }
 
@@ -1684,8 +1680,24 @@
             const correct = ex4AnswerKey[q];
             if (panelState[q] === correct) {
                 removeSlot(q);
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             } else {
                 placeSentence(q, correct);
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                const targetId = ex4ScrollTargets[q];
+                if (targetId) {
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        el.classList.add('active-highlight');
+                        const panel = document.getElementById('text-panel');
+                        if (panel) {
+                            const scrollOffset = el.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+                            panel.scrollTo({ top: scrollOffset - 80, behavior: 'smooth' });
+                        } else {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
             }
         }
 

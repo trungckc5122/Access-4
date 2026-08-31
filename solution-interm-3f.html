@@ -112,34 +112,6 @@
             margin-top: 5px;
         }
 
-        .btn {
-            padding: 10px 24px;
-            border-radius: 25px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .btn-show-all {
-            background: #16a085;
-            color: white;
-        }
-
-        .btn-show-all:hover {
-            background: #1abc9c;
-        }
-
-        .btn-reset {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background: #5a6268;
-        }
-
         .controls-row {
             margin-top: 20px;
             display: flex;
@@ -539,6 +511,61 @@
             flex: 1;
         }
 
+        /* ===== OPTION CARDS (radio cards) ===== */
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: flex-start;
+        }
+
+        .option-card {
+            border: 1px solid var(--glass-border);
+            padding: 10px 20px 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            max-width: 500px;
+            width: 500px;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .option-card.selected {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            font-weight: bold;
+        }
+
+        .option-card.correct-card {
+            border-color: var(--success) !important;
+            background: rgba(var(--success-rgb), 0.1) !important;
+            color: var(--success) !important;
+            font-weight: bold;
+        }
+
+        .option-card.incorrect-card {
+            border-color: var(--error) !important;
+            background: rgba(var(--error-rgb), 0.1) !important;
+            color: var(--error) !important;
+            font-weight: bold;
+        }
+
+        .option-card input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
         /* ===== STRATEGY CARD (đã việt hóa) ===== */
         .strategy-card {
             background: var(--hint-bg, #f0fdfa);
@@ -568,13 +595,6 @@
         .q-label {
             font-weight: bold;
             margin-right: 4px;
-        }
-
-        .ex2-answer-input {
-            min-width: 100px;
-            width: 150px;
-            text-align: left;
-            padding-left: 12px;
         }
 
         /* Pair row cho Ex1 - hiển thị giống ảnh */
@@ -637,7 +657,7 @@
 
         <!-- Reading Strategy (đã việt hóa) -->
         <div class="strategy-card" id="strategy-card">
-            <div class="strategy-title">📖 Chiến lược Đọc hiểu</div>
+            <div class="strategy-title"> Chiến lược Đọc hiểu</div>
             <p><strong>Khi nối câu hỏi với đoạn văn, hãy làm theo các bước sau:</strong></p>
             <p>1. Đọc văn bản để có ý tưởng chung về nghĩa.</p>
             <p>2. Đọc câu dẫn của nhiệm vụ rất cẩn thận. <em>(Trong đoạn nào ...)</em>. Sau đó đọc kỹ tất cả các lựa
@@ -801,10 +821,7 @@
         </div>
     </div>
 
-    <button onclick="checkAllEx()"
-        style="position:fixed;bottom:20px;right:20px;padding:15px 30px;background:#27ae60;color:#fff;border:none;border-radius:30px;font-weight:bold;font-size:1rem;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.2);z-index:100;">
-        CHECK ALL (ENTER)
-    </button>
+    <button class="check-all-btn" onclick="checkAllEx()">CHECK ALL (ENTER)</button>
 
     <script>
         // ================================================================
@@ -874,6 +891,7 @@
         const ex2Data = {
             q: "Does the research support the theory that students perform better if school starts later?",
             ans: "Yes",
+            options: ["Yes", "No"],
             hint: '<strong>Đáp án: Yes</strong><br><br><strong>Bằng chứng trong đoạn B (3 câu được highlight):</strong><br><br>① <span class="key-word">Schools in some US states have tested this theory, and the findings back up the science.</span> → Các bang ở Mỹ đã thử nghiệm và kết quả ủng hộ lý thuyết khoa học.<br><br>② <span class="key-word">One study that involved 9,000 students revealed that grades in maths, English and science all rose when school began at 8.35 a.m. or later.</span> → Nghiên cứu với 9.000 học sinh: điểm số tất cả các môn đều tăng khi giờ học bắt đầu từ 8h35 trở đi.<br><br>③ <span class="key-word">Studies in other countries such as Brazil, Italy and Israel also show that later start times improve learning.</span> → Nghiên cứu ở nhiều quốc gia khác cũng xác nhận: bắt đầu học muộn hơn giúp cải thiện kết quả học tập.<br><br><strong>Kết luận:</strong> Nghiên cứu <em>ủng hộ</em> (support) lý thuyết → đáp án là <strong>Yes</strong>.'
         };
 
@@ -908,6 +926,7 @@
 
         // Ex3: state cho MCQ (mc-card style)
         const ex3State = {};
+        let ex2Selected = null;
 
         // ================================================================
         // UTILITY
@@ -1190,18 +1209,17 @@
 
             const row = document.createElement('div');
             row.className = 'question-row';
+            row.style.display = 'block';
 
-            const qText = document.createTextNode(ex2Data.q + ' ');
-            row.appendChild(qText);
+            const qDiv = document.createElement('div');
+            qDiv.style.display = 'flex';
+            qDiv.style.alignItems = 'flex-start';
+            qDiv.style.justifyContent = 'space-between';
+            qDiv.style.gap = '10px';
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.id = 'ex2-input';
-            input.dataset.ans = ex2Data.ans;
-            input.className = 'task5-input ex2-answer-input';
-            input.placeholder = 'Yes / No';
-            input.addEventListener('input', function () { adjustWidth(this); });
-            row.appendChild(input);
+            const qText = document.createElement('div');
+            qText.textContent = ex2Data.q;
+            qDiv.appendChild(qText);
 
             const btnGroup = document.createElement('div');
             btnGroup.className = 'row-btns';
@@ -1211,7 +1229,7 @@
             eyeBtn.textContent = '👁️';
             eyeBtn.addEventListener('click', e => {
                 e.stopPropagation();
-                showSingleAns('ex2-input');
+                revealEx2Ans();
             });
             btnGroup.appendChild(eyeBtn);
 
@@ -1224,7 +1242,33 @@
             });
             btnGroup.appendChild(hintBtn);
 
-            row.appendChild(btnGroup);
+            qDiv.appendChild(btnGroup);
+            row.appendChild(qDiv);
+
+            const optGroup = document.createElement('div');
+            optGroup.className = 'option-group';
+            ex2Data.options.forEach(val => {
+                const label = document.createElement('label');
+                label.className = 'option-card';
+                label.id = `ex2-opt-${val}`;
+
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'ex2-option';
+                radio.value = val;
+
+                const span = document.createElement('span');
+                span.textContent = val;
+
+                label.appendChild(radio);
+                label.appendChild(span);
+                label.addEventListener('click', e => {
+                    e.preventDefault();
+                    selectEx2Option(val);
+                });
+                optGroup.appendChild(label);
+            });
+            row.appendChild(optGroup);
 
             const hintBox = document.createElement('div');
             hintBox.className = 'hint-box';
@@ -1233,20 +1277,47 @@
             row.appendChild(hintBox);
 
             container.appendChild(row);
-            adjustWidth(input);
+        }
+
+        function selectEx2Option(val) {
+            ex2Data.options.forEach(v => {
+                const el = document.getElementById(`ex2-opt-${v}`);
+                if (el) {
+                    el.classList.remove('correct-card', 'incorrect-card');
+                    el.classList.toggle('selected', v === val && ex2Selected !== val);
+                    el.querySelector('input').checked = (v === val && ex2Selected !== val);
+                }
+            });
+            ex2Selected = (ex2Selected === val) ? null : val;
+        }
+
+        function revealEx2Ans() {
+            ex2Data.options.forEach(v => {
+                const el = document.getElementById(`ex2-opt-${v}`);
+                if (el) el.classList.remove('selected', 'correct-card', 'incorrect-card');
+            });
+            ex2Selected = ex2Data.ans;
+            const correctEl = document.getElementById(`ex2-opt-${ex2Data.ans}`);
+            if (correctEl) {
+                correctEl.classList.add('correct-card');
+                correctEl.querySelector('input').checked = true;
+            }
         }
 
         function showEx2Answer() {
-            showSingleAns('ex2-input');
+            revealEx2Ans();
         }
 
         function resetEx2() {
-            const el = document.getElementById('ex2-input');
-            if (el) {
-                el.value = '';
-                el.classList.remove('correct', 'incorrect-marked');
-                adjustWidth(el);
-            }
+            ex2Selected = null;
+            ex2Data.options.forEach(v => {
+                const el = document.getElementById(`ex2-opt-${v}`);
+                if (el) {
+                    el.classList.remove('selected', 'correct-card', 'incorrect-card');
+                    const input = el.querySelector('input');
+                    if (input) input.checked = false;
+                }
+            });
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlight-key').forEach(el => el.classList.remove('active-highlight'));
         }
@@ -1404,17 +1475,15 @@
             });
 
             // Check Ex2
-            const ex2input = document.getElementById('ex2-input');
-            if (ex2input && ex2input.value.trim()) {
-                const user = ex2input.value.trim().toLowerCase();
-                const correct = ex2Data.ans.toLowerCase();
-                if (user === correct) {
-                    ex2input.classList.add('correct');
-                    ex2input.classList.remove('incorrect-marked');
-                } else {
-                    ex2input.classList.add('incorrect-marked');
-                    ex2input.classList.remove('correct');
-                }
+            if (ex2Selected) {
+                ex2Data.options.forEach(v => {
+                    const el = document.getElementById(`ex2-opt-${v}`);
+                    if (!el) return;
+                    el.classList.remove('correct-card', 'incorrect-card');
+                    if (v === ex2Selected) {
+                        el.classList.add(v === ex2Data.ans ? 'correct-card' : 'incorrect-card');
+                    }
+                });
             }
 
             // Check Ex3

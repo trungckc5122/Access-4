@@ -45,54 +45,6 @@
             font-size: 1.05rem;
         }
 
-        /* Standard Word Bank & Drag Drop Styles */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 20px;
-            background: var(--primary-light, #f0fdfa);
-            border: 2px solid var(--border-medium, #cbd5e1);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            justify-content: center;
-        }
-
-        .word-item {
-            padding: 8px 18px;
-            background: var(--card-bg, #fff);
-            border: 2px solid var(--border-medium, #cbd5e1);
-            border-radius: 10px;
-            cursor: grab;
-            user-select: none;
-            font-weight: bold;
-            color: var(--primary, #0d9488);
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            transform: translateY(-2px);
-        }
-
-        .word-item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            display: none;
-        }
-
-        .sticky-bank {
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
         .drop-slot {
             display: inline-flex;
             align-items: center;
@@ -319,34 +271,6 @@
 
         .hint-detail {
             margin-top: 5px;
-        }
-
-        .btn {
-            padding: 10px 24px;
-            border-radius: 25px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .btn-show-all {
-            background: #16a085;
-            color: white;
-        }
-
-        .btn-show-all:hover {
-            background: #1abc9c;
-        }
-
-        .btn-reset {
-            background: #34495e;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background: #2c3e50;
         }
 
         .controls-row {
@@ -610,13 +534,6 @@
         .solution-title-row .home-btn {
             position: static !important;
             transform: none !important;
-        }
-
-        .check-all-btn {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            z-index: 1000;
         }
 
         .text-author-header {
@@ -984,24 +901,31 @@
         function renderEx1() {
             const container = document.getElementById('questions-ex1');
             container.innerHTML = ex1Data.map((it, idx) => {
-                const qid = `ex1-q${idx + 1}`;
+                const qBase = `ex1-q${idx + 1}`;
+                const ansParts = it.ans.split(',').map(s => s.trim());
                 const parts = it.q.split('______');
+                let blanksHtml = parts[0];
+                ansParts.forEach((ans, bIdx) => {
+                    const qid = `${qBase}-b${bIdx + 1}`;
+                    blanksHtml += `
+                        <span class="drop-slot" id="${qid}" data-ans="${ans}" data-section="ex1"
+                            ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
+                            ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex1')"
+                            onclick="handleSlotClick('${qid}', 'ex1')" style="min-width:90px;"></span>
+                    `;
+                    blanksHtml += parts[bIdx + 1] || '';
+                });
                 return `
                     <div class="question-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <strong>${idx + 1}.</strong> 
                         <span style="display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px;">
-                            ${parts[0]}
-                            <span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-section="ex1"
-                                ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
-                                ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex1')"
-                                onclick="handleSlotClick('${qid}', 'ex1')" style="min-width:90px;"></span>
-                            ${parts[1] || ''}
+                            ${blanksHtml}
                         </span>
                         <span class="row-btns">
-                            <button class="eye-btn" onclick="revealEx1Slot('${qid}')">👁️</button>
-                            <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                            <button class="eye-btn" onclick="revealEx1Row(${idx})">👁️</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${qBase}')">i</button>
                         </span>
-                        <div class="hint-box" id="${qid}-hint">
+                        <div class="hint-box" id="${qBase}-hint">
                             <div class="hint-detail">${it.hint}</div>
                         </div>
                     </div>
@@ -1113,6 +1037,26 @@
                 placeEx1Word(slotId, ans);
                 slot.classList.add('correct');
             }
+        }
+
+        function revealEx1Row(idx) {
+            const it = ex1Data[idx];
+            const ansParts = it.ans.split(',').map(s => s.trim());
+            const qBase = `ex1-q${idx + 1}`;
+            const allCorrect = ansParts.every((ans, bIdx) => {
+                const slot = document.getElementById(`${qBase}-b${bIdx + 1}`);
+                return slot && slot.innerText.trim() === ans;
+            });
+            ansParts.forEach((ans, bIdx) => {
+                const qid = `${qBase}-b${bIdx + 1}`;
+                if (allCorrect) {
+                    removeEx1Word(qid);
+                } else {
+                    placeEx1Word(qid, ans);
+                    const slot = document.getElementById(qid);
+                    if (slot) slot.classList.add('correct');
+                }
+            });
         }
 
         // ============================================================
@@ -1289,9 +1233,14 @@
         function showAnswers(prefix) {
             if (prefix === 'ex1') {
                 ex1Data.forEach((it, idx) => {
-                    const qid = `ex1-q${idx + 1}`;
-                    placeEx1Word(qid, it.ans);
-                    document.getElementById(qid).classList.add('correct');
+                    const ansParts = it.ans.split(',').map(s => s.trim());
+                    const qBase = `ex1-q${idx + 1}`;
+                    ansParts.forEach((ans, bIdx) => {
+                        const qid = `${qBase}-b${bIdx + 1}`;
+                        placeEx1Word(qid, ans);
+                        const slot = document.getElementById(qid);
+                        if (slot) slot.classList.add('correct');
+                    });
                 });
             } else if (prefix === 'ex2') {
                 ex2Data.forEach((it, idx) => {
@@ -1315,7 +1264,11 @@
         function resetSection(prefix) {
             if (prefix === 'ex1') {
                 ex1Data.forEach((it, idx) => {
-                    removeEx1Word(`ex1-q${idx + 1}`);
+                    const ansParts = it.ans.split(',').map(s => s.trim());
+                    const qBase = `ex1-q${idx + 1}`;
+                    ansParts.forEach((ans, bIdx) => {
+                        removeEx1Word(`${qBase}-b${bIdx + 1}`);
+                    });
                 });
             } else if (prefix === 'ex2') {
                 ex2Data.forEach((it, idx) => {
