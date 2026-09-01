@@ -24,54 +24,7 @@
             transform: none !important;
         }
 
-        /* Word bank chung */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 16px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            justify-content: center;
-            min-height: 60px;
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--word-item-bg);
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 6px 16px;
-            font-weight: 700;
-            color: var(--primary-dark);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-dark);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            opacity: 0.3;
-            cursor: default;
-            pointer-events: none;
-        }
+        /* Word bank: kế thừa từ access-theme.css (.word-bank/.word-item/.sticky-bank) */
 
         /* Drop slot */
         .drop-slot {
@@ -164,10 +117,11 @@
             padding: 2px 8px;
             font-size: 1.05rem;
             min-width: 60px;
-            text-align: center;
+            text-align: left;
             flex-shrink: 0;
             transition: all 0.2s;
             field-sizing: content;
+            box-sizing: border-box;
         }
 
         .task5-input:focus {
@@ -299,7 +253,6 @@
         }
 
         .ex3-sentence {
-            flex: 1;
             font-size: 1.05rem;
             line-height: 1.6;
         }
@@ -365,6 +318,7 @@
             width: auto;
             min-width: 220px;
             max-width: 100%;
+            box-sizing: border-box;
             text-align: left;
             field-sizing: content;
             transition: all 0.2s;
@@ -470,6 +424,8 @@
         .ex5-item .task5-input {
             width: 100%;
             min-width: 300px;
+            max-width: 100%;
+            box-sizing: border-box;
             text-align: left;
         }
 
@@ -554,7 +510,7 @@
         }
 
         @media (max-width: 768px) {
-            .word-bank {
+            .sticky-bank {
                 position: relative;
                 top: 0;
             }
@@ -761,7 +717,7 @@
         <!-- ====== EXERCISE 1 ====== -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>1.</strong> Complete the rules with the headings below.</div>
-            <div class="word-bank" id="ex1-bank"></div>
+            <div class="word-bank sticky-bank" id="ex1-bank"></div>
             <div class="ex1-rules" id="ex1-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
@@ -794,7 +750,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>4.</strong> Complete the sentences with <strong>few</strong>, <strong>a
                     few</strong>, <strong>little</strong>, or <strong>a little</strong>.</div>
-            <div class="word-bank" id="ex4-bank"></div>
+            <div class="word-bank sticky-bank" id="ex4-bank"></div>
             <div class="ex4-items" id="ex4-items"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -1184,20 +1140,10 @@
             const slot = document.getElementById(slotId);
             slot.classList.remove('over');
             if (!ex4Dragging) return;
-            for (let key in ex4State) {
-                if (ex4State[key] === ex4Dragging) {
-                    const oldSlot = document.getElementById(key);
-                    if (oldSlot) {
-                        oldSlot.textContent = '';
-                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
-                    }
-                    delete ex4State[key];
-                }
-            }
             slot.textContent = ex4Dragging;
             slot.classList.add('filled');
             ex4State[slotId] = ex4Dragging;
-            // KHÔNG đánh dấu .used để cho phép kéo thả nhiều lần
+            // KHÔNG đánh dấu .used và KHÔNG xóa khỏi ô khác — cho phép 1 từ dùng ở nhiều ô cùng lúc
             ex4Dragging = null;
         }
 
@@ -1217,16 +1163,6 @@
             if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
                 ex4RemoveSlot(slotId);
                 return;
-            }
-            for (let key in ex4State) {
-                if (ex4State[key] === ans) {
-                    const oldSlot = document.getElementById(key);
-                    if (oldSlot) {
-                        oldSlot.textContent = '';
-                        oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
-                    }
-                    delete ex4State[key];
-                }
             }
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
@@ -1261,6 +1197,7 @@
             if (!el) return;
             const text = el.value || "";
             el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
+            el.style.maxWidth = "80%";
         }
 
         function toggleHint(event, id) {
@@ -1374,16 +1311,6 @@
                     if (!slot) return;
                     const ans = item.ans;
                     if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
-                    for (let key in ex4State) {
-                        if (ex4State[key] === ans) {
-                            const oldSlot = document.getElementById(key);
-                            if (oldSlot) {
-                                oldSlot.textContent = '';
-                                oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
-                            }
-                            delete ex4State[key];
-                        }
-                    }
                     slot.textContent = ans;
                     slot.classList.add('filled', 'correct');
                     ex4State[slotId] = ans;

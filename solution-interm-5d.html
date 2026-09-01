@@ -98,54 +98,7 @@
             flex-shrink: 0;
         }
 
-        /* Word Bank chung */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 16px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            justify-content: center;
-            min-height: 60px;
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--word-item-bg);
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 6px 16px;
-            font-weight: 700;
-            color: var(--primary-dark);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-dark);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            opacity: 0.3;
-            cursor: default;
-            pointer-events: none;
-        }
+        /* Word bank: kế thừa từ access-theme.css (.word-bank/.word-item/.sticky-bank) */
 
         /* Drop slot chung */
         .drop-slot {
@@ -492,7 +445,7 @@
         }
 
         @media (max-width: 768px) {
-            .word-bank {
+            .sticky-bank {
                 position: relative;
                 top: 0;
             }
@@ -623,7 +576,7 @@
                 the full sentence using <strong>should / shouldn't have</strong>.</div>
 
             <!-- Word Bank cho Ex3 -->
-            <div class="word-bank" id="ex3-bank"></div>
+            <div class="word-bank sticky-bank" id="ex3-bank"></div>
 
             <div class="ex3-layout" id="ex3-container"></div>
             <div class="controls-row">
@@ -638,7 +591,7 @@
                 same modal more than once.</div>
 
             <!-- Word Bank cho Ex4 -->
-            <div class="word-bank" id="ex4-bank"></div>
+            <div class="word-bank sticky-bank" id="ex4-bank"></div>
 
             <div id="ex4-dialogue"></div>
             <div class="controls-row">
@@ -689,14 +642,14 @@
             { num: 6, prompt: "He ______ (injure) his leg really badly. He cycled home!", ans: "can't have injured", hint: "<strong>Đáp án:</strong> can't have injured<br><strong>Bằng chứng:</strong> Anh ấy đã đạp xe về nhà → không thể bị thương nặng.<br><strong>Giải thích:</strong> Dùng <strong>can't have</strong> cho suy luận phủ định." }
         ];
 
-        // Ex3 - Word bank items: full sentences with letter
+        // Ex3 - Word bank items: raw prompts (letter + verb in brackets), reference only — user writes the full sentence themselves
         const ex3BankItems = [
-            { letter: "a", text: "We should have brought the satnav." },
-            { letter: "b", text: "You should have chosen a better password." },
-            { letter: "c", text: "You should have charged it overnight." },
-            { letter: "d", text: "You shouldn't have dropped it on the pavement." },
-            { letter: "e", text: "You shouldn't have made those comments on Twitter." },
-            { letter: "f", text: "You shouldn't have called your friend when you were abroad." }
+            { letter: "a", text: "We (bring) the satnav." },
+            { letter: "b", text: "You (choose) a better password." },
+            { letter: "c", text: "You (charge) it overnight." },
+            { letter: "d", text: "You (drop) it on the pavement." },
+            { letter: "e", text: "You (make) those comments on Twitter." },
+            { letter: "f", text: "You (call) your friend when you were abroad." }
         ];
 
         const ex3Data = [
@@ -839,12 +792,12 @@
             }).join('');
         }
 
-        // -------- Ex3 (drag-drop letter + input for full sentence) --------
+        // -------- Ex3 (kéo-thả chữ cái để ghép + viết lại nguyên câu) --------
         let ex3State = {};
         let ex3Dragging = null;
 
         function renderEx3() {
-            // Word bank
+            // Word bank — hiển thị prompt gốc chưa chia (kéo-thả được)
             const bank = document.getElementById('ex3-bank');
             bank.innerHTML = ex3BankItems.map(item => {
                 return `<div class="word-item" draggable="true" data-letter="${item.letter}" data-full="${item.text}" 
@@ -852,7 +805,7 @@
                           ondragend="this.classList.remove('dragging')">${item.letter}. ${item.text}</div>`;
             }).join('');
 
-            // Questions
+            // Questions — ô ghép chữ cái nằm kế ô viết lại nguyên câu
             const container = document.getElementById('ex3-container');
             container.innerHTML = ex3Data.map(item => {
                 const slotId = `ex3-slot-${item.num}`;
@@ -1028,6 +981,19 @@
             e.dataTransfer.setData('text/plain', ex4Dragging);
         }
 
+        // Word bank chỉ gạch (.used) khi 1 từ đã được điền đủ SỐ LẦN cần dùng
+        // (vd "may / might / could have" cần 3 lần mới gạch, "might not have" chỉ cần 1 lần)
+        function updateEx4BankUsed() {
+            const counts = {};
+            Object.values(ex4State).forEach(w => { counts[w] = (counts[w] || 0) + 1; });
+            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
+                const w = el.dataset.word;
+                const required = ex4Answers.filter(a => a === w).length;
+                const have = counts[w] || 0;
+                el.classList.toggle('used', required > 0 && have >= required);
+            });
+        }
+
         function ex4Drop(e, inputId) {
             e.preventDefault();
             const input = document.getElementById(inputId);
@@ -1037,10 +1003,7 @@
             input.value = ex4Dragging;
             input.classList.add('filled');
             ex4State[inputId] = ex4Dragging;
-            // mark used in bank
-            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                if (el.dataset.word === ex4Dragging) el.classList.add('used');
-            });
+            updateEx4BankUsed();
             ex4Dragging = null;
             adjustWidth(input);
         }
@@ -1054,19 +1017,14 @@
                 input.classList.remove('correct', 'incorrect-marked');
                 // also remove from state
                 delete ex4State[inputId];
-                document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                    if (el.dataset.word === ans) el.classList.remove('used');
-                });
             } else {
                 input.value = ans;
                 input.classList.add('correct');
                 input.classList.remove('incorrect-marked');
                 // Add to state
                 ex4State[inputId] = ans;
-                document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                    if (el.dataset.word === ans) el.classList.add('used');
-                });
             }
+            updateEx4BankUsed();
             adjustWidth(input);
         }
 
@@ -1211,10 +1169,8 @@
                     input.classList.remove('incorrect-marked');
                     adjustWidth(input);
                     ex4State[inputId] = ans;
-                    document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                        if (el.dataset.word === ans) el.classList.add('used');
-                    });
                 });
+                updateEx4BankUsed();
             } else if (prefix === 'ex5') {
                 ex5Data.forEach(item => {
                     const el = document.getElementById(`ex5-q${item.num}`);

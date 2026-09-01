@@ -24,54 +24,7 @@
             transform: none !important;
         }
 
-        /* Word bank drag-drop */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 16px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            justify-content: center;
-            min-height: 60px;
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--word-item-bg);
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 6px 16px;
-            font-weight: 700;
-            color: var(--primary-dark);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-dark);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            opacity: 0.3;
-            cursor: default;
-            pointer-events: none;
-        }
+        /* Word bank: kế thừa từ access-theme.css (.word-bank/.word-item/.sticky-bank) */
 
         /* Drop slot */
         .drop-slot {
@@ -930,7 +883,7 @@
                 the correct verb forms.</div>
 
             <!-- Word Bank -->
-            <div class="word-bank" id="ex1-bank"></div>
+            <div class="word-bank sticky-bank" id="ex1-bank"></div>
 
             <div id="ex1-container"></div>
 
@@ -1167,6 +1120,23 @@
             e.dataTransfer.setData('text/plain', ex1Dragging);
         }
 
+        // Word bank chỉ gạch (.used) khi 1 từ đã được điền đủ SỐ LẦN cần dùng
+        // (vd "past perfect" cần dùng cho câu 3, 4, 5 → phải điền đủ 3 lần mới gạch)
+        function updateEx1BankUsed() {
+            const counts = {};
+            Object.values(ex1State).forEach(w => { counts[w] = (counts[w] || 0) + 1; });
+            const required = {};
+            ex1Items.filter(it => !it.isInput).forEach(it => {
+                required[it.ans] = (required[it.ans] || 0) + 1;
+            });
+            document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                const w = el.dataset.word;
+                const need = required[w] || 0;
+                const have = counts[w] || 0;
+                el.classList.toggle('used', need > 0 && have >= need);
+            });
+        }
+
         function ex1Drop(e, slotId) {
             e.preventDefault();
             const slot = document.getElementById(slotId);
@@ -1176,7 +1146,7 @@
             slot.textContent = ex1Dragging;
             slot.classList.add('filled');
             ex1State[slotId] = ex1Dragging;
-            // Không đánh dấu .used để từ bank có thể dùng nhiều lần
+            updateEx1BankUsed();
             ex1Dragging = null;
         }
 
@@ -1186,6 +1156,7 @@
             slot.textContent = '';
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             delete ex1State[slotId];
+            updateEx1BankUsed();
         }
 
         function ex1ShowSlot(slotId) {
@@ -1199,6 +1170,7 @@
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
             ex1State[slotId] = ans;
+            updateEx1BankUsed();
         }
 
         // -------- Ex2 (MCQ) --------
@@ -1213,17 +1185,20 @@
                     const sep = i > 0 ? '<span>/</span>' : '';
                     return `${sep}<span class="word-choice" data-qid="${qid}" data-value="${val}" onclick="selectEx2Option(this)">${letter}. ${text}</span>`;
                 }).join('');
-                return `<div class="ex-row">
-                    <span class="q-label">${item.num}.</span>
-                    <span class="ex-sentence">${item.prompt}</span>
-                    <span class="inline-group" style="position:relative;">
+                const choiceHtml = `<span class="inline-group" style="position:relative;">
                         <span class="choice-gap" id="${qid}" data-ans="${item.ans}">${optHtml}</span>
                         <span class="row-btns">
                             <button class="eye-btn" onclick="showEx2Ans('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </span>
                         <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
-                    </span>
+                    </span>`;
+                const parts = item.prompt.split('___');
+                const before = parts[0] || '';
+                const after = parts[1] || '';
+                return `<div class="ex-row">
+                    <span class="q-label">${item.num}.</span>
+                    <span class="ex-sentence">${before}${choiceHtml}${after}</span>
                 </div>`;
             }).join('');
         }

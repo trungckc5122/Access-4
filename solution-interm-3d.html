@@ -9,54 +9,8 @@
     <style>
         /* ===== CSS ĐẶC THÙ CHO BÀI 3D ===== */
 
-        /* Word bank */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 16px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            justify-content: center;
-            min-height: 60px;
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--word-item-bg);
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 6px 16px;
-            font-weight: 700;
-            color: var(--primary-dark);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-dark);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            opacity: 0.3;
-            cursor: default;
-            pointer-events: none;
-        }
+        /* Word bank: đã có sẵn trong access-theme.css, không override */
+        /* .word-bank, .word-item, .word-item.used đều kế thừa từ theme */
 
         /* Drop slot */
         .drop-slot {
@@ -547,7 +501,7 @@
         <!-- ====== EXERCISE 4 ====== -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>4.</strong> Complete the future time phrases with the words below.</div>
-            <div class="word-bank" id="ex4-bank"></div>
+            <div class="word-bank" id="wordbank-ex4"></div>
             <div class="ex4-items" id="ex4-items"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -610,12 +564,12 @@
 
         // Ex4 - drag-drop
         const ex4Items = [
-            { num: 1, text: "within 50 years", ans: "within" },
-            { num: 2, text: "about 100 years ______ now", ans: "from" },
-            { num: 3, text: "______ some point in the future", ans: "at" },
-            { num: 4, text: "______ a million years' time", ans: "in" },
-            { num: 5, text: "______ the end of the century / millennium", ans: "by" },
-            { num: 6, text: "a few thousand years ______ the future", ans: "into" }
+            { num: 1, text: "within 50 years", ans: "within", bank: "within" },
+            { num: 2, text: "about 100 years ______ now", ans: "from", bank: "from" },
+            { num: 3, text: "______ some point in the future", ans: "at", bank: "at" },
+            { num: 4, text: "______ a million years' time", ans: "in", bank: "in" },
+            { num: 5, text: "______ the end of the century / millennium", ans: "by", bank: "by" },
+            { num: 6, text: "a few thousand years ______ the future", ans: "into", bank: "into" }
         ];
         const ex4Bank = ["at", "by", "from", "in", "into", "within"];
 
@@ -724,7 +678,7 @@
         let ex4Dragging = null;
 
         function renderEx4() {
-            const bank = document.getElementById('ex4-bank');
+            const bank = document.getElementById('wordbank-ex4');
             bank.innerHTML = ex4Bank.map(word => {
                 return `<div class="word-item" draggable="true" data-word="${word}" 
                           ondragstart="ex4DragStart(event)" 
@@ -737,13 +691,13 @@
                 let textHtml = item.text;
                 if (textHtml.includes('______')) {
                     const parts = textHtml.split('______');
-                    textHtml = parts[0] + `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                    textHtml = parts[0] + `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="wordbank-ex4"
                           ondragover="event.preventDefault(); this.classList.add('over')"
                           ondragleave="this.classList.remove('over')"
                           ondrop="ex4Drop(event, '${slotId}')"
                           onclick="ex4RemoveSlot('${slotId}')"></span>` + parts[1];
                 } else {
-                    textHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                    textHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="wordbank-ex4"
                           ondragover="event.preventDefault(); this.classList.add('over')"
                           ondragleave="this.classList.remove('over')"
                           ondrop="ex4Drop(event, '${slotId}')"
@@ -782,6 +736,9 @@
                     if (oldSlot) {
                         oldSlot.textContent = '';
                         oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const oldBank = oldSlot.dataset.bank;
+                        const oldBankId = oldSlot.dataset.bankid;
+                        setWordUsed(oldBankId, oldBank, false);
                     }
                     delete ex4State[key];
                 }
@@ -789,28 +746,27 @@
             slot.textContent = ex4Dragging;
             slot.classList.add('filled');
             ex4State[slotId] = ex4Dragging;
-            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                if (el.dataset.word === ex4Dragging) el.classList.add('used');
-            });
+            // Không gạch khi drag (chưa biết đúng/sai), chỉ gạch khi hiện đáp án hoặc check
             ex4Dragging = null;
         }
 
         function ex4RemoveSlot(slotId) {
             const slot = document.getElementById(slotId);
             if (!slot || !slot.textContent.trim()) return;
-            const word = slot.textContent.trim();
-            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                if (el.dataset.word === word) el.classList.remove('used');
-            });
+            const bankWord = slot.dataset.bank;
+            const bankId = slot.dataset.bankid;
             slot.textContent = '';
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             delete ex4State[slotId];
+            setWordUsed(bankId, bankWord, false);
         }
 
         function ex4ShowSlot(slotId) {
             const slot = document.getElementById(slotId);
             if (!slot) return;
             const ans = slot.dataset.ans;
+            const bankWord = slot.dataset.bank;
+            const bankId = slot.dataset.bankid;
             if (slot.textContent.trim() === ans && slot.classList.contains('correct')) {
                 ex4RemoveSlot(slotId);
                 return;
@@ -821,19 +777,17 @@
                     if (oldSlot) {
                         oldSlot.textContent = '';
                         oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                        const oldBank = oldSlot.dataset.bank;
+                        const oldBankId = oldSlot.dataset.bankid;
+                        setWordUsed(oldBankId, oldBank, false);
                     }
                     delete ex4State[key];
                 }
             }
-            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                if (el.dataset.word === ans) el.classList.remove('used');
-            });
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
             ex4State[slotId] = ans;
-            document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                if (el.dataset.word === ans) el.classList.add('used');
-            });
+            setWordUsed(bankId, bankWord, true);
         }
 
         // -------- Ex5 --------
@@ -860,6 +814,19 @@
         /* ================================================================
            HELPERS
            ================================================================ */
+
+        // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
 
         function adjustWidth(el) {
             if (!el) return;
@@ -949,6 +916,8 @@
                     const slot = document.getElementById(slotId);
                     if (!slot) return;
                     const ans = item.ans;
+                    const bankWord = item.bank;
+                    const bankId = 'wordbank-ex4';
                     if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
                     for (let key in ex4State) {
                         if (ex4State[key] === ans) {
@@ -956,19 +925,17 @@
                             if (oldSlot) {
                                 oldSlot.textContent = '';
                                 oldSlot.classList.remove('filled', 'correct', 'incorrect-marked');
+                                const oldBank = oldSlot.dataset.bank;
+                                const oldBankId = oldSlot.dataset.bankid;
+                                setWordUsed(oldBankId, oldBank, false);
                             }
                             delete ex4State[key];
                         }
                     }
-                    document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                        if (el.dataset.word === ans) el.classList.remove('used');
-                    });
                     slot.textContent = ans;
                     slot.classList.add('filled', 'correct');
                     ex4State[slotId] = ans;
-                    document.querySelectorAll('#ex4-bank .word-item').forEach(el => {
-                        if (el.dataset.word === ans) el.classList.add('used');
-                    });
+                    setWordUsed(bankId, bankWord, true);
                 });
             } else if (prefix === 'ex5') {
                 ex5Data.forEach((item, i) => {

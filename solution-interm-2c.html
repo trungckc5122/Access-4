@@ -692,12 +692,12 @@
                 <div class="exercise-card">
                     <div class="exercise-title">5. Complete the useful phrases with the words below.</div>
                     <div class="word-bank sticky-bank" id="ex5-word-bank">
-                        <span class="word-item" data-word="bit">bit</span>
-                        <span class="word-item" data-word="nothing">nothing</span>
-                        <span class="word-item" data-word="pretty">pretty</span>
-                        <span class="word-item" data-word="real">real</span>
-                        <span class="word-item" data-word="up">up</span>
-                        <span class="word-item" data-word="world">world</span>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">bit</div>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">nothing</div>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">pretty</div>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">real</div>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">up</div>
+                        <div class="word-item" draggable="true" ondragstart="handleDragStart(event)">world</div>
                     </div>
                     <div id="questions-ex5"></div>
                     <div class="controls-row">
@@ -890,10 +890,11 @@
             const slot = e.currentTarget;
             slot.classList.remove('over');
             const word = e.dataTransfer.getData('text/plain');
+            const bankId = slot.dataset.bankid;
 
             if (slot.classList.contains('filled')) {
                 const oldWord = slot.innerText;
-                const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                const bankItems = document.querySelectorAll(`#${bankId} .word-item`);
                 bankItems.forEach(item => {
                     if (item.innerText === oldWord) item.classList.remove('used');
                 });
@@ -912,9 +913,10 @@
         function handleSlotClick(slot) {
             if (!slot.classList.contains('filled')) return;
             const word = slot.innerText;
+            const bankId = slot.dataset.bankid;
             slot.innerText = "";
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
-            const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+            const bankItems = document.querySelectorAll(`#${bankId} .word-item`);
             bankItems.forEach(item => {
                 if (item.innerText === word) item.classList.remove('used');
             });
@@ -929,7 +931,7 @@
                         <img src="${it.img}" alt="Food ${it.num}" loading="lazy">
                         <span class="img-label">${it.num}</span>
                         <div class="img-slot-wrapper">
-                            <span class="drop-slot" id="${qid}" data-ans="${it.ans}" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)"></span>
+                            <span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-bankid="ex1-word-bank" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)"></span>
                             <div class="row-btns">
                                 <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                                 <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
@@ -989,23 +991,23 @@
             });
         }
 
-        // ----- Ex5: inline inputs with numbering -----
+        // ----- Ex5: drop-slots inline with numbering -----
         function renderEx5() {
             const container = document.getElementById('questions-ex5');
             ex5Data.forEach((it, i) => {
                 const qid = `ex5-q${i}`;
-                // Replace "___" with input
+                // Replace "___" with drop-slot
                 const parts = it.q.split('___');
                 let html = '';
                 parts.forEach((part, idx) => {
                     html += part;
                     if (idx < parts.length - 1) {
-                        html += `<input type="text" id="${qid}" data-ans="${it.ans}" class="phrase-gap-input" autocomplete="off" style="display:inline;">`;
+                        html += `<span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-bankid="ex5-word-bank" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" onclick="handleSlotClick(this)"></span>`;
                     }
                 });
                 container.innerHTML += `
                     <div class="question-row" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 0;">
-                        <span style="font-weight:500;"><strong>${i + 1}.</strong> ${html}</span>
+                        <span style="font-weight:500;"><span class="q-number">${i + 1}.</span> ${html}</span>
                         <div class="row-btns">
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
@@ -1107,12 +1109,13 @@
             // Check if it's a drop-slot
             if (el.classList.contains('drop-slot')) {
                 const ans = el.dataset.ans;
+                const bankId = el.dataset.bankid;
                 if (el.classList.contains('filled')) {
                     // If already filled, remove and return to bank
                     const word = el.innerText;
                     el.innerText = "";
                     el.classList.remove('filled', 'correct', 'incorrect-marked');
-                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    const bankItems = document.querySelectorAll(`#${bankId} .word-item`);
                     bankItems.forEach(item => {
                         if (item.innerText === word) item.classList.remove('used');
                     });
@@ -1121,7 +1124,7 @@
                     el.innerText = ans;
                     el.classList.add('filled', 'correct');
                     // Mark word as used
-                    const bankItems = document.querySelectorAll('#ex1-word-bank .word-item');
+                    const bankItems = document.querySelectorAll(`#${bankId} .word-item`);
                     bankItems.forEach(item => {
                         if (item.innerText === ans) item.classList.add('used');
                     });
@@ -1193,17 +1196,18 @@
                 });
                 return;
             }
-            if (prefix === 'ex1') {
-                document.querySelectorAll('.drop-slot').forEach(el => {
+            if (prefix === 'ex1' || prefix === 'ex5') {
+                const bankId = `${prefix}-word-bank`;
+                document.querySelectorAll(`.drop-slot[data-bankid="${bankId}"]`).forEach(el => {
                     const ans = el.dataset.ans;
                     el.innerText = ans;
                     el.classList.add('filled', 'correct');
                     el.classList.remove('incorrect-marked');
                 });
-                document.querySelectorAll('#ex1-word-bank .word-item').forEach(item => item.classList.add('used'));
+                document.querySelectorAll(`#${bankId} .word-item`).forEach(item => item.classList.add('used'));
                 return;
             }
-            // For ex5 and ex7 (text inputs)
+            // For ex7 (text inputs)
             document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                 el.value = el.dataset.ans;
                 el.classList.add('correct');
@@ -1225,12 +1229,13 @@
                     const card = r.closest('.option-card');
                     if (card) card.classList.remove('selected', 'correct-card', 'incorrect-card');
                 });
-            } else if (prefix === 'ex1') {
-                document.querySelectorAll('.drop-slot').forEach(el => {
+            } else if (prefix === 'ex1' || prefix === 'ex5') {
+                const bankId = `${prefix}-word-bank`;
+                document.querySelectorAll(`.drop-slot[data-bankid="${bankId}"]`).forEach(el => {
                     el.innerText = "";
                     el.classList.remove('filled', 'correct', 'incorrect-marked');
                 });
-                document.querySelectorAll('#ex1-word-bank .word-item').forEach(item => item.classList.remove('used'));
+                document.querySelectorAll(`#${bankId} .word-item`).forEach(item => item.classList.remove('used'));
             } else {
                 document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                     el.value = "";
