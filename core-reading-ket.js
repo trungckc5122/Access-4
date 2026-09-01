@@ -3424,23 +3424,75 @@ class ReadingHighlightManager {
         let firstSpan = null;
         const keywords = info.keywords || [];
         keywords.forEach(keyword => {
-            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while (node = walker.nextNode()) {
-                const idx = node.textContent.toLowerCase().indexOf(keyword.toLowerCase());
-                if (idx !== -1) {
-                    const range = document.createRange();
-                    range.setStart(node, idx);
-                    range.setEnd(node, idx + keyword.length);
-                    const span = document.createElement('span');
-                    span.className = 'dynamic-highlight';
-                    try { range.surroundContents(span); if (!firstSpan) firstSpan = span; } catch (e) { }
-                    break;
-                }
-            }
+            const span = this._findAndHighlightKeyword(card, keyword);
+            if (span && !firstSpan) firstSpan = span;
         });
         if (firstSpan) firstSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
         else card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    _findAndHighlightKeyword(card, keyword) {
+        const normalize = s => s
+            .replace(/[\u2018\u2019\u02BC\u2032]/g, "'")
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/[\u2013\u2014\u2015]/g, '-')
+            .replace(/\u00A0/g, ' ');
+
+        const tryHighlight = (text) => {
+            const normKeyword = normalize(text).toLowerCase();
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false);
+            const nodes = [];
+            let node;
+            while (node = walker.nextNode()) nodes.push(node);
+            const offsets = [];
+            let combined = '';
+            for (const n of nodes) { offsets.push(combined.length); combined += normalize(n.textContent); }
+            const idx = combined.toLowerCase().indexOf(normKeyword);
+            if (idx === -1) return null;
+            const endIdx = idx + normKeyword.length;
+            const findNodeAt = (pos) => {
+                for (let i = offsets.length - 1; i >= 0; i--) {
+                    if (pos >= offsets[i]) return { node: nodes[i], offset: pos - offsets[i] };
+                }
+                return { node: nodes[0], offset: 0 };
+            };
+            const start = findNodeAt(idx);
+            const end   = findNodeAt(endIdx);
+            const range = document.createRange();
+            range.setStart(start.node, Math.min(start.offset, start.node.textContent.length));
+            range.setEnd(end.node,     Math.min(end.offset,   end.node.textContent.length));
+            if (start.node === end.node) {
+                const span = document.createElement('span');
+                span.className = 'dynamic-highlight';
+                try { range.surroundContents(span); return span; } catch (e) {}
+                return null;
+            }
+            const nodesInRange = [];
+            let inRange = false;
+            for (const n of nodes) {
+                if (n === start.node) inRange = true;
+                if (inRange) nodesInRange.push(n);
+                if (n === end.node) break;
+            }
+            let firstSpan = null;
+            nodesInRange.forEach((n, i) => {
+                const r = document.createRange();
+                if (i === 0) { r.setStart(n, Math.min(start.offset, n.textContent.length)); r.setEnd(n, n.textContent.length); }
+                else if (i === nodesInRange.length - 1) { r.setStart(n, 0); r.setEnd(n, Math.min(end.offset, n.textContent.length)); }
+                else { r.selectNodeContents(n); }
+                const span = document.createElement('span');
+                span.className = 'dynamic-highlight';
+                try { r.surroundContents(span); if (!firstSpan) firstSpan = span; } catch (e) {}
+            });
+            return firstSpan;
+        };
+
+        let result = tryHighlight(keyword);
+        if (result) return result;
+        const parts = keyword.split(',').map(p => p.trim()).filter(p => p.length > 8);
+        parts.sort((a, b) => b.length - a.length);
+        for (const part of parts) { result = tryHighlight(part); if (result) return result; }
+        return null;
     }
 
     clearAllHighlights() {
