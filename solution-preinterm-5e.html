@@ -18,59 +18,6 @@
             margin-left: 10px;
         }
 
-        /* Standard Word Bank & Drag & Drop Styles */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 15px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border-medium);
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-            justify-content: center;
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid var(--border-medium);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-weight: 600;
-            color: var(--primary-dark);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            color: var(--primary);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item.active-word {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
-        }
-
-        .word-item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            display: none;
-        }
 
         .drop-slot {
             display: inline-flex;
@@ -101,15 +48,15 @@
         }
 
         .drop-slot.correct {
-            background: #dcfce7 !important;
-            border-bottom-color: #16a34a !important;
-            color: #166534 !important;
+            background: var(--success-bg) !important;
+            border-bottom-color: var(--success) !important;
+            color: var(--success, #166534) !important;
         }
 
         .drop-slot.incorrect-marked {
-            background: #fee2e2 !important;
-            border-bottom-color: #dc2626 !important;
-            color: #991b1b !important;
+            background: var(--error-bg) !important;
+            border-bottom-color: var(--error) !important;
+            color: var(--error, #991b1b) !important;
         }
 
         /* Text Input for Exercise 3 */
@@ -125,7 +72,7 @@
             flex-shrink: 0;
             field-sizing: content;
             transition: all 0.2s;
-            text-align: center;
+            text-align: left;
         }
 
         .task5-input:focus {
@@ -137,13 +84,13 @@
         .task5-input.correct {
             color: var(--success);
             border-bottom-color: var(--success);
-            background: rgba(22, 163, 74, 0.1) !important;
+            background: var(--success-bg) !important;
         }
 
         .task5-input.incorrect-marked {
             color: var(--error);
             border-bottom-color: var(--error);
-            background: rgba(220, 38, 38, 0.1) !important;
+            background: var(--error-bg) !important;
         }
 
         /* Inline paragraph styling */
@@ -389,7 +336,7 @@
         <div class="exercise-card">
             <div class="exercise-title">1. Complete the text with the prefixes below.</div>
 
-            <div class="word-bank" id="bank-ex1"></div>
+            <div class="word-bank sticky-bank" id="bank-ex1"></div>
 
             <div class="narrative-text">
                 James Cameron is one of Hollywood's most successful directors. His ¹
@@ -479,7 +426,7 @@
         <!-- Exercise 2 -->
         <div class="exercise-card">
             <div class="exercise-title">2. Complete the sentences with the prefixes below.</div>
-            <div class="word-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
 
             <div id="questions-ex2">
                 <div class="question-row">
@@ -774,7 +721,7 @@
 
         <!-- Vocab Boost! & Exercise 4 -->
         <div class="exercise-card">
-            <div class="exercise-title" style="border-bottom: 2px solid var(--accent); padding-bottom: 8px;">💡 VOCAB
+            <div class="exercise-title" style="border-bottom: 2px solid var(--accent); padding-bottom: 8px;"> VOCAB
                 BOOST!</div>
             <p style="margin-top: 15px; line-height: 1.6; font-size: 1.1rem; color: var(--text-muted);">Bạn có thể sử
                 dụng sơ đồ tư duy cho những nhóm từ có liên quan với nhau. Sơ đồ tư duy đặc biệt hữu ích cho những người
@@ -790,7 +737,7 @@
                 <em>Vocab boost!</em> box. Add these words and phrases to the mind-map for jobs.
             </div>
 
-            <div class="word-bank" id="bank-ex4"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4"></div>
 
             <div class="ex4-grid">
                 <!-- Indoors Card -->
@@ -1079,6 +1026,8 @@
         }
 
         // --- Answer Reveal Mechanics ---
+
+        // Dùng cho nút mắt 👁️ — TOGGLE (bấm lại để ẩn)
         function showSingleAns(slotId, section) {
             const slot = document.getElementById(slotId);
             if (!slot) return;
@@ -1093,6 +1042,17 @@
             }
         }
 
+        // Dùng cho "Show All" — KHÔNG TOGGLE, luôn hiện
+        function showSlotAns(slotId, ans, section) {
+            placeWord(slotId, ans, section);
+            const slot = document.getElementById(slotId);
+            if (slot) {
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
+            }
+        }
+
+        // Dùng cho nút mắt 👁️ — TOGGLE (bấm lại để ẩn)
         function showEx3Ans(inputId) {
             const input = document.getElementById(inputId);
             if (!input) return;
@@ -1108,23 +1068,35 @@
             adjustWidth(input);
         }
 
+        // Dùng cho nút mắt 👁️ trên card ex4 — TOGGLE (bấm lại để ẩn)
         function showEx4CardAns(group) {
             const slots = document.querySelectorAll(`.drop-slot[data-group="${group}"]`);
             const ansList = slots[0].dataset.ans.split('|');
 
-            let allCorrect = true;
+            let allShown = true;
             slots.forEach((slot, idx) => {
-                if (!ansList.includes(slot.innerText.trim().toLowerCase())) allCorrect = false;
+                if (slot.innerText.trim().toLowerCase() !== ansList[idx].toLowerCase()) allShown = false;
             });
 
             slots.forEach((slot, idx) => {
-                if (allCorrect) {
+                if (allShown) {
                     removeWord(slot.id, 'ex4');
                 } else {
                     placeWord(slot.id, ansList[idx], 'ex4');
                     slot.classList.add('correct');
                     slot.classList.remove('incorrect-marked');
                 }
+            });
+        }
+
+        // Dùng cho "Show All" ex4 — KHÔNG TOGGLE, luôn hiện
+        function showEx4CardAnsNoToggle(group) {
+            const slots = document.querySelectorAll(`.drop-slot[data-group="${group}"]`);
+            const ansList = slots[0].dataset.ans.split('|');
+            slots.forEach((slot, idx) => {
+                placeWord(slot.id, ansList[idx], 'ex4');
+                slot.classList.add('correct');
+                slot.classList.remove('incorrect-marked');
             });
         }
 
@@ -1241,9 +1213,7 @@
             if (prefix === 'ex1' || prefix === 'ex2') {
                 document.querySelectorAll(`.drop-slot[data-section="${prefix}"]`).forEach(slot => {
                     const ans = slot.dataset.ans.split('|')[0];
-                    placeWord(slot.id, ans, prefix);
-                    slot.classList.add('correct');
-                    slot.classList.remove('incorrect-marked');
+                    showSlotAns(slot.id, ans, prefix);
                 });
             } else if (prefix === 'ex3') {
                 document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
@@ -1255,15 +1225,7 @@
                 });
             } else if (prefix === 'ex4') {
                 const groups = ['indoors', 'outdoors', 'activities', 'describing'];
-                groups.forEach(group => {
-                    const slots = document.querySelectorAll(`.drop-slot[data-group="${group}"]`);
-                    const ansList = slots[0].dataset.ans.split('|');
-                    slots.forEach((slot, idx) => {
-                        placeWord(slot.id, ansList[idx], 'ex4');
-                        slot.classList.add('correct');
-                        slot.classList.remove('incorrect-marked');
-                    });
-                });
+                groups.forEach(group => showEx4CardAnsNoToggle(group));
             }
         }
 

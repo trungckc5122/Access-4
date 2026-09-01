@@ -23,7 +23,7 @@
             background: transparent;
             min-width: 60px;
             transition: all 0.2s;
-            text-align: center;
+            text-align: left;
         }
 
         .task5-input:focus {
@@ -71,40 +71,7 @@
             margin-top: 5px;
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light, #f9f9f9);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border, #eee);
-        }
-
-        .sticky-bank {
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .word-item {
-            background: var(--card-bg, #fff);
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid var(--border, #ddd);
-            cursor: pointer;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            border-color: var(--secondary, #27ae60);
-            color: var(--secondary, #27ae60);
-            transform: translateY(-2px);
-        }
+        /* .word-bank / .word-item / .sticky-bank kế thừa từ access-theme.css — không override ở đây */
 
         .narrative-text {
             line-height: 2.4;
@@ -585,15 +552,30 @@
             if (!isVisible) h.style.display = 'block';
         }
 
+        // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
+
         function showSingleAns(id) {
             const el = document.getElementById(id);
             if (!el) return;
             if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
                 el.value = "";
                 el.classList.remove('correct');
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
             } else {
                 el.value = el.dataset.ans;
                 el.classList.add('correct');
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
             }
             adjustWidth(el);
         }
@@ -605,8 +587,8 @@
             words.forEach(w => bank.innerHTML += `<div class="word-item" onclick="clickSelect(this)">${w}</div>`);
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i}`;
-                const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" data-type="input" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex1Hints[i].mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex1Hints[i].trans}</div></div></div>`;
+                const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" data-type="input" data-bank="${it.base}" data-bankid="bank-ex1" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex1Hints[i].mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex1Hints[i].trans}</div></div></div>`;
             });
         }
 
@@ -615,7 +597,7 @@
             ex2Data.forEach((it, i) => {
                 const qid = `ex2-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex2Hints[i].m}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex2Hints[i].t}</div></div></div>`;
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex2Hints[i].m}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex2Hints[i].t}</div></div></div>`;
             });
         }
 
@@ -642,7 +624,7 @@
             ];
             ex4Data.forEach((it, i) => {
                 const qid = `ex4-q${i}`;
-                container.innerHTML += `<div class="question-row">${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder=""> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail" style="color: #c0392b;">${explanations[i]}</div><div class="hint-detail" style="font-style: italic; color: #666;">Dịch: ${it.trans}</div><div class="hint-detail" style="color: var(--secondary, #27ae60); font-weight:bold;">Câu đúng: ${it.corr}</div></div></div>`;
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder=""> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail" style="color: #c0392b;">${explanations[i]}</div><div class="hint-detail" style="font-style: italic; color: #666;">Dịch: ${it.trans}</div><div class="hint-detail" style="color: var(--secondary, #27ae60); font-weight:bold;">Câu đúng: ${it.corr}</div></div></div>`;
             });
         }
 
@@ -658,7 +640,12 @@
                 const base = selectedWordEl.innerText;
                 const pastMap = { "decide": "decided", "die": "died", "drop": "dropped", "look": "looked", "marry": "married", "move": "moved", "stop": "stopped", "study": "studied", "talk": "talked", "want": "wanted" };
                 e.target.value = pastMap[base] || base;
+                e.target.classList.toggle('correct', e.target.value.toLowerCase().trim() === e.target.dataset.ans.toLowerCase().trim());
                 adjustWidth(e.target);
+                if (e.target.dataset.bank && e.target.dataset.bankid) {
+                    const isCorrect = e.target.value.toLowerCase().trim() === e.target.dataset.ans.toLowerCase().trim();
+                    setWordUsed(e.target.dataset.bankid, e.target.dataset.bank, isCorrect);
+                }
                 selectedWordEl.style.background = "";
                 selectedWordEl = null;
             }
@@ -666,18 +653,33 @@
 
         function checkAll() {
             document.querySelectorAll('input[data-ans]').forEach(el => {
-                if (!el.value) return;
-                if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) { el.classList.add('correct'); el.classList.remove('incorrect-marked'); }
-                else { el.classList.add('incorrect-marked'); el.classList.remove('correct'); }
+                if (!el.value) {
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+                    return;
+                }
+                if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
+                    el.classList.add('correct'); el.classList.remove('incorrect-marked');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
+                }
+                else {
+                    el.classList.add('incorrect-marked'); el.classList.remove('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+                }
             });
         }
 
         function showAnswers(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el);
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
+            });
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+            document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el);
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+            });
         }
 
         window.onload = () => {

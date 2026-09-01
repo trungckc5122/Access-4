@@ -7,19 +7,6 @@
     <title>Solution Pre-Intermediate - 4F Reading: Survival story</title>
     <link rel="stylesheet" href="access-theme.css">
     <style>
-        /* Standard Header Override (Parity with 4A) */
-        .solution-title-row h1 {
-            justify-content: flex-start !important;
-            padding-left: 0 !important;
-            gap: 15px !important;
-            width: fit-content;
-        }
-
-        .solution-title-row .home-btn {
-            position: static !important;
-            transform: none !important;
-        }
-
         /* Split-screen layout */
         .reading-split-container {
             display: flex;
@@ -349,7 +336,7 @@
             font-weight: bold;
             background: transparent;
             min-width: 80px;
-            text-align: center;
+            text-align: left;
             field-sizing: content;
         }
 
@@ -399,26 +386,6 @@
             gap: 8px;
         }
         
-        .word-bank-simple {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .word-bank-simple .word-item {
-            background: #fff;
-            padding: 6px 14px;
-            border-radius: 8px;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            font-weight: 700;
-        }
-
         /* Highlight classes */
         .active-highlight {
             background-color: #fef08a; /* highlight-yellow */
@@ -459,7 +426,7 @@
         <!-- Exercise 1 (Full Width) -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>1.</strong> Complete the sentences with the correct form of the verbs below.</div>
-            <div class="word-bank-simple">
+            <div class="word-bank" id="wordbank-ex1">
                 <span class="word-item">approach</span> <span class="word-item">head</span> <span class="word-item">land</span> <span class="word-item">reach</span> <span class="word-item">spin</span> <span class="word-item">take off</span>
             </div>
             <div id="questions-ex1"></div>
@@ -507,8 +474,11 @@
 
                 <!-- Exercise 3 -->
                 <div class="exercise-title"><strong>3.</strong> Read the text again. Match gaps 1-8 in the text with sentences A-I below. There is one extra sentence.</div>
-                <div id="sentenceItems" class="word-bank" style="display:flex; flex-direction:column; gap:8px;">
-                    <!-- Sentences will be rendered here -->
+                <div class="sentence-bank">
+                    <div class="sentence-bank-label">Sentence bank</div>
+                    <div id="sentenceItems" class="sentence-items">
+                        <!-- Sentences will be rendered here -->
+                    </div>
                 </div>
                 <div id="dropRows" style="margin-top:20px;">
                     <!-- Drop rows generated here -->
@@ -522,11 +492,11 @@
     <script>
         // --- Data ---
         const ex1Data = [
-            { q: "A snow storm was [INPUT], so we went inside.", ans: "approaching", hint: "<strong>Đáp án:</strong> approaching<br><strong>Giải thích:</strong> Cơn bão đang tiến đến (thì quá khứ tiếp diễn)." },
-            { q: "The plane [INPUT] from London at 9 a.m. yesterday and [INPUT] in Paris an hour later.", ans: ["took off", "landed"], hint: "<strong>Đáp án:</strong> took off / landed<br><strong>Giải thích:</strong> Máy bay cất cánh (took off) và hạ cánh (landed)." },
-            { q: "It was very late when we [INPUT] Oxford.", ans: "reached", hint: "<strong>Đáp án:</strong> reached<br><strong>Giải thích:</strong> reached (đã đến nơi)." },
-            { q: "The plane was [INPUT] towards Australia when it disappeared.", ans: "heading", hint: "<strong>Đáp án:</strong> heading<br><strong>Giải thích:</strong> heading towards (đang hướng về phía)." },
-            { q: "The helicopter began to [INPUT] out of control.", ans: "spin", hint: "<strong>Đáp án:</strong> spin<br><strong>Giải thích:</strong> spin out of control (xoay tròn mất kiểm soát)." }
+            { q: "A snow storm was [INPUT], so we went inside.", ans: "approaching", bank: "approach", hint: "<strong>Đáp án:</strong> approaching<br><strong>Giải thích:</strong> Cơn bão đang tiến đến (thì quá khứ tiếp diễn)." },
+            { q: "The plane [INPUT] from London at 9 a.m. yesterday and [INPUT] in Paris an hour later.", ans: ["took off", "landed"], bank: ["take off", "land"], hint: "<strong>Đáp án:</strong> took off / landed<br><strong>Giải thích:</strong> Máy bay cất cánh (took off) và hạ cánh (landed)." },
+            { q: "It was very late when we [INPUT] Oxford.", ans: "reached", bank: "reach", hint: "<strong>Đáp án:</strong> reached<br><strong>Giải thích:</strong> reached (đã đến nơi)." },
+            { q: "The plane was [INPUT] towards Australia when it disappeared.", ans: "heading", bank: "head", hint: "<strong>Đáp án:</strong> heading<br><strong>Giải thích:</strong> heading towards (đang hướng về phía)." },
+            { q: "The helicopter began to [INPUT] out of control.", ans: "spin", bank: "spin", hint: "<strong>Đáp án:</strong> spin<br><strong>Giải thích:</strong> spin out of control (xoay tròn mất kiểm soát)." }
         ];
 
         const ex2Data = [
@@ -572,12 +542,13 @@
                 html = html.replace(/\[INPUT\]/g, () => {
                     const id = count === 0 ? qid : `${qid}_${count}`;
                     const ans = Array.isArray(it.ans) ? it.ans[count] : it.ans;
+                    const bank = Array.isArray(it.bank) ? it.bank[count] : it.bank;
                     count++;
-                    return `<input type="text" id="${id}" data-ans="${ans}" class="task5-input" oninput="adjustWidth(this)">`;
+                    return `<input type="text" id="${id}" data-ans="${ans}" data-bank="${bank}" data-bankid="wordbank-ex1" class="task5-input" oninput="adjustWidth(this)">`;
                 });
 
                 container.innerHTML += `<div class="q-row">
-                    <strong>${i + 1}.</strong> ${html}
+                    <span class="q-number">${i + 1}.</span> ${html}
                     <div class="row-btns" style="display: inline-flex; gap: 5px; margin-left: 10px; vertical-align: middle;">
                         <button class="btn-small eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
                         <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
@@ -592,14 +563,27 @@
             ex2Data.forEach((it, i) => {
                 const qid = `ex2-q${i}`;
                 container.innerHTML += `<div class="q-row" style="margin-bottom: 15px;">
-                    <strong>${i + 1}.</strong> ${it.q}
-                    <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="width: auto; min-width: 150px; text-align: left; padding: 2px 5px; margin-left: 10px;">
+                    <span class="q-number">${i + 1}.</span> ${it.q}
+                    <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="width: auto; min-width: 150px; padding: 2px 5px; margin-left: 10px;">
                     <div class="row-btns" style="display: inline-flex; gap: 5px; margin-left: 10px;">
                         <button class="btn-small eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
                         <button class="btn-small info-btn" onclick="toggleHintEx2(event, '${qid}')">i</button>
                     </div>
                     <div class="hint-box" id="${qid}-hint">${it.hint}</div>
                 </div>`;
+            });
+        }
+
+        // Ánh xạ gạch đáp án trong word bank (Cơ chế A — dùng chung cho mọi bank có data-bankid)
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
             });
         }
 
@@ -615,12 +599,14 @@
                     input.value = "";
                     input.classList.remove('correct');
                     adjustWidth(input);
+                    if (input.dataset.bankid) setWordUsed(input.dataset.bankid, input.dataset.bank, false);
                 });
             } else {
                 inputs.forEach(input => {
                     input.value = input.dataset.ans;
                     input.classList.add('correct');
                     adjustWidth(input);
+                    if (input.dataset.bankid) setWordUsed(input.dataset.bankid, input.dataset.bank, true);
                 });
             }
         }
@@ -939,11 +925,13 @@
             document.querySelectorAll('input.task5-input').forEach(el => {
                 if (!el.value) {
                     el.classList.remove('correct', 'incorrect-marked');
+                    if (el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                     return;
                 }
                 const ok = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
                 el.classList.toggle('correct', ok);
                 el.classList.toggle('incorrect-marked', !ok);
+                if (el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, ok);
             });
 
             // Check Ex 3 (Drag & Drop)

@@ -44,54 +44,6 @@
             font-size: 1.05rem;
         }
 
-        /* Standard Word Bank & Drag Drop Styles */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 20px;
-            background: var(--primary-light, #f0fdfa);
-            border: 2px solid var(--border-medium, #cbd5e1);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            justify-content: center;
-        }
-
-        .word-item {
-            padding: 8px 18px;
-            background: var(--card-bg, #fff);
-            border: 2px solid var(--border-medium, #cbd5e1);
-            border-radius: 10px;
-            cursor: grab;
-            user-select: none;
-            font-weight: bold;
-            color: var(--primary, #0d9488);
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            transform: translateY(-2px);
-        }
-
-        .word-item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            display: none;
-        }
-
-        .sticky-bank {
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
         .drop-slot {
             display: inline-flex;
             align-items: center;
@@ -119,15 +71,15 @@
         }
 
         .drop-slot.correct {
-            background: #dcfce7 !important;
-            border-bottom-color: #16a34a !important;
-            color: #166534 !important;
+            background: var(--success-bg) !important;
+            border-bottom-color: var(--success) !important;
+            color: var(--success, #166534) !important;
         }
 
         .drop-slot.incorrect-marked {
-            background: #fee2e2 !important;
-            border-bottom-color: #dc2626 !important;
-            color: #991b1b !important;
+            background: var(--error-bg) !important;
+            border-bottom-color: var(--error) !important;
+            color: var(--error, #991b1b) !important;
         }
 
         /* Choice Select Interaction for Ex 2 */
@@ -437,21 +389,6 @@
             font-weight: bold;
         }
 
-        .par-num {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: 28px;
-            height: 28px;
-            border: 2px solid var(--text, #333);
-            font-weight: bold;
-            margin-right: 8px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            background: var(--card-bg);
-            color: var(--text, #333);
-        }
-
         .highlight-yellow {
             background-color: #fef08a;
             border-radius: 3px;
@@ -684,7 +621,7 @@
 
             <div class="oneword-container">
                 <div class="strategy-title" style="font-weight: bold; color: var(--primary); font-size: 1.05rem;">
-                    💡 Which of them are written as ONE WORD? (Những từ nào được viết liền thành 1 từ?)
+                    Which of them are written as ONE WORD? (Những từ nào được viết liền thành 1 từ?)
                 </div>
                 <p style="margin: 5px 0; font-size: 0.95rem; color: var(--text-muted);">
                     Click on the question numbers below to select them as compound nouns written as one word:
@@ -1016,7 +953,7 @@
                 const qid = `ex1-q${idx + 1}`;
                 return `
                     <div class="question-row" style="display:flex; align-items:center; gap:8px;">
-                        <strong>${idx + 1}.</strong> 
+                        <span class="q-number">${idx + 1}.</span>
                         <span class="drop-slot" id="${qid}" data-ans="${it.ans}" data-section="ex1"
                             ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)"
                             ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'ex1')"
@@ -1169,7 +1106,7 @@
                 const qid = `ex2-q${idx + 1}`;
                 return `
                     <div class="choice-row">
-                        <div class="choice-text"><strong>${idx + 1}.</strong> ${it.q}</div>
+                        <div class="choice-text"><span class="q-number-inline">${idx + 1}.</span> ${it.q}</div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div class="choice-container">
                                 <span class="choice-badge" id="${qid}-true" onclick="selectEx2Choice('${qid}', 'True')">T</span>
@@ -1223,22 +1160,20 @@
         }
 
         function revealEx2Ans(qid, correctAns) {
+            const trueBadge = document.getElementById(`${qid}-true`);
+            const falseBadge = document.getElementById(`${qid}-false`);
+            const badge = correctAns === 'True' ? trueBadge : falseBadge;
+            const qIdx = parseInt(qid.replace('ex2-q', '')) - 1;
+            const it = ex2Data[qIdx];
+
+            // Nếu đã chọn đúng → chỉ thêm class correct (hiện xanh), không toggle off
             if (ex2State[qid] === correctAns) {
-                selectEx2Choice(qid, correctAns); // toggle off
-                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                badge.classList.add('correct');
+                if (it && it.target) scrollAndHighlight(it.target);
             } else {
                 selectEx2Choice(qid, correctAns);
-                const trueBadge = document.getElementById(`${qid}-true`);
-                const falseBadge = document.getElementById(`${qid}-false`);
-                const badge = correctAns === 'True' ? trueBadge : falseBadge;
                 badge.classList.add('correct');
-
-                // Highlight and autoscroll to corresponding sentence
-                const qIdx = parseInt(qid.replace('ex2-q', '')) - 1;
-                const it = ex2Data[qIdx];
-                if (it && it.target) {
-                    scrollAndHighlight(it.target);
-                }
+                if (it && it.target) scrollAndHighlight(it.target);
             }
         }
 
@@ -1262,7 +1197,7 @@
                 return `
                     <div class="mc-card">
                         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
-                            <div class="mc-question">${idx + 1}. ${it.q}</div>
+                            <div class="mc-question"><span class="q-number-inline">${idx + 1}.</span> ${it.q}</div>
                             <span class="row-btns">
                                 <button class="eye-btn" onclick="revealEx3Ans('${qid}', '${it.ans}')">👁️</button>
                                 <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>

@@ -71,27 +71,6 @@
             margin-top: 5px;
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light, #f9f9f9);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border, #eee);
-        }
-
-        .word-item {
-            background: var(--card-bg, #fff);
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid var(--border, #ddd);
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
         .narrative-text {
             line-height: 3.2;
             text-align: justify;
@@ -506,7 +485,7 @@
                     </label>
                 </div>
             </div>
-            <div class="word-bank">
+            <div class="word-bank" id="wordbank-ex6">
                 <div class="word-item">a few</div>
                 <div class="word-item">a little</div>
                 <div class="word-item">any</div>
@@ -586,7 +565,7 @@
             { q: "5 [INPUT] televisions are there in your home?", ans: "How many", hint: "'televisions' đếm được -> dùng 'How many'." }
         ];
 
-        const ex6Text = "I really enjoyed this game. The aim is to build a city, but there are a lot of problems to solve along the way. ¹[INPUT1] houses, hotels, roads and factories can you build? ²[INPUT2] money and energy do you need to build them? Players use money called 'megabucks'. You start with just ³[INPUT3] megabucks, so you must spend them carefully. It's difficult to build a city on your own, so ⁴[INPUT4] players work together. For example, if you have only got ⁵[INPUT5] energy, you can borrow or buy ⁶[INPUT6] electricity from a neighbour. But selfish and greedy players don't make ⁷[INPUT7] friends. If they haven't got ⁸[INPUT8] money or energy, no one helps them and they can't finish their city. So it's best to be friendly to the other players!";
+        const ex6Text = "I really enjoyed this game. The aim is to build a city, but there are a lot of problems to solve along the way. <span class=\"q-number-inline\">¹</span>[INPUT1] houses, hotels, roads and factories can you build? <span class=\"q-number-inline\">²</span>[INPUT2] money and energy do you need to build them? Players use money called 'megabucks'. You start with just <span class=\"q-number-inline\">³</span>[INPUT3] megabucks, so you must spend them carefully. It's difficult to build a city on your own, so <span class=\"q-number-inline\">⁴</span>[INPUT4] players work together. For example, if you have only got <span class=\"q-number-inline\">⁵</span>[INPUT5] energy, you can borrow or buy <span class=\"q-number-inline\">⁶</span>[INPUT6] electricity from a neighbour. But selfish and greedy players don't make <span class=\"q-number-inline\">⁷</span>[INPUT7] friends. If they haven't got <span class=\"q-number-inline\">⁸</span>[INPUT8] money or energy, no one helps them and they can't finish their city. So it's best to be friendly to the other players!";
 
         const ex6Ans = [
             { a: "How many", h: "Đi với danh từ đếm được 'houses'." },
@@ -653,15 +632,30 @@
             span.classList.add('selected');
         }
 
+        // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
+
         function showSingleAns(id) {
             const el = document.getElementById(id);
             if (el && el.tagName === 'INPUT') {
                 if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
                     el.value = "";
                     el.classList.remove('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                 } else {
                     el.value = el.dataset.ans;
                     el.classList.add('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
                 }
                 adjustWidth(el);
             } else {
@@ -775,7 +769,7 @@
                 const qid = `ex6-q${index}`;
                 const inputHtml = `
                     <div class="inline-input-wrapper">
-                        <input type="text" id="${qid}" data-ans="${item.a}" class="task5-input" oninput="adjustWidth(this)" placeholder="">
+                        <input type="text" id="${qid}" data-ans="${item.a}" data-bank="${item.a}" data-bankid="wordbank-ex6" class="task5-input" oninput="adjustWidth(this)" placeholder="">
                         <div class="row-btns">
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
@@ -857,16 +851,21 @@
 
         function checkAll() {
             document.querySelectorAll('input[data-ans]').forEach(el => {
-                if (!el.value) return;
+                if (!el.value) {
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+                    return;
+                }
                 const userVal = el.value.toLowerCase().trim().replace(/[.,!]/g, '');
                 const correctVal = el.dataset.ans.toLowerCase().trim().replace(/[.,!]/g, '');
 
                 if (userVal === correctVal) {
                     el.classList.add('correct');
                     el.classList.remove('incorrect-marked');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
                 } else {
                     el.classList.add('incorrect-marked');
                     el.classList.remove('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                 }
             });
 
@@ -890,7 +889,10 @@
                     });
                 });
             } else {
-                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el); });
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                    el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el);
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
+                });
             }
         }
 
@@ -898,7 +900,10 @@
             if (prefix === 'ex1') {
                 document.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
             } else {
-                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); });
+                document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
+                    el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el);
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+                });
             }
             document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none');
         }

@@ -73,7 +73,6 @@
 
         .answer-row label {
             min-width: 24px;
-            font-weight: 700;
         }
 
         input.task5-input {
@@ -106,45 +105,7 @@
             color: var(--primary-dark);
         }
 
-        /* ── Drag-and-Drop Word Bank ── */
-        .dnd-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 14px 16px;
-            background: var(--grammar-bg);
-            border: 1px dashed var(--primary);
-            border-radius: 10px;
-            margin-bottom: 20px;
-            min-height: 48px;
-        }
-
-        .dnd-chip {
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            color: var(--primary-dark);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: 700;
-            cursor: grab;
-            user-select: none;
-            transition: all 0.18s;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-        }
-
-        .dnd-chip:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
-        }
-
-        .dnd-chip.dragging {
-            opacity: 0.4;
-            cursor: grabbing;
-        }
-
-        .dnd-chip.used {
-            display: none;
-        }
+        /* .word-bank / .word-item kế thừa chuẩn từ access-theme.css (không override ở đây) */
 
         .dnd-drop-zone {
             display: inline-flex;
@@ -590,7 +551,7 @@
         <div class="exercise-card">
             <div class="exercise-title">2. Identify the kinds of TV programme and film. Choose from the words below.
             </div>
-            <div class="dnd-bank" id="ex2-bank"></div>
+            <div class="word-bank sticky-bank" id="ex2-bank"></div>
             <div id="ex2-questions"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswersDnd()">Show All</button>
@@ -815,7 +776,7 @@
                 const hintText = `<span class="key-word">${item.ans}</span> nằm trong ma trận theo hướng → hoặc ↓.`;
                 list.innerHTML += `
                 <div class="answer-row">
-                    <label>${i + 1}</label>
+                    <label class="q-number">${i + 1}.</label>
                     <input type="text" id="ex1-${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="${item.starter}">
                     <span class="row-btns">
                         <button class="eye-btn" onclick="showWordSearchOne(${i})">👁️</button>
@@ -881,7 +842,7 @@
             const shuffled = [...ex2Bank].sort(() => Math.random() - 0.5);
             shuffled.forEach(word => {
                 const chip = document.createElement('div');
-                chip.className = 'dnd-chip';
+                chip.className = 'word-item';
                 chip.textContent = word;
                 chip.draggable = true;
                 chip.dataset.word = word;
@@ -895,7 +856,7 @@
                 const id = `ex2-${i}`;
                 container.innerHTML += `
                 <div class="question-row">
-                    <strong>${i + 1}</strong> This kind of film or TV programme ${item.q}
+                    <span class="q-number-inline">${i + 1}.</span> This kind of film or TV programme ${item.q}
                     <span class="dnd-drop-zone" id="${id}" data-ans="${item.ans}" ondragover="onDzDragOver(event)" ondragleave="onDzDragLeave(event)" ondrop="onDzDrop(event, '${id}')" onclick="onDzClick(event, '${id}')">
                         <span class="dz-text"></span>
                         <button class="dz-clear" onclick="clearDz(event, '${id}')" title="Xóa">✕</button>
@@ -958,7 +919,7 @@
             dz.classList.remove('filled', 'correct', 'incorrect');
         }
         function returnChipToBank(word) {
-            const chip = document.querySelector(`#ex2-bank .dnd-chip[data-word="${word}"]`);
+            const chip = document.querySelector(`#ex2-bank .word-item[data-word="${word}"]`);
             if (chip) chip.classList.remove('used');
         }
         function showDndOne(id) {
@@ -968,22 +929,22 @@
             if (prevWord === ans) { clearDz({ stopPropagation: () => { } }, id); return; }
             if (prevWord) returnChipToBank(prevWord);
             fillDropZone(dz, ans);
-            const chip = document.querySelector(`#ex2-bank .dnd-chip[data-word="${ans}"]`);
+            const chip = document.querySelector(`#ex2-bank .word-item[data-word="${ans}"]`);
             if (chip) chip.classList.add('used');
         }
         function showAnswersDnd() { ex2Data.forEach((_, i) => showDndOne(`ex2-${i}`)); }
         function resetDnd() {
             document.querySelectorAll('.dnd-drop-zone').forEach(dz => emptyDropZone(dz));
-            document.querySelectorAll('#ex2-bank .dnd-chip').forEach(chip => chip.classList.remove('used'));
+            document.querySelectorAll('#ex2-bank .word-item').forEach(chip => chip.classList.remove('used'));
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
         }
 
         // Touch/click support: tap a chip then tap a drop zone
         let tappedChip = null;
         document.addEventListener('click', e => {
-            const chip = e.target.closest('#ex2-bank .dnd-chip');
+            const chip = e.target.closest('#ex2-bank .word-item');
             if (chip && !chip.classList.contains('used')) {
-                document.querySelectorAll('#ex2-bank .dnd-chip').forEach(c => c.style.outline = '');
+                document.querySelectorAll('#ex2-bank .word-item').forEach(c => c.style.outline = '');
                 if (tappedChip === chip) { tappedChip = null; return; }
                 tappedChip = chip;
                 chip.style.outline = '3px solid var(--primary)';
@@ -1026,7 +987,7 @@
                 const value = i === 0 ? 'boring' : '';
                 container.innerHTML += `
                 <div class="question-row">
-                    <strong>${i + 1}</strong>
+                    <span class="q-number">${i === 0 ? '0.' : i + '.'}</span>
                     <input type="text" id="${id}" data-ans="${item.ans}" data-sentiment="${item.sentiment}" class="task5-input" value="${value}" placeholder="${item.shown}" oninput="adjustWidth(this)" ${disabled}>
                     <button class="sentiment-btn" id="${id}-sent" data-value="" onclick="cycleSentiment('${id}')"></button>
                     <span class="row-btns">
@@ -1047,7 +1008,7 @@
                 ).join('');
                 container.innerHTML += `
                 <div class="choice-row" data-answer="${item.ans}" id="${id}">
-                    <strong>${i + 1}</strong> ${item.q}
+                    <span class="q-number-inline">${i + 1}.</span> ${item.q}
                     <div class="choice-options">${choices}</div>
                     <span class="row-btns">
                         <button class="eye-btn" onclick="showMultipleChoiceOne('${id}')">👁️</button>

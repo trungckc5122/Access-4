@@ -389,7 +389,7 @@
                     </label>
                 </div>
             </div>
-            <div class="word-bank">
+            <div class="word-bank" id="wordbank-ex3">
                 <div class="word-item">carry</div>
                 <div class="word-item">follow</div>
                 <div class="word-item">hurry</div>
@@ -433,7 +433,7 @@
                     <img src="img-pre/module 2b-ex4.png" alt="Park activity">
                 </div>
                 <div class="ex4-questions">
-                    <div class="word-bank" style="margin-bottom: 20px;">
+                    <div class="word-bank" id="wordbank-ex4" style="margin-bottom: 20px;">
                         <span class="word-item">eat an ice cream</span>
                         <span class="word-item">drink fruit juice</span>
                         <span class="word-item">have a picnic</span>
@@ -493,18 +493,21 @@
         // Data for Exercise 3
         const ex3Text = "When I got off the coach in London, the weather was awful. It ¹ [INPUT1] (rain) and there was a cold wind. A short, fat man, who ² [INPUT2] (wear) a hat and ³ [INPUT3] (carry) a small briefcase, got off after me. It was five o'clock and lots of people ⁴ [INPUT4] (leave) work and ⁵ [INPUT5] (hurry) to catch the bus or the Underground. I ⁶ [INPUT6] (not wear) a raincoat so I went into a department store and bought a cheap umbrella. When I came out, the short, fat man from the bus ⁷ [INPUT7] (stand) outside the department store. ⁸ [INPUT8] he [INPUT9] (follow) me?";
         const ex3Ans = ["was raining", "was wearing", "was carrying", "were leaving", "were hurrying", "wasn't wearing", "was standing", "Was", "following"];
+        // Ánh xạ mỗi đáp án với từ tương ứng trong word bank phía trên (để gạch ngang khi hiện đáp án)
+        const ex3Bank = ["rain", "wear", "carry", "leave", "hurry", "not wear", "stand", null, "follow"];
 
         // Data for Exercise 4
+        // Mỗi item có "bank" = từ tương ứng trong word bank phía trên (để gạch ngang khi hiện đáp án)
         const ex4Data = [
-            { q: "1 Tom <em>was texting.</em>", isEx: true },
-            { q: "2 Will and Emma [INPUT]", ans: "were having a picnic" },
-            { q: "3 Kim [INPUT]", ans: "was reading a magazine" },
-            { q: "4 Max and Eve [INPUT]", ans: "were sunbathing" },
-            { q: "5 George and Susan [INPUT]", ans: "were listening to music" },
-            { q: "6 Jay [INPUT]", ans: "was drinking fruit juice" },
-            { q: "7 Leyla [INPUT]", ans: "was eating an ice cream" },
-            { q: "8 Zoe [INPUT]", ans: "was phoning someone" },
-            { q: "9 The sun [INPUT]", ans: "was shining" }
+            { q: "1 Tom <em>was texting.</em>", isEx: true, bank: "text" },
+            { q: "2 Will and Emma [INPUT]", ans: "were having a picnic", bank: "have a picnic" },
+            { q: "3 Kim [INPUT]", ans: "was reading a magazine", bank: "read a magazine" },
+            { q: "4 Max and Eve [INPUT]", ans: "were sunbathing", bank: "sunbathe" },
+            { q: "5 George and Susan [INPUT]", ans: "were listening to music", bank: "listen to music" },
+            { q: "6 Jay [INPUT]", ans: "was drinking fruit juice", bank: "drink fruit juice" },
+            { q: "7 Leyla [INPUT]", ans: "was eating an ice cream", bank: "eat an ice cream" },
+            { q: "8 Zoe [INPUT]", ans: "was phoning someone", bank: "phone someone" },
+            { q: "9 The sun [INPUT]", ans: "was shining", bank: "shine" }
         ];
 
         // Data for Exercise 5
@@ -548,7 +551,8 @@
             let fullHtml = ex3Text;
             for (let i = 0; i < ex3Ans.length; i++) {
                 const qid = `ex3-q${i}`;
-                const wrapper = `<span class="inline-input-wrapper"><strong>${i + 1}</strong> <input type="text" id="${qid}" data-ans="${ex3Ans[i]}" class="task5-input" oninput="adjustWidth(this)"> <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button></span>`;
+                const bankAttr = ex3Bank[i] ? ` data-bank="${ex3Bank[i]}" data-bankid="wordbank-ex3"` : '';
+                const wrapper = `<span class="inline-input-wrapper"><strong>${i + 1}</strong> <input type="text" id="${qid}" data-ans="${ex3Ans[i]}"${bankAttr} class="task5-input" oninput="adjustWidth(this)"> <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button></span>`;
                 fullHtml = fullHtml.replace(`[INPUT${i + 1}]`, wrapper);
             }
             container.innerHTML = `<div class="narrative-text">${fullHtml}</div>`;
@@ -559,11 +563,13 @@
             ex4Data.forEach((it, i) => {
                 if (it.isEx) {
                     container.innerHTML += `<div class="question-row" style="color: var(--text-muted)">${it.q}</div>`;
+                    if (it.bank) setWordUsed('wordbank-ex4', it.bank, true);
                     return;
                 }
                 const qid = `ex4-q${i}`;
                 let label = it.q.replace('[INPUT]', '');
-                container.innerHTML += `<div class="question-row">${label} <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width: 200px;" oninput="adjustWidth(this)"> <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button></div>`;
+                const bankAttr = it.bank ? ` data-bank="${it.bank}" data-bankid="wordbank-ex4"` : '';
+                container.innerHTML += `<div class="question-row">${label} <input type="text" id="${qid}" data-ans="${it.ans}"${bankAttr} class="task5-input" style="min-width: 200px;" oninput="adjustWidth(this)"> <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button></div>`;
             });
         }
 
@@ -594,13 +600,28 @@
             if (!isVisible) h.style.display = 'block';
         }
 
+        // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
+
         function showSingleAns(id) {
             const el = document.getElementById(id);
             if (!el) return;
             if (el.value === el.dataset.ans) {
                 el.value = ""; el.classList.remove('correct');
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
             } else {
                 el.value = el.dataset.ans; el.classList.add('correct');
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
             }
             adjustWidth(el);
         }
@@ -621,11 +642,16 @@
 
         function checkAll() {
             document.querySelectorAll('input[data-ans]').forEach(el => {
-                if (!el.value) return;
+                if (!el.value) {
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
+                    return;
+                }
                 if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
                     el.classList.add('correct'); el.classList.remove('incorrect-marked');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
                 } else {
                     el.classList.add('incorrect-marked'); el.classList.remove('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                 }
             });
         }
@@ -633,12 +659,14 @@
         function showAnswers(prefix) {
             document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                 el.value = el.dataset.ans; el.classList.add('correct'); adjustWidth(el);
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
             });
         }
 
         function resetSection(prefix) {
             document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
                 el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el);
+                if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
             });
         }
 

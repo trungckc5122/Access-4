@@ -274,7 +274,8 @@
                         <div class="example-box-detail">more powerful, more spectacular, more dangerous, more
                             interesting</div>
                         <p class="reference-note">Lưu ý: Một số tính từ 2 âm tiết có thể dùng cả 2 cách (ví dụ:
-                            <em>gentle → gentler/more gentle</em>).</p>
+                            <em>gentle → gentler/more gentle</em>).
+                        </p>
                     </div>
 
                     <div class="detail-item">
@@ -485,7 +486,12 @@
             { q: "‘Is a hurricane [INPUT] powerful than a thunderstorm?’ ‘Yes, it's [INPUT] stronger.’", ans: "more, much", hint: "<strong>Đáp án:</strong> more, much<br><strong>Giải thích:</strong> more + long adj; much + comparative." },
             { q: "The moon isn't [INPUT] bright [INPUT] the sun.", ans: "as, as", hint: "<strong>Đáp án:</strong> as, as<br><strong>Giải thích:</strong> So sánh không bằng: not as + adj + as." },
             { q: "Are hurricanes more dangerous [INPUT] tornadoes?", ans: "than", hint: "<strong>Đáp án:</strong> than<br><strong>Giải thích:</strong> Sử dụng than sau tính từ so sánh hơn." },
-            { q: "‘I think maths is much [INPUT] interesting [INPUT] geography.’ ‘Do you? I don't think it's [INPUT] interesting as geography, but it's [INPUT] more useful.’", ans: "more, than, as, much", hint: "<strong>Đáp án:</strong> more, than, as, much<br><strong>Giải thích:</strong> Tổng hợp các cấu trúc so sánh hơn và so sánh bằng." }
+            {
+                parts: [
+                    { q: "‘I think maths is much [INPUT] interesting [INPUT] geography.’", ans: "more, than", hint: "<strong>Đáp án:</strong> more, than<br><strong>Giải thích:</strong> much + more + tính từ dài (interesting) để nhấn mạnh mức độ hơn; than đứng sau tính từ so sánh hơn." },
+                    { q: "‘Do you? I don't think it's [INPUT] interesting as geography, but it's [INPUT] more useful.’", ans: "as, much", hint: "<strong>Đáp án:</strong> as, much<br><strong>Giải thích:</strong> not as + adj + as (so sánh bằng, phủ định); much + more useful để nhấn mạnh mức độ hơn." }
+                ]
+            }
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -493,6 +499,7 @@
             renderEx2();
             renderEx3();
             renderEx4();
+            document.querySelectorAll('input.task5-input').forEach(adjustWidth);
         });
 
         function renderEx1() {
@@ -506,7 +513,7 @@
                     <td>${it.w}</td>
                     <td>
                         <div class="q-row">
-                            <strong>${count}.</strong> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="q-number-inline">${count}.</span> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
                             <div class="row-btns">
                                 <button class="btn-small eye-btn" onclick="showRowAns('${qid}')">👁️</button>
                                 <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
@@ -531,7 +538,7 @@
             ex2Data.forEach(it => {
                 const qid = `ex2-${it.id}`;
                 const group = `<span class="inline-group">
-                <strong>${it.id}.</strong> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:60px;" oninput="adjustWidth(this)">
+                <span class="q-number-inline">${it.id}.</span> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:120px;" oninput="adjustWidth(this)">
                 <button class="btn-small eye-btn" onclick="showRowAns('${qid}')" style="transform:scale(0.85);">👁️</button>
                 <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')" style="transform:scale(0.85);">i</button>
                 <div class="hint-box absolute" id="${qid}-hint">${it.hint}</div>
@@ -547,11 +554,11 @@
                 const qid = `ex3-${i + 1}`;
                 const num = i + 1;
                 if (i === 0) {
-                    container.innerHTML += `<div class="q-row"><strong>1.</strong> ${it.ans} (sunny)</div>`;
+                    container.innerHTML += `<div class="q-row"><span class="q-number">1.</span> ${it.ans} (sunny)</div>`;
                     return;
                 }
                 container.innerHTML += `<div class="q-row" style="position:relative;">
-                <strong>${num}.</strong> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:320px; text-align:left;" oninput="adjustWidth(this)">
+                <span class="q-number-inline">${num}.</span> <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:320px; text-align:left;" oninput="adjustWidth(this)">
                 <span style="color:var(--text-muted); font-size:0.9rem;">(${it.adj})</span>
                 <div class="row-btns">
                     <button class="btn-small eye-btn" onclick="showRowAns('${qid}')">👁️</button>
@@ -565,6 +572,28 @@
         function renderEx4() {
             const container = document.getElementById('questions-ex4');
             ex4Data.forEach((it, i) => {
+                const num = i + 1;
+                if (it.parts) {
+                    let partsHtml = '';
+                    it.parts.forEach((part, pIdx) => {
+                        const pqid = `ex4-${num}${String.fromCharCode(97 + pIdx)}`;
+                        let psentence = part.q;
+                        const pAnsArr = part.ans.split(',').map(s => s.trim());
+                        pAnsArr.forEach((a, idx) => {
+                            psentence = psentence.replace('[INPUT]', `<input type="text" id="${pqid}_${idx}" data-ans="${a}" class="task5-input" style="min-width:60px;" oninput="adjustWidth(this)">`);
+                        });
+                        partsHtml += `<div class="question-row" style="${pIdx > 0 ? 'margin-top:10px;' : ''}">
+                        ${pIdx === 0 ? `<span class="q-number-inline">${num}.</span> ` : ''}${psentence}
+                        <span style="display:inline-flex; gap:5px; vertical-align:middle; margin-left:5px;">
+                            <button class="btn-small eye-btn" onclick="showRowAnsEx4('${pqid}')">👁️</button>
+                            <button class="btn-small info-btn" onclick="toggleHint(event, '${pqid}')">i</button>
+                        </span>
+                        <div class="hint-box" id="${pqid}-hint" style="margin-top:10px;">${part.hint}</div>
+                    </div>`;
+                    });
+                    container.innerHTML += `<div style="margin-bottom:15px;">${partsHtml}</div>`;
+                    return;
+                }
                 const qid = `ex4-${i + 1}`;
                 let sentence = it.q;
                 if (it.ans.includes(',')) {
@@ -576,7 +605,7 @@
                     sentence = sentence.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width:60px;" oninput="adjustWidth(this)">`);
                 }
                 container.innerHTML += `<div class="question-row" style="margin-bottom:15px;">
-                <strong>${i + 1}.</strong> ${sentence}
+                <span class="q-number-inline">${i + 1}.</span> ${sentence}
                 <span style="display:inline-flex; gap:5px; vertical-align:middle; margin-left:5px;">
                     <button class="btn-small eye-btn" onclick="showRowAnsEx4('${qid}')">👁️</button>
                     <button class="btn-small info-btn" onclick="toggleHint(event, '${qid}')">i</button>
