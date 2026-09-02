@@ -786,17 +786,41 @@
             }).join('');
         }
 
-        // -------- Ex5 (drag-drop - cho phép kéo thả nhiều lần, không dùng .used) --------
+          // -------- Ex5 (drag-drop với theo dõi số lần dùng từng từ) --------
         let ex5Dragging = null;
         let ex5State = {};
 
+        // Tính quota: mỗi từ trong bank được dùng đúng bao nhiêu câu
+        const ex5Quota = {};
+        ex5Items.forEach(item => {
+            const w = item.ans;
+            ex5Quota[w] = (ex5Quota[w] || 0) + 1;
+        });
+
+        // Cập nhật trạng thái .used trong bank dựa trên số slot đang chứa từ đó
+        function ex5UpdateBankUsed() {
+            const bank = document.getElementById('ex5-bank');
+            if (!bank) return;
+            // Đếm số lần mỗi từ đang được dùng trong các slot
+            const counts = {};
+            Object.values(ex5State).forEach(w => {
+                counts[w] = (counts[w] || 0) + 1;
+            });
+            bank.querySelectorAll('.word-item').forEach(el => {
+                const w = el.dataset.word;
+                const quota = ex5Quota[w] || 1;
+                const used = counts[w] || 0;
+                el.classList.toggle('used', used >= quota);
+            });
+        }
+
         function renderEx5() {
             const bank = document.getElementById('ex5-bank');
-            bank.innerHTML = ex5Bank.map(word => {
-                return `<div class="word-item" draggable="true" data-word="${word}" 
-                          ondragstart="ex5DragStart(event)" 
-                          ondragend="this.classList.remove('dragging')">${word}</div>`;
-            }).join('');
+            bank.innerHTML = ex5Bank.map(word =>
+                `<div class="word-item" draggable="true" data-word="${word}"
+                          ondragstart="ex5DragStart(event)"
+                          ondragend="this.classList.remove('dragging')">${word}</div>`
+            ).join('');
 
             const items = document.getElementById('ex5-items');
             items.innerHTML = ex5Items.map(item => {
@@ -804,7 +828,7 @@
                 const parts = item.text.split('______');
                 const before = parts[0] || '';
                 const after = parts[1] || '';
-                const slotHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
+                const slotHtml = `<span class="drop-slot" id="${slotId}" data-ans="${item.ans}"
                           ondragover="event.preventDefault(); this.classList.add('over')"
                           ondragleave="this.classList.remove('over')"
                           ondrop="ex5Drop(event, '${slotId}')"
@@ -822,6 +846,7 @@
         }
 
         function ex5DragStart(e) {
+            if (e.target.classList.contains('used')) { e.preventDefault(); return; }
             ex5Dragging = e.target.dataset.word;
             e.target.classList.add('dragging');
             e.dataTransfer.setData('text/plain', ex5Dragging);
@@ -832,22 +857,26 @@
             const slot = document.getElementById(slotId);
             slot.classList.remove('over');
             if (!ex5Dragging) return;
-            // Bài cho phép dùng lại cùng 1 từ (less/the least/fewer/the fewest) ở nhiều câu,
-            // nên KHÔNG xóa từ khỏi slot khác chỉ vì trùng giá trị — mỗi slot độc lập.
+            // Nếu slot đã có từ khác → trả từ cũ về bank trước (giảm count)
+            const oldWord = ex5State[slotId];
+            if (oldWord) {
+                delete ex5State[slotId];
+            }
             slot.textContent = ex5Dragging;
             slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
             ex5State[slotId] = ex5Dragging;
-            // KHÔNG đánh dấu .used để cho phép kéo thả nhiều lần
             ex5Dragging = null;
+            ex5UpdateBankUsed();
         }
 
         function ex5RemoveSlot(slotId) {
             const slot = document.getElementById(slotId);
             if (!slot || !slot.textContent.trim()) return;
-            const word = slot.textContent.trim();
             slot.textContent = '';
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             delete ex5State[slotId];
+            ex5UpdateBankUsed();
         }
 
         function ex5ShowSlot(slotId) {
@@ -858,10 +887,13 @@
                 ex5RemoveSlot(slotId);
                 return;
             }
-            // Không xóa từ ở slot khác chỉ vì trùng giá trị — từ được phép lặp lại ở nhiều câu.
+            // Xóa từ cũ trong slot (nếu có) khỏi state trước khi ghi đáp án
+            if (ex5State[slotId]) delete ex5State[slotId];
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
+            slot.classList.remove('incorrect-marked');
             ex5State[slotId] = ans;
+            ex5UpdateBankUsed();
         }
 
         // -------- Ex6 (adverb comparison) --------
@@ -1045,11 +1077,13 @@
                     if (!slot) return;
                     const ans = item.ans;
                     if (slot.textContent.trim() === ans && slot.classList.contains('correct')) return;
-                    // Không xóa từ ở slot khác chỉ vì trùng giá trị — từ được phép lặp lại ở nhiều câu.
+                    if (ex5State[slotId]) delete ex5State[slotId];
                     slot.textContent = ans;
                     slot.classList.add('filled', 'correct');
+                    slot.classList.remove('incorrect-marked');
                     ex5State[slotId] = ans;
                 });
+                ex5UpdateBankUsed();
             } else if (prefix === 'ex6') {
                 ex6Data.forEach((item) => {
                     const ansParts = item.ans.split(', ');
@@ -1123,6 +1157,7 @@
                     }
                     delete ex5State[key];
                 }
+                ex5UpdateBankUsed();
                 document.querySelectorAll('#ex5-items .hint-box').forEach(h => h.style.display = 'none');
             } else if (prefix === 'ex6') {
                 document.querySelectorAll('#ex6-container input').forEach(el => {
