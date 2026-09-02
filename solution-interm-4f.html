@@ -578,6 +578,28 @@
         .reading-questions-panel::-webkit-scrollbar-thumb:hover {
             background: var(--primary);
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i
+           inline-hint dùng position:fixed + JS getBoundingClientRect để không tràn màn hình */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            width: 320px;
+            z-index: 9999;
+        }
+
+        /* Override selector lồng ngữ cảnh cha (.ex1-item, .ex2-item) —
+           specificity (2 class) bằng nhau nên chỉ cần đặt sau là thắng */
+        .ex1-item .hint-box.inline-hint,
+        .ex2-item .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-left: 0;
+            width: 320px;
+        }
     </style>
 </head>
 
@@ -866,20 +888,11 @@
             adjustWidth(el);
         }
 
-        function toggleHint(event, hintId) {
-            if (event) event.stopPropagation();
-            const h = document.getElementById(hintId);
-            if (!h) return;
-            const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
-            if (!isVisible) {
-                h.style.display = 'block';
-            }
-        }
+        // toggleHint được cung cấp bởi access-core.js (load ở cuối file)
+        // Không định nghĩa lại ở đây để tránh bị ghi đè gây lỗi
 
         // ===== HÀM SHOW HINT VỚI SCROLL GIỮA MÀN HÌNH =====
-        function showReadingHint(targetKey, hintId) {
+        function showReadingHint(event, targetKey, hintId) {
             const h = document.getElementById(hintId);
             if (!h) return;
             const isShowing = h.style.display === 'block';
@@ -887,7 +900,26 @@
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
 
             if (!isShowing) {
-                h.style.display = 'block';
+                // Định vị position:fixed cạnh nút bấm
+                if (event) {
+                    const btn = event.currentTarget || event.target;
+                    const rect = btn.getBoundingClientRect();
+                    h.style.display = 'block';
+                    const hW = h.offsetWidth || 320;
+                    const hH = h.offsetHeight || 120;
+                    const vw = window.innerWidth;
+                    const vh = window.innerHeight;
+                    let top = rect.bottom + 6;
+                    let left = rect.left;
+                    if (left + hW > vw - 8) left = vw - hW - 8;
+                    if (left < 8) left = 8;
+                    if (top + hH > vh - 8) top = rect.top - hH - 6;
+                    if (top < 8) top = 8;
+                    h.style.top = top + 'px';
+                    h.style.left = left + 'px';
+                } else {
+                    h.style.display = 'block';
+                }
                 const keyEl = document.getElementById(targetKey);
                 if (keyEl) {
                     keyEl.classList.add('active-highlight');
@@ -974,15 +1006,15 @@
                 const hintBtn = document.createElement('button');
                 hintBtn.className = 'hint-btn';
                 hintBtn.textContent = 'i';
-                const hintId = `ex1-hint-${idx}`;
-                hintBtn.addEventListener('click', e => toggleHint(e, hintId));
+                const qid1 = `ex1-q${idx}`;
+                hintBtn.addEventListener('click', e => toggleHint(e, qid1));
                 btnGroup.appendChild(hintBtn);
 
                 div.appendChild(btnGroup);
 
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
-                hintBox.id = hintId;
+                hintBox.className = 'hint-box inline-hint';
+                hintBox.id = `${qid1}-hint`;
                 const typeText = item.type === 'liền' ? 'viết liền' : 'viết cách';
                 hintBox.innerHTML = `
                     <div class="hint-detail">
@@ -1116,15 +1148,15 @@
                 const hintBtn = document.createElement('button');
                 hintBtn.className = 'hint-btn';
                 hintBtn.textContent = 'i';
-                const hintId = `ex2-hint-${idx}`;
-                hintBtn.addEventListener('click', e => toggleHint(e, hintId));
+                const qid2 = `ex2-q${idx}`;
+                hintBtn.addEventListener('click', e => toggleHint(e, qid2));
                 btnGroup.appendChild(hintBtn);
 
                 div.appendChild(btnGroup);
 
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
-                hintBox.id = hintId;
+                hintBox.className = 'hint-box inline-hint';
+                hintBox.id = `${qid2}-hint`;
                 hintBox.innerHTML = `
                     <div class="hint-detail">
                         <strong>Đáp án:</strong> <span class="compound-word">${item.ans}</span><br>
@@ -1240,13 +1272,13 @@
             controls.style.alignItems = 'center';
             controls.innerHTML = `
                 <button class="eye-btn" onclick="revealEx3()">👁️</button>
-                <button class="hint-btn" onclick="showEx3Hint()">i</button>
+                <button class="hint-btn" onclick="showEx3Hint(event)">i</button>
                 <span id="ex3-feedback-inner" style="margin-left:10px;font-weight:bold;"></span>
             `;
             container.appendChild(controls);
 
             const hintBox = document.createElement('div');
-            hintBox.className = 'hint-box';
+            hintBox.className = 'hint-box inline-hint';
             hintBox.id = 'ex3-hint-box';
             hintBox.style.display = 'none';
             hintBox.innerHTML = '';
@@ -1310,7 +1342,7 @@
             }
         }
 
-        function showEx3Hint() {
+        function showEx3Hint(event) {
             const hintBox = document.getElementById('ex3-hint-box');
             if (!hintBox) return;
             const isVisible = hintBox.style.display === 'block';
@@ -1318,7 +1350,26 @@
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
             if (!isVisible) {
                 hintBox.innerHTML = `<div class="hint-detail">${ex3Data.hint}</div>`;
-                hintBox.style.display = 'block';
+                // Định vị position:fixed cạnh nút bấm
+                if (event) {
+                    const btn = event.currentTarget || event.target;
+                    const rect = btn.getBoundingClientRect();
+                    hintBox.style.display = 'block';
+                    const hW = hintBox.offsetWidth || 320;
+                    const hH = hintBox.offsetHeight || 120;
+                    const vw = window.innerWidth;
+                    const vh = window.innerHeight;
+                    let top = rect.bottom + 6;
+                    let left = rect.left;
+                    if (left + hW > vw - 8) left = vw - hW - 8;
+                    if (left < 8) left = 8;
+                    if (top + hH > vh - 8) top = rect.top - hH - 6;
+                    if (top < 8) top = 8;
+                    hintBox.style.top = top + 'px';
+                    hintBox.style.left = left + 'px';
+                } else {
+                    hintBox.style.display = 'block';
+                }
                 const keyEl = document.getElementById('text-a');
                 if (keyEl) {
                     keyEl.classList.add('active-highlight');
@@ -1392,7 +1443,7 @@
                 const hintId = `ex4-hint-${idx}`;
                 hintBtn.addEventListener('click', e => {
                     e.stopPropagation();
-                    showReadingHint(item.targetKey, hintId);
+                    showReadingHint(e, item.targetKey, hintId);
                 });
                 btnGroup.appendChild(hintBtn);
 
@@ -1412,7 +1463,7 @@
                 card.appendChild(optDiv);
 
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = hintId;
                 hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
                 card.appendChild(hintBox);
@@ -1737,7 +1788,6 @@
         window.resetEx4 = resetEx4;
         window.selectEx4Option = selectEx4Option;
         window.revealEx4Ans = revealEx4Ans;
-        window.toggleHint = toggleHint;
         window.showReadingHint = showReadingHint;
         window.showSingleAns = showSingleAns;
         window.applyManualHighlight = applyManualHighlight;

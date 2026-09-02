@@ -480,6 +480,18 @@
                 max-width: 100%;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
+           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
+           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -1016,9 +1028,9 @@
                         <input type="text" id="${qid}" data-ans="${it.ans}" class="matching-input" autocomplete="off" style="text-transform:lowercase;">
                         <div class="row-btns" style="margin-left:0;">
                             <button class="eye-btn" onclick="showSingleAnsMatching('${qid}')">👁️</button>
-                            <button class="hint-btn" onclick="showHintOnly('${qid}-hint')">i</button>
+                            <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </div>
-                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
                     </div>
                 `;
             });
@@ -1039,7 +1051,7 @@
                             <button class="eye-btn" onclick="showSingleAnsEx4('${ph.id}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHintInline(event,'${ph.id}-hint','${ph.target}','1.19')">i</button>
                         </div>
-                        <div class="hint-box" id="${ph.id}-hint" style="flex-basis:100%;"><div class="hint-detail">${ph.hint}</div></div>
+                        <div class="hint-box inline-hint" id="${ph.id}-hint"><div class="hint-detail">${ph.hint}</div></div>
                     </div>`).join('');
 
                 return `
@@ -1054,7 +1066,7 @@
                                 <button class="eye-btn" onclick="showSingleAnsEx4('${rn.id}')">👁️</button>
                                 <button class="hint-btn" onclick="toggleHintInline(event,'${rn.id}-hint','','')">i</button>
                             </div>
-                            <div class="hint-box" id="${rn.id}-hint" style="flex-basis:100%;"><div class="hint-detail">${rn.hint}</div></div>
+                            <div class="hint-box inline-hint" id="${rn.id}-hint"><div class="hint-detail">${rn.hint}</div></div>
                         </div>
                         ${phrasesHtml}
                     </div>`;
@@ -1226,7 +1238,23 @@
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             if (!isShowing) {
+                // Định vị position:fixed cạnh nút bấm (giống inline-hint của access-core.js)
+                const btn = event.currentTarget || event.target;
+                const rect = btn.getBoundingClientRect();
                 h.style.display = 'block';
+                const hW = h.offsetWidth || 320;
+                const hH = h.offsetHeight || 120;
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                let top = rect.bottom + 6;
+                let left = rect.left;
+                if (left + hW > vw - 8) left = vw - hW - 8;
+                if (left < 8) left = 8;
+                if (top + hH > vh - 8) top = rect.top - hH - 6;
+                if (top < 8) top = 8;
+                h.style.top = top + 'px';
+                h.style.left = left + 'px';
+
                 if (track) {
                     toggleTranscript(track, true);
                 }
