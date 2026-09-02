@@ -44,8 +44,6 @@
         }
 
         .ex1-num {
-            font-weight: 700;
-            color: var(--primary-dark);
             margin-right: 4px;
         }
 
@@ -69,23 +67,7 @@
             vertical-align: middle;
         }
 
-        /* Word Bank cho Ex1 */
-        .ex1-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 16px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            justify-content: center;
-            min-height: 60px;
-            position: sticky;
-            top: 15px;
-            z-index: 100;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
+        /* Word Bank cho Ex1 — kế thừa từ access-theme.css (.word-bank + .sticky-bank) */
 
         /* ===== EXERCISE 2: SPLIT SCREEN ===== */
         .ex2-split-container {
@@ -100,7 +82,7 @@
         }
 
         .ex2-left-panel {
-            flex: 1;
+            flex: 0 0 60%;
             min-width: 200px;
             padding: 24px;
             overflow-y: auto;
@@ -154,7 +136,7 @@
         }
 
         .ex2-right-panel {
-            flex: 1;
+            flex: 0 0 40%;
             min-width: 200px;
             padding: 24px;
             overflow-y: auto;
@@ -249,7 +231,6 @@
         }
 
         .ex3-sentence {
-            flex: 1;
             font-size: 1.05rem;
             line-height: 1.6;
         }
@@ -453,7 +434,7 @@
             padding: 2px 8px;
             font-size: 1.05rem;
             min-width: 60px;
-            text-align: center;
+            text-align: left;
             flex-shrink: 0;
             transition: all 0.2s;
             field-sizing: content;
@@ -727,11 +708,12 @@
 
         <!-- ====== EXERCISE 1 ====== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>1.</strong> Complete the sentences with the relative pronouns below.
+            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the sentences with the
+                relative pronouns below.
             </div>
 
             <!-- Word Bank cho Ex1 -->
-            <div class="ex1-bank" id="ex1-bank"></div>
+            <div class="word-bank sticky-bank" id="ex1-bank"></div>
 
             <div class="ex1-layout" id="ex1-container"></div>
 
@@ -743,7 +725,8 @@
 
         <!-- ====== EXERCISE 2 ====== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>2.</strong> Complete the text with the relative clauses (a–f).</div>
+            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete the text with the relative
+                clauses (a–f).</div>
 
             <div class="ex2-split-container" id="ex2-split-container">
                 <!-- Left Panel: Text -->
@@ -800,7 +783,8 @@
 
         <!-- ====== EXERCISE 3 ====== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>3.</strong> Four of these sentences contain mistakes. Underline and
+            <div class="exercise-title"><strong class="q-number-inline">3.</strong> Four of these sentences contain
+                mistakes. Underline and
                 correct the mistakes. Tick the two correct sentences.</div>
             <div id="ex3-container"></div>
             <div class="controls-row">
@@ -811,7 +795,8 @@
 
         <!-- ====== EXERCISE 4 ====== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>4.</strong> Rewrite the sentences as one sentence with a non-defining
+            <div class="exercise-title"><strong class="q-number-inline">4.</strong> Rewrite the sentences as one
+                sentence with a non-defining
                 relative clause. Sometimes there are two possible answers.</div>
             <div id="ex4-container"></div>
             <div class="controls-row">
@@ -900,7 +885,7 @@
                 const parts = item.text.split('______');
                 const before = parts[0] || '';
                 const after = parts[1] || '';
-                return `<div class="ex1-item"><span class="ex1-num">${item.num}.</span>${before}<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="ex1Drop(event, '${slotId}')" onclick="ex1RemoveSlot('${slotId}')"></span>${after}<span class="row-btns"><button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span><div class="hint-box absolute" id="${slotId}-hint">${item.hint}</div></div>`;
+                return `<div class="ex1-item"><span class="q-number-inline ex1-num">${item.num}.</span>${before}<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="ex1Drop(event, '${slotId}')" onclick="ex1RemoveSlot('${slotId}')"></span>${after}<span class="row-btns"><button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span><div class="hint-box absolute" id="${slotId}-hint">${item.hint}</div></div>`;
             }).join('');
         }
 
@@ -915,8 +900,16 @@
             const slot = document.getElementById(slotId);
             slot.classList.remove('over');
             if (!ex1Dragging) return;
+            // Trả từ cũ trong chính ô đích về bank (replace-on-drop)
+            const existingWord = ex1State[slotId];
+            if (existingWord && existingWord !== ex1Dragging) {
+                document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                    if (el.dataset.word === existingWord) el.classList.remove('used');
+                });
+            }
+            // Xóa ô khác nếu từ đang kéo đã nằm ở đó
             for (let key in ex1State) {
-                if (ex1State[key] === ex1Dragging) {
+                if (key !== slotId && ex1State[key] === ex1Dragging) {
                     const oldSlot = document.getElementById(key);
                     if (oldSlot) {
                         oldSlot.textContent = '';
@@ -927,6 +920,7 @@
             }
             slot.textContent = ex1Dragging;
             slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
             ex1State[slotId] = ex1Dragging;
             document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
                 if (el.dataset.word === ex1Dragging) el.classList.add('used');
@@ -954,8 +948,16 @@
                 ex1RemoveSlot(slotId);
                 return;
             }
+            // Trả từ cũ trong chính ô đích về bank
+            const existingWord = ex1State[slotId];
+            if (existingWord && existingWord !== ans) {
+                document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
+                    if (el.dataset.word === existingWord) el.classList.remove('used');
+                });
+            }
+            // Xóa ô khác nếu đáp án đúng đang nằm ở đó
             for (let key in ex1State) {
-                if (ex1State[key] === ans) {
+                if (key !== slotId && ex1State[key] === ans) {
                     const oldSlot = document.getElementById(key);
                     if (oldSlot) {
                         oldSlot.textContent = '';
@@ -969,6 +971,7 @@
             });
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
+            slot.classList.remove('incorrect-marked');
             ex1State[slotId] = ans;
             document.querySelectorAll('#ex1-bank .word-item').forEach(el => {
                 if (el.dataset.word === ans) el.classList.add('used');
@@ -1118,7 +1121,7 @@
                 const n = i + 1;
                 return `<div class="ex3-row" id="ex3-row-${n}">
                     <div class="ex3-top">
-                        <span class="ex3-sentence"><strong>${n}.</strong> ${item.sentence}</span>
+                        <span class="ex3-sentence"><strong class="q-number-inline">${n}.</strong> ${item.sentence}</span>
                         <div class="ex3-controls">
                             <button class="ex3-tick-btn correct-btn" id="ex3-correct-${n}" onclick="ex3Tick(${n}, true)" title="Câu đúng">✓ Đúng</button>
                             <button class="ex3-tick-btn wrong-btn" id="ex3-wrong-${n}" onclick="ex3Tick(${n}, false)" title="Câu sai">✗ Sai</button>
@@ -1183,7 +1186,7 @@
             container.innerHTML = ex4Data.map(item => {
                 const qid = `ex4-q${item.num}`;
                 return `<div class="ex4-item">
-                    <div class="ex4-prompt"><span class="q-label">${item.num}.</span> ${item.prompt}<span class="row-btns" style="margin-left:6px; vertical-align:middle;"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span><div class="hint-box absolute" id="${qid}-hint" style="top:100%; left:0;">${item.hint}</div></div>
+                    <div class="ex4-prompt"><span class="q-number-inline q-label">${item.num}.</span> ${item.prompt}<span class="row-btns" style="margin-left:6px; vertical-align:middle;"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span><div class="hint-box absolute" id="${qid}-hint" style="top:100%; left:0;">${item.hint}</div></div>
                     <div class="ex4-input-group">
                         <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="text-align:left;" oninput="adjustWidth(this)">
                     </div>

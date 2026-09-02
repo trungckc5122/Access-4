@@ -83,9 +83,7 @@
             font-size: 1.05rem;
         }
 
-        .ex1-num {
-            font-weight: 700;
-            color: var(--primary-dark);
+        .ex1-item .q-number {
             min-width: 24px;
         }
 
@@ -139,9 +137,7 @@
             position: relative;
         }
 
-        .ex2-match-row .m-num {
-            font-weight: 700;
-            color: var(--primary-dark);
+        .ex2-match-row .q-number {
             min-width: 24px;
         }
 
@@ -386,10 +382,6 @@
                 max-width: none !important;
             }
 
-            .sticky-bank {
-                position: relative;
-                top: 0;
-            }
         }
     </style>
 </head>
@@ -674,7 +666,7 @@
                 const displayText = before + input1 + after + input2;
 
                 return `<div class="ex1-item">
-                    <span class="ex1-num">${item.num}.</span>
+                    <span class="q-number">${item.num}.</span>
                     <span class="ex1-text">${displayText}</span>
                 </div>`;
             }).join('');
@@ -700,7 +692,7 @@
                 // Lấy hint cho câu ghép
                 const hintContent = ex2MatchHints[item.num] || "<strong>Giải thích chi tiết</strong>";
                 return `<div class="ex2-match-row">
-                    <span class="m-num">${item.num}.</span>
+                    <span class="q-number">${item.num}.</span>
                     <span class="m-text">${item.text}</span>
                     <span class="drop-slot" id="${slotId}" data-ans="${item.ans}" 
                           ondragover="event.preventDefault(); this.classList.add('over')"
@@ -730,9 +722,17 @@
             slot.classList.remove('over');
             if (!ex2Dragging) return;
 
+            // Trả từ cũ trong chính ô đích về bank (nếu có)
+            const existingLetter = ex2State[slotId];
+            if (existingLetter && existingLetter !== ex2Dragging) {
+                document.querySelectorAll('#ex2-bank .word-item').forEach(el => {
+                    if (el.dataset.letter === existingLetter) el.classList.remove('used');
+                });
+            }
+
             // Remove from any other slot
             for (let key in ex2State) {
-                if (ex2State[key] === ex2Dragging) {
+                if (ex2State[key] === ex2Dragging && key !== slotId) {
                     const oldSlot = document.getElementById(key);
                     if (oldSlot) {
                         oldSlot.textContent = '';
@@ -746,6 +746,7 @@
             const fullText = e.dataTransfer.getData('full') || ex2Dragging + '. ';
             slot.textContent = fullText;
             slot.classList.add('filled');
+            slot.classList.remove('correct', 'incorrect-marked');
             ex2State[slotId] = ex2Dragging;
 
             // Mark used in bank
@@ -776,9 +777,17 @@
                 return;
             }
 
+            // Trả từ cũ trong chính ô đích về bank (nếu có và khác đáp án mới)
+            const existingLetter = ex2State[slotId];
+            if (existingLetter && existingLetter !== ans) {
+                document.querySelectorAll('#ex2-bank .word-item').forEach(el => {
+                    if (el.dataset.letter === existingLetter) el.classList.remove('used');
+                });
+            }
+
             // Remove from any other slot first
             for (let key in ex2State) {
-                if (ex2State[key] === ans) {
+                if (ex2State[key] === ans && key !== slotId) {
                     const oldSlot = document.getElementById(key);
                     if (oldSlot) {
                         oldSlot.textContent = '';
@@ -808,7 +817,7 @@
             container.innerHTML = ex2Rewrite.map(item => {
                 const qid = `ex2-rw-${item.num}`;
                 return `<div class="ex2-rewrite-row">
-                    <div class="rw-prompt"><span class="q-label">${item.num}.</span> ${item.ans}</div>
+                    <div class="rw-prompt"><span class="q-number-inline">${item.num}.</span> ${item.ans}</div>
                     <div class="rw-input-group">
                         <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:350px; text-align:left; max-width:700px; width:auto;" oninput="adjustWidth(this)">
                         <span class="row-btns">
@@ -827,7 +836,7 @@
             container.innerHTML = ex3Data.map(item => {
                 const qid = `ex3-q${item.num}`;
                 return `<div class="ex3-item">
-                    <div class="ex3-prompt"><span class="q-label">${item.num}.</span> ${item.prompt}</div>
+                    <div class="ex3-prompt"><span class="q-number-inline">${item.num}.</span> ${item.prompt}</div>
                     <div class="ex3-input-group">
                         <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="min-width:400px; text-align:left; max-width:750px; width:auto;" oninput="adjustWidth(this)">
                         <span class="row-btns">

@@ -254,49 +254,7 @@
             font-weight: 500;
         }
 
-        /* ===== WORD BANK & DROP SLOT ===== */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding: 15px 20px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 2px solid var(--glass-border);
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            justify-content: center;
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 2px solid var(--primary-light);
-            cursor: grab;
-            user-select: none;
-            transition: all 0.2s;
-            font-weight: 600;
-            color: var(--primary-dark);
-            font-size: 0.95rem;
-        }
-
-        .word-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .word-item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            display: none;
-        }
+        /* ===== DROP SLOT ===== */
 
         .drop-slot {
             display: inline-flex;
@@ -386,9 +344,7 @@
             flex-wrap: wrap;
         }
 
-        .ex1-row .num {
-            font-weight: 600;
-            color: var(--text-muted);
+        .ex1-row .q-number {
             min-width: 28px;
         }
 
@@ -578,7 +534,7 @@
 
         <!-- ==================== EXERCISE 1 ==================== -->
         <div class="exercise-card">
-            <div class="exercise-title">1. Complete the art forms.</div>
+            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the art forms.</div>
             <div class="ex1-split">
                 <div class="ex1-img-box">
                     <img src="img-int/module 7a.png" alt="Art forms">
@@ -593,7 +549,8 @@
 
         <!-- ==================== EXERCISE 2 ==================== -->
         <div class="exercise-card">
-            <div class="exercise-title">2. Complete the sentences with types of artist.</div>
+            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete the sentences with types of
+                artist.</div>
             <div id="questions-ex2"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -652,7 +609,8 @@
             <div class="reading-resizer" id="rr-ex3"></div>
             <div class="main-exercise-panel">
                 <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
-                    <div class="exercise-title">3. 🎧 2.02 Listen to three speakers talking about art forms that they
+                    <div class="exercise-title"><strong class="q-number-inline">3.</strong> 🎧 2.02 Listen to three
+                        speakers talking about art forms that they
                         study. Match speakers 1–3 with sentences A–D.</div>
                     <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex3')">📜 Transcript
                         2.02</button>
@@ -690,7 +648,8 @@
             <div class="reading-resizer" id="rr-ex4"></div>
             <div class="main-exercise-panel">
                 <div class="exercise-card" style="margin-bottom:0; box-shadow:none; border:none; padding:0;">
-                    <div class="exercise-title">4. 🎧 2.02 Complete the sentences with the verbs below. Then listen
+                    <div class="exercise-title"><strong class="q-number-inline">4.</strong> 🎧 2.02 Complete the
+                        sentences with the verbs below. Then listen
                         again and check.</div>
                     <button class="transcript-toggle-btn" onclick="toggleTranscript('tp-ex4')">📜 Transcript
                         2.02</button>
@@ -699,7 +658,7 @@
                             <source src="audio-int/2_Track_02.wav" type="audio/wav">
                         </audio>
                     </div>
-                    <div class="word-bank" id="bank-ex4"></div>
+                    <div class="word-bank sticky-bank" id="bank-ex4"></div>
                     <div id="questions-ex4"></div>
                     <div class="controls-row">
                         <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -812,7 +771,7 @@
                 const id = 'ex1-' + item.num;
                 const hintId = id + '-hint';
                 return `<div class="ex1-row">
-                            <span class="num">${item.num}</span>
+                            <span class="q-number">${item.num}</span>
                             <span class="inline-group">
                                 <input type="text" id="${id}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
                                 <span class="row-btns">
@@ -835,7 +794,7 @@
                 const id = 'ex2-' + item.num;
                 const hintId = id + '-hint';
                 const parts = item.sentence.split('______');
-                const boldNum = `<strong>${item.num}</strong>`;
+                const boldNum = `<strong class="q-number-inline">${item.num}</strong>`;
                 const html = parts.map((p, i) => {
                     if (i === parts.length - 1) return p;
                     return `${p}<span class="inline-group">
@@ -868,7 +827,7 @@
                     `;
 
                 return `<div class="ex3-item">
-                            <div class="ex3-sentence"><strong>${item.id}</strong> &nbsp;${item.text}</div>
+                            <div class="ex3-sentence"><strong class="q-number-inline">${item.id}</strong> &nbsp;${item.text}</div>
                             <div class="ex3-options">
                                 ${options}
                                 <span class="row-btns" style="position:relative; margin-left:6px;">
@@ -1007,11 +966,13 @@
         function placeWord(slotId, word, section) {
             const slot = document.getElementById(slotId);
             if (!slot) return;
-            const old = slot.textContent.trim();
-            if (old) {
-                const oldEl = document.getElementById(`wi-${section}-${safeId(old)}`);
-                if (oldEl) oldEl.classList.remove('used');
+            // Trả từ cũ trong chính ô đích về bank trước khi ghi đè
+            const existingWord = slot.textContent.trim();
+            if (existingWord && existingWord !== word) {
+                const existingEl = document.getElementById(`wi-${section}-${safeId(existingWord)}`);
+                if (existingEl) existingEl.classList.remove('used');
             }
+            // Xóa từ mới khỏi ô khác nếu đang có ở đó
             document.querySelectorAll(`.drop-slot[data-section="${section}"]`).forEach(s => {
                 if (s.textContent.trim() === word && s.id !== slotId) {
                     s.textContent = '';

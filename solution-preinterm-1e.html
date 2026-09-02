@@ -101,27 +101,7 @@
             margin-top: 5px;
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light, #f9f9f9);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border, #eee);
-        }
 
-        .word-item {
-            background: var(--card-bg, #fff);
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid var(--border, #ddd);
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #2c3e50;
-        }
 
         .narrative-text {
             line-height: 2.2;
@@ -476,7 +456,7 @@
         <div class="exercise-card">
             <div class="exercise-title">3. Complete the sentences with -ed or -ing adjectives formed from the verbs
                 below.</div>
-            <div class="word-bank">
+            <div class="word-bank" id="wordbank-ex3">
                 <div class="word-item">confuse</div>
                 <div class="word-item">disgust</div>
                 <div class="word-item">excite</div>
@@ -494,7 +474,7 @@
         <div class="exercise-card">
             <div class="exercise-title">4. Read the Vocab boost! box. Write down the related adjectives and noun for the
                 verbs below.</div>
-            <div class="word-bank">
+            <div class="word-bank" id="wordbank-ex4">
                 <div class="word-item">amuse</div>
                 <div class="word-item">depress</div>
                 <div class="word-item">entertain</div>
@@ -553,11 +533,11 @@
         ];
 
         const ex3Data = [
-            { q: "1. 'This milk has got black bits in it.' 'How [INPUT]!'", ans: "disgusting", mean: "kinh tởm", trans: "'Sữa này có những hạt đen trong đó.' 'Thật kinh tởm!'", hint: "Từ 'disgust'. Miêu tả tính chất của sữa (sự vật) -> đuôi -ing." },
-            { q: "2. We all cried at the end of the film - it was so [INPUT]!", ans: "moving", mean: "cảm động", trans: "Tất cả chúng tôi đều khóc ở cuối phim - nó thật sự rất cảm động!", hint: "Từ 'move'. Miêu tả tính chất của bộ phim (sự vật) -> đuôi -ing." },
-            { q: "3. I enjoyed the book, but I was [INPUT] about the ending. It didn't make sense.", ans: "confused", mean: "bối rối, khó hiểu", trans: "Tôi thích cuốn sách, nhưng tôi rất khó hiểu về cái kết. Nó vô lý.", hint: "Từ 'confuse'. Miêu tả cảm giác của 'I' (người) -> đuôi -ed." },
-            { q: "4. I love watching football, it's so [INPUT]!", ans: "exciting", mean: "hào hứng, thú vị", trans: "Tôi thích xem bóng đá, nó rất thú vị!", hint: "Từ 'excite'. Miêu tả tính chất của môn bóng đá (sự việc) -> đuôi -ing." },
-            { q: "5. I felt [INPUT] because it was dark in the house and I was alone.", ans: "frightened", mean: "sợ hãi", trans: "Tôi cảm thấy sợ hãi vì trong nhà tối và tôi ở một mình.", hint: "Từ 'frighten'. Miêu tả cảm giác của 'I' (người) -> đuôi -ed." }
+            { q: "1. 'This milk has got black bits in it.' 'How [INPUT]!'", ans: "disgusting", bank: "disgust", mean: "kinh tởm", trans: "'Sữa này có những hạt đen trong đó.' 'Thật kinh tởm!'", hint: "Từ 'disgust'. Miêu tả tính chất của sữa (sự vật) -> đuôi -ing." },
+            { q: "2. We all cried at the end of the film - it was so [INPUT]!", ans: "moving", bank: "move", mean: "cảm động", trans: "Tất cả chúng tôi đều khóc ở cuối phim - nó thật sự rất cảm động!", hint: "Từ 'move'. Miêu tả tính chất của bộ phim (sự vật) -> đuôi -ing." },
+            { q: "3. I enjoyed the book, but I was [INPUT] about the ending. It didn't make sense.", ans: "confused", bank: "confuse", mean: "bối rối, khó hiểu", trans: "Tôi thích cuốn sách, nhưng tôi rất khó hiểu về cái kết. Nó vô lý.", hint: "Từ 'confuse'. Miêu tả cảm giác của 'I' (người) -> đuôi -ed." },
+            { q: "4. I love watching football, it's so [INPUT]!", ans: "exciting", bank: "excite", mean: "hào hứng, thú vị", trans: "Tôi thích xem bóng đá, nó rất thú vị!", hint: "Từ 'excite'. Miêu tả tính chất của môn bóng đá (sự việc) -> đuôi -ing." },
+            { q: "5. I felt [INPUT] because it was dark in the house and I was alone.", ans: "frightened", bank: "frighten", mean: "sợ hãi", trans: "Tôi cảm thấy sợ hãi vì trong nhà tối và tôi ở một mình.", hint: "Từ 'frighten'. Miêu tả cảm giác của 'I' (người) -> đuôi -ed." }
         ];
 
         const ex4Data = [
@@ -567,6 +547,32 @@
             { v: "relax", ed: "relaxed", ing: "relaxing", n: "relaxation" },
             { v: "satisfy", ed: "satisfied", ing: "satisfying", n: "satisfaction" }
         ];
+
+        // ── Ánh xạ gạch đáp án trong word bank ─────────────────────────────────
+        // Dùng chung cho bài 3 (Cơ chế A: 1 ô → 1 từ trong bank)
+        function setWordUsed(bankId, word, used) {
+            if (!word) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
+
+        // Dùng cho bài 4: gạch verb khi CẢ 3 ô (ed/ing/n) của verb đó đều đúng
+        function checkVerbGroupUsed(verbGroup) {
+            const inputs = document.querySelectorAll(`input[data-verbgroup="${verbGroup}"]`);
+            if (!inputs.length) return;
+            const bankId = inputs[0].dataset.bankid;
+            const bankWord = inputs[0].dataset.bank;
+            const allCorrect = Array.from(inputs).every(el =>
+                el.value.trim().toLowerCase() === el.dataset.ans.toLowerCase()
+            );
+            setWordUsed(bankId, bankWord, allCorrect);
+        }
 
         function adjustWidth(el) {
             const text = el.value || el.placeholder || "";
@@ -605,6 +611,15 @@
                 el.classList.add('correct');
             }
             adjustWidth(el);
+            // Ánh xạ gạch bank bài 3
+            if (el.dataset.bankid === 'wordbank-ex3') {
+                const isCorrect = el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim();
+                setWordUsed(el.dataset.bankid, el.dataset.bank, isCorrect);
+            }
+            // Ánh xạ gạch bank bài 4 (kiểm tra cả nhóm)
+            if (el.dataset.bankid === 'wordbank-ex4') {
+                checkVerbGroupUsed(el.dataset.verbgroup);
+            }
         }
 
         function selectChoice(span) {
@@ -743,7 +758,7 @@
             const container = document.getElementById('questions-ex3');
             ex3Data.forEach((it, i) => {
                 const qid = `ex3-q${i}`;
-                const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
+                const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" data-bank="${it.bank}" data-bankid="wordbank-ex3" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
                 container.innerHTML += `<div class="question-row">${html} 
                     <div class="row-btns">
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
@@ -769,15 +784,15 @@
                     <tr>
                         <td style="font-weight: bold; color: #2980b9;">${it.v}</td>
                         <td>
-                            <input type="text" id="${qidEd}" data-ans="${it.ed}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
+                            <input type="text" id="${qidEd}" data-ans="${it.ed}" data-bank="${it.v}" data-bankid="wordbank-ex4" data-verbgroup="${i}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
                             <button class="eye-btn" onclick="showSingleAns('${qidEd}')">👁️</button>
                         </td>
                         <td>
-                            <input type="text" id="${qidIng}" data-ans="${it.ing}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
+                            <input type="text" id="${qidIng}" data-ans="${it.ing}" data-bank="${it.v}" data-bankid="wordbank-ex4" data-verbgroup="${i}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
                             <button class="eye-btn" onclick="showSingleAns('${qidIng}')">👁️</button>
                         </td>
                         <td>
-                            <input type="text" id="${qidN}" data-ans="${it.n}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
+                            <input type="text" id="${qidN}" data-ans="${it.n}" data-bank="${it.v}" data-bankid="wordbank-ex4" data-verbgroup="${i}" class="task5-input" oninput="adjustWidth(this)" style="min-width: 80px;">
                             <button class="eye-btn" onclick="showSingleAns('${qidN}')">👁️</button>
                         </td>
                     </tr>
@@ -808,6 +823,15 @@
                     el.classList.remove('correct');
                 }
             });
+
+            // Ánh xạ gạch bank bài 3 (gạch nếu đúng, bỏ gạch nếu sai/rỗng)
+            document.querySelectorAll('input[data-bankid="wordbank-ex3"]').forEach(el => {
+                const isCorrect = el.value.trim().toLowerCase() === el.dataset.ans.toLowerCase();
+                setWordUsed(el.dataset.bankid, el.dataset.bank, isCorrect);
+            });
+
+            // Ánh xạ gạch bank bài 4 (kiểm tra từng nhóm verb)
+            ex4Data.forEach((_, i) => checkVerbGroupUsed(i));
         }
 
         function showAnswers(prefix) {
@@ -825,6 +849,16 @@
                     el.classList.add('correct');
                     adjustWidth(el);
                 });
+                // Gạch bank bài 3
+                if (prefix === 'ex3') {
+                    document.querySelectorAll('input[data-bankid="wordbank-ex3"]').forEach(el => {
+                        setWordUsed(el.dataset.bankid, el.dataset.bank, true);
+                    });
+                }
+                // Gạch bank bài 4 — gạch từng verb group khi cả 3 ô đều được điền đúng
+                if (prefix === 'ex4') {
+                    ex4Data.forEach((_, i) => checkVerbGroupUsed(i));
+                }
             }
         }
 
@@ -839,6 +873,14 @@
                     el.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(el);
                 });
+                // Bỏ gạch bank bài 3
+                if (prefix === 'ex3') {
+                    document.querySelectorAll('#wordbank-ex3 .word-item').forEach(el => el.classList.remove('used'));
+                }
+                // Bỏ gạch bank bài 4
+                if (prefix === 'ex4') {
+                    document.querySelectorAll('#wordbank-ex4 .word-item').forEach(el => el.classList.remove('used'));
+                }
             }
         }
 
