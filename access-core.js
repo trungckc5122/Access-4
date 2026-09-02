@@ -729,7 +729,13 @@
         h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
     }
 
-    window.toggleHint = function (event, id) {
+    window.toggleHint = function (id, eventOrWord) {
+        // Back-compat: every info-btn across all files calls
+        // toggleHint('${qid}') or toggleHint('${qid}', wordToSpeak) —
+        // id is ALWAYS the first argument, never an Event. Grab the
+        // real click event from window.event instead of expecting
+        // it to be passed in.
+        const event = window.event || null;
         if (event) event.stopPropagation();
         const h = document.getElementById(id + '-hint');
         if (!h) return;
@@ -738,7 +744,7 @@
         activeInlineHint = null;
         if (!isVisible) {
             if (h.classList.contains('inline-hint')) {
-                const btn = event ? event.currentTarget : null;
+                const btn = (event && event.currentTarget) ? event.currentTarget : document.getElementById(id + '-info');
                 h.style.display = 'block';
                 if (btn) {
                     positionInlineHint(h, btn);
