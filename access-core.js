@@ -729,13 +729,21 @@
         h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
     }
 
-    window.toggleHint = function (id, eventOrWord) {
-        // Back-compat: every info-btn across all files calls
-        // toggleHint('${qid}') or toggleHint('${qid}', wordToSpeak) —
-        // id is ALWAYS the first argument, never an Event. Grab the
-        // real click event from window.event instead of expecting
-        // it to be passed in.
-        const event = window.event || null;
+    window.toggleHint = function (firstArg, secondArg) {
+        // Support 2 calling conventions used across all files:
+        //   (A) toggleHint(event, 'id')  — solution-preinterm-*.html
+        //   (B) toggleHint('id')          — 1a.html, info-btn pattern
+        //   (C) toggleHint('id', word)    — 1a.html with TTS word
+        let id, event;
+        if (firstArg instanceof Event || (firstArg && typeof firstArg === 'object' && firstArg.stopPropagation)) {
+            // Convention A: first arg is the click Event
+            event = firstArg;
+            id = secondArg;
+        } else {
+            // Convention B/C: first arg is the id string
+            id = firstArg;
+            event = window.event || null;
+        }
         if (event) event.stopPropagation();
         const h = document.getElementById(id + '-hint');
         if (!h) return;
