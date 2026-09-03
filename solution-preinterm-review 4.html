@@ -207,43 +207,6 @@
         }
 
         /* Drag & drop styles (from Review 1) */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border-medium);
-            justify-content: center;
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .word-item:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .word-item.used {
-            display: none;
-        }
-
         .inline-input-group {
             display: inline-flex;
             align-items: center;
@@ -300,6 +263,19 @@
             font-weight: 600;
             margin-right: 8px;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, mẫu tham khảo solution-preinterm-review_5.html
+           (script order trong file này bị đảo ngược nên toggleHint cục bộ mới là hàm thật chạy,
+           không thể phó mặc cho access-core.js — phải tự cấy logic định vị positionHintBox) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -331,7 +307,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>2.</strong> Complete the sentences with the words below. Use each word
                 only once.</div>
-            <div class="word-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
             <div id="ex2-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -352,7 +328,7 @@
         <!-- EX4: transport verbs (word bank + per-slot buttons) -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>4.</strong> Complete the texts with the words below.</div>
-            <div class="word-bank" id="bank-ex4"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4"></div>
             <div id="ex4-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -374,7 +350,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>6.</strong> Replace the underlined words with the phrasal verbs below.
             </div>
-            <div class="word-bank" id="bank-ex6"></div>
+            <div class="word-bank sticky-bank" id="bank-ex6"></div>
             <div id="ex6-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
@@ -407,7 +383,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>9.</strong> Complete the text with the words below. There are two extra
                 words.</div>
-            <div class="word-bank" id="bank-ex9"></div>
+            <div class="word-bank sticky-bank" id="bank-ex9"></div>
             <div id="ex9-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex9')">Show All</button>
@@ -421,8 +397,45 @@
     <script>
         // ========== GLOBAL HELPERS ==========
         function adjustWidth(el) { if (!el) return; const text = el.value || el.placeholder || ""; el.style.width = Math.max(text.length * 12 + 40, 80) + "px"; }
-        function closeAllHints() { document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none'); }
-        function toggleHint(event, id) { event.stopPropagation(); const h = document.getElementById(id); const isVisible = h && h.style.display === 'block'; closeAllHints(); if (h && !isVisible) h.style.display = 'block'; }
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() { document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none'); currentHintBtn = null; }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
         function toggleInputAns(input) { if (!input || !input.dataset.ans) return; const answers = input.dataset.ans.split('|').map(a => a.trim()); const cur = input.value.trim(); if (answers.includes(cur) && input.classList.contains('correct')) { input.value = ''; input.classList.remove('correct', 'incorrect-marked'); } else { input.value = answers[0]; input.classList.remove('incorrect-marked'); input.classList.add('correct'); } adjustWidth(input); }
         // Hàm KHÔNG toggle dùng riêng cho "Show All": luôn hiển thị đáp án đúng,
         // không quan tâm trạng thái hiện tại (khác với toggleInputAns dùng cho nút mắt 👁️ từng câu)
@@ -590,7 +603,7 @@
             let html = '';
             ex1Sentences.forEach((s, i) => {
                 let displayText = s.text.replace('______', `<input type="text" id="ex1-${i}" data-ans="${s.ans}" data-variants="${s.ansVariants ? s.ansVariants.join('|') : ''}" class="task5-input" oninput="adjustWidth(this)">`);
-                html += `<div class="question-row">${i + 1}. ${displayText} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex1-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex1-h${i}')">i</button></span><div class="hint-box" id="ex1-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${displayText} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex1-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex1-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex1-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
             });
             document.getElementById('ex1-container').innerHTML = html;
             document.querySelectorAll('#ex1-container .task5-input').forEach(adjustWidth);
@@ -600,7 +613,7 @@
             initWordBank('bank-ex2', ex2Words);
             let html = '';
             ex2Sentences.forEach((s, i) => {
-                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex2-q${i}" data-ans="${s.ans}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex2-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
+                html += `<div class="question-row">${i + 1}. ${s.text.replace('______', `<input type="text" class="task5-input" id="ex2-q${i}" data-ans="${s.ans}" data-type="wb" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`)} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex2-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex2-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${s.ans}</div>${s.hint}</div></div>`;
             });
             document.getElementById('ex2-container').innerHTML = html;
             document.querySelectorAll('#ex2-container .task5-input').forEach(adjustWidth);
@@ -611,7 +624,7 @@
             ex3Data.forEach((item, i) => {
                 let choiceHtml = `<span class="choice-group" data-id="ex3-${i}" data-ans="${item.ans}">${item.opts.map(opt => `<button class="choice-btn" onclick="selectChoiceBtn(this)">${opt}</button>`).join('')}</span>`;
                 let sentence = item.text.replace('______', choiceHtml);
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceGroup('ex3-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button></span><div class="hint-box" id="ex3-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${item.ans}</div>${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceGroup('ex3-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex3-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${item.ans}</div>${item.hint}</div></div>`;
             });
             document.getElementById('ex3-container').innerHTML = html;
         }
@@ -653,7 +666,7 @@
                     btnSpan.style.marginLeft = '5px';
                     btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex4-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button>`;
                     let hintDiv = document.createElement('div');
-                    hintDiv.className = 'hint-box';
+                    hintDiv.className = 'hint-box inline-hint';
                     hintDiv.id = `ex4-h${i}`;
                     hintDiv.innerHTML = `<div class="hint-detail"><strong>Đáp án:</strong> ${explanations[i].word}</div><div class="hint-detail"><strong>Bằng chứng:</strong> ${explanations[i].evidence}</div><div class="hint-detail"><strong>Giải thích:</strong> ${explanations[i].explanation}</div>`;
                     inp.insertAdjacentElement('afterend', btnSpan);
@@ -667,7 +680,7 @@
             ex5Data.forEach((item, i) => {
                 let choiceHtml = `<span class="choice-group" data-id="ex5-${i}" data-ans="${item.ans}">${item.opts.map(opt => `<button class="choice-btn" onclick="selectChoiceBtn(this)">${opt}</button>`).join('')}</span>`;
                 let sentence = item.text.replace('______', choiceHtml);
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceGroup('ex5-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button></span><div class="hint-box" id="ex5-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${item.ans}</div>${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceGroup('ex5-${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex5-h${i}"><div class="hint-detail"><strong>Đáp án:</strong> ${item.ans}</div>${item.hint}</div></div>`;
             });
             document.getElementById('ex5-container').innerHTML = html;
         }
@@ -686,7 +699,7 @@
                             <button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex6-q${i}'))">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'ex6-h${i}')">i</button>
                         </span>
-                        <div class="hint-box" id="ex6-h${i}">${item.hint}</div>
+                        <div class="hint-box inline-hint" id="ex6-h${i}">${item.hint}</div>
                     </div>`;
             });
             document.getElementById('ex6-container').innerHTML = html;
@@ -696,7 +709,7 @@
         function renderEx7() {
             let html = '';
             ex7Data.forEach((item, i) => {
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.prompt}<br><input type="text" id="ex7-${i}" data-ans="${item.ans.replace(/"/g, '&quot;')}" class="task5-input" style="width:300px; min-width:200px;" oninput="adjustWidth(this)"> <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex7-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex7-h${i}')">i</button></span><div class="hint-box" id="ex7-h${i}">${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.prompt}<br><input type="text" id="ex7-${i}" data-ans="${item.ans.replace(/"/g, '&quot;')}" class="task5-input" style="width:300px; min-width:200px;" oninput="adjustWidth(this)"> <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex7-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex7-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex7-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex7-container').innerHTML = html;
             document.querySelectorAll('#ex7-container .task5-input').forEach(adjustWidth);
@@ -706,7 +719,7 @@
             let html = '';
             ex8Data.forEach((item, i) => {
                 let text = item.text.replace('______', `<input type="text" id="ex8-${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`);
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${text} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex8-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex8-h${i}')">i</button></span><div class="hint-box" id="ex8-h${i}">${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${text} <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex8-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex8-h${i}')">i</button></span><div class="hint-box inline-hint" id="ex8-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex8-container').innerHTML = html;
             document.querySelectorAll('#ex8-container .task5-input').forEach(adjustWidth);
@@ -735,7 +748,7 @@
                     btnSpan.style.marginLeft = '5px';
                     btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex9-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex9-h${i}')">i</button>`;
                     let hintDiv = document.createElement('div');
-                    hintDiv.className = 'hint-box';
+                    hintDiv.className = 'hint-box inline-hint';
                     hintDiv.id = `ex9-h${i}`;
                     hintDiv.innerHTML = `<div class="hint-detail"><strong>Đáp án:</strong> ${hints[i].ans}</div><div class="hint-detail"><strong>Bằng chứng:</strong> ${hints[i].evidence}</div><div class="hint-detail"><strong>Giải thích:</strong> ${hints[i].explanation}</div>`;
                     slot.insertAdjacentElement('afterend', btnSpan);

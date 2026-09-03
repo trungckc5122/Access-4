@@ -104,44 +104,7 @@
             background: rgba(220, 38, 38, 0.1);
         }
 
-        /* Drag & Drop styles */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border-medium);
-            justify-content: center;
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
 
-        .word-item {
-            background: var(--card-bg);
-            color: var(--text);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: grab;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .word-item:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .word-item.used {
-            display: none;
-        }
 
         .choice-group {
             display: inline-flex;
@@ -211,6 +174,17 @@
             border-radius: 12px;
             line-height: 1.4;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -238,7 +212,7 @@
         <!-- EX2: Match words with descriptions (drag & drop) -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>2.</strong> Match the words below with descriptions 1–6.</div>
-            <div class="word-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
             <div id="ex2-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -249,7 +223,7 @@
         <!-- EX3: Match intentions with sentences (drag & drop) -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>3.</strong> Match the intentions below with sentences 1–10.</div>
-            <div class="word-bank" id="bank-ex3"></div>
+            <div class="word-bank sticky-bank" id="bank-ex3"></div>
             <div id="ex3-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
@@ -260,7 +234,7 @@
         <!-- EX4: Complete collocations (drag & drop) -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>4.</strong> Complete the collocations with the verbs below.</div>
-            <div class="word-bank" id="bank-ex4"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4"></div>
             <div id="ex4-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -271,7 +245,7 @@
         <!-- EX5: Prepositions with multiple copies -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>5.</strong> Complete the sentences with the prepositions below.</div>
-            <div class="word-bank" id="bank-ex5"></div>
+            <div class="word-bank sticky-bank" id="bank-ex5"></div>
             <div id="ex5-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
@@ -318,8 +292,48 @@
     <script>
         // ========== GLOBAL HELPERS ==========
         function adjustWidth(el) { if (!el) return; const text = el.value || el.placeholder || ""; el.style.width = Math.max(text.length * 12 + 40, 80) + "px"; }
-        function closeAllHints() { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); }
-        function toggleHint(event, id) { if (event) event.stopPropagation(); const h = document.getElementById(id); const isVisible = h && h.style.display === 'block'; closeAllHints(); if (h && !isVisible) h.style.display = 'block'; }
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
         function normaliseText(text) { return text.trim().toLowerCase().replace(/[.!?]/g, ''); }
 
         function toggleInputAns(input) {
@@ -382,16 +396,16 @@
         }
 
         function clickSelect(el) {
-            if (selectedWordEl) selectedWordEl.style.background = '';
+            if (selectedWordEl) selectedWordEl.classList.remove('dragging');
             selectedWordEl = el;
-            el.style.background = '#ffeaa7';
+            el.classList.add('dragging');
         }
 
         document.addEventListener('click', (e) => {
             if (e.target.tagName === 'INPUT' && selectedWordEl) {
                 e.target.value = selectedWordEl.innerText;
                 adjustWidth(e.target);
-                selectedWordEl.style.background = '';
+                selectedWordEl.classList.remove('dragging');
                 selectedWordEl = null;
                 updateWordBank();
             }
@@ -547,7 +561,7 @@
                 let replacement = `${choiceHtml} <span class="row-btns">${eyeBtn}${hintBtn}</span>`;
                 let sentence = item.text.replace('______', replacement);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
-                <div class="hint-box" id="ex1-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex1-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex1-container').innerHTML = html;
         }
@@ -559,7 +573,7 @@
                 let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex2-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
                 <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex2-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex2-h${i}')">i</button></span>
-                <div class="hint-box" id="ex2-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex2-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex2-container').innerHTML = html;
         }
@@ -572,7 +586,7 @@
                 ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()"
                 oninput="adjustWidth(this); updateWordBank()">
                 <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex3-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex3-h${i}')">i</button></span>
-                <div class="hint-box" id="ex3-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex3-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex3-container').innerHTML = html;
         }
@@ -584,7 +598,7 @@
                 let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex4-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
                 <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex4-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex4-h${i}')">i</button></span>
-                <div class="hint-box" id="ex4-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex4-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex4-container').innerHTML = html;
         }
@@ -596,7 +610,7 @@
                 let sentence = item.text.replace('______', `<input type="text" class="task5-input" id="ex5-q${i}" data-ans="${item.ans}" data-type="input" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="this.select()" oninput="adjustWidth(this); updateWordBank()">`);
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${sentence}
                 <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex5-q${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex5-h${i}')">i</button></span>
-                <div class="hint-box" id="ex5-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex5-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex5-container').innerHTML = html;
         }
@@ -607,7 +621,7 @@
                 html += `<div class="question-row"><strong>${i + 1}</strong> ${item.prompt}<br>
                 <input type="text" id="ex6-${i}" data-ans="${item.ans}" class="task5-input" style="min-width:300px; text-align:left;" oninput="adjustWidth(this)">
                 <span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('ex6-${i}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex6-h${i}')">i</button></span>
-                <div class="hint-box" id="ex6-h${i}">${item.hint}</div></div>`;
+                <div class="hint-box inline-hint" id="ex6-h${i}">${item.hint}</div></div>`;
             });
             document.getElementById('ex6-container').innerHTML = html;
             document.querySelectorAll('#ex6-container .task5-input').forEach(adjustWidth);
@@ -625,7 +639,7 @@
                 text = text.replace(/\[INPUT\]\s*(\([^)]+\))?/, `<sup style="font-weight:700;color:var(--primary);font-size:0.8rem;">${qIdx}</sup><input type="text" id="${inputId}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">${vbHtml}<span class="row-btns" style="margin-left:2px;"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('${inputId}'))">&#128065;&#65039;</button><button class="hint-btn" onclick="toggleHint(event,'ex7-h${i}')">i</button></span>`);
                 qIdx++;
                 emailParts.push(text);
-                hintBoxes += `<div class="hint-box" id="ex7-h${i}">${item.hint}</div>`;
+                hintBoxes += `<div class="hint-box inline-hint" id="ex7-h${i}">${item.hint}</div>`;
             });
             const emailBody = emailParts.join(' ');
             const html = `
@@ -648,7 +662,7 @@
             html += articleParts.join(' ');
             html += '</div>';
             ex8Data.forEach((item, i) => {
-                html += `<div class="hint-box" id="ex8-h${i}">${item.hint}</div>`;
+                html += `<div class="hint-box inline-hint" id="ex8-h${i}">${item.hint}</div>`;
             });
             document.getElementById('ex8-container').innerHTML = html;
             document.querySelectorAll('#ex8-container .task5-input').forEach(adjustWidth);

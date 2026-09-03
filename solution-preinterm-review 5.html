@@ -109,41 +109,6 @@
             background: var(--error-bg);
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border-medium);
-            justify-content: center;
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            color: var(--text);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: grab;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .word-item:hover,
-        .word-item.active-word {
-            background: var(--primary);
-            color: white;
-        }
-
         .drop-slot {
             display: inline-flex;
             min-width: 110px;
@@ -286,6 +251,22 @@
                 margin-top: 8px;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i.
+           File này load access-core.js TRƯỚC script cục bộ (ngược quy ước chung của
+           dự án), nên hàm toggleHint() cục bộ trong file mới là hàm thật sự chạy,
+           không bị access-core.js ghi đè. Vị trí fixed được chính hàm cục bộ này
+           tự tính (xem toggleHint/positionHintBox trong phần JS bên dưới), CSS ở
+           đây chỉ cần khai báo position:fixed để JS gán top/left đúng. */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -303,7 +284,7 @@
 
         <div class="exercise-card">
             <div class="exercise-title"><strong>1.</strong> Match the jobs with the statements.</div>
-            <div class="word-bank" id="bank-ex1"></div>
+            <div class="word-bank sticky-bank" id="bank-ex1"></div>
             <div id="ex1-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
@@ -313,7 +294,7 @@
 
         <div class="exercise-card">
             <div class="exercise-title"><strong>2.</strong> Complete the sentences with the words below.</div>
-            <div class="word-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
             <div id="ex2-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -323,7 +304,7 @@
 
         <div class="exercise-card">
             <div class="exercise-title"><strong>3.</strong> Complete the sentences with the words below.</div>
-            <div class="word-bank" id="bank-ex3"></div>
+            <div class="word-bank sticky-bank" id="bank-ex3"></div>
             <div id="ex3-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
@@ -333,7 +314,7 @@
 
         <div class="exercise-card">
             <div class="exercise-title"><strong>4.</strong> Match the jobs below with definitions 1-9.</div>
-            <div class="word-bank" id="bank-ex4"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4"></div>
             <div id="ex4-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -343,7 +324,7 @@
 
         <div class="exercise-card">
             <div class="exercise-title"><strong>5.</strong> Complete the text with the words below.</div>
-            <div class="word-bank" id="bank-ex5"></div>
+            <div class="word-bank sticky-bank" id="bank-ex5"></div>
             <div id="ex5-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex5')">Show All</button>
@@ -401,8 +382,35 @@
             el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) {
+                top = rect.top - boxRect.height - 6;
+            }
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) {
+                left = window.innerWidth - boxRect.width - 8;
+            }
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
         function closeAllHints() {
             document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
         }
 
         function toggleHint(event, id) {
@@ -411,8 +419,15 @@
             if (!h) return;
             const isVisible = h.style.display === 'block';
             closeAllHints();
-            if (!isVisible) h.style.display = 'block';
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function normaliseText(text) {
             return text.trim().toLowerCase().replace(/[.!?]/g, '');
@@ -441,16 +456,16 @@
             const bank = document.querySelector(bankSelector);
             if (!bank) return;
             const hidden = Array.from(bank.querySelectorAll('.word-item'))
-                .find(w => w.dataset.value === value && w.style.display === 'none');
-            if (hidden) hidden.style.display = '';
+                .find(w => w.dataset.value === value && w.classList.contains('used'));
+            if (hidden) hidden.classList.remove('used');
         }
 
         function hideVisibleWord(bankSelector, value) {
             const bank = document.querySelector(bankSelector);
             if (!bank) return;
             const visible = Array.from(bank.querySelectorAll('.word-item'))
-                .find(w => w.dataset.value === value && w.style.display !== 'none');
-            if (visible) visible.style.display = 'none';
+                .find(w => w.dataset.value === value && !w.classList.contains('used'));
+            if (visible) visible.classList.add('used');
         }
 
         function fillSlot(slot, value, bankSelector) {
@@ -488,18 +503,19 @@
             document.querySelectorAll(`${bankSelector} .word-item`).forEach(word => {
                 word.setAttribute('draggable', 'true');
                 word.addEventListener('dragstart', e => {
+                    if (word.classList.contains('used')) { e.preventDefault(); return; }
                     activeWord = word;
-                    word.classList.add('active-word');
+                    word.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 });
                 word.addEventListener('dragend', () => {
-                    word.classList.remove('active-word');
+                    word.classList.remove('dragging');
                     activeWord = null;
                 });
                 word.addEventListener('click', () => {
+                    if (word.classList.contains('used')) return;
                     if (!activeSlot || activeSlot.innerText.trim()) return;
                     fillSlot(activeSlot, word.dataset.value, bankSelector);
-                    word.style.display = 'none';
                     activeSlot = null;
                 });
             });
@@ -510,7 +526,6 @@
                     e.preventDefault();
                     if (!activeWord) return;
                     fillSlot(slot, activeWord.dataset.value, bankSelector);
-                    activeWord.style.display = 'none';
                 });
                 slot.addEventListener('click', () => {
                     if (slot.innerText.trim()) {
@@ -681,7 +696,7 @@
                     <button class="eye-btn" onclick="toggleSlot('${section}-${i}', '#bank-${section}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${section}-h${i}')">i</button>
                 </span>
-                <div class="hint-box" id="${section}-h${i}">${hint(row.ans, row.evidence, row.explanation)}</div>
+                <div class="hint-box inline-hint" id="${section}-h${i}">${hint(row.ans, row.evidence, row.explanation)}</div>
             </div>`;
             });
             document.getElementById(`${section}-container`).innerHTML = html;
@@ -702,7 +717,7 @@
                         <button class="eye-btn" onclick="toggleSlot('ex3-${slotIndex}', '#bank-ex3')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, 'ex3-h${slotIndex}')">i</button>
                     </span>
-                    <div class="hint-box" id="ex3-h${slotIndex}">${hint(h[0], h[1], h[2])}</div>`;
+                    <div class="hint-box inline-hint" id="ex3-h${slotIndex}">${hint(h[0], h[1], h[2])}</div>`;
                     text = text.replace('[SLOT]', slotMarkup);
                     slotIndex++;
                 });
@@ -728,7 +743,7 @@
                     <button class="eye-btn" onclick="toggleSlot('ex5-${i}', '#bank-ex5')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, 'ex5-h${i}')">i</button>
                 </span>
-                <div class="hint-box" id="ex5-h${i}">${hint(item[0], item[1], item[2])}</div>`;
+                <div class="hint-box inline-hint" id="ex5-h${i}">${hint(item[0], item[1], item[2])}</div>`;
                 filled = filled.replace(`${i + 1} [SLOT]`, slotMarkup);
             });
             let html = `<div class="email-box">${filled}</div>`;
@@ -754,7 +769,7 @@
                     <button class="eye-btn" onclick="toggleInputAns(document.getElementById('${section}-${i}'))">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${section}-h${i}')">i</button>
                 </span>
-                <div class="hint-box" id="${section}-h${i}">${hint(answerText, item.evidence, item.explanation)}</div>
+                <div class="hint-box inline-hint" id="${section}-h${i}">${hint(answerText, item.evidence, item.explanation)}</div>
             </div>`;
             });
             document.getElementById(`${section}-container`).innerHTML = html;
@@ -770,7 +785,7 @@
                     <button class="eye-btn" onclick="toggleChoiceGroup('ex9-${i}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, 'ex9-h${i}')">i</button>
                 </span>
-                <span class="hint-box" id="ex9-h${i}">${hint(item.ans, item.evidence, item.explanation)}</span>`;
+                <span class="hint-box inline-hint" id="ex9-h${i}">${hint(item.ans, item.evidence, item.explanation)}</span>`;
                 return item.text.replace('[CHOICE]', `${choices}${tools}`);
             }).join(' ');
             let html = `<div class="reading-box">${text}</div>`;
@@ -817,7 +832,7 @@
             });
             document.querySelectorAll(`#${section}-container .drop-slot`).forEach(slot => clearSlot(slot, `#bank-${section}`));
             const bank = document.getElementById(`bank-${section}`);
-            if (bank) bank.querySelectorAll('.word-item').forEach(word => word.style.display = '');
+            if (bank) bank.querySelectorAll('.word-item').forEach(word => word.classList.remove('used'));
             document.querySelectorAll(`#${section}-container .choice-btn`).forEach(btn => btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
             closeAllHints();
         };

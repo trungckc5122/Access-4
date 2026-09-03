@@ -95,38 +95,15 @@
             background: var(--error-bg);
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border-medium);
-            justify-content: center;
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            color: var(--text);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: grab;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .word-item:hover,
-        .word-item.active-word {
-            background: var(--primary);
-            color: white;
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
         }
 
         .drop-slot {
@@ -275,7 +252,7 @@
         <!-- EX1: Drag & drop word bank into news summaries -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>1.</strong> Complete the news summaries with the words below.</div>
-            <div class="word-bank" id="bank-ex1"></div>
+            <div class="word-bank sticky-bank" id="bank-ex1"></div>
             <div id="ex1-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex1')">Show All</button>
@@ -286,7 +263,7 @@
         <!-- EX2: Drag & drop word bank into sentences -->
         <div class="exercise-card">
             <div class="exercise-title"><strong>2.</strong> Complete the sentences with the words below.</div>
-            <div class="word-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
             <div id="ex2-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -298,7 +275,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>3.</strong> Complete the compound nouns. Match column A with column B.
             </div>
-            <div class="word-bank" id="bank-ex3"></div>
+            <div class="word-bank sticky-bank" id="bank-ex3"></div>
             <div id="ex3-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex3')">Show All</button>
@@ -342,7 +319,7 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong>7.</strong> Complete the text. Use the words below. There are two extra
                 words.</div>
-            <div class="word-bank" id="bank-ex7"></div>
+            <div class="word-bank sticky-bank" id="bank-ex7"></div>
             <div id="ex7-container"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex7')">Show All</button>
@@ -356,8 +333,48 @@
     <script>
         // ========== GLOBAL HELPERS (unchanged) ==========
         function adjustWidth(el) { if (!el) return; const text = el.value || el.placeholder || ""; el.style.width = Math.max(text.length * 12 + 40, 80) + "px"; }
-        function closeAllHints() { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); }
-        function toggleHint(event, id) { if (event) event.stopPropagation(); const h = document.getElementById(id); const isVisible = h && h.style.display === 'block'; closeAllHints(); if (h && !isVisible) h.style.display = 'block'; }
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id);
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showInputAns(input) {
             if (!input || !input.dataset.ans) return;
@@ -388,7 +405,7 @@
             if (oldValue) {
                 const bank = document.querySelector(bankSelector);
                 const oldWordItem = bank ? Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === oldValue) : null;
-                if (oldWordItem) oldWordItem.style.display = '';
+                if (oldWordItem) oldWordItem.classList.remove('used');
             }
             slot.innerText = '';
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
@@ -407,7 +424,7 @@
             if (!allowMultipleUse) {
                 const bank = document.querySelector(bankSelector);
                 const wi = bank ? Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === value) : null;
-                if (wi) wi.style.display = 'none';
+                if (wi) wi.classList.add('used');
             }
         }
 
@@ -417,17 +434,17 @@
                 word.setAttribute('draggable', 'true');
                 word.addEventListener('dragstart', function (e) {
                     activeWord = word;
-                    word.classList.add('active-word');
+                    word.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 });
                 word.addEventListener('dragend', function () {
-                    word.classList.remove('active-word');
+                    word.classList.remove('dragging');
                     activeWord = null;
                 });
                 word.addEventListener('click', function () {
                     if (activeSlot) {
                         fillSlot(activeSlot, word.dataset.value, bankSelector, allowMultipleUse);
-                        if (!allowMultipleUse) word.style.display = 'none';
+                        if (!allowMultipleUse) word.classList.add('used');
                         activeSlot = null;
                     }
                 });
@@ -441,14 +458,14 @@
                     slot.classList.remove('drag-over');
                     if (activeWord) {
                         fillSlot(slot, activeWord.dataset.value, bankSelector, allowMultipleUse);
-                        if (!allowMultipleUse) activeWord.style.display = 'none';
+                        if (!allowMultipleUse) activeWord.classList.add('used');
                     }
                     activeWord = null;
                 });
                 slot.addEventListener('click', function () {
                     if (activeWord) {
                         fillSlot(slot, activeWord.dataset.value, bankSelector, allowMultipleUse);
-                        if (!allowMultipleUse) activeWord.style.display = 'none';
+                        if (!allowMultipleUse) activeWord.classList.add('used');
                         activeWord = null;
                         activeSlot = null;
                     }
@@ -456,7 +473,7 @@
                         const oldValue = slot.innerText.trim();
                         const bank = document.querySelector(bankSelector);
                         const oldWordItem = bank ? Array.from(bank.querySelectorAll('.word-item')).find(w => w.dataset.value === oldValue) : null;
-                        if (oldWordItem) oldWordItem.style.display = '';
+                        if (oldWordItem) oldWordItem.classList.remove('used');
                         slot.innerText = '';
                         slot.classList.remove('filled', 'correct', 'incorrect-marked');
                         slot.style.minWidth = '110px';
@@ -535,7 +552,7 @@
                 // Tạo hộp gợi ý riêng cho từng slot
                 var hintBoxes = '';
                 item.slots.forEach(function (sl) {
-                    hintBoxes += '<div class="hint-box" id="ex1-h-' + sl.id + '">' + sl.hint + '</div>';
+                    hintBoxes += '<div class="hint-box inline-hint" id="ex1-h-' + sl.id + '">' + sl.hint + '</div>';
                 });
                 html += '<div class="question-row"><strong>' + (i + 1) + '.</strong> ' + t + hintBoxes + '</div>';
             });
@@ -561,7 +578,7 @@
                     if (slot) clearSlot(slot, '#bank-ex1');
                 });
             });
-            document.querySelectorAll('#bank-ex1 .word-item').forEach(function (wi) { wi.style.display = ''; });
+            document.querySelectorAll('#bank-ex1 .word-item').forEach(function (wi) { wi.classList.remove('used'); });
             closeAllHints();
         }
 
@@ -588,7 +605,7 @@
                 html += '<div class="question-row"><strong>' + (i + 1) + '.</strong> ' + t +
                     ' <span class="row-btns"><button class="eye-btn" onclick="toggleSlot(\'' + slotId + '\',\'' + item.ans + '\',\'#bank-ex2\')">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex2-h' + i + '\')">i</button></span>' +
-                    '<div class="hint-box" id="ex2-h' + i + '">' + item.hint + '</div></div>';
+                    '<div class="hint-box inline-hint" id="ex2-h' + i + '">' + item.hint + '</div></div>';
             });
             document.getElementById('ex2-container').innerHTML = html;
             setupDragDrop('#bank-ex2', '#ex2-container .drop-slot', false);
@@ -608,7 +625,7 @@
                 var slot = document.querySelector('.drop-slot[data-id="ex2-' + i + '"]');
                 if (slot) clearSlot(slot, '#bank-ex2');
             });
-            document.querySelectorAll('#bank-ex2 .word-item').forEach(function (wi) { wi.style.display = ''; });
+            document.querySelectorAll('#bank-ex2 .word-item').forEach(function (wi) { wi.classList.remove('used'); });
             closeAllHints();
         }
 
@@ -637,7 +654,7 @@
                     ' <span style="color:var(--text-muted); font-size:0.9rem; font-style:italic;"></span>' +
                     ' <span class="row-btns"><button class="eye-btn" onclick="toggleSlot(\'' + slotId + '\',\'' + item.ans + '\',\'#bank-ex3\')">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex3-h' + i + '\')">i</button></span>' +
-                    '<div class="hint-box" id="ex3-h' + i + '">' + item.hint + '</div></div>';
+                    '<div class="hint-box inline-hint" id="ex3-h' + i + '">' + item.hint + '</div></div>';
             });
             document.getElementById('ex3-container').innerHTML = html;
             setupDragDrop('#bank-ex3', '#ex3-container .drop-slot', false);
@@ -657,7 +674,7 @@
                 var slot = document.querySelector('.drop-slot[data-id="ex3-' + i + '"]');
                 if (slot) clearSlot(slot, '#bank-ex3');
             });
-            document.querySelectorAll('#bank-ex3 .word-item').forEach(function (wi) { wi.style.display = ''; });
+            document.querySelectorAll('#bank-ex3 .word-item').forEach(function (wi) { wi.classList.remove('used'); });
             closeAllHints();
         }
 
@@ -690,7 +707,7 @@
                     ' <span style="color:var(--text-muted); font-size:0.88rem;">(' + item.base + ')</span>' +
                     ' <span class="row-btns"><button class="eye-btn" onclick="showInputAns(document.getElementById(\'' + inputId + '\'))">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex4-h' + i + '\')">i</button></span>' +
-                    '<div class="hint-box" id="ex4-h' + i + '">' + item.hint + '</div></div>';
+                    '<div class="hint-box inline-hint" id="ex4-h' + i + '">' + item.hint + '</div></div>';
             });
             document.getElementById('ex4-container').innerHTML = html;
             document.querySelectorAll('#ex4-container .task5-input').forEach(adjustWidth);
@@ -760,7 +777,7 @@
                     '<span class="row-btns"><button class="eye-btn" onclick="showEx5RowAns(' + i + ')">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex5-h' + i + '\')">i</button></span>' +
                     '</div>' +
-                    '<div class="hint-box" id="ex5-h' + i + '">' + item.hint + '</div>' +
+                    '<div class="hint-box inline-hint" id="ex5-h' + i + '">' + item.hint + '</div>' +
                     '</div>';
             });
             document.getElementById('ex5-container').innerHTML = html;
@@ -807,7 +824,7 @@
                     ' <span class="row-btns"><button class="eye-btn" onclick="showInputAns(document.getElementById(\'' + inputId + '\'))">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex6-h' + i + '\')">i</button></span>' +
                     '</div>' +
-                    '<div class="hint-box" id="ex6-h' + i + '">' + item.hint + '</div>' +
+                    '<div class="hint-box inline-hint" id="ex6-h' + i + '">' + item.hint + '</div>' +
                     '</div>';
             });
             document.getElementById('ex6-container').innerHTML = html;
@@ -852,7 +869,7 @@
                     '<button class="eye-btn" onclick="toggleSlot(\'' + slotId + '\',\'' + item.ans + '\',\'#bank-ex7\')">👁️</button>' +
                     '<button class="hint-btn" onclick="toggleHint(event,\'ex7-h' + i + '\')">i</button></span>';
                 parts.push(item.before + slotHtml + item.after);
-                hintBoxes += '<div class="hint-box" id="ex7-h' + i + '">' + item.hint + '</div>';
+                hintBoxes += '<div class="hint-box inline-hint" id="ex7-h' + i + '">' + item.hint + '</div>';
                 qIdx++;
             });
             var html = '<div style="background:var(--hint-bg,#f8fafc); border:1px solid var(--glass-border); border-radius:12px; padding:24px 28px; line-height:2.8; font-size:1.02rem;">' +
@@ -876,7 +893,7 @@
                 var slot = document.querySelector('.drop-slot[data-id="ex7-' + i + '"]');
                 if (slot) clearSlot(slot, '#bank-ex7');
             });
-            document.querySelectorAll('#bank-ex7 .word-item').forEach(function (wi) { wi.style.display = ''; });
+            document.querySelectorAll('#bank-ex7 .word-item').forEach(function (wi) { wi.classList.remove('used'); });
             closeAllHints();
         }
 
