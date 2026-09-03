@@ -485,7 +485,7 @@
                     <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')" title="Show/Hide hint">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">💡 ${item.hint}</div>
+                <div class="hint-box" id="${qid}-hint">${item.hint}</div>
             </div>`;
             });
         }
@@ -501,6 +501,7 @@
             });
             data.forEach((it, i) => {
                 const qid = `${id}-q${i}`;
+                const answers = it.ans.split('|');
                 let sentence = it.q;
                 let numberHtml = '';
                 const numberMatch = sentence.match(/^(\d+)\.\s+/);
@@ -514,24 +515,19 @@
                 let inputIndex = 0;
                 sentence = sentence.replace(/_{2,}/g, (match) => {
                     const inputId = `${qid}-${inputIndex}`;
+                    const ansVal = answers[inputIndex] || answers[0] || '';
                     inputIndex++;
-                    return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
+                    return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" data-ans="${ansVal}" data-bank="${ansVal}" data-bankid="${bankId}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
                 });
                 container.innerHTML += `
             <div class="question-row">
                 ${numberHtml} ${sentence}
                 <div class="row-btns">
-                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans.replace(/'/g, "\\'")}')">👁️</button>
+                    <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans.replace(/'/g, "\\'")}', '${bankId}')">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                <div class="hint-box" id="${qid}-hint"> ${it.hint}</div>
             </div>`;
-                setTimeout(() => {
-                    for (let j = 0; j < gapCount; j++) {
-                        const input = document.getElementById(`${qid}-${j}`);
-                        if (input && it.ans) input.setAttribute('data-ans', it.ans);
-                    }
-                }, 0);
             });
         }
 
@@ -563,7 +559,7 @@
                     <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans.replace(/'/g, "\\'")}')">👁️</button>
                     <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">💡 ${it.hint}</div>
+                <div class="hint-box" id="${qid}-hint"> ${it.hint}</div>
             </div>`;
                 setTimeout(() => {
                     for (let j = 0; j < gapCount; j++) {
@@ -638,33 +634,22 @@
             updateWordBank();
         }
 
-        function toggleMultiGapAns(parentId, gapCount, answersStr) {
+        function toggleMultiGapAns(parentId, gapCount, answersStr, bankId) {
             const eyeBtn = document.getElementById(parentId + '-eye');
             const stateKey = `${parentId}-state`;
             const isCurrentlyShown = answerStates.get(stateKey) || false;
             const answers = answersStr.split('|');
             if (isCurrentlyShown) {
                 for (let i = 0; i < gapCount; i++) {
-                    const inputId = `${parentId}-${i}`;
-                    const el = document.getElementById(inputId);
-                    if (el) {
-                        el.value = "";
-                        el.classList.remove('correct', 'incorrect-marked');
-                        adjustWidth(el);
-                    }
+                    const el = document.getElementById(`${parentId}-${i}`);
+                    if (el) { if (el.dataset.bank && bankId) setWordUsed(bankId, el.dataset.bank, false); el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); }
                 }
                 if (eyeBtn) eyeBtn.classList.remove('active');
                 answerStates.set(stateKey, false);
             } else {
                 for (let i = 0; i < gapCount; i++) {
-                    const inputId = `${parentId}-${i}`;
-                    const el = document.getElementById(inputId);
-                    if (el && answers[i]) {
-                        el.value = answers[i];
-                        el.classList.add('correct');
-                        el.classList.remove('incorrect-marked');
-                        adjustWidth(el);
-                    }
+                    const el = document.getElementById(`${parentId}-${i}`);
+                    if (el && answers[i]) { el.value = answers[i]; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); if (el.dataset.bank && bankId) setWordUsed(bankId, el.dataset.bank, true); }
                 }
                 if (eyeBtn) eyeBtn.classList.add('active');
                 answerStates.set(stateKey, true);
@@ -707,6 +692,7 @@
                             input.classList.add('correct');
                             input.classList.remove('incorrect-marked');
                             adjustWidth(input);
+                            if (input.dataset.bank && input.dataset.bankid) setWordUsed(input.dataset.bankid, input.dataset.bank, true);
                         }
                     });
                     const eyeBtn = document.getElementById(parentId + '-eye');
@@ -719,6 +705,7 @@
         function resetSection(prefix) {
             document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
                 if (i.tagName === 'INPUT') {
+                    if (i.dataset.bank && i.dataset.bankid) setWordUsed(i.dataset.bankid, i.dataset.bank, false);
                     i.value = "";
                     i.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(i);
@@ -756,8 +743,10 @@
                 if (!userAnswer.trim()) return;
                 if (validateMultipleAnswers(userAnswer, correctAnswers)) {
                     el.classList.add('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
                 } else {
                     el.classList.add('incorrect-marked');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                 }
             });
         }
@@ -765,7 +754,8 @@
         function allowDrop(ev) { ev.preventDefault(); }
         function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); selectedWordEl = ev.target; }
         function drop(ev) { ev.preventDefault(); const data = ev.dataTransfer.getData("text"); if (ev.target.tagName === 'INPUT') { ev.target.value = data; adjustWidth(ev.target); updateWordBank(); } }
-        function clickSelect(el) { if (selectedWordEl) selectedWordEl.style.background = "#eef2f7"; selectedWordEl = el; el.style.background = "#ffeaa7"; }
+        function setWordUsed(bankId, word, used) { if (!word) return; const bank = document.getElementById(bankId); if (!bank) return; const target = word.trim().toLowerCase(); bank.querySelectorAll('.word-item').forEach(el => { if (el.textContent.trim().toLowerCase() === target) el.classList.toggle('used', used); }); }
+        function clickSelect(el) { if (selectedWordEl) selectedWordEl.classList.remove('selected-word'); selectedWordEl = el; el.classList.add('selected-word'); }
         function updateWordBank() {
             const inputs = Array.from(document.querySelectorAll('input[data-type="input"]')).map(i => normalizeAnswer(i.value));
             document.querySelectorAll('.word-item').forEach(item => {
@@ -779,7 +769,7 @@
             if (e.target.tagName === 'INPUT' && selectedWordEl) {
                 e.target.value = selectedWordEl.innerText;
                 adjustWidth(e.target);
-                selectedWordEl.style.background = "#eef2f7";
+                selectedWordEl.classList.remove('selected-word');
                 selectedWordEl = null;
                 updateWordBank();
             }

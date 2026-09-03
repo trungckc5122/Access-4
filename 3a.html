@@ -688,71 +688,41 @@
         function renderGapFill(id, data, bankId) {
             const container = document.getElementById(`questions-${id}`);
             const bank = document.getElementById(bankId);
-
-            // Clear existing content
             container.innerHTML = '';
             bank.innerHTML = '';
-
-            // Create word bank - IMPORTANT: Always use lowercase for word bank display
             const words = [...new Set(data.map(item => item.ans.toLowerCase()))].sort();
             words.forEach(w => {
-                // Word bank items are always displayed in lowercase
                 bank.innerHTML += `<div class="word-item" draggable="true" ondragstart="drag(event)" onclick="clickSelect(this)">${w}</div>`;
             });
-
-            // Render questions
             data.forEach((it, i) => {
                 const qid = `${id}-q${i}`;
-
-                // Check if sentence already has a number
+                const answers = it.ans.split('|');
                 let sentence = it.q;
                 let numberHtml = '';
                 const numberMatch = sentence.match(/^(\d+)\.\s+/);
-
                 if (numberMatch) {
-                    // Remove the number from the sentence and use it
                     sentence = sentence.replace(/^\d+\.\s+/, '');
                     numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
                 } else {
-                    // Use automatic numbering
                     numberHtml = `<span class="exercise-number">${i + 1}</span>`;
                 }
-
-                // IMPORTANT: Replace ALL occurrences of underscores (any length) with input fields
-                // This handles "______" and any other variations
-                // For multiple gaps, we need to create separate input fields
                 const gapCount = (sentence.match(/_{2,}/g) || []).length;
                 let inputIndex = 0;
-
-                // Create a unique ID for each input field in multi-gap questions
                 sentence = sentence.replace(/_{2,}/g, (match) => {
                     const inputId = `${qid}-${inputIndex}`;
+                    const ansVal = answers[inputIndex] || answers[0] || '';
                     inputIndex++;
-                    return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
+                    return `<input type="text" class="word-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${inputIndex - 1}" data-ans="${ansVal}" data-bank="${ansVal}" data-bankid="${bankId}" oninput="adjustWidth(this)" ondrop="drop(event)" ondragover="allowDrop(event)">`;
                 });
-
-                // Store the answers for each gap
-                const answers = it.ans.split('|');
-
                 container.innerHTML += `
             <div class="question-row">
                 ${numberHtml} ${sentence}
                 <div class="row-btns">
-                    <button class="btn-small" onclick="showMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
+                    <button class="btn-small" id="${qid}-eye" onclick="showMultiGapAns('${qid}', ${gapCount}, '${it.ans}', '${bankId}')">👁️</button>
                     <button class="info-btn" onclick="toggleHint('${qid}')">i</button>
                 </div>
                 <div class="hint-box" id="${qid}-hint">${it.hint}</div>
             </div>`;
-
-                // Set data-ans attribute for each input field
-                setTimeout(() => {
-                    for (let j = 0; j < gapCount; j++) {
-                        const input = document.getElementById(`${qid}-${j}`);
-                        if (input && answers[j]) {
-                            input.setAttribute('data-ans', answers[j]);
-                        }
-                    }
-                }, 0);
             });
         }
 
@@ -981,48 +951,37 @@
             }
         }
 
-        function showMultiGapAns(parentId, gapCount, answersStr) {
+        function showMultiGapAns(parentId, gapCount, answersStr, bankId) {
             const answers = answersStr.split('|');
-
             for (let i = 0; i < gapCount; i++) {
-                const inputId = `${parentId}-${i}`;
-                const el = document.getElementById(inputId);
+                const el = document.getElementById(`${parentId}-${i}`);
                 if (el && answers[i]) {
-                    // IMPORTANT: Show answer with exact original capitalization
                     el.value = answers[i];
                     el.classList.add('correct');
                     el.classList.remove('incorrect-marked');
                     adjustWidth(el);
+                    if (el.dataset.bank && bankId) setWordUsed(bankId, el.dataset.bank, true);
                 }
             }
-
             updateWordBank();
         }
 
         function showAnswers(prefix) {
-            // Handle regular single-gap questions
             document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
                 if (el.dataset.type === 'input' && !el.dataset.parent) {
                     showSingleAns(el.id);
                 }
             });
-
-            // Handle multi-gap questions
             document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
                 if (el.dataset.type === 'input' && el.dataset.parent) {
-                    // Find all inputs with the same parent
                     const parentId = el.dataset.parent;
                     const inputs = document.querySelectorAll(`[data-parent="${parentId}"]`);
                     const answers = [];
-
-                    // Collect answers from all inputs
                     inputs.forEach(input => {
                         if (input.dataset.ans) {
                             answers[parseInt(input.dataset.gapIndex)] = input.dataset.ans;
                         }
                     });
-
-                    // Show answers for each input
                     inputs.forEach(input => {
                         const index = parseInt(input.dataset.gapIndex);
                         if (answers[index]) {
@@ -1030,6 +989,7 @@
                             input.classList.add('correct');
                             input.classList.remove('incorrect-marked');
                             adjustWidth(input);
+                            if (input.dataset.bank && input.dataset.bankid) setWordUsed(input.dataset.bankid, input.dataset.bank, true);
                         }
                     });
                 }
@@ -1039,6 +999,7 @@
         function resetSection(prefix) {
             document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
                 if (i.tagName === 'INPUT') {
+                    if (i.dataset.bank && i.dataset.bankid) setWordUsed(i.dataset.bankid, i.dataset.bank, false);
                     i.value = "";
                     i.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(i);
@@ -1049,12 +1010,9 @@
             document.querySelectorAll(`[id$="-eye"], [id$="-info"]`).forEach(btn => {
                 if (btn.id.includes(prefix)) btn.classList.remove('active');
             });
-
-            // Reset global hint state
             if (currentActiveHint && currentActiveHint.id.includes(prefix)) {
                 currentActiveHint = null;
             }
-
             updateWordBank();
         }
 
@@ -1077,23 +1035,17 @@
         }
 
         function checkAll() {
-            // Check text inputs
             document.querySelectorAll('[data-type="input"]').forEach(el => {
                 const correctAnswers = el.dataset.ans;
                 const userAnswer = el.value;
-
                 el.classList.remove('correct', 'incorrect-marked');
-
-                if (!userAnswer.trim()) {
-                    // Empty answer, do nothing
-                    return;
-                }
-
-                // IMPORTANT: Case-insensitive validation
+                if (!userAnswer.trim()) return;
                 if (validateMultipleAnswers(userAnswer, correctAnswers)) {
                     el.classList.add('correct');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, true);
                 } else {
                     el.classList.add('incorrect-marked');
+                    if (el.dataset.bank && el.dataset.bankid) setWordUsed(el.dataset.bankid, el.dataset.bank, false);
                 }
             });
         }
@@ -1123,21 +1075,20 @@
             }
         }
 
+        function setWordUsed(bankId, word, used) { if (!word) return; const bank = document.getElementById(bankId); if (!bank) return; const target = word.trim().toLowerCase(); bank.querySelectorAll('.word-item').forEach(el => { if (el.textContent.trim().toLowerCase() === target) el.classList.toggle('used', used); }); }
+
         function clickSelect(el) {
-            if (selectedWordEl) {
-                selectedWordEl.style.background = "#eef2f7";
-            }
+            if (selectedWordEl) selectedWordEl.classList.remove('selected-word');
             selectedWordEl = el;
-            el.style.background = "#ffeaa7";
+            el.classList.add('selected-word');
         }
 
         // Handle word bank click to input
         document.addEventListener('click', (e) => {
             if (e.target.tagName === 'INPUT' && selectedWordEl) {
-                // IMPORTANT: Word bank provides lowercase, but user can type with any case
                 e.target.value = selectedWordEl.innerText;
                 adjustWidth(e.target);
-                selectedWordEl.style.background = "#eef2f7";
+                selectedWordEl.classList.remove('selected-word');
                 selectedWordEl = null;
                 updateWordBank();
             }
