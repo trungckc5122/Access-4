@@ -182,11 +182,6 @@
             color: white;
         }
 
-        #ex9-container .hint-box {
-            display: none;
-            width: 100%;
-        }
-
         @media (max-width: 700px) {
             #ex9-container .choice-group {
                 display: flex;
@@ -417,12 +412,6 @@
             white-space: nowrap;
         }
 
-        #ex6-container .hint-box,
-        #ex7-container .hint-box {
-            display: none;
-            width: 100%;
-        }
-
         .dialogue-block {
             margin-bottom: 22px;
             padding-bottom: 18px;
@@ -470,7 +459,7 @@
 
         <!-- EX1: age & life stages -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>1.</strong> Rewrite the sentences with the words below.</div>
+            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Rewrite the sentences with the words below.</div>
             <div class="word-bank sticky-bank" id="bank-ex1"></div>
             <div id="ex1-container"></div>
             <div class="controls-row">
@@ -481,7 +470,7 @@
 
         <!-- EX2: life events verbs -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>2.</strong> Complete each pair of life events with a suitable verb.
+            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete each pair of life events with a suitable verb.
             </div>
             <div id="ex2-container"></div>
             <div class="controls-row">
@@ -492,7 +481,7 @@
 
         <!-- EX3: life event verbs (with word bank shown, no drag) -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>3.</strong> Complete the sentences with the correct form of the verbs
+            <div class="exercise-title"><strong class="q-number-inline">3.</strong> Complete the sentences with the correct form of the verbs
                 below.</div>
             <div class="word-bank sticky-bank" id="bank-ex3"></div>
             <div id="ex3-container"></div>
@@ -504,7 +493,7 @@
 
         <!-- EX4: phrasal verbs replacing underlined words -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>4.</strong> Replace the underlined words with the correct form of the
+            <div class="exercise-title"><strong class="q-number-inline">4.</strong> Replace the underlined words with the correct form of the
                 phrasal verbs below.</div>
             <div class="word-bank sticky-bank" id="bank-ex4"></div>
             <div id="ex4-container"></div>
@@ -516,7 +505,7 @@
 
         <!-- EX5: phrasal verb pairs -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>5.</strong> Complete the sentences with the correct form of the correct
+            <div class="exercise-title"><strong class="q-number-inline">5.</strong> Complete the sentences with the correct form of the correct
                 verb in brackets. Include a pronoun where necessary.</div>
             <div id="ex5-container"></div>
             <div class="controls-row">
@@ -527,7 +516,7 @@
 
         <!-- EX6: past tense narrative text -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>6.</strong> Complete the text with the correct past tense form of the
+            <div class="exercise-title"><strong class="q-number-inline">6.</strong> Complete the text with the correct past tense form of the
                 verbs in brackets.</div>
             <div id="ex6-container"></div>
             <div class="controls-row">
@@ -538,7 +527,7 @@
 
         <!-- EX7: dialogues with used to -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>7.</strong> Complete the dialogues with the correct form of <em>used
+            <div class="exercise-title"><strong class="q-number-inline">7.</strong> Complete the dialogues with the correct form of <em>used
                     to</em> and the verbs in brackets.</div>
             <div id="ex7-container"></div>
             <div class="controls-row">
@@ -549,7 +538,7 @@
 
         <!-- EX8: used to / get used to -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>8.</strong> Complete the sentences with <em>used to</em> or <em>get used
+            <div class="exercise-title"><strong class="q-number-inline">8.</strong> Complete the sentences with <em>used to</em> or <em>get used
                     to</em>.</div>
             <div id="ex8-container"></div>
             <div class="controls-row">
@@ -560,7 +549,7 @@
 
         <!-- EXERCISE 9: USE OF ENGLISH (option cards embedded in the text) -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong>9.</strong> Circle the correct answers.</div>
+            <div class="exercise-title"><strong class="q-number-inline">9.</strong> Circle the correct answers.</div>
             <p
                 style="font-weight:bold; font-size:1.2rem; border-bottom:2px solid var(--primary); padding-bottom:10px; margin-bottom:15px; color:var(--primary-dark);">
                 Boyhood</p>
@@ -573,6 +562,8 @@
     </div>
 
     <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
+
+    <script src="access-core.js"></script>
 
     <script>
         // Utilities
@@ -612,21 +603,57 @@
             }
         }
 
+        // Hint popup - reference implementation tự định vị theo viewport (script này giờ load SAU
+        // access-core.js nên luôn thắng, không còn phụ thuộc quy ước lookup id của access-core.js)
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(evtOrId, id) {
             // Accept both toggleHint(event, id) and legacy toggleHint(id)
-            let hintId;
+            let event = null, hintId;
             if (typeof evtOrId === 'string') {
                 hintId = evtOrId;
             } else {
-                if (evtOrId && evtOrId.stopPropagation) evtOrId.stopPropagation();
+                event = evtOrId;
+                if (event) event.stopPropagation();
                 hintId = id;
             }
             const h = document.getElementById(hintId);
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(box => box.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            currentHintBtn = event ? (event.currentTarget || event.target) : null;
+            positionHintBox(h, currentHintBtn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // Safe reveal for inputs — avoids apostrophe-in-onclick-string bugs
         function revealInput(id) {
@@ -683,7 +710,7 @@
             ex1Data.forEach((item, i) => {
                 const primary = item.ans.split('|')[0];
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> ${item.text}<br>
+                    <strong class="q-number-inline">${i + 1}.</strong> ${item.text}<br>
                     <div style="margin-top:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                         <input type="text" id="ex1-q${i}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex1" class="task5-input" style="width:400px; max-width:100%; text-align:left; flex-shrink:0;" oninput="adjustWidth(this)">
                         <span class="row-btns">
@@ -713,7 +740,7 @@
             let html = '';
             ex2Data.forEach((item, i) => {
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> <input type="text" id="ex2-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)"> <span class="tiny-verb">${item.pair}</span>
+                    <strong class="q-number-inline">${i + 1}.</strong> <input type="text" id="ex2-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)"> <span class="tiny-verb">${item.pair}</span>
                     <span class="row-btns">
                         <button class="eye-btn" onclick="revealInput('ex2-q${i}')">👁️</button>
                         <span class="hint-anchor">
@@ -743,7 +770,7 @@
             let html = '';
             ex3Data.forEach((item, i) => {
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex3-q${i}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex3" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <strong class="q-number-inline">${i + 1}.</strong> ${item.text.replace('______', `<input type="text" id="ex3-q${i}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex3" class="task5-input" oninput="adjustWidth(this)">`)}
                     <span class="row-btns">
                         <button class="eye-btn" onclick="revealInput('ex3-q${i}')">👁️</button>
                         <span class="hint-anchor">
@@ -776,7 +803,7 @@
             let html = '';
             ex4Data.forEach((item, i) => {
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> ${item.text} <input type="text" id="ex4-q${i}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex4" class="task5-input" oninput="adjustWidth(this)">
+                    <strong class="q-number-inline">${i + 1}.</strong> ${item.text} <input type="text" id="ex4-q${i}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex4" class="task5-input" oninput="adjustWidth(this)">
                     <span class="row-btns">
                         <button class="eye-btn" onclick="revealInput('ex4-q${i}')">👁️</button>
                         <span class="hint-anchor">
@@ -804,7 +831,7 @@
             let html = '';
             ex5Data.forEach((item, i) => {
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex5-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <strong class="q-number-inline">${i + 1}.</strong> ${item.text.replace('______', `<input type="text" id="ex5-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
                     <span class="row-btns">
                         <button class="eye-btn" onclick="revealInput('ex5-q${i}')">👁️</button>
                         <span class="hint-anchor">
@@ -941,7 +968,7 @@
             let html = '';
             ex8Data.forEach((item, i) => {
                 html += `<div class="question-row">
-                    <strong>${i + 1}</strong> ${item.text.replace('______', `<input type="text" id="ex8-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
+                    <strong class="q-number-inline">${i + 1}.</strong> ${item.text.replace('______', `<input type="text" id="ex8-q${i}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">`)}
                     <span class="row-btns">
                         <button class="eye-btn" onclick="revealInput('ex8-q${i}')">👁️</button>
                         <span class="hint-anchor">
@@ -1014,6 +1041,7 @@
         window.resetEx9 = function () {
             document.querySelectorAll('#ex9-container .choice-btn').forEach(btn => btn.classList.remove('selected', 'correct-highlight', 'incorrect-highlight'));
             document.querySelectorAll('#ex9-container .hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
         };
 
         // ================= INITIALIZE ALL =================
@@ -1066,6 +1094,7 @@
 
         window.resetSection = function (section) {
             document.querySelectorAll(`#${section}-container .hint-box`).forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
             document.querySelectorAll(`#${section}-container .task5-input`).forEach(el => {
                 el.value = '';
                 el.classList.remove('correct', 'incorrect-marked');
@@ -1097,7 +1126,6 @@
             });
         };
     </script>
-    <script src="access-core.js"></script>
 </body>
 
 </html>
