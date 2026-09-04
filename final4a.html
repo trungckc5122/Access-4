@@ -53,6 +53,25 @@
         .vocab-table tbody tr td:first-child:hover::after, .vocab-table tbody tr td:first-child.speaking::after {
             opacity: 1;
         }
+
+        /* Word Choice (Inline Option Cards) - Chuan hoa CSS Option Cards */
+        .word-choice {
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary, #0d9488);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .word-choice:hover { background: var(--primary-light, #e0f2f1); }
+        .word-choice.selected { background: var(--primary, #0d9488); color: #fff; }
+        .word-choice.correct-select { background: var(--success, #10b981) !important; color: #fff !important; }
+        .word-choice.incorrect-select { background: var(--error, #ef4444) !important; color: #fff !important; }
+
+        .choice-gap {
+            display: contents;
+        }
     </style>
 </head>
 
@@ -733,10 +752,21 @@
             { question: "What would Vicky say on her blog?", options: ["As a child, I always knew what I wanted to do when I grew up. But I never expected to become so famous.", "If you join CycleZone, you'll get to meet celebrities and learn how they've become successful.", "Although track cycling is not the only sport I've been good at, I've never regretted my choice of career.", "In my spare time I love going to schools and helping groups of children learn to ride bikes."], correct: 2, hint: "<div class='hint-detail'>Phù hợp với câu chuyện của Vicky: cô ấy thử bơi lội trước, sau đó chọn đua xe đạp và nói đó là 'quyết định đúng đắn nhất'.</div><div class='hint-detail'><span class='key-word'>quyết định đúng đắn nhất</span> → không bao giờ hối hận.</div>", para: "p2" }
         ];
 
-        // Shuffle functions
-        function shuffleArray(a) { let s = [...a]; for (let i = s.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[s[i], s[j]] = [s[j], s[i]]; } return s; }
+        // Order initialization (no shuffle)
+        function shuffleArray(a) { return [...a]; }
         let t2_data = [], t2_wordBank = [], t3_data = [], t4_data = [], t4_wordBank = [], t5_data = [], t5_wordBank = [], t6_data = [], t7_data = [], t8_data = [];
-        function initializeAllOrders() { t2_data = shuffleArray(t2_data_original); t2_wordBank = shuffleArray(t2_wordBank_original); t3_data = shuffleArray(t3_data_original); t4_data = shuffleArray(t4_data_original); t4_wordBank = shuffleArray(t4_wordBank_original); t5_data = shuffleArray(t5_data_original); t5_wordBank = shuffleArray(t5_wordBank_original); t6_data = shuffleArray(t6_data_original); t7_data = shuffleArray(t7_data_original); t8_data = shuffleArray(t8_data_original); }
+        function initializeAllOrders() {
+            t2_data = [...t2_data_original];
+            t2_wordBank = [...t2_wordBank_original];
+            t3_data = [...t3_data_original];
+            t4_data = [...t4_data_original];
+            t4_wordBank = [...t4_wordBank_original];
+            t5_data = [...t5_data_original];
+            t5_wordBank = [...t5_wordBank_original];
+            t6_data = [...t6_data_original];
+            t7_data = [...t7_data_original];
+            t8_data = [...t8_data_original];
+        }
 
         // State
         let answerStates = new Map(), wordUsageCount = { t2: {}, t4: {}, t5: {} }, optionSelections = new Map(), readingSelections = new Map();
@@ -748,12 +778,12 @@
         function calculateTaskCorrect(taskId) {
             if (taskId === 't1') { let c = 0; t1_data.forEach((_, i) => { let inp = document.getElementById(`t1-q${i}`); if (inp && inp.value.trim() && normalizeAnswer(inp.value) === normalizeAnswer(t1_data[i].letter)) c++; }); return c; }
             if (taskId === 't2') { let c = 0; t2_data.forEach((_, i) => { let inp = document.getElementById(`t2-q${i}`); if (inp && inp.value.trim() && normalizeAnswer(inp.value) === normalizeAnswer(t2_data[i].ans)) c++; }); return c; }
-            if (taskId === 't3') { let c = 0; t3_data.forEach((_, i) => { if (optionSelections.get(`t3-q${i}`) === t3_data[i].ans) c++; }); return c; }
+            if (taskId === 't3') { let c = 0; t3_data.forEach((_, i) => { if (normalizeAnswer(optionSelections.get(`t3-q${i}`) || '') === normalizeAnswer(t3_data[i].ans)) c++; }); return c; }
             if (taskId === 't4') { let c = 0; t4_data.forEach((_, i) => { let inp = document.getElementById(`t4-q${i}`); if (inp && inp.value.trim() && normalizeAnswer(inp.value) === normalizeAnswer(t4_data[i].ans)) c++; }); return c; }
             if (taskId === 't5') { let c = 0; t5_data.forEach((_, i) => { let inp = document.getElementById(`t5-q${i}`); if (inp && inp.value.trim() && normalizeAnswer(inp.value) === normalizeAnswer(t5_data[i].ans)) c++; }); return c; }
-            if (taskId === 't6') { let c = 0; t6_data.forEach((_, i) => { if (optionSelections.get(`t6-q${i}`) === t6_data[i].ans) c++; }); return c; }
+            if (taskId === 't6') { let c = 0; t6_data.forEach((_, i) => { if (normalizeAnswer(optionSelections.get(`t6-q${i}`) || '') === normalizeAnswer(t6_data[i].ans)) c++; }); return c; }
             if (taskId === 't7') { let c = 0; t7_data.forEach((_, i) => { let inp = document.getElementById(`t7-q${i}`); if (inp && inp.value.trim() && normalizeAnswer(inp.value) === normalizeAnswer(t7_data[i].ans)) c++; }); return c; }
-            if (taskId === 't8') { let c = 0; t8_data.forEach((_, i) => { if (optionSelections.get(`t8-q${i}`) === t8_data[i].ans) c++; }); return c; }
+            if (taskId === 't8') { let c = 0; t8_data.forEach((_, i) => { if (normalizeAnswer(optionSelections.get(`t8-q${i}`) || '') === normalizeAnswer(t8_data[i].ans)) c++; }); return c; }
             if (taskId === 't9') { let c = 0; t9_data.forEach((_, i) => { if (readingSelections.get(`t9-q${i}`) === t9_data[i].correct) c++; }); return c; }
             return 0;
         }
@@ -775,12 +805,259 @@
         }
         if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = () => { }; }
         function toggleHint(id, wordToSpeak = null) { let h = document.getElementById(id + '-hint'), b = document.getElementById(id + '-info'); if (h) { if (currentActiveHint === h) { h.style.display = 'none'; if (b) b.classList.remove('active'); currentActiveHint = null; } else { if (currentActiveHint) { currentActiveHint.style.display = 'none'; let oldB = document.getElementById(currentActiveHint.id.replace('-hint', '-info')); if (oldB) oldB.classList.remove('active'); } h.style.display = 'block'; if (b) b.classList.add('active'); currentActiveHint = h; if (wordToSpeak && id.startsWith('t1')) speakText(wordToSpeak); } } }
-        function selectOption(qid, opt) { let idx = parseInt(qid.split('-q')[1]), data; if (qid.startsWith('t3')) data = t3_data; else if (qid.startsWith('t6')) data = t6_data; else data = t8_data; let btns = []; for (let i = 0; i < data[idx].options.length; i++) { let b = document.getElementById(`${qid}-opt${i}`); if (b) btns.push(b); } btns.forEach(b => b.classList.remove('selected')); let sb = btns.find(b => b.textContent === opt); if (sb) sb.classList.add('selected'); optionSelections.set(qid, opt); updateAllProgress(); }
+        function selectChoice(span, qid) {
+            let row = span.closest('.question-row');
+            let isAlreadySelected = span.classList.contains('selected');
+            row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            if (isAlreadySelected) {
+                optionSelections.delete(qid);
+            } else {
+                span.classList.add('selected');
+                optionSelections.set(qid, span.textContent.trim());
+            }
+            let eye = document.getElementById(`${qid}-eye`);
+            if (eye) eye.classList.remove('active');
+            answerStates.set(`${qid}-state`, false);
+            updateAllProgress();
+        }
+        function selectOption(qid, opt) {
+            let row = document.getElementById(`${qid}-eye`)?.closest('.question-row');
+            if (row) {
+                let span = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.trim() === opt);
+                if (span) { selectChoice(span, qid); return; }
+            }
+            optionSelections.set(qid, opt);
+            updateAllProgress();
+        }
         function selectReadingOption(qid, optIdx) { let opts = document.querySelectorAll(`#${qid}-container .mcq-option`); opts.forEach(o => o.classList.remove('selected')); let sel = document.getElementById(`${qid}-option-${optIdx}`); if (sel) sel.classList.add('selected'); readingSelections.set(qid, optIdx); updateAllProgress(); }
-        function checkAll() { document.querySelectorAll('[data-type="input"]').forEach(el => { let ans = el.dataset.ans, val = el.value; el.classList.remove('correct', 'incorrect-marked'); if (val.trim() && normalizeAnswer(val) === normalizeAnswer(ans)) el.classList.add('correct'); else if (val.trim()) el.classList.add('incorrect-marked'); });['t3', 't6', 't8'].forEach(tid => { let data = tid === 't3' ? t3_data : (tid === 't6' ? t6_data : t8_data); data.forEach((item, i) => { let qid = `${tid}-q${i}`, sel = optionSelections.get(qid), cor = item.ans; let btns = []; for (let j = 0; j < item.options.length; j++) { let b = document.getElementById(`${qid}-opt${j}`); if (b) btns.push(b); } btns.forEach(b => b.classList.remove('correct-option', 'incorrect-option')); let sb = btns.find(b => b.textContent === sel); if (sb) { if (cor.includes(',')) { let cors = cor.split(',').map(s => s.trim()); if (cors.some(c => sel.includes(c))) sb.classList.add('correct-option'); else sb.classList.add('incorrect-option'); } else if (sel === cor) sb.classList.add('correct-option'); else sb.classList.add('incorrect-option'); } }); }); t9_data.forEach((item, i) => { let qid = `t9-q${i}`, sel = readingSelections.get(qid), cor = item.correct; let opts = document.querySelectorAll(`#${qid}-container .mcq-option`); opts.forEach((o, idx) => { o.classList.remove('correct', 'incorrect', 'selected'); if (sel !== undefined) { if (idx === sel) { if (sel === cor) o.classList.add('correct'); else o.classList.add('incorrect'); } } }); }); updateAllProgress(); }
-        function resetSection(prefix) { if (prefix === 't9') { clearDynamicHighlights(); document.querySelectorAll('#reading-questions-t9 .mcq-option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect')); readingSelections.clear(); document.querySelectorAll('#reading-questions-t9 .btn-small[id$="-eye"]').forEach(e => e.classList.remove('active')); for (let k of answerStates.keys()) if (k.includes('t9-q')) answerStates.delete(k); updateAllProgress(); return; } document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => { if (i.tagName === 'INPUT') { i.value = ""; i.classList.remove('correct', 'incorrect-marked'); adjustWidth(i); } let h = document.getElementById(i.id + '-hint'); if (h) h.style.display = 'none'; }); document.querySelectorAll(`[id$="-eye"],[id$="-info"]`).forEach(b => { if (b.id.includes(prefix)) b.classList.remove('active'); }); if (prefix === 't3' || prefix === 't6' || prefix === 't8') { document.querySelectorAll(`#questions-${prefix} .option-btn`).forEach(b => b.classList.remove('selected', 'correct-option', 'incorrect-option')); for (let k of optionSelections.keys()) if (k.startsWith(`${prefix}-`)) optionSelections.delete(k); for (let k of answerStates.keys()) if (k.includes(`${prefix}-q`)) answerStates.delete(k); } if (prefix === 't2' || prefix === 't4' || prefix === 't5') { document.querySelectorAll(`#bank-${prefix} .word-item`).forEach(w => { w.classList.remove('used'); w.style.display = 'flex'; }); if (wordUsageCount[prefix]) Object.keys(wordUsageCount[prefix]).forEach(w => wordUsageCount[prefix][w] = 0); } if (prefix === 't1' || prefix === 't7') { for (let k of answerStates.keys()) if (k.includes(`${prefix}-q`)) answerStates.delete(k); } updateAllProgress(); }
-        function toggleSingleAns(id) { let qid = id.replace('-eye', ''); if (qid.startsWith('t9-q')) { let idx = parseInt(qid.split('-q')[1]), cor = t9_data[idx].correct; let opts = document.querySelectorAll(`#${qid}-container .mcq-option`); let eye = document.getElementById(id), state = answerStates.get(`${qid}-state`) || false; if (state) { opts.forEach((o, i) => { o.classList.remove('correct', 'incorrect'); let us = readingSelections.get(qid); if (us !== undefined && i === us) o.classList.add('selected'); }); if (eye) eye.classList.remove('active'); answerStates.set(`${qid}-state`, false); clearDynamicHighlights(); } else { opts.forEach((o, i) => { o.classList.remove('selected'); if (i === cor) o.classList.add('correct'); }); if (eye) eye.classList.add('active'); answerStates.set(`${qid}-state`, true); highlightAnswerLocation(idx + 1); } updateAllProgress(); return; } if (qid.startsWith('t3-q') || qid.startsWith('t6-q') || qid.startsWith('t8-q')) { let idx = parseInt(qid.split('-q')[1]), data; if (qid.startsWith('t3')) data = t3_data; else if (qid.startsWith('t6')) data = t6_data; else data = t8_data; let cor = data[idx].ans; let btns = []; for (let i = 0; i < data[idx].options.length; i++) { let b = document.getElementById(`${qid}-opt${i}`); if (b) btns.push(b); } let state = answerStates.get(`${qid}-state`) || false; if (state) { btns.forEach(b => { b.classList.remove('correct-option', 'incorrect-option'); let us = optionSelections.get(qid); if (us && b.textContent === us) b.classList.add('selected'); }); document.getElementById(id).classList.remove('active'); answerStates.set(`${qid}-state`, false); } else { btns.forEach(b => { b.classList.remove('selected', 'correct-option', 'incorrect-option'); if (cor.includes(',')) { let cors = cor.split(',').map(c => c.trim()); if (cors.some(c => b.textContent.includes(c))) b.classList.add('correct-option'); } else if (b.textContent === cor) b.classList.add('correct-option'); }); document.getElementById(id).classList.add('active'); answerStates.set(`${qid}-state`, true); } updateAllProgress(); return; } let el = document.getElementById(qid); if (!el) return; let ans = el.dataset.ans, eyeBtn = document.getElementById(id), state = answerStates.get(`${qid}-state`) || false; if (state) { el.value = ""; el.classList.remove('correct', 'incorrect-marked'); adjustWidth(el); if (eyeBtn) eyeBtn.classList.remove('active'); answerStates.set(`${qid}-state`, false); if (qid.startsWith('t2') || qid.startsWith('t4') || qid.startsWith('t5')) updateWordBank(qid.split('-')[0]); } else { if (ans) { el.value = ans; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); if (eyeBtn) eyeBtn.classList.add('active'); answerStates.set(`${qid}-state`, true); if (qid.startsWith('t1')) { let vt = el.closest('.vocab-item')?.querySelector('.vocab-text')?.textContent; if (vt) speakText(vt); } if (qid.startsWith('t2') || qid.startsWith('t4') || qid.startsWith('t5')) updateWordBank(qid.split('-')[0]); } } updateAllProgress(); }
-        function showAnswers(prefix) { if (prefix === 't2' || prefix === 't4' || prefix === 't5') { let data = prefix === 't2' ? t2_data : (prefix === 't4' ? t4_data : t5_data); data.forEach((item, i) => { let qid = `${prefix}-q${i}`, el = document.getElementById(qid); if (el && item.ans) { el.value = item.ans; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); let eye = document.getElementById(`${qid}-eye`); if (eye) eye.classList.add('active'); answerStates.set(`${qid}-state`, true); let norm = normalizeAnswer(item.ans); document.querySelectorAll(`#bank-${prefix} .word-item`).forEach(w => { if (normalizeAnswer(w.dataset.word) === norm) w.classList.add('used'); }); } }); updateAllProgress(); return; } if (prefix === 't9') { clearDynamicHighlights(); t9_data.forEach((item, i) => { let qid = `t9-q${i}`, cor = item.correct; let opts = document.querySelectorAll(`#${qid}-container .mcq-option`); opts.forEach((o, idx) => { o.classList.remove('correct', 'incorrect', 'selected'); if (idx === cor) o.classList.add('correct'); }); let eye = document.getElementById(`${qid}-eye`); if (eye) eye.classList.add('active'); answerStates.set(`${qid}-state`, true); }); updateAllProgress(); return; } if (prefix === 't3' || prefix === 't6' || prefix === 't8') { let data = prefix === 't3' ? t3_data : (prefix === 't6' ? t6_data : t8_data); data.forEach((item, i) => { let qid = `${prefix}-q${i}`, cor = item.ans; let btns = []; for (let j = 0; j < item.options.length; j++) { let b = document.getElementById(`${qid}-opt${j}`); if (b) btns.push(b); } btns.forEach(b => { b.classList.remove('selected', 'correct-option', 'incorrect-option'); if (cor.includes(',')) { let cors = cor.split(',').map(c => c.trim()); if (cors.some(c => b.textContent.includes(c))) b.classList.add('correct-option'); } else if (b.textContent === cor) b.classList.add('correct-option'); }); let eye = document.getElementById(`${qid}-eye`); if (eye) eye.classList.add('active'); answerStates.set(`${qid}-state`, true); }); updateAllProgress(); return; } if (prefix === 't1' || prefix === 't7') { document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => { if (el.dataset && el.dataset.type === 'input') { let ans = el.dataset.ans, eye = document.getElementById(el.id + '-eye'); if (ans) { el.value = ans; el.classList.add('correct'); el.classList.remove('incorrect-marked'); adjustWidth(el); if (eye) eye.classList.add('active'); answerStates.set(`${el.id}-state`, true); } } }); updateAllProgress(); } }
+        function checkAll() {
+            document.querySelectorAll('[data-type="input"]').forEach(el => {
+                let ans = el.dataset.ans, val = el.value;
+                el.classList.remove('correct', 'incorrect-marked');
+                if (val.trim() && normalizeAnswer(val) === normalizeAnswer(ans)) el.classList.add('correct');
+                else if (val.trim()) el.classList.add('incorrect-marked');
+            });
+            ['t3', 't6', 't8'].forEach(tid => {
+                let container = document.getElementById(`questions-${tid}`);
+                if (!container) return;
+                container.querySelectorAll('.question-row').forEach(row => {
+                    let choices = row.querySelectorAll('.word-choice');
+                    choices.forEach(span => {
+                        span.classList.remove('correct-select', 'incorrect-select');
+                        if (span.classList.contains('selected')) {
+                            const isCorrect = normalizeAnswer(span.textContent) === normalizeAnswer(span.dataset.ans || '');
+                            span.classList.add(isCorrect ? 'correct-select' : 'incorrect-select');
+                        }
+                    });
+                });
+            });
+            t9_data.forEach((item, i) => {
+                let qid = `t9-q${i}`, sel = readingSelections.get(qid), cor = item.correct;
+                let opts = document.querySelectorAll(`#${qid}-container .mcq-option`);
+                opts.forEach((o, idx) => {
+                    o.classList.remove('correct', 'incorrect', 'selected');
+                    if (sel !== undefined) {
+                        if (idx === sel) {
+                            if (sel === cor) o.classList.add('correct');
+                            else o.classList.add('incorrect');
+                        }
+                    }
+                });
+            });
+            updateAllProgress();
+        }
+        function resetSection(prefix) {
+            if (prefix === 't9') {
+                clearDynamicHighlights();
+                document.querySelectorAll('#reading-questions-t9 .mcq-option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect'));
+                readingSelections.clear();
+                document.querySelectorAll('#reading-questions-t9 .btn-small[id$="-eye"]').forEach(e => e.classList.remove('active'));
+                for (let k of answerStates.keys()) if (k.includes('t9-q')) answerStates.delete(k);
+                updateAllProgress();
+                return;
+            }
+            document.querySelectorAll(`[id^="${prefix}"]`).forEach(i => {
+                if (i.tagName === 'INPUT') {
+                    i.value = "";
+                    i.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(i);
+                }
+                let h = document.getElementById(i.id + '-hint');
+                if (h) h.style.display = 'none';
+            });
+            document.querySelectorAll(`[id$="-eye"],[id$="-info"]`).forEach(b => {
+                if (b.id.includes(prefix)) b.classList.remove('active');
+            });
+            if (prefix === 't3' || prefix === 't6' || prefix === 't8') {
+                document.querySelectorAll(`#questions-${prefix} .word-choice`).forEach(b => b.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                for (let k of optionSelections.keys()) if (k.startsWith(`${prefix}-`)) optionSelections.delete(k);
+                for (let k of answerStates.keys()) if (k.includes(`${prefix}-q`)) answerStates.delete(k);
+            }
+            if (prefix === 't2' || prefix === 't4' || prefix === 't5') {
+                document.querySelectorAll(`#bank-${prefix} .word-item`).forEach(w => {
+                    w.classList.remove('used');
+                    w.style.display = 'flex';
+                });
+                if (wordUsageCount[prefix]) Object.keys(wordUsageCount[prefix]).forEach(w => wordUsageCount[prefix][w] = 0);
+            }
+            if (prefix === 't1' || prefix === 't7') {
+                for (let k of answerStates.keys()) if (k.includes(`${prefix}-q`)) answerStates.delete(k);
+            }
+            updateAllProgress();
+        }
+        function toggleSingleAns(id) {
+            let qid = id.replace('-eye', '');
+            if (qid.startsWith('t9-q')) {
+                let idx = parseInt(qid.split('-q')[1]), cor = t9_data[idx].correct;
+                let opts = document.querySelectorAll(`#${qid}-container .mcq-option`);
+                let eye = document.getElementById(id), state = answerStates.get(`${qid}-state`) || false;
+                if (state) {
+                    opts.forEach((o, i) => {
+                        o.classList.remove('correct', 'incorrect');
+                        let us = readingSelections.get(qid);
+                        if (us !== undefined && i === us) o.classList.add('selected');
+                    });
+                    if (eye) eye.classList.remove('active');
+                    answerStates.set(`${qid}-state`, false);
+                    clearDynamicHighlights();
+                } else {
+                    opts.forEach((o, i) => {
+                        o.classList.remove('selected');
+                        if (i === cor) o.classList.add('correct');
+                    });
+                    if (eye) eye.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                    highlightAnswerLocation(idx + 1);
+                }
+                updateAllProgress();
+                return;
+            }
+            if (qid.startsWith('t3-q') || qid.startsWith('t6-q') || qid.startsWith('t8-q')) {
+                let eye = document.getElementById(id);
+                let row = eye ? eye.closest('.question-row') : null;
+                if (!row) return;
+                let choices = row.querySelectorAll('.word-choice');
+                let state = answerStates.get(`${qid}-state`) || false;
+                if (state) {
+                    choices.forEach(b => b.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                    let us = optionSelections.get(qid);
+                    if (us) {
+                        let selSpan = Array.from(choices).find(b => normalizeAnswer(b.textContent) === normalizeAnswer(us));
+                        if (selSpan) selSpan.classList.add('selected');
+                    }
+                    if (eye) eye.classList.remove('active');
+                    answerStates.set(`${qid}-state`, false);
+                } else {
+                    choices.forEach(b => b.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                    let cor = choices[0]?.dataset.ans || '';
+                    let corSpan = Array.from(choices).find(b => normalizeAnswer(b.textContent) === normalizeAnswer(cor));
+                    if (corSpan) corSpan.classList.add('correct-select');
+                    if (eye) eye.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                }
+                updateAllProgress();
+                return;
+            }
+            let el = document.getElementById(qid);
+            if (!el) return;
+            let ans = el.dataset.ans, eyeBtn = document.getElementById(id), state = answerStates.get(`${qid}-state`) || false;
+            if (state) {
+                el.value = "";
+                el.classList.remove('correct', 'incorrect-marked');
+                adjustWidth(el);
+                if (eyeBtn) eyeBtn.classList.remove('active');
+                answerStates.set(`${qid}-state`, false);
+                if (qid.startsWith('t2') || qid.startsWith('t4') || qid.startsWith('t5')) updateWordBank(qid.split('-')[0]);
+            } else {
+                if (ans) {
+                    el.value = ans;
+                    el.classList.add('correct');
+                    el.classList.remove('incorrect-marked');
+                    adjustWidth(el);
+                    if (eyeBtn) eyeBtn.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                    if (qid.startsWith('t1')) {
+                        let vt = el.closest('.vocab-item')?.querySelector('.vocab-text')?.textContent;
+                        if (vt) speakText(vt);
+                    }
+                    if (qid.startsWith('t2') || qid.startsWith('t4') || qid.startsWith('t5')) updateWordBank(qid.split('-')[0]);
+                }
+            }
+            updateAllProgress();
+        }
+        function showAnswers(prefix) {
+            if (prefix === 't2' || prefix === 't4' || prefix === 't5') {
+                let data = prefix === 't2' ? t2_data : (prefix === 't4' ? t4_data : t5_data);
+                data.forEach((item, i) => {
+                    let qid = `${prefix}-q${i}`, el = document.getElementById(qid);
+                    if (el && item.ans) {
+                        el.value = item.ans;
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect-marked');
+                        adjustWidth(el);
+                        let eye = document.getElementById(`${qid}-eye`);
+                        if (eye) eye.classList.add('active');
+                        answerStates.set(`${qid}-state`, true);
+                        let norm = normalizeAnswer(item.ans);
+                        document.querySelectorAll(`#bank-${prefix} .word-item`).forEach(w => {
+                            if (normalizeAnswer(w.dataset.word) === norm) w.classList.add('used');
+                        });
+                    }
+                });
+                updateAllProgress();
+                return;
+            }
+            if (prefix === 't9') {
+                clearDynamicHighlights();
+                t9_data.forEach((item, i) => {
+                    let qid = `t9-q${i}`, cor = item.correct;
+                    let opts = document.querySelectorAll(`#${qid}-container .mcq-option`);
+                    opts.forEach((o, idx) => {
+                        o.classList.remove('correct', 'incorrect', 'selected');
+                        if (idx === cor) o.classList.add('correct');
+                    });
+                    let eye = document.getElementById(`${qid}-eye`);
+                    if (eye) eye.classList.add('active');
+                    answerStates.set(`${qid}-state`, true);
+                });
+                updateAllProgress();
+                return;
+            }
+            if (prefix === 't3' || prefix === 't6' || prefix === 't8') {
+                let container = document.getElementById(`questions-${prefix}`);
+                if (container) {
+                    container.querySelectorAll('.question-row').forEach((row, i) => {
+                        let qid = `${prefix}-q${i}`;
+                        let choices = row.querySelectorAll('.word-choice');
+                        choices.forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                        let cor = choices[0]?.dataset.ans || '';
+                        let corSpan = Array.from(choices).find(s => normalizeAnswer(s.textContent) === normalizeAnswer(cor));
+                        if (corSpan) corSpan.classList.add('correct-select');
+                        let eye = document.getElementById(`${qid}-eye`);
+                        if (eye) eye.classList.add('active');
+                        answerStates.set(`${qid}-state`, true);
+                    });
+                }
+                updateAllProgress();
+                return;
+            }
+            if (prefix === 't1' || prefix === 't7') {
+                document.querySelectorAll(`[id^="${prefix}-q"]`).forEach(el => {
+                    if (el.dataset && el.dataset.type === 'input') {
+                        let ans = el.dataset.ans, eye = document.getElementById(el.id + '-eye');
+                        if (ans) {
+                            el.value = ans;
+                            el.classList.add('correct');
+                            el.classList.remove('incorrect-marked');
+                            adjustWidth(el);
+                            if (eye) eye.classList.add('active');
+                            answerStates.set(`${el.id}-state`, true);
+                        }
+                    }
+                });
+                updateAllProgress();
+            }
+        }
         function dragWord(e) { e.dataTransfer.setData("text/plain", e.target.dataset.word); e.dataTransfer.setData("wordId", e.target.id); }
         function allowDrop(e) { e.preventDefault(); }
         function dropWord(e, inputId) { e.preventDefault(); let word = e.dataTransfer.getData("text/plain"), wordId = e.dataTransfer.getData("wordId"), inp = document.getElementById(inputId); if (inp) { inp.value = word; adjustWidth(inp); let wd = document.getElementById(wordId); if (wd) wd.classList.add('used'); let taskId = inputId.split('-')[0]; updateWordBankUsage(word, taskId); updateAllProgress(); } }
@@ -792,12 +1069,44 @@
         function renderInlineTask(taskId, data, hasBank) { let container = document.getElementById(`questions-${taskId}`); container.innerHTML = ''; data.forEach((item, i) => { let qid = `${taskId}-q${i}`; let parts = item.q.split('______'); let inlineInput = `<input type="text" class="word-input inline-input" id="${qid}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" ${hasBank ? `ondrop="dropWord(event,'${qid}')" ondragover="allowDrop(event)"` : ''} style="width:120px">`; let before = parts[0] || ''; let after = parts[1] || ''; let sentenceHtml = `${before} ${inlineInput} ${after}`; container.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${sentenceHtml}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); if (hasBank) { addWordBankEventListeners(taskId); } document.getElementById(`${taskId}-total`).textContent = data.length; }
         function renderTask1() { let vc = document.getElementById('vocab-t1'), dc = document.getElementById('def-t1'); vc.innerHTML = ''; dc.innerHTML = ''; let defs = {}; t1_data.forEach(item => defs[item.letter] = item.def); Object.keys(defs).sort().forEach(l => { dc.innerHTML += `<div class="definition-item"><span class="definition-letter">${l}.</span><span class="definition-text">${defs[l]}</span></div>`; }); t1_data.forEach((item, i) => { let qid = `t1-q${i}`; vc.innerHTML += `<div class="vocab-item"><span class="vocab-text">${item.v}</span><input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); document.getElementById('t1-total').textContent = t1_data.length; }
         function renderTask2() { let bank = document.getElementById('bank-t2'); bank.innerHTML = ''; wordUsageCount.t2 = {}; t2_wordBank.forEach((w, i) => { bank.innerHTML += `<div class="word-item" id="t2-word-${i}" data-word="${w.toLowerCase()}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('t2-word-${i}')">${w}</div>`; wordUsageCount.t2[w.toLowerCase()] = 0; }); renderInlineTask('t2', t2_data, true); }
-        function renderTask3() { let c = document.getElementById('questions-t3'); c.innerHTML = ''; t3_data.forEach((item, i) => { let qid = `t3-q${i}`; let optsHtml = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}','${opt}')" id="${qid}-opt${j}">${opt}</button>`).join(''); c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${item.q}<div class="option-container">${optsHtml}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); document.getElementById('t3-total').textContent = t3_data.length; }
+        function renderTask3() {
+            let c = document.getElementById('questions-t3');
+            c.innerHTML = '';
+            t3_data.forEach((item, i) => {
+                let qid = `t3-q${i}`;
+                let sentenceHtml = item.q.replace(/<span class=['"]bold-option['"]>(.*?)<\/span>/g, (m, w) =>
+                    `<span class="word-choice" data-ans="${item.ans}" onclick="selectChoice(this, '${qid}')">${w}</span>`
+                );
+                c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${sentenceHtml}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+            });
+            document.getElementById('t3-total').textContent = t3_data.length;
+        }
         function renderTask4() { let bank = document.getElementById('bank-t4'); bank.innerHTML = ''; wordUsageCount.t4 = {}; t4_wordBank.forEach((w, i) => { bank.innerHTML += `<div class="word-item" id="t4-word-${i}" data-word="${w.toLowerCase()}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('t4-word-${i}')">${w}</div>`; wordUsageCount.t4[w.toLowerCase()] = 0; }); renderInlineTask('t4', t4_data, true); }
         function renderTask5() { let bank = document.getElementById('bank-t5'); bank.innerHTML = ''; wordUsageCount.t5 = {}; t5_wordBank.forEach((w, i) => { bank.innerHTML += `<div class="word-item" id="t5-word-${i}" data-word="${w.toLowerCase()}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('t5-word-${i}')">${w}</div>`; wordUsageCount.t5[w.toLowerCase()] = 0; }); renderInlineTask('t5', t5_data, true); }
-        function renderTask6() { let c = document.getElementById('questions-t6'); c.innerHTML = ''; t6_data.forEach((item, i) => { let qid = `t6-q${i}`; let optsHtml = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}','${opt}')" id="${qid}-opt${j}">${opt}</button>`).join(''); c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${item.q}<div class="option-container">${optsHtml}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); document.getElementById('t6-total').textContent = t6_data.length; }
+        function renderTask6() {
+            let c = document.getElementById('questions-t6');
+            c.innerHTML = '';
+            t6_data.forEach((item, i) => {
+                let qid = `t6-q${i}`;
+                let choicesHtml = `<span class="word-choice" data-ans="${item.ans}" onclick="selectChoice(this, '${qid}')">${item.options[0]}</span> / <span class="word-choice" data-ans="${item.ans}" onclick="selectChoice(this, '${qid}')">${item.options[1]}</span>`;
+                let sentenceHtml = item.q.replace('______', choicesHtml);
+                c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${sentenceHtml}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+            });
+            document.getElementById('t6-total').textContent = t6_data.length;
+        }
         function renderTask7() { renderInlineTask('t7', t7_data, false); }
-        function renderTask8() { let c = document.getElementById('questions-t8'); c.innerHTML = ''; t8_data.forEach((item, i) => { let qid = `t8-q${i}`; let optsHtml = item.options.map((opt, j) => `<button class="option-btn" onclick="selectOption('${qid}','${opt}')" id="${qid}-opt${j}">${opt}</button>`).join(''); c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${item.q}<div class="option-container">${optsHtml}</div><div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); document.getElementById('t8-total').textContent = t8_data.length; }
+        function renderTask8() {
+            let c = document.getElementById('questions-t8');
+            c.innerHTML = '';
+            t8_data.forEach((item, i) => {
+                let qid = `t8-q${i}`;
+                let sentenceHtml = item.q.replace(/<span class=['"]bold-option['"]>(.*?)<\/span>/g, (m, w) =>
+                    `<span class="word-choice" data-ans="${item.ans}" onclick="selectChoice(this, '${qid}')">${w}</span>`
+                );
+                c.innerHTML += `<div class="question-row"><strong class="q-number-inline">${i + 1}.</strong> ${sentenceHtml}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+            });
+            document.getElementById('t8-total').textContent = t8_data.length;
+        }
         function renderTask9() { let qc = document.getElementById('reading-questions-t9'); qc.innerHTML = ''; t9_data.forEach((item, i) => { let qid = `t9-q${i}`, optsHtml = '<div class="mcq-options-container">'; item.options.forEach((opt, j) => { let ltr = String.fromCharCode(65 + j); optsHtml += `<div class="mcq-option" id="${qid}-option-${j}" onclick="selectReadingOption('${qid}',${j})"><span class="option-letter">${ltr}</span><span class="option-text">${opt}</span></div>`; }); optsHtml += '</div>'; qc.innerHTML += `<div class="mcq-question" id="${qid}-container"><p><strong class="q-number-inline">${i + 1}.</strong> ${item.question}</p>${optsHtml}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}-eye')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`; }); document.getElementById('t9-total').textContent = t9_data.length; }
         function clearDynamicHighlights() { let rd = document.getElementById('reading-text-t9'); if (rd) { rd.querySelectorAll('.dynamic-highlight, .keyword-highlight').forEach(el => { let p = el.parentNode; while (el.firstChild) p.insertBefore(el.firstChild, el); p.removeChild(el); }); } }
         function highlightAnswerLocation(qNum) { clearDynamicHighlights(); let loc = { 1: { text: "The track was near her school", keywords: ["track near her school"] }, 2: { text: "I began to get a bit tired of the whole thing", keywords: ["began to get a bit tired"] }, 3: { text: "We want them to learn to believe in themselves", keywords: ["believe in themselves"] }, 4: { text: "prevents the public from seeing the real work of the charity", keywords: ["prevents the public"] }, 5: { text: "She says that was the best decision she ever made", keywords: ["best decision"] } }[qNum]; if (!loc) return; let rd = document.getElementById('reading-text-t9'), ps = rd.getElementsByTagName('p'); for (let p of ps) { if (p.textContent.includes(loc.text)) { let idx = p.textContent.indexOf(loc.text); try { let startNode = findNodeAtOffset(p, idx), endNode = findNodeAtOffset(p, idx + loc.text.length); if (startNode && endNode) { let range = document.createRange(); range.setStart(startNode.node, startNode.offset); range.setEnd(endNode.node, endNode.offset); let span = document.createElement('span'); span.className = 'dynamic-highlight'; let contents = range.extractContents(); span.appendChild(contents); range.insertNode(span); span.scrollIntoView({ behavior: 'smooth', block: 'center' }); } } catch (e) { } break; } } }
@@ -805,7 +1114,7 @@
         function initializeTextHighlighting() {/* basic context menu handling */ }
         function initializeResizer() { let r = document.getElementById('resizer-t9'), l = document.getElementById('text-panel-t9'), ri = document.getElementById('questions-panel-t9'); if (!r || !l || !ri) return; l.style.width = '50%'; ri.style.flex = '1'; let isResizing = false, startX = 0, startLeft = 0; r.addEventListener('mousedown', e => { isResizing = true; startX = e.clientX; startLeft = l.offsetWidth; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; document.addEventListener('mousemove', handleMove); document.addEventListener('mouseup', () => { isResizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; document.removeEventListener('mousemove', handleMove); }); }); function handleMove(e) { if (!isResizing) return; let dx = e.clientX - startX, nw = startLeft + dx, contW = l.parentElement.offsetWidth, minW = 200, maxW = contW - minW - r.offsetWidth; if (nw >= minW && nw <= maxW) { l.style.width = nw + 'px'; ri.style.flex = '1'; } } }
         function toggleGrammarSection(section) { let c = document.getElementById('content' + section), i = document.getElementById('icon' + section); if (c && i) { c.classList.toggle('active'); i.classList.toggle('active'); } }
-        window.onload = () => { initializeAllOrders(); renderTask1(); renderTask2(); renderTask3(); renderTask4(); renderTask5(); renderTask6(); renderTask7(); renderTask8(); renderTask9(); initializeResizer(); initializeTextHighlighting(); updateAllProgress(); window.toggleGrammarSection = toggleGrammarSection; window.toggleSingleAns = toggleSingleAns; window.toggleHint = toggleHint; window.selectOption = selectOption; window.selectReadingOption = selectReadingOption; window.showAnswers = showAnswers; window.resetSection = resetSection; window.checkAll = checkAll; window.dragWord = dragWord; window.allowDrop = allowDrop; window.dropWord = dropWord; window.selectWordFromBank = selectWordFromBank; window.adjustWidth = adjustWidth; };
+        window.onload = () => { initializeAllOrders(); renderTask1(); renderTask2(); renderTask3(); renderTask4(); renderTask5(); renderTask6(); renderTask7(); renderTask8(); renderTask9(); initializeResizer(); initializeTextHighlighting(); updateAllProgress(); window.toggleGrammarSection = toggleGrammarSection; window.toggleSingleAns = toggleSingleAns; window.toggleHint = toggleHint; window.selectOption = selectOption; window.selectChoice = selectChoice; window.selectReadingOption = selectReadingOption; window.showAnswers = showAnswers; window.resetSection = resetSection; window.checkAll = checkAll; window.dragWord = dragWord; window.allowDrop = allowDrop; window.dropWord = dropWord; window.selectWordFromBank = selectWordFromBank; window.adjustWidth = adjustWidth; };
         document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
     </script>
 

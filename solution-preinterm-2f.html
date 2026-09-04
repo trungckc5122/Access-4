@@ -146,8 +146,14 @@
         }
 
         .active-highlight {
-            background-color: var(--highlight-yellow);
-            box-shadow: 0 0 0 2px var(--highlight-yellow);
+            background-color: rgba(250, 204, 21, 0.5);
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+        }
+
+        [data-theme="dark"] .active-highlight {
+            background-color: rgba(250, 204, 21, 0.3);
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.4);
+            color: #fef08a;
         }
 
         .highlight-yellow {
@@ -1260,8 +1266,15 @@
             const correctAns = ex3AnswerKey[q];
             if (panelState[q] === correctAns) {
                 removeSlot(q);
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             } else {
                 placeSentence(q, correctAns);
+                const contextSpan = document.getElementById(`slot${q}-context`);
+                if (contextSpan) {
+                    document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                    contextSpan.classList.add('active-highlight');
+                    contextSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         }
 
@@ -1309,43 +1322,11 @@
         // ============================================================
         function showDragHint(event, q) {
             if (event) event.stopPropagation();
-            const h = document.getElementById(`ex3-q${q}-hint`);
-            if (!h) return;
-            const isVisible = h.style.display === 'block';
-
-            // Hide all hints & clear highlights
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
-
-            if (!isVisible) {
-                h.style.display = 'block';
-                scrollAndHighlightForQ(q);
-            }
+            showReadingHint(`slot${q}-context`, `ex3-q${q}-hint`);
         }
 
-        // Mapping: which elements to highlight+scroll per question
-        const ex3ScrollTargets = {
-            1: ['slot1-anchor'],
-            2: ['slot2-anchor'],
-            3: ['slot3-anchor'],
-            4: ['slot4-anchor'],
-            5: ['slot5-anchor']
-        };
-
-        function scrollAndHighlightForQ(q) {
-            const contextSpan = document.getElementById(`slot${q}-context`);
-            if (contextSpan) {
-                contextSpan.classList.add('active-highlight');
-                const textPanel = document.getElementById('text-panel');
-                if (textPanel) {
-                    const scrollOffset = contextSpan.offsetTop - 80;
-                    textPanel.scrollTo({ top: scrollOffset, behavior: 'smooth' });
-                }
-            }
-        }
-
-        function showReadingHint(targetId, hintId) {
-            const h = document.getElementById(hintId);
+        function showReadingHint(targetTextId, hintBoxId) {
+            const h = document.getElementById(hintBoxId);
             if (!h) return;
             const isShowing = h.style.display === 'block';
 
@@ -1354,17 +1335,10 @@
 
             if (!isShowing) {
                 h.style.display = 'block';
-                const textEl = document.getElementById(targetId);
+                const textEl = document.getElementById(targetTextId);
                 if (textEl) {
                     textEl.classList.add('active-highlight');
-                    const textPanel = document.getElementById('text-panel');
-                    if (textPanel) {
-                        const elRect = textEl.getBoundingClientRect();
-                        const panelRect = textPanel.getBoundingClientRect();
-                        const relativeOffsetTop = elRect.top - panelRect.top + textPanel.scrollTop;
-                        const scrollPosition = relativeOffsetTop - (panelRect.height / 2) + (elRect.height / 2);
-                        textPanel.scrollTo({ top: scrollPosition, behavior: 'smooth' });
-                    }
+                    textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
         }
@@ -1383,9 +1357,24 @@
             if (el.value.toLowerCase().trim() === el.dataset.ans.toLowerCase().trim()) {
                 el.value = "";
                 el.classList.remove('correct');
+                if (id.startsWith('ex4-para')) {
+                    document.querySelectorAll('.highlightable').forEach(e => e.classList.remove('active-highlight'));
+                }
             } else {
                 el.value = el.dataset.ans;
                 el.classList.add('correct');
+                if (id.startsWith('ex4-para')) {
+                    const idx = parseInt(id.replace('ex4-para', ''));
+                    const it = ex4Data[idx];
+                    if (it && it.textTarget) {
+                        const textEl = document.getElementById(it.textTarget);
+                        if (textEl) {
+                            document.querySelectorAll('.highlightable').forEach(e => e.classList.remove('active-highlight'));
+                            textEl.classList.add('active-highlight');
+                            textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
             }
             adjustWidth(el);
         }
@@ -1632,12 +1621,21 @@
             // Toggle: if already showing correct, unselect
             if (ex4State[qid] === ans) {
                 selectEx4TF(i, ans); // toggle off
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             } else {
                 selectEx4TF(i, ans);
                 const trueBadge = document.getElementById(`${qid}-true`);
                 const falseBadge = document.getElementById(`${qid}-false`);
                 const badge = ans === 'T' ? trueBadge : falseBadge;
                 if (badge) badge.classList.add('correct');
+                if (it.textTarget) {
+                    const textEl = document.getElementById(it.textTarget);
+                    if (textEl) {
+                        document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+                        textEl.classList.add('active-highlight');
+                        textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             }
         }
 
@@ -1651,6 +1649,7 @@
                     slot.classList.add('correct');
                 });
             } else if (prefix === 'ex4') {
+                document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
                 ex4Data.forEach((it, i) => {
                     const qid = `ex4-q${i}`;
                     selectEx4TF(i, it.ans1);
