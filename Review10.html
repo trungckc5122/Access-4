@@ -6,6 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Access 4 – Review Module 10</title>
     <link rel="stylesheet" href="access-theme.css">
+    <style>
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            z-index: 9999;
+        }
+
+        .word-item.used {
+            opacity: .35;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+    </style>
 </head>
 
 <body>
@@ -31,7 +48,7 @@
         <div class="exercise-card">
             <div class="exercise-title">2. Fill in: contribution, inhabitants, prohibited, survival, conservation,
                 hospitality.</div>
-            <div class="sticky-bank" id="bank-ex2"></div>
+            <div class="word-bank sticky-bank" id="bank-ex2"></div>
             <div id="questions-ex2"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex2')">Show All</button>
@@ -42,7 +59,7 @@
         <!-- EX3: Verbs (go, keep, get, miss, have, lose, meet) -->
         <div class="exercise-card">
             <div class="exercise-title">3. Fill in with correct form: go, keep, get, miss, have, lose, meet.</div>
-            <div class="sticky-bank" style="justify-content:center; gap:15px;">
+            <div class="word-bank sticky-bank" style="justify-content:center; gap:15px;">
                 <span class="word-item" style="cursor:default;">go</span>
                 <span class="word-item" style="cursor:default;">keep</span>
                 <span class="word-item" style="cursor:default;">get</span>
@@ -87,7 +104,7 @@
         <div class="exercise-card">
             <div class="exercise-title">6. Fill in: so that, by the time, although, despite, unless, before, in case, in
                 order to.</div>
-            <div class="sticky-bank" id="bank-ex6"></div>
+            <div class="word-bank sticky-bank" id="bank-ex6"></div>
             <div id="questions-ex6"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex6')">Show All</button>
@@ -177,7 +194,7 @@
         <!-- EX10: Prepositions -->
         <div class="exercise-card">
             <div class="exercise-title">10. Fill in: in, about, for, with.</div>
-            <div class="sticky-bank" id="bank-ex10"></div>
+            <div class="word-bank sticky-bank" id="bank-ex10"></div>
             <div id="questions-ex10"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex10')">Show All</button>
@@ -199,7 +216,7 @@
         <!-- EX12: Phrasal verbs (throw) -->
         <div class="exercise-card">
             <div class="exercise-title">12. Fill in the correct particle: away, out, up, off.</div>
-            <div class="sticky-bank" id="bank-ex12"></div>
+            <div class="word-bank sticky-bank" id="bank-ex12"></div>
             <div id="questions-ex12"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex12')">Show All</button>
@@ -218,6 +235,7 @@
         <div onclick="removeHighlight()">Xóa highlight</div>
     </div>
 
+    <script src="access-core.js"></script>
     <script>
         (function () {
             // ==================== DATA (unchanged from original Review10) ====================
@@ -381,7 +399,40 @@
             let optionSelections = new Map();
 
             window.adjustWidth = function (el) { if (!el) return; let base = 120, charW = 9; let newW = Math.max(el.value.length * charW + 40, base); el.style.width = Math.min(newW, 600) + "px"; };
-            window.toggleHint = function (id) { let hint = document.getElementById(id + '-hint'); let btn = document.getElementById(id + '-info'); if (hint) { hint.style.display = hint.style.display === 'block' ? 'none' : 'block'; if (btn) btn.classList.toggle('active', hint.style.display === 'block'); } };
+            let currentHintBox = null, currentHintBtn = null;
+            function positionHintBox(hintBox, btn) {
+                if (!btn) return;
+                const btnRect = btn.getBoundingClientRect();
+                const boxRect = hintBox.getBoundingClientRect();
+                let top = btnRect.bottom + 8;
+                let left = btnRect.left;
+                if (top + boxRect.height > window.innerHeight - 8) top = btnRect.top - boxRect.height - 8;
+                if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+                if (left < 8) left = 8;
+                if (top < 8) top = 8;
+                hintBox.style.top = top + 'px';
+                hintBox.style.left = left + 'px';
+            }
+            function repositionCurrentHint() { if (currentHintBox && currentHintBtn) positionHintBox(currentHintBox, currentHintBtn); }
+            function closeAllHints() { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); document.querySelectorAll('.info-btn').forEach(b => b.classList.remove('active')); currentHintBox = null; currentHintBtn = null; }
+            window.toggleHint = function (event, id) {
+                if (event) event.stopPropagation();
+                let hint = document.getElementById(id + '-hint');
+                let btn = document.getElementById(id + '-info') || (event && event.currentTarget);
+                if (!hint) return;
+                let isOpening = hint.style.display !== 'block';
+                closeAllHints();
+                if (isOpening) {
+                    hint.classList.add('inline-hint');
+                    hint.style.display = 'block';
+                    positionHintBox(hint, btn);
+                    currentHintBox = hint;
+                    currentHintBtn = btn;
+                    if (btn) btn.classList.add('active');
+                }
+            };
+            window.addEventListener('scroll', repositionCurrentHint, true);
+            window.addEventListener('resize', repositionCurrentHint);
             window.selectOption = function (qid, opt) { let container = document.getElementById(qid + '-container'); if (container) { container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected')); let btn = Array.from(container.querySelectorAll('.option-btn')).find(b => b.textContent === opt); if (btn) btn.classList.add('selected'); } optionSelections.set(qid, opt); };
             window.selectInlineOption = function (qid, opt) { optionSelections.set(qid, opt); };
             window.toggleSingleAns = function (id) {
@@ -390,7 +441,7 @@
                         container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('correct-option', 'incorrect-option', 'selected')); container.querySelectorAll('.option-btn').forEach(btn => { if (btn.textContent.includes(correct) || btn.textContent.startsWith(correct + ' ')) btn.classList.add('correct-option'); }); // also handle inline-select for ex8
                         let sel = document.getElementById(qid + '-sel'); if (sel) { let correctOpt = data.find ? (data === ex8_data ? ex8_data.find(d => d.num == parseInt(qid.split('-q')[1])) : null) : null; if (correctOpt) { let correctFull = correctOpt.options.find(o => o.startsWith(correct + ' ') || o === correct); if (correctFull) { sel.value = correctFull; sel.style.borderColor = 'var(--correct,#27ae60)'; sel.style.background = 'rgba(39,174,96,0.12)'; } } }
                     } let eye = document.getElementById(id); if (eye) eye.classList.add('active'); answerStates.set(qid + '-state', true); return;
-                } let inp = document.getElementById(qid); if (!inp) return; let eye = document.getElementById(id); let state = answerStates.get(qid + '-state') || false; if (state) { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); if (eye) eye.classList.remove('active'); answerStates.set(qid + '-state', false); } else { inp.value = inp.dataset.ans.split('|')[0]; inp.classList.add('correct'); adjustWidth(inp); if (eye) eye.classList.add('active'); answerStates.set(qid + '-state', true); }
+                } let inp = document.getElementById(qid); if (!inp) return; let eye = document.getElementById(id); let state = answerStates.get(qid + '-state') || false; let bankPrefix = ['ex2', 'ex6', 'ex10', 'ex12'].find(p => qid.startsWith(p)); if (state) { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); if (eye) eye.classList.remove('active'); answerStates.set(qid + '-state', false); } else { inp.value = inp.dataset.ans.split('|')[0]; inp.classList.add('correct'); adjustWidth(inp); if (eye) eye.classList.add('active'); answerStates.set(qid + '-state', true); } if (bankPrefix) updateWordBank(bankPrefix);
             };
             window.showAnswers = function (prefix) {
                 if (prefix === 'ex9') {
@@ -496,12 +547,12 @@
                     }
                 } catch (e) { console.error(e); }
             };
-            window.dragWord = e => e.dataTransfer.setData('text/plain', e.target.dataset.word);
+            window.dragWord = e => { if (e.target.classList.contains('used')) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', e.target.dataset.word); };
             window.allowDrop = e => e.preventDefault();
             window.dropWord = (e, inputId) => { e.preventDefault(); let word = e.dataTransfer.getData('text/plain'); let inp = document.getElementById(inputId); if (inp) { inp.value = word; adjustWidth(inp); let task = inputId.split('-')[0]; updateWordBankUsage(word, task); } };
             window.selectWordFromBank = function (wordId) { let item = document.getElementById(wordId); if (!item || item.classList.contains('used')) return; let word = item.dataset.word; let task = wordId.split('-')[0]; let inputs = document.querySelectorAll(`#questions-${task} input.word-input`); let empty = Array.from(inputs).find(inp => !inp.value.trim()); if (empty) { empty.value = word; adjustWidth(empty); updateWordBankUsage(word, task); } else alert('All gaps filled. Click a gap to replace.'); };
             window.updateWordBankUsage = function (word, task) { if (!wordUsageCount[task]) wordUsageCount[task] = {}; wordUsageCount[task][word] = (wordUsageCount[task][word] || 0) + 1; updateWordBankDisplay(task); };
-            window.updateWordBankDisplay = function (task) { document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => { let w = item.dataset.word; let cnt = wordUsageCount[task]?.[w] || 0; item.classList.toggle('used', cnt > 0); item.style.display = cnt > 0 ? 'none' : ''; }); };
+            window.updateWordBankDisplay = function (task) { document.querySelectorAll(`#bank-${task} .word-item`).forEach(item => { let w = item.dataset.word; let cnt = wordUsageCount[task]?.[w] || 0; item.classList.toggle('used', cnt > 0); }); };
             window.updateWordBank = function (task) { let inputs = document.querySelectorAll(`#questions-${task} input.word-input`); let bank = task === 'ex2' ? ex2_bank : task === 'ex6' ? ex6_bank : task === 'ex10' ? ex10_bank : ex12_bank; bank.forEach(w => wordUsageCount[task][w] = 0); inputs.forEach(inp => { let w = inp.value.trim(); if (w && wordUsageCount[task][w] !== undefined) wordUsageCount[task][w]++; }); updateWordBankDisplay(task); };
             function addWordBankEventListeners(task) { document.querySelectorAll(`#bank-${task} .word-item`).forEach(it => { it.addEventListener('click', () => selectWordFromBank(it.id)); it.addEventListener('dragstart', dragWord); }); document.querySelectorAll(`#questions-${task} input.word-input`).forEach(inp => { inp.addEventListener('dragover', allowDrop); inp.addEventListener('drop', e => dropWord(e, inp.id)); inp.addEventListener('input', () => updateWordBank(task)); }); }
             window.scrollToReadingQuestion = function (num) { let el = document.getElementById(`ex9-q${num}-item`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
@@ -618,7 +669,8 @@
             };
 
             // i nút giải thích: show hint + highlight bài đọc
-            window.showEx9Hint = function (questionNum) {
+            window.showEx9Hint = function (event, questionNum) {
+                if (event) event.stopPropagation();
                 const hint = document.getElementById(`ex9-q${questionNum}-hint`);
                 const infoBtn = document.getElementById(`ex9-q${questionNum}-info`);
                 const item = document.getElementById(`ex9-q${questionNum}-item`);
@@ -634,9 +686,9 @@
             };
 
             // ==================== RENDER FUNCTIONS (unchanged except eye icon onclick) ====================
-            function renderEx1() { let html = ''; ex1_data.forEach((item, i) => { html += `<div class="question-row"><strong>${i + 1}.</strong> ${item.clue} <input type="text" class="word-input" id="ex1-q${i}" data-type="input" data-ans="${item.ans}" placeholder="${item.hint}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex1-q${i}-eye" onclick="toggleSingleAns('ex1-q${i}')">👁️</button><button class="info-btn" id="ex1-q${i}-info" onclick="toggleHint('ex1-q${i}')">i</button></div><div class="hint-box" id="ex1-q${i}-hint">${item.detailHint}</div></div>`; }); document.getElementById('questions-ex1').innerHTML = html; }
-            function renderEx2() { let bankHtml = '', qHtml = ''; ex2_bank.forEach((w, i) => { wordUsageCount.ex2[w] = 0; bankHtml += `<div class="word-item" id="ex2-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex2-word-${i}')" style="transition:opacity 0.2s,transform 0.2s;">${w}</div>`; }); ex2_data.forEach((item, i) => { qHtml += `<div class="question-row"><strong>${i + 1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex2-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex2\')" ondrop="dropWord(event,\'ex2-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex2-q${i}-eye" onclick="toggleSingleAns('ex2-q${i}')">👁️</button><button class="info-btn" id="ex2-q${i}-info" onclick="toggleHint('ex2-q${i}')">i</button></div><div class="hint-box" id="ex2-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex2').innerHTML = bankHtml; document.getElementById('questions-ex2').innerHTML = qHtml; addWordBankEventListeners('ex2'); }
-            function renderEx3() { let html = ''; ex3_data.forEach((item, i) => { html += `<div class="question-row"><strong>${i + 1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex3-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this)">')}<div class="row-btns"><button class="btn-small" id="ex3-q${i}-eye" onclick="toggleSingleAns('ex3-q${i}')">👁️</button><button class="info-btn" id="ex3-q${i}-info" onclick="toggleHint('ex3-q${i}')">i</button></div><div class="hint-box" id="ex3-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex3').innerHTML = html; }
+            function renderEx1() { let html = ''; ex1_data.forEach((item, i) => { html += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.clue} <input type="text" class="word-input" id="ex1-q${i}" data-type="input" data-ans="${item.ans}" placeholder="${item.hint}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex1-q${i}-eye" onclick="toggleSingleAns('ex1-q${i}')">👁️</button><button class="info-btn" id="ex1-q${i}-info" onclick="toggleHint(event, 'ex1-q${i}')">i</button></div><div class="hint-box" id="ex1-q${i}-hint">${item.detailHint}</div></div>`; }); document.getElementById('questions-ex1').innerHTML = html; }
+            function renderEx2() { let bankHtml = '', qHtml = ''; ex2_bank.forEach((w, i) => { wordUsageCount.ex2[w] = 0; bankHtml += `<div class="word-item" id="ex2-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex2-word-${i}')" style="transition:opacity 0.2s,transform 0.2s;">${w}</div>`; }); ex2_data.forEach((item, i) => { qHtml += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex2-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex2\')" ondrop="dropWord(event,\'ex2-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex2-q${i}-eye" onclick="toggleSingleAns('ex2-q${i}')">👁️</button><button class="info-btn" id="ex2-q${i}-info" onclick="toggleHint(event, 'ex2-q${i}')">i</button></div><div class="hint-box" id="ex2-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex2').innerHTML = bankHtml; document.getElementById('questions-ex2').innerHTML = qHtml; addWordBankEventListeners('ex2'); }
+            function renderEx3() { let html = ''; ex3_data.forEach((item, i) => { html += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex3-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this)">')}<div class="row-btns"><button class="btn-small" id="ex3-q${i}-eye" onclick="toggleSingleAns('ex3-q${i}')">👁️</button><button class="info-btn" id="ex3-q${i}-info" onclick="toggleHint(event, 'ex3-q${i}')">i</button></div><div class="hint-box" id="ex3-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex3').innerHTML = html; }
             function renderEx4() {
                 let html = '';
                 ex4_data.forEach((item, i) => {
@@ -647,13 +699,13 @@
                         let btns = words.map(w => `<button class="option-btn inline-opt" onclick="selectOption('${qid}','${w.trim()}')" id="${qid}-opt-${w.trim().replace(/\s+/g,'-')}">${w.trim()}</button>`).join('');
                         return `<span class="inline-opts-wrap">${btns}</span>`;
                     });
-                    html += `<div class="question-row" id="${qid}-container"><strong>${i + 1}.</strong> ${qText}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+                    html += `<div class="question-row" id="${qid}-container"><span class="q-number">${i + 1}.</span> ${qText}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
                 });
                 document.getElementById('questions-ex4').innerHTML = html;
             }
-            function renderEx5() { let html = ''; ex5_data.forEach(item => { html += `<div class="question-row"><strong>${item.num}.</strong> ${item.q}<br><input type="text" class="word-input" style="width:90%" id="ex5-q${item.num}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex5-q${item.num}-eye" onclick="toggleSingleAns('ex5-q${item.num}')">👁️</button><button class="info-btn" id="ex5-q${item.num}-info" onclick="toggleHint('ex5-q${item.num}')">i</button></div><div class="hint-box" id="ex5-q${item.num}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex5').innerHTML = html; }
-            function renderEx6() { let bankHtml = '', qHtml = ''; ex6_bank.forEach((w, i) => { wordUsageCount.ex6[w] = 0; bankHtml += `<div class="word-item" id="ex6-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex6-word-${i}')">${w}</div>`; }); ex6_data.forEach((item, i) => { qHtml += `<div class="question-row"><strong>${i + 1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex6-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex6\')" ondrop="dropWord(event,\'ex6-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex6-q${i}-eye" onclick="toggleSingleAns('ex6-q${i}')">👁️</button><button class="info-btn" id="ex6-q${i}-info" onclick="toggleHint('ex6-q${i}')">i</button></div><div class="hint-box" id="ex6-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex6').innerHTML = bankHtml; document.getElementById('questions-ex6').innerHTML = qHtml; addWordBankEventListeners('ex6'); }
-            function renderEx7() { let html = ''; ex7_data.forEach((item, i) => { let inpId = `ex7-q${i}`; let qWithInput = item.q.replace('...............', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:150px;">`); html += `<div class="question-row"><strong>${i + 3}.</strong> ${qWithInput}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex7').innerHTML = html; }
+            function renderEx5() { let html = ''; ex5_data.forEach(item => { html += `<div class="question-row"><span class="q-number">${item.num}.</span> ${item.q}<br><input type="text" class="word-input" style="width:90%" id="ex5-q${item.num}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)"><div class="row-btns"><button class="btn-small" id="ex5-q${item.num}-eye" onclick="toggleSingleAns('ex5-q${item.num}')">👁️</button><button class="info-btn" id="ex5-q${item.num}-info" onclick="toggleHint(event, 'ex5-q${item.num}')">i</button></div><div class="hint-box" id="ex5-q${item.num}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex5').innerHTML = html; }
+            function renderEx6() { let bankHtml = '', qHtml = ''; ex6_bank.forEach((w, i) => { wordUsageCount.ex6[w] = 0; bankHtml += `<div class="word-item" id="ex6-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex6-word-${i}')">${w}</div>`; }); ex6_data.forEach((item, i) => { qHtml += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex6-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex6\')" ondrop="dropWord(event,\'ex6-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex6-q${i}-eye" onclick="toggleSingleAns('ex6-q${i}')">👁️</button><button class="info-btn" id="ex6-q${i}-info" onclick="toggleHint(event, 'ex6-q${i}')">i</button></div><div class="hint-box" id="ex6-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex6').innerHTML = bankHtml; document.getElementById('questions-ex6').innerHTML = qHtml; addWordBankEventListeners('ex6'); }
+            function renderEx7() { let html = ''; ex7_data.forEach((item, i) => { let inpId = `ex7-q${i}`; let qWithInput = item.q.replace('...............', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:150px;">`); html += `<div class="question-row"><span class="q-number">${i + 3}.</span> ${qWithInput}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint(event, '${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex7').innerHTML = html; }
             function renderEx8() {
                 let html = '';
                 ex8_data.forEach(item => {
@@ -662,7 +714,7 @@
                     let optBtns = item.options.map(o => `<button class="option-btn inline-opt" onclick="selectOption('${qid}','${o}')" id="${qid}-opt-${o.replace(/\s+/g,'-')}">${o}</button>`).join('');
                     let optWrap = `<span class="inline-opts-wrap">${optBtns}</span>`;
                     let qText = item.q.replace('......', optWrap);
-                    html += `<div class="question-row" id="${qid}-container"><strong>${item.num}.</strong> ${qText}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+                    html += `<div class="question-row" id="${qid}-container"><span class="q-number">${item.num}.</span> ${qText}<div class="row-btns"><button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')">👁️</button><button class="info-btn" id="${qid}-info" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
                 });
                 document.getElementById('questions-ex8').innerHTML = html;
             }
@@ -670,13 +722,13 @@
                 let qHtml = '';
                 document.getElementById('readingNav-ex9').innerHTML = '';
                 for (let i = 1; i <= 10; i++) {
-                    qHtml += `<div class="question-item" id="ex9-q${i}-item"><div class="question-wrapper"><span class="question-number">${i}.</span><span>${ex9_statements[i - 1]}</span><div class="row-btns" style="display:inline-flex;gap:4px;margin-left:6px;"><button class="btn-small" id="ex9-q${i}-eye" onclick="showEx9Answer(${i})">👁️</button><button class="info-btn" id="ex9-q${i}-info" onclick="showEx9Hint(${i})">i</button></div></div><div class="option-container" id="ex9-q${i}-opts"><button class="option-btn" id="ex9-q${i}-TRUE" onclick="selectTF(${i},'TRUE')">TRUE</button><button class="option-btn" id="ex9-q${i}-FALSE" onclick="selectTF(${i},'FALSE')">FALSE</button></div><div class="hint-box" id="ex9-q${i}-hint">${ex9_hints[i - 1]}</div></div>`;
+                    qHtml += `<div class="question-item" id="ex9-q${i}-item"><div class="question-wrapper"><span class="question-number">${i}.</span><span>${ex9_statements[i - 1]}</span><div class="row-btns" style="display:inline-flex;gap:4px;margin-left:6px;"><button class="btn-small" id="ex9-q${i}-eye" onclick="showEx9Answer(${i})">👁️</button><button class="info-btn" id="ex9-q${i}-info" onclick="showEx9Hint(event, ${i})">i</button></div></div><div class="option-container" id="ex9-q${i}-opts"><button class="option-btn" id="ex9-q${i}-TRUE" onclick="selectTF(${i},'TRUE')">TRUE</button><button class="option-btn" id="ex9-q${i}-FALSE" onclick="selectTF(${i},'FALSE')">FALSE</button></div><div class="hint-box" id="ex9-q${i}-hint">${ex9_hints[i - 1]}</div></div>`;
                 }
                 document.getElementById('questions-ex9').innerHTML = qHtml;
             }
-            function renderEx10() { let bankHtml = '', qHtml = ''; ex10_bank.forEach((w, i) => { wordUsageCount.ex10[w] = 0; bankHtml += `<div class="word-item" id="ex10-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex10-word-${i}')">${w}</div>`; }); ex10_data.forEach((item, i) => { qHtml += `<div class="question-row"><strong>${i + 1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex10-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex10\')" ondrop="dropWord(event,\'ex10-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex10-q${i}-eye" onclick="toggleSingleAns('ex10-q${i}')">👁️</button><button class="info-btn" id="ex10-q${i}-info" onclick="toggleHint('ex10-q${i}')">i</button></div><div class="hint-box" id="ex10-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex10').innerHTML = bankHtml; document.getElementById('questions-ex10').innerHTML = qHtml; addWordBankEventListeners('ex10'); }
-            function renderEx11() { let html = ''; ex11_data.forEach((item, i) => { let inpId = `ex11-q${i}`; let qWithBlank = item.q.replace('______', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:100px;">`); html += `<div class="question-row"><strong>${i + 1}.</strong> ${qWithBlank}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint('${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex11').innerHTML = html; }
-            function renderEx12() { let bankHtml = '', qHtml = ''; ex12_bank.forEach((w, i) => { wordUsageCount.ex12[w] = 0; bankHtml += `<div class="word-item" id="ex12-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex12-word-${i}')">${w}</div>`; }); ex12_data.forEach((item, i) => { qHtml += `<div class="question-row"><strong>${i + 1}.</strong> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex12-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex12\')" ondrop="dropWord(event,\'ex12-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex12-q${i}-eye" onclick="toggleSingleAns('ex12-q${i}')">👁️</button><button class="info-btn" id="ex12-q${i}-info" onclick="toggleHint('ex12-q${i}')">i</button></div><div class="hint-box" id="ex12-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex12').innerHTML = bankHtml; document.getElementById('questions-ex12').innerHTML = qHtml; addWordBankEventListeners('ex12'); }
+            function renderEx10() { let bankHtml = '', qHtml = ''; ex10_bank.forEach((w, i) => { wordUsageCount.ex10[w] = 0; bankHtml += `<div class="word-item" id="ex10-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex10-word-${i}')">${w}</div>`; }); ex10_data.forEach((item, i) => { qHtml += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex10-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex10\')" ondrop="dropWord(event,\'ex10-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex10-q${i}-eye" onclick="toggleSingleAns('ex10-q${i}')">👁️</button><button class="info-btn" id="ex10-q${i}-info" onclick="toggleHint(event, 'ex10-q${i}')">i</button></div><div class="hint-box" id="ex10-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex10').innerHTML = bankHtml; document.getElementById('questions-ex10').innerHTML = qHtml; addWordBankEventListeners('ex10'); }
+            function renderEx11() { let html = ''; ex11_data.forEach((item, i) => { let inpId = `ex11-q${i}`; let qWithBlank = item.q.replace('______', `<input type="text" class="word-input" id="${inpId}" data-type="input" data-ans="${item.ans}" oninput="adjustWidth(this)" style="min-width:100px;">`); html += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${qWithBlank}<div class="row-btns"><button class="btn-small" id="${inpId}-eye" onclick="toggleSingleAns('${inpId}')">👁️</button><button class="info-btn" id="${inpId}-info" onclick="toggleHint(event, '${inpId}')">i</button></div><div class="hint-box" id="${inpId}-hint">${item.hint}</div></div>`; }); document.getElementById('questions-ex11').innerHTML = html; }
+            function renderEx12() { let bankHtml = '', qHtml = ''; ex12_bank.forEach((w, i) => { wordUsageCount.ex12[w] = 0; bankHtml += `<div class="word-item" id="ex12-word-${i}" data-word="${w}" draggable="true" ondragstart="dragWord(event)" onclick="selectWordFromBank('ex12-word-${i}')">${w}</div>`; }); ex12_data.forEach((item, i) => { qHtml += `<div class="question-row"><span class="q-number">${i + 1}.</span> ${item.q.replace('...............', '<input type="text" class="word-input" id="ex12-q' + i + '" data-type="input" data-ans="' + item.ans + '" oninput="adjustWidth(this); updateWordBank(\'ex12\')" ondrop="dropWord(event,\'ex12-q' + i + '\')" ondragover="allowDrop(event)">')}<div class="row-btns"><button class="btn-small" id="ex12-q${i}-eye" onclick="toggleSingleAns('ex12-q${i}')">👁️</button><button class="info-btn" id="ex12-q${i}-info" onclick="toggleHint(event, 'ex12-q${i}')">i</button></div><div class="hint-box" id="ex12-q${i}-hint">${item.hint}</div></div>`; }); document.getElementById('bank-ex12').innerHTML = bankHtml; document.getElementById('questions-ex12').innerHTML = qHtml; addWordBankEventListeners('ex12'); }
 
             function initResizer() {
                 let resizer = document.getElementById('resizer-ex9');
@@ -775,7 +827,6 @@
             });
         })();
     </script>
-    <script src="access-core.js"></script>
 </body>
 
 </html>
