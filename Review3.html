@@ -34,8 +34,14 @@
         }
 
         .active-highlight {
-            background-color: rgba(250, 204, 21, 0.5);
-            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+            box-shadow: inset 3px 0 0 rgba(250, 204, 21, 0.9);
+        }
+
+        .keyword-highlight-inline {
+            background-color: rgba(250, 204, 21, 0.6);
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600;
         }
 
         /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, đồng bộ với review 8 */
@@ -285,16 +291,16 @@
                 restaurant reviews. Decide which restaurant would be the most suitable for the following people.</div>
 
             <div class="dual-screen-container" id="dual-screen-t12">
-                <div class="people-panel" id="people-panel-t12">
-                    <h3>People Looking for Restaurants</h3>
-                    <div id="people-t12"></div>
+                <div class="restaurants-panel" id="restaurants-panel-t12">
+                    <h3>Restaurant Reviews</h3>
+                    <div id="restaurants-t12"></div>
                 </div>
 
                 <div class="resizer" id="resizer-t12"></div>
 
-                <div class="restaurants-panel" id="restaurants-panel-t12">
-                    <h3>Restaurant Reviews</h3>
-                    <div id="restaurants-t12"></div>
+                <div class="people-panel" id="people-panel-t12">
+                    <h3>People Looking for Restaurants</h3>
+                    <div id="people-t12"></div>
                 </div>
             </div>
 
@@ -770,30 +776,40 @@
                 description: "Pauline and her friend Janet like to go out on Friday evening in town to relax after work and enjoy a meal together. Last week, they had Chinese food. They are both vegetarians, and they love trying new restaurants and different kinds of food.",
                 answer: "G",
                 target: "restaurant-t12-G",
+                keywords: ["vegetarian", "suitable for both of them"],
+                qKeywords: ["in town", "vegetarians"],
                 hint: "<div class='hint-detail'>Họ cần nhà hàng ở trung tâm (<span class='key-word'>in town</span>), phù hợp cho người <span class='key-word'>ăn chay</span>, và thích đồ ăn mới lạ (không phải Trung Quốc vì tuần trước họ đã ăn rồi). Mario's (G) phù hợp vì có thực đơn cho cả người ăn chay và ăn mặn, lại là nhà hàng gia đình nhỏ.</div>"
             },
             {
                 description: "Mr. and Mrs. Green are celebrating their 30th wedding anniversary, and they are looking for somewhere special for a romantic dinner for two. They like eating fresh fish and would like to listen to some music.",
                 answer: "C",
                 target: "restaurant-t12-C",
+                keywords: ["very good piano player", "fish which was delicious"],
+                qKeywords: ["romantic dinner", "fresh fish", "listen to some music"],
                 hint: "<div class='hint-detail'>Họ cần một nơi <span class='key-word'>lãng mạn</span> cho kỷ niệm ngày cưới, có <span class='key-word'>cá tươi</span> và <span class='key-word'>âm nhạc</span>. The Riverboat (C) có khung cảnh lãng mạn trên sông, có người chơi piano, và phục vụ cá tươi rất ngon ('today's catch').</div>"
             },
             {
                 description: "Jason will be 18 at the end of the month. His parents have said he can have a party. He wants to invite 10 friends and go somewhere where they can have something to eat and dance.",
                 answer: "B",
                 target: "restaurant-t12-B",
+                keywords: ["large dining area upstairs", "small disco downstairs"],
+                qKeywords: ["have a party", "eat and dance"],
                 hint: "<div class='hint-detail'>Cần một nơi cho nhóm bạn trẻ <span class='key-word'>tiệc tùng</span>, có cả đồ ăn và <span class='key-word'>nhảy</span> (disco). Riverside Restaurant (B) có tầng trên là khu ăn uống lớn, tầng dưới là sàn disco nhỏ.</div>"
             },
             {
                 description: "Andrew would like to take his family out this weekend. He and his wife have two children aged 7 and 9 and his elderly mother also lives with them. He would like to go somewhere with a parking lot, where the food is English and reasonably priced.",
                 answer: "E",
                 target: "restaurant-t12-E",
+                keywords: ["small parking lot in the back", "buffet style"],
+                qKeywords: ["a parking lot", "English", "reasonably priced"],
                 hint: "<div class='hint-detail'>Cần nhà hàng cho <span class='key-word'>gia đình</span> nhiều thế hệ, có <span class='key-word'>bãi đỗ xe</span>, đồ ăn <span class='key-word'>Anh</span> và giá cả phải chăng. Cliff's Carvery (E) có bãi đỗ xe nhỏ phía sau, phục vụ thịt quay kiểu Anh với giá buffet hợp lý.</div>"
             },
             {
                 description: "Michelle and Lauren are students and have just moved into a new apartment. After a tiring day, they are hungry. Because everything is still in boxes, they want to eat out or order takeout, but they do not want to spend a lot of money.",
                 answer: "A",
                 target: "restaurant-t12-A",
+                keywords: ["a good deal", "bring something back with us"],
+                qKeywords: ["order takeout", "spend a lot of money"],
                 hint: "<div class='hint-detail'>Họ là <span class='key-word'>sinh viên</span>, cần đồ ăn <span class='key-word'>giá rẻ</span>, có thể mua mang về (<span class='key-word'>takeout</span>). The Place (A) là tiệm burger ngon nhất thị trấn, giá tốt ('a good deal'), và có thể mua mang về trên đường về nhà.</div>"
             }
         ];
@@ -1156,7 +1172,7 @@
                 peopleContainer.innerHTML += `
             <div class="person-item">
                 <span class="person-number q-number-inline">${i + 1}</span>
-                <span class="person-desc">${person.description}</span>
+                <span class="person-desc" id="${qid}-desc">${person.description}</span>
                 <br>
                 <strong>Restaurant:</strong> 
                 <input type="text" class="matching-input letter-input" id="${qid}" data-type="input" data-ans="${person.answer}" maxlength="1" oninput="adjustWidth(this)" style="text-transform: uppercase;">
@@ -1251,24 +1267,73 @@
             if (id.startsWith('t12-q')) {
                 const idx = parseInt(id.split('-q')[1]);
                 const person = t12_people[idx];
-                if (person && person.target) showReadingHighlight(person.target);
+                if (person && person.target) showReadingHighlight(person.target, person.keywords, id + '-desc', person.qKeywords);
             }
         }
 
         window.addEventListener('scroll', repositionCurrentHint, true);
         window.addEventListener('resize', repositionCurrentHint);
 
-        // Bài đọc: scroll + highlight (thuật toán từ 3f)
-        function showReadingHighlight(targetId) {
+        // Bài đọc: scroll + highlight (thuật toán từ 3f, mở rộng: highlight thêm keyword tương ứng bên câu hỏi)
+        let reviewHighlightBackup = {};
+        let questionHighlightBackup = {};
+        function applyKeywordHighlight(el, keywords) {
+            if (!el || !keywords || !keywords.length) return;
+            let html = el.innerHTML;
+            keywords.forEach(kw => {
+                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+                const regex = new RegExp(`(${escaped})`, 'i');
+                html = html.replace(regex, '<span class="keyword-highlight-inline">$1</span>');
+            });
+            el.innerHTML = html;
+        }
+        function showReadingHighlight(targetId, keywords, descId, qKeywords) {
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            Object.keys(reviewHighlightBackup).forEach(id => {
+                const reviewEl = document.querySelector(`#${id} .restaurant-review`);
+                if (reviewEl) reviewEl.innerHTML = reviewHighlightBackup[id];
+            });
+            reviewHighlightBackup = {};
+            Object.keys(questionHighlightBackup).forEach(id => {
+                const descEl = document.getElementById(id);
+                if (descEl) descEl.innerHTML = questionHighlightBackup[id];
+            });
+            questionHighlightBackup = {};
+
             const el = document.getElementById(targetId);
             if (el) {
                 el.classList.add('active-highlight');
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                if (keywords && keywords.length) {
+                    const reviewEl = el.querySelector('.restaurant-review');
+                    if (reviewEl) {
+                        reviewHighlightBackup[targetId] = reviewEl.innerHTML;
+                        applyKeywordHighlight(reviewEl, keywords);
+                    }
+                }
+            }
+
+            if (descId && qKeywords && qKeywords.length) {
+                const descEl = document.getElementById(descId);
+                if (descEl) {
+                    questionHighlightBackup[descId] = descEl.innerHTML;
+                    applyKeywordHighlight(descEl, qKeywords);
+                }
             }
         }
         function clearReadingHighlight() {
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            Object.keys(reviewHighlightBackup).forEach(id => {
+                const reviewEl = document.querySelector(`#${id} .restaurant-review`);
+                if (reviewEl) reviewEl.innerHTML = reviewHighlightBackup[id];
+            });
+            reviewHighlightBackup = {};
+            Object.keys(questionHighlightBackup).forEach(id => {
+                const descEl = document.getElementById(id);
+                if (descEl) descEl.innerHTML = questionHighlightBackup[id];
+            });
+            questionHighlightBackup = {};
         }
 
         function toggleSingleAns(id) {
@@ -1307,7 +1372,7 @@
                 const person = t12_people[idx];
                 if (person && person.target) {
                     if (isCurrentlyShown) clearReadingHighlight();
-                    else showReadingHighlight(person.target);
+                    else showReadingHighlight(person.target, person.keywords, qid + '-desc', person.qKeywords);
                 }
             }
         }
@@ -1371,7 +1436,7 @@
             if (prefix === 't2' || prefix === 't4') updateWordBank(prefix);
 
             if (prefix === 't12') {
-                t12_people.forEach(person => { if (person.target) showReadingHighlight(person.target); });
+                t12_people.forEach((person, i) => { if (person.target) showReadingHighlight(person.target, person.keywords, `t12-q${i}-desc`, person.qKeywords); });
             }
         }
 
@@ -1682,8 +1747,8 @@
 
         function initializeResizer() {
             const resizer = document.getElementById('resizer-t12');
-            const leftPanel = document.getElementById('people-panel-t12');
-            const rightPanel = document.getElementById('restaurants-panel-t12');
+            const leftPanel = document.getElementById('restaurants-panel-t12');
+            const rightPanel = document.getElementById('people-panel-t12');
 
             if (!resizer || !leftPanel || !rightPanel) return;
 
