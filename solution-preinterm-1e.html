@@ -303,6 +303,17 @@
         #contentDict .grammar-list li strong.vocab-speak.speaking::after {
             opacity: 1;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -504,6 +515,7 @@
 
     <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
+    <script src="access-core.js"></script>
     <script>
         const ex1Data = [
             { q: "1. Playing volleyball is fun, but it's [CHOICE:tired/tiring].", ans: "tiring", mean: "làm mệt mỏi", trans: "Chơi bóng chuyền rất vui, nhưng nó gây mệt mỏi.", hint: "Miêu tả tính chất của việc 'chơi bóng chuyền' (sự việc) -> dùng đuôi -ing." },
@@ -579,14 +591,48 @@
             el.style.width = Math.max(text.length * 11 + 30, 70) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function toggleGrammarSection(section) {
             const content = document.getElementById('content' + section);
@@ -653,7 +699,7 @@
                         <button class="eye-btn" onclick="showSingleAnsSelect('${qid}-select')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         <div class="hint-detail" style="font-weight: bold; color: #2980b9;">Giải thích: ${it.hint}</div>
                         <div class="hint-detail" style="font-style: italic; color: #666; margin-top: 5px;">${it.trans}</div>
@@ -677,7 +723,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
-                        <div class="hint-box" id="${qid}-hint" style="position: absolute; top: 100%; left: 0; min-width: 280px; z-index: 100;">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${item.a}</span></div>
                             <div class="hint-detail">${item.h}</div>
                         </div>
@@ -764,7 +810,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         <div class="hint-detail" style="font-weight: bold; color: #2980b9;">Giải thích: ${it.hint}</div>
                         <div class="hint-detail" style="font-style: italic; color: #666; margin-top: 5px;">${it.trans}</div>
@@ -944,8 +990,6 @@
             window.speechSynthesis.onvoiceschanged = () => { };
         })();
     </script>
-
-    <script src="access-core.js"></script>
 </body>
 
 </html>

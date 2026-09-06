@@ -143,6 +143,17 @@
         }
 
         /* .sticky-bank kế thừa từ access-theme.css — không override ở đây */
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -295,6 +306,7 @@
 
     <button class="check-all-btn" onclick="checkAll()">CHECK ALL ANSWERS (ENTER)</button>
 
+    <script src="access-core.js"></script>
     <script>
         const ex1Data = [
             { q: "We [INPUT] (get) to the hotel in time for dinner.", ans: "didn't get", mean: "không đến nơi", trans: "Chúng tôi đã không đến khách sạn kịp giờ ăn tối." },
@@ -330,17 +342,17 @@
         ];
 
         const ex4Parts = [
-            { t: "Mia: Hi, Henry. ¹ [INPUT] did you do at the weekend?", ans: "What", hint: "Hỏi về hành động/sự việc (làm gì) nên dùng 'What'." },
+            { t: "Mia: Hi, Henry. ¹ [INPUT] did you do at the weekend?", ans: "What", hint: "Hỏi về hành động/sự việc (làm gì) → 'What'." },
             { t: "Henry: I went to the beach on Saturday." },
-            { t: "Mia: That’s nice! ² [INPUT] did you go with?", ans: "Who", hint: "Hỏi về người (đi cùng ai) nên dùng 'Who'." },
+            { t: "Mia: That’s nice! ² [INPUT] did you go with?", ans: "Who", hint: "Hỏi về người (đi cùng ai) → 'Who'." },
             { t: "Henry: Matt and Alex." },
-            { t: "Mia: Alex West? ³ [INPUT] do you see him?", ans: "How often", hint: "Hỏi về tần suất (bao lâu một lần) nên dùng 'How often'." },
+            { t: "Mia: Alex West? ³ [INPUT] do you see him?", ans: "How often", hint: "Hỏi về tần suất (bao lâu một lần) → 'How often'." },
             { t: "Henry: Only two or three times a year. He doesn’t live near here any more." },
-            { t: "Mia: ⁴ [INPUT] does he live now?", ans: "Where", hint: "Hỏi về nơi chốn (sống ở đâu) nên dùng 'Where'." },
+            { t: "Mia: ⁴ [INPUT] does he live now?", ans: "Where", hint: "Hỏi về nơi chốn (sống ở đâu) → 'Where'." },
             { t: "Henry: In London." },
             { t: "Mia: Does he? ⁵ [INPUT] part of London?", ans: "Which", hint: "Hỏi về sự lựa chọn trong một nhóm (khu vực nào) dùng 'Which'." },
             { t: "Henry: I’m not sure. North London, I think." },
-            { t: "Mia: ⁶ [INPUT] did he move?", ans: "Why", hint: "Hỏi về lý do (tại sao) nên dùng 'Why'." },
+            { t: "Mia: ⁶ [INPUT] did he move?", ans: "Why", hint: "Hỏi về lý do (tại sao) → 'Why'." },
             { t: "Henry: I think his mum got a new job. Anyway, ⁷ [INPUT] did you last see him?", ans: "When", hint: "Hỏi về thời điểm (lần cuối gặp khi nào) dùng 'When'." },
             { t: "Mia: Oh, about two years ago." }
         ];
@@ -372,14 +384,48 @@
             if (content && icon) { content.classList.toggle('active'); icon.classList.toggle('active'); }
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showSingleAns(id) {
             const el = document.getElementById(id);
@@ -399,7 +445,7 @@
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
             });
         }
 
@@ -412,7 +458,7 @@
                 }
                 const qid = `ex2-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
             });
         }
 
@@ -421,7 +467,7 @@
             ex3Data.forEach((it, i) => {
                 const qid = `ex3-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div></div>`;
             });
         }
 
@@ -444,7 +490,7 @@
                 let processedLine = line.t;
                 if (line.t.includes('[INPUT]')) {
                     const qid = `ex4-q${count}`;
-                    processedLine = line.t.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${line.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div> <div class="row-btns"><button class="eye-btn" onclick="revealEx4Ans('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><strong>Đáp án:</strong> ${line.ans}<br><strong>Giải thích:</strong> ${line.hint}</div></div>`);
+                    processedLine = line.t.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${line.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div> <div class="row-btns"><button class="eye-btn" onclick="revealEx4Ans('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><strong>Đáp án:</strong> ${line.ans}<br><strong>Giải thích:</strong> ${line.hint}</div></div>`);
                     count++;
                 }
                 fullHtml += `<div>${processedLine}</div>`;
@@ -544,7 +590,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
                     <br>
                     A: <input type="text" class="task5-input" style="text-align: left; min-width: 300px;" placeholder="Your own answer...">
                 </div>`;
@@ -569,7 +615,7 @@
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
                     </div>
-                    <div class="hint-box" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
                     <div style="margin-top: 5px; color: #555;">
                         <strong>A:</strong> ${it.givenAns}
                     </div>
@@ -637,7 +683,6 @@
             document.querySelectorAll('input').forEach(adjustWidth);
         };
     </script>
-    <script src="access-core.js"></script>
 </body>
 
 </html>

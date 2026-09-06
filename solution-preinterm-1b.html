@@ -62,6 +62,20 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tự tính theo viewport,
+           không bao giờ bị cắt/che ở bất kỳ mép nào của màn hình */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
         .hint-box .key-word {
             font-weight: bold;
             color: var(--primary-dark);
@@ -543,14 +557,50 @@
             if (content && icon) { content.classList.toggle('active'); icon.classList.toggle('active'); }
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const margin = 8;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - margin) top = rect.top - boxRect.height - 6;
+            if (top < margin) top = margin;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - margin) left = window.innerWidth - boxRect.width - margin;
+            if (left < margin) left = margin;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
         function setWordUsed(bankId, word, used) {
@@ -588,7 +638,7 @@
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" data-type="input" data-bank="${it.base}" data-bankid="bank-ex1" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex1Hints[i].mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex1Hints[i].trans}</div></div></div>`;
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex1Hints[i].mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex1Hints[i].trans}</div></div></div>`;
             });
         }
 
@@ -597,7 +647,7 @@
             ex2Data.forEach((it, i) => {
                 const qid = `ex2-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex2Hints[i].m}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex2Hints[i].t}</div></div></div>`;
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${ex2Hints[i].m}</div><div class="hint-detail" style="font-style: italic; color: #666;">${ex2Hints[i].t}</div></div></div>`;
             });
         }
 
@@ -624,7 +674,7 @@
             ];
             ex4Data.forEach((it, i) => {
                 const qid = `ex4-q${i}`;
-                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder=""> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint"><div class="hint-detail" style="color: #c0392b;">${explanations[i]}</div><div class="hint-detail" style="font-style: italic; color: #666;">Dịch: ${it.trans}</div><div class="hint-detail" style="color: var(--secondary, #27ae60); font-weight:bold;">Câu đúng: ${it.corr}</div></div></div>`;
+                container.innerHTML += `<div class="question-row"><span class="q-number-inline">${i + 1}.</span> ${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder=""> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail" style="color: #c0392b;">${explanations[i]}</div><div class="hint-detail" style="font-style: italic; color: #666;">Dịch: ${it.trans}</div><div class="hint-detail" style="color: var(--secondary, #27ae60); font-weight:bold;">Câu đúng: ${it.corr}</div></div></div>`;
             });
         }
 

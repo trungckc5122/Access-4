@@ -123,27 +123,6 @@
             text-align: center;
         }
 
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light, #f9f9f9);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            border: 1px solid var(--border, #eee);
-        }
-
-        .word-item {
-            background: var(--card-bg, #fff);
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid var(--border, #ddd);
-            font-size: 0.95rem;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
         /* Split Screen Reading */
         .reading-split-container {
             display: flex;
@@ -263,46 +242,6 @@
         .bilingual-mode .bilingual-block { display: block; }
 
         /* Drag and Drop Styles */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            padding: 20px;
-            background: var(--card-bg);
-            border: 2px solid var(--primary-light);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            justify-content: center;
-        }
-
-        .word-item {
-            padding: 8px 18px;
-            background: white;
-            border: 2px solid var(--primary-light);
-            border-radius: 10px;
-            cursor: grab;
-            user-select: none;
-            font-weight: bold;
-            color: var(--primary);
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .word-item:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .word-item.dragging {
-            opacity: 0.5;
-            cursor: grabbing;
-        }
-
-        .word-item.used {
-            display: none;
-        }
-
         .drop-slot {
             display: inline-flex;
             align-items: center;
@@ -341,12 +280,14 @@
             color: #991b1b !important;
         }
 
-        .sticky-bank {
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-            background: var(--bg);
-            padding: 10px 0;
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            z-index: 9999;
         }
     </style>
 </head>
@@ -508,9 +449,9 @@
         ];
 
         const ex3Data = [
-            { q: "<b>1</b> Lenkei took about half an hour to hypnotise himself.", ans: "F", target: "text-ex3-1", hint: "<strong>F (Sai)</strong><br>Trong đoạn 1: <span class='key-word'>That took about thirty seconds.</span> (Điều đó chỉ mất khoảng 30 giây, không phải nửa tiếng)." },
-            { q: "<b>2</b> Lenkei didn't speak during the operation.", ans: "F", target: "text-ex3-2", hint: "<strong>F (Sai)</strong><br>Trong đoạn 2: <span class='key-word'>he said \"How's it going?\"</span> (giữa chừng ca phẫu thuật ông ấy hỏi \"Mọi chuyện sao rồi?\")." },
-            { q: "<b>3</b> All the operations were successful.", ans: "T", target: "text-ex3-3", hint: "<strong>T (Đúng)</strong><br>Trong đoạn 3: <span class='key-word'>Both operations were successful... which also went well.</span> (Cả 3 ca phẫu thuật đều thành công tốt đẹp)." }
+            { q: "<span class='q-number-inline'>1</span> Lenkei took about half an hour to hypnotise himself.", ans: "F", target: "text-ex3-1", hint: "<strong>F (Sai)</strong><br>Trong đoạn 1: <span class='key-word'>That took about thirty seconds.</span> (Điều đó chỉ mất khoảng 30 giây, không phải nửa tiếng)." },
+            { q: "<span class='q-number-inline'>2</span> Lenkei didn't speak during the operation.", ans: "F", target: "text-ex3-2", hint: "<strong>F (Sai)</strong><br>Trong đoạn 2: <span class='key-word'>he said \"How's it going?\"</span> (giữa chừng ca phẫu thuật ông ấy hỏi \"Mọi chuyện sao rồi?\")." },
+            { q: "<span class='q-number-inline'>3</span> All the operations were successful.", ans: "T", target: "text-ex3-3", hint: "<strong>T (Đúng)</strong><br>Trong đoạn 3: <span class='key-word'>Both operations were successful... which also went well.</span> (Cả 3 ca phẫu thuật đều thành công tốt đẹp)." }
         ];
 
         const ex4Data = [
@@ -541,14 +482,61 @@
             adjustWidth(el);
         }
 
-        function toggleSimpleHint(event, id) {
-            if (event) event.stopPropagation();
-            const h = document.getElementById(id + '-hint');
-            if (!h) return;
-            const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            const margin = 8;
+            const btnRect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+
+            let top = btnRect.bottom + 6;
+            let left = btnRect.left;
+
+            if (top + boxRect.height > window.innerHeight - margin) {
+                top = btnRect.top - boxRect.height - 6;
+            }
+            if (top < margin) top = margin;
+            if (left + boxRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - boxRect.width - margin;
+            }
+            if (left < margin) left = margin;
+
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
         }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const hintBox = document.getElementById(currentHintBtn.dataset.hintTarget);
+            if (hintBox && hintBox.style.display === 'block') {
+                positionHintBox(hintBox, currentHintBtn);
+            }
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const hintBox = document.getElementById(id + '-hint');
+            if (!hintBox) return;
+            const btn = event ? event.currentTarget : null;
+            const isVisible = hintBox.style.display === 'block';
+            closeAllHints();
+            if (!isVisible) {
+                hintBox.style.display = 'block';
+                if (btn) {
+                    btn.dataset.hintTarget = hintBox.id;
+                    positionHintBox(hintBox, btn);
+                    currentHintBtn = btn;
+                }
+            }
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showReadingHint(targetTextId, hintBoxId) {
             const h = document.getElementById(hintBoxId);
@@ -575,12 +563,20 @@
             const tbody = document.getElementById('questions-ex1');
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i}`;
-                let nHtml = it.n;
+                let nHtml = it.n.replace(/^(\d+)\s/, '<span class="q-number-inline">$1</span> ');
                 let vHtml = it.v;
+                const controlsHtml = `
+                    <div class="row-btns">
+                        <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
+                        <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
+                    </div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">
+                        <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
+                    </div>`;
                 if(nHtml.includes('[INPUT]')) {
-                    nHtml = nHtml.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+                    nHtml = nHtml.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`) + controlsHtml;
                 } else {
-                    vHtml = vHtml.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`);
+                    vHtml = vHtml.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">`) + controlsHtml;
                 }
                 
                 tbody.innerHTML += `
@@ -588,13 +584,6 @@
                         <td>${nHtml}</td>
                         <td>
                             ${vHtml}
-                            <div class="row-btns">
-                                <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
-                                <button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button>
-                            </div>
-                            <div class="hint-box" id="${qid}-hint" style="display:none; background:#e8f4f8; border-left-color:#3498db; margin-top:10px;">
-                                <div class="hint-detail"><span class="key-word" style="color:#2980b9;">${it.ans}</span>: ${it.mean}</div>
-                            </div>
                         </td>
                     </tr>
                 `;
@@ -629,7 +618,7 @@
                     hintHtml += `<div class="hint-detail"><strong>Đáp án 2:</strong> <span class="key-word">${it.ans2}</span>: ${it.mean2}</div>`;
                 }
 
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="revealEx2Ans('${qid}', ${qid2 ? `'${qid2}'` : 'null'})">👁️</button><button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${hintHtml}</div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="revealEx2Ans('${qid}', ${qid2 ? `'${qid2}'` : 'null'})">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint">${hintHtml}</div></div>`;
             });
         }
 
@@ -643,7 +632,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint" style="background:#f0f4c3; border-left-color:#c0ca33;">
+                    <div class="hint-box" id="${qid}-hint">
                         <div class="hint-detail">${it.hint}</div>
                     </div>
                 </div>`;
@@ -660,7 +649,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="showReadingHint('${it.target}', '${qid}-hint')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint" style="background:#e3f2fd; border-left-color:#42a5f5;">
+                    <div class="hint-box" id="${qid}-hint">
                         <div class="hint-detail">${it.hint}</div>
                     </div>
                 </div>`;
@@ -982,7 +971,8 @@
             renderEx1(); renderEx2(); renderEx3(); renderEx4();
             document.querySelectorAll('input').forEach(adjustWidth);
             initSplitScreenResizer();
-            
+            window.toggleHint = toggleHint;
+
             document.addEventListener('keydown', (e) => {
                 if(e.key === 'Enter') checkAll();
             });
