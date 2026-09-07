@@ -275,6 +275,23 @@
             .resizer {
                 display: none;
             }
+
+            #questions-ex1 {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
         }
     </style>
 </head>
@@ -369,7 +386,7 @@
             <div class="exercise-title">1. Write the opposite of the adjectives by adding a negative prefix: dis-, il-,
                 im-, in- or un-.</div>
             <div id="questions-ex1"
-                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <!-- Populated by JS -->
             </div>
             <div class="controls-row" style="margin-top: 30px;">
@@ -531,23 +548,23 @@
         const ex5Data = [
             {
                 w: "pleasant",
-                syn: "enjoyable", synHint: "<strong>enjoyable</strong>: giving pleasure; very pleasant.",
-                opp: "unpleasant", oppHint: "<strong>unpleasant</strong>: not pleasant or enjoyable; making you feel unhappy."
+                syn: "enjoyable", synHint: "<strong>enjoyable</strong>: đồng nghĩa với pleasant, nghĩa là dễ chịu, thú vị.",
+                opp: "unpleasant", oppHint: "<strong>unpleasant</strong>: trái nghĩa với pleasant (thêm tiền tố un-), nghĩa là khó chịu."
             },
             {
                 w: "fortunate",
-                syn: "lucky", synHint: "<strong>lucky</strong>: having good luck; resulting from good luck.",
-                opp: "unfortunate", oppHint: "<strong>unfortunate</strong>: unlucky; having bad luck."
+                syn: "lucky", synHint: "<strong>lucky</strong>: đồng nghĩa với fortunate, nghĩa là may mắn.",
+                opp: "unfortunate", oppHint: "<strong>unfortunate</strong>: trái nghĩa với fortunate (thêm tiền tố un-), nghĩa là không may."
             },
             {
                 w: "courteous",
-                syn: "polite", synHint: "<strong>polite</strong>: having good manners and showing respect for others.",
-                opp: "discourteous", oppHint: "<strong>discourteous</strong>: not polite; lacking good manners; rude."
+                syn: "polite", synHint: "<strong>polite</strong>: đồng nghĩa với courteous, nghĩa là lịch sự.",
+                opp: "discourteous", oppHint: "<strong>discourteous</strong>: trái nghĩa với courteous (thêm tiền tố dis-), nghĩa là bất lịch sự."
             },
             {
                 w: "probable",
-                syn: "likely", synHint: "<strong>likely</strong>: probable; expected to happen or be true.",
-                opp: "improbable", oppHint: "<strong>improbable</strong>: not likely to happen or be true."
+                syn: "likely", synHint: "<strong>likely</strong>: đồng nghĩa với probable, nghĩa là có khả năng xảy ra.",
+                opp: "improbable", oppHint: "<strong>improbable</strong>: trái nghĩa với probable (thêm tiền tố im-), nghĩa là khó có khả năng xảy ra."
             }
         ];
 
@@ -565,14 +582,53 @@
             icon.textContent = content.classList.contains('active') ? '▲' : '▼';
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect(), boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px'; hintBox.style.left = left + 'px';
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            currentHintBtn = event ? (event.currentTarget || event.target) : null;
+            positionHintBox(h, currentHintBtn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function setWordUsed(bankId, word, used) {
             if (!word) return;
@@ -606,15 +662,14 @@
                 container.innerHTML += `
                     <div class="question-row">
                         ${i + 1}. ${it.w}
-                        <span style="float: right; display: flex; align-items: center;">
+                        <span style="display: inline-flex; align-items: center; margin-left: 10px;">
                             <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
                             <span class="row-btns">
                                 <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                                 <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                             </span>
                         </span>
-                        <div style="clear: both;"></div>
-                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
                     </div>`;
             });
         }
@@ -631,7 +686,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </span>
-                        <div class="hint-box" id="${qid}-hint" style="position: absolute; top: 100%; left: 0; min-width: 250px; z-index: 100;">${it.h}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${it.h}</div>
                     </span>`;
                 html = html.replace(`[INPUT${i + 1}]`, inputHtml);
             });
@@ -703,7 +758,7 @@
                         </span>
                     </span>`;
                 const html = it.q.replace('[INPUT]', inputHtml);
-                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -721,7 +776,7 @@
                                 <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                             </div>
                         </div>
-                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
                     </div>`;
             });
         }
@@ -739,14 +794,14 @@
                             <input type="text" id="${qidSyn}" data-ans="${it.syn}" class="task5-input" oninput="adjustWidth(this)">
                             <button class="eye-btn" onclick="showSingleAns('${qidSyn}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qidSyn}')">i</button>
-                            <div class="hint-box" id="${qidSyn}-hint" style="position: absolute; top: 100%; left: 0; min-width: 200px; z-index: 100;">${it.synHint}</div>
+                            <div class="hint-box inline-hint" id="${qidSyn}-hint">${it.synHint}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 5px; position: relative;">
                             <span>OPP</span>
                             <input type="text" id="${qidOpp}" data-ans="${it.opp}" class="task5-input" oninput="adjustWidth(this)">
                             <button class="eye-btn" onclick="showSingleAns('${qidOpp}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qidOpp}')">i</button>
-                            <div class="hint-box" id="${qidOpp}-hint" style="position: absolute; top: 100%; left: 0; min-width: 200px; z-index: 100;">${it.oppHint}</div>
+                            <div class="hint-box inline-hint" id="${qidOpp}-hint">${it.oppHint}</div>
                         </div>
                     </div>`;
             });

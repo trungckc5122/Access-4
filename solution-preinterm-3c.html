@@ -258,6 +258,19 @@
             margin-top: 10px;
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
         /* Exercise 2: Click-to-select */
         .word-choice {
             cursor: pointer;
@@ -676,7 +689,7 @@
             const container = document.getElementById('questions-ex1');
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i + 1}`;
-                container.innerHTML += `<div class="matching-row"><span><span class="q-number-inline">${i + 1}.</span> ${it.q}</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" data-bank="${it.bank}" data-bankid="wordbank-ex1" class="matching-box"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="matching-row"><span><span class="q-number-inline">${i + 1}.</span> ${it.q}</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" data-bank="${it.bank}" data-bankid="wordbank-ex1" class="matching-box"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div></div><div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -692,7 +705,7 @@
                         <button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </div>
                     <span id="${qid}-select" style="display:none;"></span>
-                    <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
                 </div>`;
             });
         }
@@ -717,7 +730,7 @@
             const container = document.getElementById('questions-ex5');
             ex5Data.forEach((it, i) => {
                 const qid = `ex5-q${i + 1}`;
-                container.innerHTML += `<div class="matching-row"><span><span class="q-number-inline">${i + 1}.</span> ${it.q}</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="matching-row"><span><span class="q-number-inline">${i + 1}.</span> ${it.q}</span><div style="display:flex;align-items:center;gap:10px;"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input"><div class="row-btns"><button class="btn-small eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="btn-small info-btn" onclick="toggleHint(event,'${qid}')">i</button></div></div><div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -755,7 +768,7 @@
                 return;
             }
             toggleTranscript(track, true);
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             h.style.display = 'block';
             const txt = document.getElementById(targetId);
@@ -765,14 +778,55 @@
             }
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
         function setWordUsed(bankId, word, used) {
@@ -838,11 +892,12 @@
         function showAnswers(prefix) {
             if (prefix === 'ex2') {
                 document.querySelectorAll('#questions-ex2 .question-row').forEach(row => {
-                    const correct = Array.from(row.querySelectorAll('.word-choice')).find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
-                    if (correct) {
-                        row.querySelectorAll('.word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
-                        correct.classList.add('selected');
-                    }
+                    const choices = Array.from(row.querySelectorAll('.word-choice'));
+                    const correct = choices.find(s => s.textContent.toLowerCase() === s.dataset.ans.toLowerCase());
+                    const selected = choices.find(s => s.classList.contains('selected'));
+                    choices.forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                    if (selected && selected !== correct) selected.classList.add('incorrect-select');
+                    if (correct) correct.classList.add('correct-select');
                 });
             } else {
                 document.querySelectorAll(`input[id^="${prefix}"]`).forEach(el => {
@@ -875,6 +930,7 @@
         }
 
         window.onload = () => {
+            window.toggleHint = toggleHint;
             renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6();
             const t = document.getElementById('theme-toggle');
             t.onclick = () => {

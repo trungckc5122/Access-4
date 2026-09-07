@@ -100,6 +100,19 @@
             line-height: 1.55;
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
         .hint-detail .key-word {
             font-weight: 800;
             color: var(--primary-dark);
@@ -222,42 +235,91 @@
             background: var(--error-bg);
         }
 
-        .choice-row {
-            padding: 10px 0;
+        .mc-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-medium, #cbd5e1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 18px;
         }
 
-        .choice-options {
+        .mc-question {
+            font-weight: bold;
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+
+        .mc-options {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-top: 6px;
-            align-items: flex-start;
+            max-width: 520px;
         }
 
-        .choice-options label {
+        .mc-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            border: 1px solid var(--border-medium, #e2e8f0);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.98rem;
+        }
+
+        .mc-option:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .mc-option.selected {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        .mc-option.correct {
+            background: #dcfce7 !important;
+            border-color: #22c55e !important;
+            color: #15803d !important;
+            font-weight: bold;
+        }
+
+        .mc-option.incorrect {
+            background: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #b91c1c !important;
+        }
+
+        .mc-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 18px 8px 12px;
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            background: var(--bg);
-            cursor: pointer;
-            min-width: 0;
-            max-width: 500px;
-            width: 500px;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            background: var(--border-medium, #e2e8f0);
+            font-weight: bold;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
         }
 
-        .choice-options label:hover {
-            border-color: var(--primary);
-            background: var(--grammar-bg);
+        .mc-option.selected .mc-badge {
+            background: var(--primary);
+            color: white;
         }
 
-        .choice-options label.correct-choice {
-            border-color: var(--success);
-            background: var(--success-bg);
-            color: var(--success);
-            font-weight: 800;
+        .mc-option.correct .mc-badge {
+            background: #22c55e !important;
+            color: white !important;
+        }
+
+        .mc-option.incorrect .mc-badge {
+            background: #ef4444 !important;
+            color: white !important;
         }
 
         .audio-player-container {
@@ -782,7 +844,7 @@
                         <button class="eye-btn" onclick="showWordSearchOne(${i})">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, 'ex1-${i}')">i</button>
                     </span>
-                    <div class="hint-box" id="ex1-${i}-hint"><div class="hint-detail">${hintText}</div></div>
+                    <div class="hint-box inline-hint" id="ex1-${i}-hint"><div class="hint-detail">${hintText}</div></div>
                 </div>`;
             });
         }
@@ -865,7 +927,7 @@
                         <button class="eye-btn" onclick="showDndOne('${id}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
                     </span>
-                    <div class="hint-box" id="${id}-hint">
+                    <div class="hint-box inline-hint" id="${id}-hint">
                         <div class="hint-detail"><strong>Đáp án: ${item.ans}</strong></div>
                         <div class="hint-detail"><em>Dẫn chứng:</em> "${item.evidence}"</div>
                         <div class="hint-detail"><em>Giải thích:</em> ${item.explain}</div>
@@ -932,7 +994,19 @@
             const chip = document.querySelector(`#ex2-bank .word-item[data-word="${ans}"]`);
             if (chip) chip.classList.add('used');
         }
-        function showAnswersDnd() { ex2Data.forEach((_, i) => showDndOne(`ex2-${i}`)); }
+        // Hàm KHÔNG toggle dùng riêng cho "Show All": luôn điền đáp án đúng,
+        // không quan tâm trạng thái hiện tại (khác với showDndOne dùng cho nút mắt 👁️ từng câu)
+        function showDndOneAll(id) {
+            const dz = document.getElementById(id);
+            const ans = dz.dataset.ans;
+            const prevWord = dz.dataset.filled;
+            if (prevWord === ans) return;
+            if (prevWord) returnChipToBank(prevWord);
+            fillDropZone(dz, ans);
+            const chip = document.querySelector(`#ex2-bank .word-item[data-word="${ans}"]`);
+            if (chip) chip.classList.add('used');
+        }
+        function showAnswersDnd() { ex2Data.forEach((_, i) => showDndOneAll(`ex2-${i}`)); }
         function resetDnd() {
             document.querySelectorAll('.dnd-drop-zone').forEach(dz => emptyDropZone(dz));
             document.querySelectorAll('#ex2-bank .word-item').forEach(chip => chip.classList.remove('used'));
@@ -994,29 +1068,46 @@
                         <button class="eye-btn" onclick="showAdjectiveOne('${id}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
                     </span>
-                    <div class="hint-box" id="${id}-hint"><div class="hint-detail"><span class="key-word">${item.ans}</span> là tính từ ${item.sentiment === 'pos' ? 'thường tích cực' : 'thường tiêu cực'} khi miêu tả phim.</div></div>
+                    <div class="hint-box inline-hint" id="${id}-hint"><div class="hint-detail"><span class="key-word">${item.ans}</span> là tính từ ${item.sentiment === 'pos' ? 'thường tích cực' : 'thường tiêu cực'} khi miêu tả phim.</div></div>
                 </div>`;
             });
         }
+
+        const ex5State = {};
 
         function renderEx5() {
             const container = document.getElementById('ex5-questions');
             ex5Data.forEach((item, i) => {
                 const id = `ex5-${i}`;
                 const choices = Object.entries(item.choices).map(([key, text]) =>
-                    `<label data-choice="${id}-${key}"><input type="radio" name="${id}" value="${key}"> ${key}. ${text}</label>`
+                    `<div class="mc-option" id="${id}-opt-${key}" onclick="selectEx5Option('${id}','${key}')">
+                        <span class="mc-badge">${key}</span>
+                        <span>${text}</span>
+                    </div>`
                 ).join('');
                 container.innerHTML += `
-                <div class="choice-row" data-answer="${item.ans}" id="${id}">
-                    <span class="q-number-inline">${i + 1}.</span> ${item.q}
-                    <div class="choice-options">${choices}</div>
-                    <span class="row-btns">
-                        <button class="eye-btn" onclick="showMultipleChoiceOne('${id}')">👁️</button>
-                        <button class="hint-btn" onclick="showReadingHint(event, '${item.target}', '${id}-hint', '1.09')">i</button>
-                    </span>
+                <div class="mc-card">
+                    <div style="margin-bottom:10px; line-height:1.6;">
+                        <span class="mc-question" style="display:inline;"><span class="q-number-inline">${i + 1}.</span> ${item.q}</span>
+                        <span class="row-btns" style="display:inline-flex; margin-left:8px; vertical-align:middle;">
+                            <button class="eye-btn" onclick="showMultipleChoiceOne('${id}')">👁️</button>
+                            <button class="hint-btn" onclick="showReadingHint(event, '${item.target}', '${id}-hint', '1.09')">i</button>
+                        </span>
+                    </div>
+                    <div class="mc-options">${choices}</div>
                     <div class="hint-box" id="${id}-hint">${item.hint}</div>
                 </div>`;
             });
+        }
+
+        function selectEx5Option(qid, val) {
+            document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt => opt.classList.remove('selected', 'correct', 'incorrect'));
+            if (ex5State[qid] === val) {
+                delete ex5State[qid];
+            } else {
+                ex5State[qid] = val;
+                document.getElementById(`${qid}-opt-${val}`).classList.add('selected');
+            }
         }
 
         function renderEx6() {
@@ -1050,14 +1141,55 @@
             el.classList.add('selected');
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const box = document.getElementById(`${id}-hint`);
             if (!box) return;
             const visible = box.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!visible) box.style.display = 'block';
+            closeAllHints();
+            if (visible) return;
+            box.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(box, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function adjustWidth(el) {
             if (!el) return;
@@ -1138,11 +1270,16 @@
         }
 
         function showMultipleChoiceOne(id) {
-            const row = document.getElementById(id);
-            const ans = row.dataset.answer;
-            const radio = row.querySelector(`input[value="${ans}"]`);
-            if (radio) radio.checked = true;
-            row.querySelectorAll('label').forEach(label => label.classList.toggle('correct-choice', label.dataset.choice === `${id}-${ans}`));
+            const i = parseInt(id.replace('ex5-', ''));
+            const item = ex5Data[i];
+            const userVal = ex5State[id];
+            document.querySelectorAll(`[id^="${id}-opt-"]`).forEach(opt => opt.classList.remove('selected', 'correct', 'incorrect'));
+            if (userVal === item.ans) {
+                document.getElementById(`${id}-opt-${item.ans}`).classList.add('selected', 'correct');
+            } else {
+                if (userVal) document.getElementById(`${id}-opt-${userVal}`).classList.add('incorrect');
+                document.getElementById(`${id}-opt-${item.ans}`).classList.add('correct');
+            }
         }
 
         function showMultipleChoiceAnswers() {
@@ -1150,8 +1287,11 @@
         }
 
         function resetMultipleChoice() {
-            document.querySelectorAll('#ex5-questions input[type="radio"]').forEach(radio => radio.checked = false);
-            document.querySelectorAll('#ex5-questions label').forEach(label => label.classList.remove('correct-choice'));
+            ex5Data.forEach((_, i) => {
+                const id = `ex5-${i}`;
+                delete ex5State[id];
+                document.querySelectorAll(`[id^="${id}-opt-"]`).forEach(opt => opt.className = 'mc-option');
+            });
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
         }
@@ -1190,7 +1330,7 @@
             }
 
             toggleTranscript(track, true);
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
 
             hint.style.display = 'block';
@@ -1224,6 +1364,15 @@
                 btn.classList.toggle('pos', btn.dataset.value === input.dataset.sentiment);
                 btn.classList.toggle('neg', btn.dataset.value !== input.dataset.sentiment);
             });
+            ex5Data.forEach((it, i) => {
+                const qid = `ex5-${i}`;
+                const userVal = ex5State[qid];
+                if (!userVal) return;
+                const el = document.getElementById(`${qid}-opt-${userVal}`);
+                if (!el) return;
+                el.classList.remove('selected');
+                el.classList.add(userVal === it.ans ? 'correct' : 'incorrect');
+            });
         }
 
         function toggleGrammarSection(section) {
@@ -1241,6 +1390,7 @@
         });
 
         window.onload = () => {
+            window.toggleHint = toggleHint;
             renderWordSearch();
             renderEx2();
             renderEx3();

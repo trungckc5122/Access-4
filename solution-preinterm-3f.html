@@ -98,6 +98,18 @@
             text-decoration: underline;
         }
 
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            z-index: 9999;
+        }
+
         .hint-detail {
             margin-top: 5px;
         }
@@ -660,15 +672,15 @@
 
     <script>
         const ex1Data = [
-            { q: "I often [INPUT] online games like <em>Minecraft</em> with my friends.", ans: "take part in", bank: "take part in", hint: "<strong>Đáp án: take part in</strong><br>Giải thích: <span class='key-word'>take part in</span> nghĩa là tham gia vào." },
-            { q: "Video games can [INPUT] many benefits, such as improving memory and creativity.", ans: "provide", bank: "provide", hint: "<strong>Đáp án: provide</strong><br>Giải thích: <span class='key-word'>provide</span> nghĩa là cung cấp." },
-            { q: "The scientists [INPUT] a lot of research on the topic and published the results yesterday.", ans: "did", bank: "do", hint: "<strong>Đáp án: did</strong><br>Giải thích: Cụm từ <span class='key-word'>do research</span> (làm nghiên cứu). Ở thì quá khứ dùng <strong>did</strong>." },
-            { q: "I prefer to [INPUT] a smartphone rather than a computer.", ans: "use", bank: "use", hint: "<strong>Đáp án: use</strong><br>Giải thích: <span class='key-word'>use</span> nghĩa là sử dụng." },
-            { q: "Video games can sometimes [INPUT] a positive effect on teenagers.", ans: "have", bank: "have", hint: "<strong>Đáp án: have</strong><br>Giải thích: Cụm từ <span class='key-word'>have an effect on</span> nghĩa là có ảnh hưởng tới." },
-            { q: "The amount of violence in video games can [INPUT] concern for a lot of parents.", ans: "cause", bank: "cause", hint: "<strong>Đáp án: cause</strong><br>Giải thích: Cụm từ <span class='key-word'>cause concern</span> nghĩa là gây ra sự lo lắng." },
-            { q: "Newspapers sometimes claim that video games are bad for children, and parents often [INPUT] the same opinion.", ans: "express", bank: "express", hint: "<strong>Đáp án: express</strong><br>Giải thích: Cụm từ <span class='key-word'>express an opinion</span> nghĩa là bày tỏ quan điểm." },
-            { q: "Playing computer games in groups can help you to work together with other people and to [INPUT] decisions more quickly.", ans: "make", bank: "make", hint: "<strong>Đáp án: make</strong><br>Giải thích: Cụm từ <span class='key-word'>make decisions</span> nghĩa là đưa ra quyết định." },
-            { q: "Do you think playing computer games helps you to [INPUT] better grades?", ans: "get", bank: "get", hint: "<strong>Đáp án: get</strong><br>Giải thích: Cụm từ <span class='key-word'>get better grades</span> nghĩa là đạt điểm số tốt hơn." }
+            { q: "I often [INPUT] online games like <em>Minecraft</em> with my friends.", ans: "take part in", bank: "take part in", hint: "Dấu hiệu: '<strong>online games ... with my friends</strong>' → tham gia vào một hoạt động cùng người khác, đi với cụm <strong>take part in</strong>." },
+            { q: "Video games can [INPUT] many benefits, such as improving memory and creativity.", ans: "provide", bank: "provide", hint: "Dấu hiệu: '<strong>many benefits</strong>' → mang lại lợi ích, đi với động từ <strong>provide</strong>." },
+            { q: "The scientists [INPUT] a lot of research on the topic and published the results yesterday.", ans: "did", bank: "do", hint: "Dấu hiệu: '<strong>research ... yesterday</strong>' → cụm cố định <span class='key-word'>do research</span> (làm nghiên cứu), có 'yesterday' nên chia quá khứ: <strong>did</strong>." },
+            { q: "I prefer to [INPUT] a smartphone rather than a computer.", ans: "use", bank: "use", hint: "Dấu hiệu: '<strong>a smartphone rather than a computer</strong>' → hành động sử dụng thiết bị, đi với động từ <strong>use</strong>." },
+            { q: "Video games can sometimes [INPUT] a positive effect on teenagers.", ans: "have", bank: "have", hint: "Dấu hiệu: '<strong>a positive effect on</strong>' → cụm cố định <span class='key-word'>have an effect on</span> (có ảnh hưởng đến): <strong>have</strong>." },
+            { q: "The amount of violence in video games can [INPUT] concern for a lot of parents.", ans: "cause", bank: "cause", hint: "Dấu hiệu: '<strong>concern for a lot of parents</strong>' → cụm cố định <span class='key-word'>cause concern</span> (gây ra lo ngại): <strong>cause</strong>." },
+            { q: "Newspapers sometimes claim that video games are bad for children, and parents often [INPUT] the same opinion.", ans: "express", bank: "express", hint: "Dấu hiệu: '<strong>the same opinion</strong>' → cụm cố định <span class='key-word'>express an opinion</span> (bày tỏ quan điểm): <strong>express</strong>." },
+            { q: "Playing computer games in groups can help you to work together with other people and to [INPUT] decisions more quickly.", ans: "make", bank: "make", hint: "Dấu hiệu: '<strong>decisions more quickly</strong>' → cụm cố định <span class='key-word'>make decisions</span> (đưa ra quyết định): <strong>make</strong>." },
+            { q: "Do you think playing computer games helps you to [INPUT] better grades?", ans: "get", bank: "get", hint: "Dấu hiệu: '<strong>better grades</strong>' → cụm cố định <span class='key-word'>get better grades</span> (đạt điểm số tốt hơn): <strong>get</strong>." }
         ];
 
         const ex2Data = [
@@ -758,14 +770,43 @@
             adjustWidth(el);
         }
 
-        function toggleSimpleHint(event, id) {
+        let currentHintBtn = null;
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect(), boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px'; hintBox.style.left = left + 'px';
+        }
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+        function closeAllHints() { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); currentHintBtn = null; }
+        function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            currentHintBtn = event ? (event.currentTarget || event.target) : null;
+            positionHintBox(h, currentHintBtn);
         }
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showReadingHint(targetTextId, hintBoxId) {
             const h = document.getElementById(hintBoxId);
@@ -799,9 +840,9 @@
                         ${i + 1}. ${html} 
                         <div class="row-btns">
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
-                            <button class="hint-btn" onclick="toggleSimpleHint(event, '${qid}')">i</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
-                        <div class="hint-box" id="${qid}-hint">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail">${it.hint}</div>
                         </div>
                     </div>`;
@@ -1149,6 +1190,7 @@
                 if (e.key === 'Enter') checkAllEx();
             });
         };
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
     </script>
     <script src="access-core.js"></script>
 </body>
