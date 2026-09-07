@@ -710,7 +710,11 @@
    On scroll, the tooltip used to stay glued to the viewport instead
    of following its anchor button, making it appear to "float away"
    from the question it explains. This version recomputes the
-   position on every scroll/resize while a tooltip is open.
+   position on every scroll/resize while a tooltip is open — and now
+   also auto-closes the tooltip once its anchor button has scrolled
+   fully out of the viewport, instead of clamping it to the screen
+   edge (which used to leave it hovering over unrelated content
+   further down the page as the user kept scrolling). 2026-09-07 fix.
 
    Files that only use `.hint-box` (not `.inline-hint`) are
    unaffected — this function preserves that original show/hide
@@ -721,12 +725,41 @@
 
     function positionInlineHint(h, btn) {
         const rect = btn.getBoundingClientRect();
-        const hintW = 260;
+        const hintW = h.offsetWidth || 260;
         let left = rect.left + rect.width / 2 - hintW / 2;
         if (left < 8) left = 8;
         if (left + hintW > window.innerWidth - 8) left = window.innerWidth - hintW - 8;
         h.style.left = left + 'px';
-        h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
+        let top = rect.top - h.offsetHeight - 12;
+        let below = false;
+        // Not enough room above the button — place it below instead.
+        if (top < 8) { top = rect.bottom + 12; below = true; }
+        // Still doesn't fit (button itself is huge/near screen edge) — clamp inside viewport.
+        if (top + h.offsetHeight > window.innerHeight - 8) top = window.innerHeight - h.offsetHeight - 8;
+        if (top < 8) top = 8;
+        h.style.top = top + 'px';
+        // Expose which side the box actually landed on so each file's own
+        // arrow CSS (a `.inline-hint.hint-below::after` rule, if present)
+        // can flip the little triangle to match — this function only sets
+        // the class, it never assumes any file has that CSS defined, so
+        // files without it are unaffected (the class simply does nothing).
+        h.classList.toggle('hint-below', below);
+    }
+
+    // A hint whose anchor button has scrolled entirely out of the
+    // viewport must close instead of staying pinned to the screen edge —
+    // otherwise it "floats" over unrelated content further down the page.
+    function isBtnOffScreen(btn) {
+        const rect = btn.getBoundingClientRect();
+        const margin = 4;
+        return rect.bottom < margin || rect.top > window.innerHeight - margin;
+    }
+
+    function closeActiveInlineHint() {
+        if (activeInlineHint) {
+            activeInlineHint.hintEl.style.display = 'none';
+            activeInlineHint = null;
+        }
     }
 
     window.toggleHint = function (firstArg, secondArg) {
@@ -766,13 +799,21 @@
 
     window.addEventListener('scroll', () => {
         if (activeInlineHint && activeInlineHint.hintEl.style.display === 'block') {
-            positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
+            if (isBtnOffScreen(activeInlineHint.btnEl)) {
+                closeActiveInlineHint();
+            } else {
+                positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
+            }
         }
     }, true);
 
     window.addEventListener('resize', () => {
         if (activeInlineHint && activeInlineHint.hintEl.style.display === 'block') {
-            positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
+            if (isBtnOffScreen(activeInlineHint.btnEl)) {
+                closeActiveInlineHint();
+            } else {
+                positionInlineHint(activeInlineHint.hintEl, activeInlineHint.btnEl);
+            }
         }
     });
 

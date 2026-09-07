@@ -145,6 +145,14 @@
             border-color: var(--hint-border) transparent transparent transparent;
         }
 
+        /* When the box is flipped to sit BELOW the button, the arrow must
+           flip too: move it to the top edge and point it upward. */
+        .inline-hint.hint-below::after {
+            top: auto;
+            bottom: 100%;
+            border-color: transparent transparent var(--hint-border) transparent;
+        }
+
         .inline-input-wrapper {
             display: inline-flex;
             align-items: center;
@@ -428,7 +436,20 @@
                         if (left < 8) left = 8;
                         if (left + hintW > window.innerWidth - 8) left = window.innerWidth - hintW - 8;
                         h.style.left = left + 'px';
-                        h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
+
+                        const hintH = h.offsetHeight;
+                        const spaceAbove = rect.top;
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        // Default: show above the button. Flip below only if
+                        // there truly isn't room above but there is below —
+                        // and keep the arrow in sync with whichever side we pick.
+                        if (spaceAbove < hintH + 12 && spaceBelow > spaceAbove) {
+                            h.style.top = (rect.bottom + 12) + 'px';
+                            h.classList.add('hint-below');
+                        } else {
+                            h.style.top = (rect.top - hintH - 12) + 'px';
+                            h.classList.remove('hint-below');
+                        }
                     }
                 } else {
                     h.style.display = 'block';
@@ -687,6 +708,46 @@
             renderEx1(); renderEx2(); renderEx3(); renderEx4();
             document.querySelectorAll('input').forEach(adjustWidth);
         };
+
+        // Mũi tên (arrow) chỉ vào nút "i" — không sửa access-core.js.
+        // access-core.js load SAU file này nên window.toggleHint thật sự
+        // đang chạy là bản của nó (đã tự lật box trên/dưới đúng), nhưng nó
+        // không gắn class nào để CSS biết mà lật mũi tên theo. Đợi 'load'
+        // (chạy sau khi access-core.js đã gán xong window.toggleHint), rồi
+        // bọc thêm 1 lớp mỏng bên ngoài: gọi hàm gốc như cũ, sau đó tự so
+        // vị trí box vừa render với vị trí nút bấm để gắn/gỡ class
+        // `hint-below` cho đúng — CSS `.inline-hint.hint-below::after` đã
+        // có sẵn ở đầu file lo phần hiển thị.
+        window.addEventListener('load', () => {
+            const coreToggleHint = window.toggleHint;
+            if (typeof coreToggleHint !== 'function') return;
+
+            let lastHint = null, lastBtn = null;
+
+            function syncArrow() {
+                if (!lastHint || !lastBtn || lastHint.style.display !== 'block') return;
+                const boxTop = lastHint.getBoundingClientRect().top;
+                const btnTop = lastBtn.getBoundingClientRect().top;
+                lastHint.classList.toggle('hint-below', boxTop > btnTop);
+            }
+
+            window.toggleHint = function (event, id) {
+                coreToggleHint(event, id);
+                const h = document.getElementById(id + '-hint');
+                const btn = event && event.currentTarget;
+                if (h && btn && h.classList.contains('inline-hint')) {
+                    lastHint = h;
+                    lastBtn = btn;
+                    syncArrow();
+                }
+            };
+
+            // access-core.js tự reposition box khi cuộn/resize — mình cũng
+            // phải tự chạy lại syncArrow() theo, để mũi tên không bị "lỡ
+            // nhịp" nếu box đổi hướng ngay trong lúc đang cuộn trang.
+            window.addEventListener('scroll', syncArrow, true);
+            window.addEventListener('resize', syncArrow);
+        });
 
         // Dark mode logic
         const toggle = document.getElementById('theme-toggle');
