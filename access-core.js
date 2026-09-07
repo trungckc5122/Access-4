@@ -744,6 +744,35 @@
         // the class, it never assumes any file has that CSS defined, so
         // files without it are unaffected (the class simply does nothing).
         h.classList.toggle('hint-below', below);
+        // Some files (the `positionHintBox` reference implementation, e.g.
+        // solution-preinterm-4a.html) use a DIFFERENT pair of class names
+        // for the same purpose — `arrow-up`/`arrow-down` instead of
+        // `hint-below` — and only avoid this function's (buggy, class-less)
+        // behavior via a `window.addEventListener('load', ...)` trick that
+        // re-overrides `window.toggleHint` back to their own local copy
+        // AFTER this IIFE has already assigned it. Any file that forgets
+        // that trick silently falls back to this function, which used to
+        // set no arrow class those files recognize at all — the arrow then
+        // stayed frozen in whatever direction the CSS default drew it,
+        // regardless of which side the box actually landed on. Semantics
+        // match positionHintBox() exactly: `below` true means the box sits
+        // BELOW the button, so the arrow must point UP at it, and vice
+        // versa. Setting both pairs is harmless — a file's CSS only reacts
+        // to the class name(s) it actually defines a rule for.
+        h.classList.toggle('arrow-up', below);
+        h.classList.toggle('arrow-down', !below);
+        // The box is centered on the button ONLY when there's room — near
+        // a screen edge `left` above gets clamped inward, so the button is
+        // no longer at the box's horizontal center. A `::after` arrow fixed
+        // at left:50% would then point away from the real button. Expose
+        // the button's true horizontal position relative to the box's
+        // (possibly clamped) left edge as --arrow-x, so any file whose CSS
+        // uses `left: var(--arrow-x, 50%)` on its arrow keeps it aligned.
+        // Files that still hardcode `left:50%` are unaffected (the
+        // variable simply goes unused there).
+        let arrowX = (rect.left + rect.width / 2) - left;
+        arrowX = Math.max(14, Math.min(hintW - 14, arrowX));
+        h.style.setProperty('--arrow-x', arrowX + 'px');
     }
 
     // A hint whose anchor button has scrolled entirely out of the
