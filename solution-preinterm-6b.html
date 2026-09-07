@@ -136,6 +136,19 @@
             border-bottom: 1px solid var(--primary);
             padding-bottom: 10px;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -441,7 +454,7 @@
                     <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -457,7 +470,7 @@
                 <span style="color:var(--text-muted); font-size:0.85rem;">${it.verb}</span>
                 <button class="eye-btn" onclick="showSingleAns('${qid}')" style="transform:scale(0.85);">👁️</button>
                 <button class="hint-btn" onclick="toggleHint(event, '${qid}')" style="transform:scale(0.85);">i</button>
-                <div class="hint-box absolute" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </span>`;
                 text = text.replace(`[Q${it.id}]`, group);
             });
@@ -474,7 +487,7 @@
                     <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}<br><br><strong>Short answer:</strong> ${it.shortAns}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}<br><br><strong>Short answer:</strong> ${it.shortAns}</div>
             </div>`;
             });
         }
@@ -491,7 +504,7 @@
                     <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -508,7 +521,7 @@
                     <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -536,12 +549,56 @@
             }
         }
 
-        function toggleHint(event, qid) {
-            event.stopPropagation();
-            const hint = document.getElementById(qid + '-hint');
-            const current = window.getComputedStyle(hint).display;
-            hint.style.display = current === 'none' ? 'block' : 'none';
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
         }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, qid) {
+            if (event) event.stopPropagation();
+            const hint = document.getElementById(qid + '-hint');
+            if (!hint) return;
+            const isVisible = hint.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            hint.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(hint, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function checkAll() {
             const inputs = document.querySelectorAll('input[data-ans]');

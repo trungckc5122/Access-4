@@ -56,6 +56,20 @@
             white-space: nowrap;
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tự tính theo viewport,
+           không bao giờ bị cắt/che ở bất kỳ mép nào của màn hình */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
 
 
         @media (max-width: 992px) {
@@ -472,12 +486,12 @@
         // Data for Exercise 1
         const ex1Data = [
             { q: "1 Yesterday at 6 p.m. we [INPUT] (have) dinner.", ans: "were having", hint: "Chủ ngữ 'we' (số nhiều) đi với 'were'. 'Have' kết thúc bằng 'e' nên bỏ 'e' thêm 'ing'." },
-            { q: "2 Harry [INPUT] (not listen) so he didn't know how to do the exercise.", ans: "wasn't listening", hint: "Harry (số ít) đi với 'wasn't'. 'Listen' + 'ing'." },
-            { q: "3 Kate [INPUT] (lie) on the beach and Anna [INPUT2] (eat) an ice cream.", ans: "was lying", ans2: "was eating", hint: "'Kate' và 'Anna' đều là số ít. 'Lie' đổi 'ie' thành 'y' + 'ing'." },
+            { q: "2 Harry [INPUT] (not listen) so he didn't know how to do the exercise.", ans: "wasn't listening", hint: "Harry (Ngôi thứ 3 số ít) đi với 'wasn't'. 'Listen' + 'ing'." },
+            { q: "3 Kate [INPUT] (lie) on the beach and Anna [INPUT2] (eat) an ice cream.", ans: "was lying", ans2: "was eating", hint: "'Kate' và 'Anna' đều là ngôi thứ 3 số ít. 'Lie' đổi 'ie' thành 'y' + 'ing'." },
             { q: "4 Sam and Ryan [INPUT] (smile) and Nancy [INPUT2] (take) a photo of them.", ans: "were smiling", ans2: "was taking", hint: "'Sam and Ryan' (số nhiều) dùng 'were'. 'Nancy' (số ít) dùng 'was'." },
             { q: "5 Why [INPUT] you and Zoe [INPUT2] (argue)?", ans: "were", ans2: "arguing", hint: "Câu hỏi: Were + Chủ ngữ + V-ing? 'You and Zoe' là số nhiều." },
-            { q: "6 Hannah was annoyed because a man on the train [INPUT] (talk) loudly on his mobile.", ans: "was talking", hint: "'A man' (số ít) dùng 'was'." },
-            { q: "7 At 1 a.m. Fred [INPUT] still [INPUT2] (chat) with his friends on Facebook.", ans: "was", ans2: "chatting", hint: "'Fred' (số ít). 'Chat' là từ 1 âm tiết CVC nên gấp đôi 't'." },
+            { q: "6 Hannah was annoyed because a man on the train [INPUT] (talk) loudly on his mobile.", ans: "was talking", hint: "'A man' (Ngôi thứ 3 số ít) dùng 'was'." },
+            { q: "7 At 1 a.m. Fred [INPUT] still [INPUT2] (chat) with his friends on Facebook.", ans: "was", ans2: "chatting", hint: "'Fred' (Ngôi thứ 3 số ít). 'Chat' là từ 1 âm tiết CVC nên gấp đôi 't'." },
             { q: "8 My eyes were closed, but I [INPUT] (not sleep).", ans: "wasn't sleeping", hint: "'I' dùng 'wasn't'." }
         ];
 
@@ -530,7 +544,7 @@
                     const qid2 = `ex1-q${i}-2`;
                     html = html.replace('[INPUT2]', `<input type="text" id="${qid2}" data-ans="${it.ans2}" class="task5-input" oninput="adjustWidth(this)">`);
                 }
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showGroupAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showGroupAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -542,7 +556,7 @@
                     return;
                 }
                 const qid = `ex2-q${i}`;
-                container.innerHTML += `<div class="question-row">${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width: 250px;" oninput="adjustWidth(this)"> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box" id="${qid}-hint">${it.hint}</div></div>`;
+                container.innerHTML += `<div class="question-row">${it.q} <br> ➔ <input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" style="min-width: 250px;" oninput="adjustWidth(this)"> <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div></div>`;
             });
         }
 
@@ -591,14 +605,49 @@
             el.style.width = Math.max(text.length * 10 + 30, 80) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const margin = 8;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - margin) top = rect.top - boxRect.height - 6;
+            if (top < margin) top = margin;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - margin) left = window.innerWidth - boxRect.width - margin;
+            if (left < margin) left = margin;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // Gạch ngang (hoặc bỏ gạch) từ tương ứng trong word bank khi đáp án được hiện/ẩn
         function setWordUsed(bankId, word, used) {
@@ -747,6 +796,7 @@
         window.onload = () => {
             renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5();
             document.querySelectorAll('input').forEach(adjustWidth);
+            window.toggleHint = toggleHint;
         };
     </script>
     <script src="access-core.js"></script>

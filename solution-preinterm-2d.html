@@ -289,6 +289,21 @@
             color: var(--primary-dark);
             margin-right: 5px;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (chỉ áp dụng cho các .hint-box thường của Ex1/Ex2/Ex4; span .inline-hint
+           riêng của Ex3 giữ nguyên style cũ vì không có class hint-box) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -616,6 +631,22 @@
             }
         }
 
+        function showSingleAnsEx1(qid) {
+            const hintEl = document.getElementById(qid + '-hint');
+            const qRow = hintEl ? hintEl.closest('.question-row') : null;
+            if (!qRow) return;
+            qRow.querySelectorAll('.choice-gap').forEach(gap => {
+                const choices = gap.querySelectorAll('.word-choice');
+                const correctAns = gap.dataset.ans;
+                const anyCorrect = Array.from(choices).some(c => c.classList.contains('correct-select'));
+
+                choices.forEach(c => c.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                if (!anyCorrect) {
+                    choices.forEach(c => { if (correctAns.includes(c.textContent.trim())) c.classList.add('correct-select'); });
+                }
+            });
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
@@ -629,12 +660,14 @@
                     h.style.display = 'block';
                     if (btn) {
                         const rect = btn.getBoundingClientRect();
-                        const hintW = 250;
+                        const hintW = h.offsetWidth || 250;
                         let left = rect.left + rect.width / 2 - hintW / 2;
                         if (left < 8) left = 8;
                         if (left + hintW > window.innerWidth - 8) left = window.innerWidth - hintW - 8;
                         h.style.left = left + 'px';
-                        h.style.top = (rect.top - h.offsetHeight - 12) + 'px';
+                        let top = rect.top - h.offsetHeight - 12;
+                        if (top < 8) top = 8;
+                        h.style.top = top + 'px';
                     }
                 } else {
                     h.style.display = 'block';
@@ -742,10 +775,10 @@
                 container.innerHTML += `<div class="question-row">
                 ${html}
                 <div class="row-btns">
-                    <button class="eye-btn" onclick="showAnswers('${qid}')">👁️</button>
+                    <button class="eye-btn" onclick="showSingleAnsEx1('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -768,7 +801,7 @@
                 }
                 container.innerHTML += `<div class="question-row">
                 ${html} <button class="hint-btn" onclick="toggleHint(event, '${qidBase}')">i</button>
-                <div class="hint-box" id="${qidBase}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qidBase}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -814,7 +847,7 @@
                     <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
             });
         }
@@ -883,6 +916,7 @@
                 toggle.innerText = theme === 'dark' ? '☀️' : '🌙';
             };
             document.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAll(); });
+            window.toggleHint = toggleHint;
         };
     </script>
     <script src="access-core.js"></script>

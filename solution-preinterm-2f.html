@@ -666,6 +666,19 @@
             position: static !important;
             transform: none !important;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -1379,14 +1392,48 @@
             adjustWidth(el);
         }
 
-        function toggleSimpleHint(event, id) {
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function renderEx1() {
             const container = document.getElementById('questions-ex1');
@@ -1416,11 +1463,11 @@
                 const btnGroupHtml = `
                             <div class="row-btns">
                                 <button class="eye-btn" onclick="revealEx1Ans('${qid}')">👁️</button>
-                                <button class="hint-btn" onclick="toggleSimpleHint(event,'${qid}')">i</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                             </div>`;
                 const hintBoxHtml = `
-                        <div class="hint-box" id="${qid}-hint" style="display:none;background:#e8f4f8;border-left:4px solid #3498db;padding:10px;margin-top:10px;border-radius:4px;">
-                            <div class="hint-detail"><span class="key-word" style="color:#2980b9; font-weight:bold;">${it.ans}</span>: ${it.mean}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">
+                            <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         </div>`;
 
                 let nCellHtml, vCellHtml;
@@ -1876,6 +1923,7 @@
             initSplitScreenResizer();
 
             document.addEventListener('keydown', e => { if (e.key === 'Enter') checkAll(); });
+            window.toggleHint = toggleHint;
         });
     </script>
 
