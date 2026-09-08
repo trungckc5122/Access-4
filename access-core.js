@@ -131,6 +131,18 @@
         }
     });
 
+    // 6. Global Audio/Video Player Mutual Exclusion: Only 1 media element plays at a time (prioritize the newly played one)
+    document.addEventListener('play', (e) => {
+        const target = e.target;
+        if (target && (target.tagName === 'AUDIO' || target.tagName === 'VIDEO')) {
+            document.querySelectorAll('audio, video').forEach(media => {
+                if (media !== target && !media.paused) {
+                    media.pause();
+                }
+            });
+        }
+    }, true);
+
     // 6. Transcript Panel: auto-inject close button & fix sticky scope
     const initTranscriptPanels = () => {
         document.querySelectorAll('.transcript-panel').forEach(panel => {
