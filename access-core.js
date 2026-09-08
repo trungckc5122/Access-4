@@ -738,6 +738,16 @@
         if (top + h.offsetHeight > window.innerHeight - 8) top = window.innerHeight - h.offsetHeight - 8;
         if (top < 8) top = 8;
         h.style.top = top + 'px';
+        // Re-derive `below` from where the box actually ended up, rather than
+        // trusting the flag set by the branch above: the two clamp lines just
+        // above (viewport-bottom clamp, then the final top<8 safety clamp) can
+        // silently override that branch's choice — e.g. a tall box near the
+        // top of the page gets pushed back down by `if (top < 8) top = 8`
+        // even though the "not enough room above" branch never fired, or gets
+        // pushed back up by the viewport-bottom clamp after that branch did
+        // fire. Using the stale flag in either case draws the arrow pointing
+        // the wrong way even though the box itself landed in the right spot.
+        below = (top + h.offsetHeight / 2) > rect.top;
         // Expose which side the box actually landed on so each file's own
         // arrow CSS (a `.inline-hint.hint-below::after` rule, if present)
         // can flip the little triangle to match — this function only sets
@@ -847,7 +857,7 @@
     });
 
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.hint-btn') && !e.target.closest('.eye-btn') && !e.target.closest('.hint-box') && !e.target.closest('.inline-hint')) {
+        if (!e.target.closest('.hint-btn') && !e.target.closest('.info-btn') && !e.target.closest('.eye-btn') && !e.target.closest('.hint-box') && !e.target.closest('.inline-hint')) {
             document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
             activeInlineHint = null;
         }

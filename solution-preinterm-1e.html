@@ -311,8 +311,32 @@
             left: auto;
             margin-top: 0;
             max-width: 380px;
+            width: max-content;
+            white-space: normal;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -605,10 +629,24 @@
             if (left < 8) left = 8;
             hintBox.style.top = top + 'px';
             hintBox.style.left = left + 'px';
+            // Mũi tên: tính lại "below" SAU khi đã kẹp top, không dùng cờ tính sớm
+            // (bản đời đầu lỗi khi box bị kẹp về mép trên sau khi lật lên - xem guide mục 4d "Lỗi thứ 3")
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
         }
 
         function repositionCurrentHint() {
             if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
             const open = document.querySelector('.hint-box[style*="display: block"]');
             if (open) positionHintBox(open, currentHintBtn);
         }
@@ -931,6 +969,7 @@
         }
 
         window.onload = () => {
+            window.toggleHint = toggleHint;
             renderEx1(); renderEx2(); renderEx3(); renderEx4();
             document.querySelectorAll('input').forEach(adjustWidth);
         };

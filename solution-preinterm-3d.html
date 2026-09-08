@@ -116,41 +116,39 @@
             display: contents;
         }
 
-        .inline-hint {
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
             position: fixed;
-            background: var(--hint-bg);
-            border-left: 4px solid var(--hint-border);
-            color: var(--hint-text);
-            padding: 12px 16px;
-            border-radius: 8px;
-            width: 260px;
-            z-index: 10000;
-            display: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
-            line-height: 1.6;
-            white-space: normal;
-            text-align: left;
-            font-size: 0.9rem;
-            font-weight: 400;
-        }
-
-        .inline-hint::after {
-            content: "";
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 8px;
-            border-style: solid;
-            border-color: var(--hint-border) transparent transparent transparent;
-        }
-
-        /* When the box is flipped to sit BELOW the button, the arrow must
-           flip too: move it to the top edge and point it upward. */
-        .inline-hint.hint-below::after {
             top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
             bottom: 100%;
-            border-color: transparent transparent var(--hint-border) transparent;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
 
         .inline-input-wrapper {
@@ -419,47 +417,65 @@
             el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
-            if (!isVisible) {
-                if (h.classList.contains('inline-hint')) {
-                    const btn = event ? event.currentTarget : null;
-                    h.style.display = 'block';
-                    if (btn) {
-                        const rect = btn.getBoundingClientRect();
-                        const hintW = 260;
-                        let left = rect.left + rect.width / 2 - hintW / 2;
-                        if (left < 8) left = 8;
-                        if (left + hintW > window.innerWidth - 8) left = window.innerWidth - hintW - 8;
-                        h.style.left = left + 'px';
-
-                        const hintH = h.offsetHeight;
-                        const spaceAbove = rect.top;
-                        const spaceBelow = window.innerHeight - rect.bottom;
-                        // Default: show above the button. Flip below only if
-                        // there truly isn't room above but there is below —
-                        // and keep the arrow in sync with whichever side we pick.
-                        if (spaceAbove < hintH + 12 && spaceBelow > spaceAbove) {
-                            h.style.top = (rect.bottom + 12) + 'px';
-                            h.classList.add('hint-below');
-                        } else {
-                            h.style.top = (rect.top - hintH - 12) + 'px';
-                            h.classList.remove('hint-below');
-                        }
-                    }
-                } else {
-                    h.style.display = 'block';
-                }
-            }
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
 
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.hint-btn') && !e.target.closest('.eye-btn') && !e.target.closest('.hint-box') && !e.target.closest('.inline-hint')) {
-                document.querySelectorAll('.hint-box, .inline-hint').forEach(el => el.style.display = 'none');
+            if (!e.target.closest('.hint-btn') && !e.target.closest('.eye-btn') && !e.target.closest('.hint-box')) {
+                closeAllHints();
             }
         });
 
@@ -541,7 +557,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}-gap')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
-                        <div class="inline-hint" id="${qid}-hint">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${currentAns}</span></div>
                             <div class="hint-detail">${hintText}</div>
                         </div></span>`;
@@ -569,12 +585,12 @@
                     it.ans.forEach((ans, j) => {
                         const qid = `ex2-q${inputCounter}`;
                         const hint = it.hints[j];
-                        html = html.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${ans}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${ans}</span></div><div class="hint-detail">${hint}</div></div></span>`);
+                        html = html.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${ans}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${ans}</span></div><div class="hint-detail">${hint}</div></div></span>`);
                         inputCounter++;
                     });
                 } else {
                     const qid = `ex2-q${inputCounter}`;
-                    html = html.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span></div><div class="hint-detail">${it.hint}</div></div></span>`);
+                    html = html.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span></div><div class="hint-detail">${it.hint}</div></div></span>`);
                     inputCounter++;
                 }
 
@@ -591,7 +607,7 @@
                 const ansData = Array.isArray(it.ans) ? it.ans.join('||') : it.ans;
                 const displayAns = Array.isArray(it.ans) ? it.ans.join(' / ') : it.ans;
 
-                const html = it.q.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${ansData}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${displayAns}</span></div><div class="hint-detail">${it.hint}</div></div></span>`);
+                const html = it.q.replace('[INPUT]', `<span class="inline-input-wrapper"><input type="text" id="${qid}" data-ans="${ansData}" class="task5-input" oninput="adjustWidth(this)"><div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${displayAns}</span></div><div class="hint-detail">${it.hint}</div></div></span>`);
 
                 container.innerHTML += `<div class="question-row" style="display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 25px;">
                     <span style="flex: 1; min-width: 250px;">${html}</span>
@@ -619,7 +635,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}-gap')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
-                        <div class="inline-hint" id="${qid}-hint">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${it.ans}</span></div>
                             <div class="hint-detail">${it.hint}</div>
                         </div></span>`;
@@ -701,53 +717,14 @@
                     adjustWidth(el);
                 });
             }
-            document.querySelectorAll('.hint-box, .inline-hint').forEach(h => h.style.display = 'none');
+            closeAllHints();
         }
 
         window.onload = () => {
             renderEx1(); renderEx2(); renderEx3(); renderEx4();
             document.querySelectorAll('input').forEach(adjustWidth);
+            window.toggleHint = toggleHint;
         };
-
-        // Mũi tên (arrow) chỉ vào nút "i" — không sửa access-core.js.
-        // access-core.js load SAU file này nên window.toggleHint thật sự
-        // đang chạy là bản của nó (đã tự lật box trên/dưới đúng), nhưng nó
-        // không gắn class nào để CSS biết mà lật mũi tên theo. Đợi 'load'
-        // (chạy sau khi access-core.js đã gán xong window.toggleHint), rồi
-        // bọc thêm 1 lớp mỏng bên ngoài: gọi hàm gốc như cũ, sau đó tự so
-        // vị trí box vừa render với vị trí nút bấm để gắn/gỡ class
-        // `hint-below` cho đúng — CSS `.inline-hint.hint-below::after` đã
-        // có sẵn ở đầu file lo phần hiển thị.
-        window.addEventListener('load', () => {
-            const coreToggleHint = window.toggleHint;
-            if (typeof coreToggleHint !== 'function') return;
-
-            let lastHint = null, lastBtn = null;
-
-            function syncArrow() {
-                if (!lastHint || !lastBtn || lastHint.style.display !== 'block') return;
-                const boxTop = lastHint.getBoundingClientRect().top;
-                const btnTop = lastBtn.getBoundingClientRect().top;
-                lastHint.classList.toggle('hint-below', boxTop > btnTop);
-            }
-
-            window.toggleHint = function (event, id) {
-                coreToggleHint(event, id);
-                const h = document.getElementById(id + '-hint');
-                const btn = event && event.currentTarget;
-                if (h && btn && h.classList.contains('inline-hint')) {
-                    lastHint = h;
-                    lastBtn = btn;
-                    syncArrow();
-                }
-            };
-
-            // access-core.js tự reposition box khi cuộn/resize — mình cũng
-            // phải tự chạy lại syncArrow() theo, để mũi tên không bị "lỡ
-            // nhịp" nếu box đổi hướng ngay trong lúc đang cuộn trang.
-            window.addEventListener('scroll', syncArrow, true);
-            window.addEventListener('resize', syncArrow);
-        });
 
         // Dark mode logic
         const toggle = document.getElementById('theme-toggle');

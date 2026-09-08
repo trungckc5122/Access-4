@@ -152,21 +152,24 @@
 
         .hint-box.inline-hint::after {
             content: "";
+            display: block;
             position: absolute;
             left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
             transform: translateX(-50%);
-            border-width: 8px;
-            border-style: solid;
+            border: 8px solid transparent;
+            pointer-events: none;
         }
 
         .hint-box.inline-hint.arrow-up::after {
             bottom: 100%;
-            border-color: transparent transparent var(--hint-bg) transparent;
+            border-bottom-color: var(--hint-border);
         }
 
         .hint-box.inline-hint.arrow-down::after {
             top: 100%;
-            border-color: var(--hint-bg) transparent transparent transparent;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -638,14 +641,16 @@
             const rect = btn.getBoundingClientRect();
             const boxRect = hintBox.getBoundingClientRect();
             let top = rect.bottom + 6;
-            let below = true;
-            if (top + boxRect.height > window.innerHeight - 8) { top = rect.top - boxRect.height - 6; below = false; }
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
             if (top < 8) top = 8;
             let left = rect.left;
             if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
             if (left < 8) left = 8;
             hintBox.style.top = top + 'px';
             hintBox.style.left = left + 'px';
+            // Mũi tên: tính lại "below" SAU khi đã kẹp top, không dùng cờ tính sớm
+            // (bản đời đầu lỗi khi box bị kẹp về mép trên sau khi lật lên - xem guide mục 4d "Lỗi thứ 3")
+            const below = (top + boxRect.height / 2) > rect.top;
             const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
             hintBox.style.setProperty('--arrow-x', arrowX + 'px');
             hintBox.classList.toggle('arrow-up', below);
