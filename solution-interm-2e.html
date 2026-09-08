@@ -196,6 +196,7 @@
             position: sticky;
             top: calc(50vh - 200px);
             align-self: flex-start;
+            z-index: 500;
         }
 
         .label-input-row {
@@ -208,6 +209,7 @@
             border: 1px solid var(--border, #eee);
             transition: 0.2s;
             position: relative;
+            z-index: 501;
         }
 
         .label-input-row .label-letter {
@@ -224,12 +226,54 @@
             padding: 6px 12px;
         }
 
+        .label-input-row .drop-slot {
+            min-width: 150px;
+            min-height: 36px;
+            padding: 5px 12px;
+            font-size: 1rem;
+            text-align: center;
+            background: var(--card-bg, #fff);
+            border: 2px dashed var(--border, #ccc);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .label-input-row .drop-slot.drag-over {
+            background: var(--primary-light, #eafaf1);
+            border-color: var(--secondary, #27ae60);
+            transform: scale(1.02);
+        }
+
+        .label-input-row .drop-slot.filled {
+            border-style: solid;
+            border-color: var(--secondary, #27ae60);
+            color: var(--text, #2c3e50);
+        }
+
+        .label-input-row .drop-slot.correct {
+            color: var(--secondary, #27ae60);
+            border-color: var(--secondary, #27ae60);
+            background: var(--primary-light, #eafaf1);
+        }
+
+        .label-input-row .drop-slot.incorrect-marked {
+            color: #e74c3c;
+            border-color: #e74c3c;
+            background: #fdf2f2;
+        }
+
+        #wordbank-label {
+            z-index: 10;
+        }
+
         .label-input-row .row-btns {
             margin-left: 4px;
             position: relative;
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            z-index: 502;
         }
 
         .label-input-row .row-btns .hint-box {
@@ -238,7 +282,7 @@
             left: 0;
             min-width: 220px;
             max-width: 320px;
-            z-index: 200;
+            z-index: 99999;
             margin-top: 4px;
         }
 
@@ -400,6 +444,56 @@
             background: #0f172a;
             border-color: #2d3748;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
+           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
+           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 99999 !important;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
+        /* Ghi đè riêng cho selector lồng ngữ cảnh cha .label-input-row .row-btns
+           (specificity 3 class cao hơn .hint-box.inline-hint 2 class) */
+        .label-input-row .row-btns .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            z-index: 99999 !important;
+        }
     </style>
 </head>
 
@@ -462,7 +556,7 @@
                     </ul>
                     <div
                         style="background:#f0f8ff;padding:15px;border-left:4px solid #3498db;border-radius:0 8px 8px 0;margin-top:12px;">
-                        <p><strong>💡 Vocab Boost!</strong> Nhiều compound adjectives không có trong từ điển vì được tạo
+                        <p><strong> Vocab Boost!</strong> Nhiều compound adjectives không có trong từ điển vì được tạo
                             thành từ các từ khác. Khi gặp một compound adjective mới, hãy suy nghĩa bằng cách nhìn vào
                             các từ cấu thành.</p>
                         <ul class="grammar-list">
@@ -492,73 +586,107 @@
 
             <!-- Phần 2: Label photos -->
             <div style="margin-top:32px; border-top:2px solid var(--border,#eee); padding-top:25px;">
-                <div class="exercise-title" style="font-size:1rem; font-weight:600; margin-bottom:12px;">📸 Label the
+                <div class="exercise-title" style="font-size:1.05rem; font-weight:600; margin-bottom:12px;">Label the
                     photos (a–f) with the correct sports venues.</div>
+
+                <!-- Wordbank cho bài label (được tạo tự động từ đáp án đúng của bài 1) -->
+                <div class="word-bank sticky-bank" id="wordbank-label" style="min-height:48px; margin-bottom:18px;">
+                    <div class="bank-placeholder"
+                        style="color:var(--text-muted, #7f8c8d); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;">
+                        Hoàn thành đúng các câu ở bài 1 phía trên để tạo từ vựng cho bài tập này.
+                    </div>
+                </div>
+
                 <div class="image-label-grid">
                     <div class="image-col">
                         <img src="img-int/module 2e.png" alt="Sports venues photos a-f"
                             style="max-width:100%;border-radius:12px;border:1px solid var(--border,#ddd);">
                     </div>
-                    <div class="inputs-col" id="ex1-image-inputs">
-                        <div class="label-input-row"><span class="label-letter">a</span><input type="text"
-                                id="ex1-img-a" data-ans="weights room" class="task5-input"><span
-                                class="row-btns"><button class="eye-btn"
-                                    onclick="showSingleAns('ex1-img-a')">👁️</button><button class="hint-btn"
-                                    onclick="toggleHint(event,'ex1-img-a')">i</button>
-                                <div class="hint-box" id="ex1-img-a-hint">
+                    <div class="inputs-col" id="label-image-inputs">
+                        <div class="label-input-row">
+                            <span class="label-letter">a</span>
+                            <span class="drop-slot" id="label-slot-a" data-ans="weights room" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-a')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-a')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-a-hint">
                                     <div class="hint-detail"><span class="key-word">weights room</span></div>
                                     <div class="hint-detail">Phòng tập tạ</div>
                                 </div>
-                            </span></div>
-                        <div class="label-input-row"><span class="label-letter">b</span><input type="text"
-                                id="ex1-img-b" data-ans="bowling alley" class="task5-input"><span
-                                class="row-btns"><button class="eye-btn"
-                                    onclick="showSingleAns('ex1-img-b')">👁️</button><button class="hint-btn"
-                                    onclick="toggleHint(event,'ex1-img-b')">i</button>
-                                <div class="hint-box" id="ex1-img-b-hint">
+                            </div>
+                        </div>
+                        <div class="label-input-row">
+                            <span class="label-letter">b</span>
+                            <span class="drop-slot" id="label-slot-b" data-ans="bowling alley" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-b')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-b')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-b-hint">
                                     <div class="hint-detail"><span class="key-word">bowling alley</span></div>
                                     <div class="hint-detail">Sân chơi bowling</div>
                                 </div>
-                            </span></div>
-                        <div class="label-input-row"><span class="label-letter">c</span><input type="text"
-                                id="ex1-img-c" data-ans="golf course" class="task5-input"><span class="row-btns"><button
-                                    class="eye-btn" onclick="showSingleAns('ex1-img-c')">👁️</button><button
-                                    class="hint-btn" onclick="toggleHint(event,'ex1-img-c')">i</button>
-                                <div class="hint-box" id="ex1-img-c-hint">
+                            </div>
+                        </div>
+                        <div class="label-input-row">
+                            <span class="label-letter">c</span>
+                            <span class="drop-slot" id="label-slot-c" data-ans="golf course" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-c')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-c')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-c-hint">
                                     <div class="hint-detail"><span class="key-word">golf course</span></div>
                                     <div class="hint-detail">Sân gôn</div>
                                 </div>
-                            </span></div>
-                        <div class="label-input-row"><span class="label-letter">d</span><input type="text"
-                                id="ex1-img-d" data-ans="climbing wall" class="task5-input"><span
-                                class="row-btns"><button class="eye-btn"
-                                    onclick="showSingleAns('ex1-img-d')">👁️</button><button class="hint-btn"
-                                    onclick="toggleHint(event,'ex1-img-d')">i</button>
-                                <div class="hint-box" id="ex1-img-d-hint">
+                            </div>
+                        </div>
+                        <div class="label-input-row">
+                            <span class="label-letter">d</span>
+                            <span class="drop-slot" id="label-slot-d" data-ans="climbing wall" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-d')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-d')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-d-hint">
                                     <div class="hint-detail"><span class="key-word">climbing wall</span></div>
                                     <div class="hint-detail">Tường leo núi</div>
                                 </div>
-                            </span></div>
-                        <div class="label-input-row"><span class="label-letter">e</span><input type="text"
-                                id="ex1-img-e" data-ans="athletics track" class="task5-input"><span
-                                class="row-btns"><button class="eye-btn"
-                                    onclick="showSingleAns('ex1-img-e')">👁️</button><button class="hint-btn"
-                                    onclick="toggleHint(event,'ex1-img-e')">i</button>
-                                <div class="hint-box" id="ex1-img-e-hint">
+                            </div>
+                        </div>
+                        <div class="label-input-row">
+                            <span class="label-letter">e</span>
+                            <span class="drop-slot" id="label-slot-e" data-ans="athletics track" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-e')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-e')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-e-hint">
                                     <div class="hint-detail"><span class="key-word">athletics track</span></div>
                                     <div class="hint-detail">Đường chạy điền kinh</div>
                                 </div>
-                            </span></div>
-                        <div class="label-input-row"><span class="label-letter">f</span><input type="text"
-                                id="ex1-img-f" data-ans="ice rink" class="task5-input"><span class="row-btns"><button
-                                    class="eye-btn" onclick="showSingleAns('ex1-img-f')">👁️</button><button
-                                    class="hint-btn" onclick="toggleHint(event,'ex1-img-f')">i</button>
-                                <div class="hint-box" id="ex1-img-f-hint">
+                            </div>
+                        </div>
+                        <div class="label-input-row">
+                            <span class="label-letter">f</span>
+                            <span class="drop-slot" id="label-slot-f" data-ans="ice rink" data-bank="label"
+                                data-filled="0"></span>
+                            <div class="row-btns">
+                                <button class="eye-btn" onclick="showSingleLabelAns('label-slot-f')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'label-img-f')">i</button>
+                                <div class="hint-box inline-hint" id="label-img-f-hint">
                                     <div class="hint-detail"><span class="key-word">ice rink</span></div>
                                     <div class="hint-detail">Sân băng</div>
                                 </div>
-                            </span></div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <div class="controls-row" style="margin-top:20px;">
+                    <button class="btn btn-show-all" onclick="showAnswers('label')">Show All</button>
+                    <button class="btn btn-reset" onclick="resetSection('label')">Reset</button>
                 </div>
             </div>
         </div>
@@ -741,18 +869,18 @@
 
         // EX1 – sports venues (phần 1)
         const ex1Data = [
-            { q: "______ alley", ans: "bowling", mean: "sân bowling", trans: "bowling alley — sân chơi bowling", hint: "'bowling' + 'alley' = bowling alley" },
-            { q: "______ course", ans: "golf", mean: "sân gôn", trans: "golf course — sân gôn", hint: "'golf' + 'course' = golf course" },
-            { q: "______ track", ans: "track", mean: "đường chạy điền kinh", trans: "athletics track — đường chạy điền kinh", hint: "'athletics' + 'track' = athletics track" },
-            { q: "______ rink", ans: "ice", mean: "sân băng", trans: "ice rink — sân băng", hint: "'ice' + 'rink' = ice rink" },
-            { q: "______ court", ans: "court", mean: "sân (tennis/bóng rổ)", trans: "tennis court — sân tennis", hint: "'tennis' + 'court' = tennis court" },
-            { q: "______ ring", ans: "boxing", mean: "võ đài", trans: "boxing ring — võ đài quyền anh", hint: "'boxing' + 'ring' = boxing ring" },
-            { q: "______ court", ans: "basketball", mean: "sân bóng rổ", trans: "basketball court — sân bóng rổ", hint: "'basketball' + 'court' = basketball court" },
-            { q: "______ studio", ans: "studio", mean: "phòng nhảy", trans: "dance studio — phòng nhảy", hint: "'dance' + 'studio' = dance studio" },
-            { q: "______ wall", ans: "wall", mean: "tường leo núi", trans: "climbing wall — tường leo núi", hint: "'climbing' + 'wall' = climbing wall" },
-            { q: "______ pitch", ans: "football", mean: "sân bóng đá", trans: "football pitch — sân bóng đá", hint: "'football' + 'pitch' = football pitch" },
-            { q: "______ room", ans: "room", mean: "phòng tập tạ", trans: "weights room — phòng tập tạ", hint: "'weights' + 'room' = weights room" },
-            { q: "______ pool", ans: "swimming", mean: "bể bơi", trans: "swimming pool — bể bơi", hint: "'swimming' + 'pool' = swimming pool" }
+            { q: "______ alley", ans: "bowling", compound: "bowling alley", mean: "sân bowling", trans: "bowling alley — sân chơi bowling", hint: "'bowling' + 'alley' = bowling alley" },
+            { q: "______ course", ans: "golf", compound: "golf course", mean: "sân gôn", trans: "golf course — sân gôn", hint: "'golf' + 'course' = golf course" },
+            { q: "athletics ______", ans: "track", compound: "athletics track", mean: "đường chạy điền kinh", trans: "athletics track — đường chạy điền kinh", hint: "'athletics' + 'track' = athletics track" },
+            { q: "______ rink", ans: "ice", compound: "ice rink", mean: "sân băng", trans: "ice rink — sân băng", hint: "'ice' + 'rink' = ice rink" },
+            { q: "tennis ______", ans: "court", compound: "tennis court", mean: "sân tennis", trans: "tennis court — sân tennis", hint: "'tennis' + 'court' = tennis court" },
+            { q: "______ ring", ans: "boxing", compound: "boxing ring", mean: "võ đài", trans: "boxing ring — võ đài quyền anh", hint: "'boxing' + 'ring' = boxing ring" },
+            { q: "______ court", ans: "basketball", compound: "basketball court", mean: "sân bóng rổ", trans: "basketball court — sân bóng rổ", hint: "'basketball' + 'court' = basketball court" },
+            { q: "dance ______", ans: "studio", compound: "dance studio", mean: "phòng nhảy", trans: "dance studio — phòng nhảy", hint: "'dance' + 'studio' = dance studio" },
+            { q: "climbing ______", ans: "wall", compound: "climbing wall", mean: "tường leo núi", trans: "climbing wall — tường leo núi", hint: "'climbing' + 'wall' = climbing wall" },
+            { q: "______ pitch", ans: "football", compound: "football pitch", mean: "sân bóng đá", trans: "football pitch — sân bóng đá", hint: "'football' + 'pitch' = football pitch" },
+            { q: "weights ______", ans: "room", compound: "weights room", mean: "phòng tập tạ", trans: "weights room — phòng tập tạ", hint: "'weights' + 'room' = weights room" },
+            { q: "______ pool", ans: "swimming", compound: "swimming pool", mean: "bể bơi", trans: "swimming pool — bể bơi", hint: "'swimming' + 'pool' = swimming pool" }
         ];
 
         // EX2 – matching
@@ -852,12 +980,15 @@
                 if (slotEl.dataset.filled === '1') {
                     removeWordFromSlot(slotEl);
                 } else if (selectedWordEl) {
-                    placeWordInSlot(selectedWordEl, slotEl);
+                    if (!selectedWordEl.dataset.bank || !slotEl.dataset.bank || selectedWordEl.dataset.bank === slotEl.dataset.bank) {
+                        placeWordInSlot(selectedWordEl, slotEl);
+                    }
                 }
             });
         }
 
         function placeWordInSlot(wordEl, slotEl) {
+            if (wordEl.dataset.bank && slotEl.dataset.bank && wordEl.dataset.bank !== slotEl.dataset.bank) return;
             if (slotEl.dataset.filled === '1') removeWordFromSlot(slotEl);
             slotEl.textContent = wordEl.dataset.word;
             slotEl.dataset.filled = '1';
@@ -869,13 +1000,16 @@
                 selectedWordEl.classList.remove('selected');
                 selectedWordEl = null;
             }
+            if (slotEl.dataset.bank === 'ex1') {
+                updateLabelWordBank();
+            }
         }
 
         function removeWordFromSlot(slotEl) {
             const word = slotEl.dataset.sourceWord;
             const bankId = slotEl.dataset.bank;
             const wordEl = Array.from(document.querySelectorAll(`.word-item[data-bank="${bankId}"]`))
-                .find(w => w.dataset.word === word);
+                .find(w => w.dataset.word.toLowerCase() === (word || '').toLowerCase());
             if (wordEl) {
                 wordEl.classList.remove('used');
             }
@@ -883,6 +1017,106 @@
             slotEl.dataset.filled = '0';
             slotEl.dataset.sourceWord = '';
             slotEl.classList.remove('filled', 'correct', 'incorrect-marked');
+            if (bankId === 'ex1') {
+                updateLabelWordBank();
+            }
+        }
+
+        // ============================================================
+        // LABEL PHOTOS & WORDBANK SYNC
+        // ============================================================
+
+        function isEx1QuestionCorrect(index) {
+            const slot = document.getElementById(`ex1-q${index}-s0`);
+            if (!slot) return false;
+            const it = ex1Data[index];
+            return slot.dataset.filled === '1' && slot.textContent.trim().toLowerCase() === it.ans.toLowerCase();
+        }
+
+        function getUnlockedCompounds() {
+            const list = [];
+            ex1Data.forEach((it, idx) => {
+                if (isEx1QuestionCorrect(idx)) {
+                    list.push(it.compound);
+                }
+            });
+            return list;
+        }
+
+        function updateLabelWordBank() {
+            const bankEl = document.getElementById('wordbank-label');
+            if (!bankEl) return;
+            const unlocked = getUnlockedCompounds();
+
+            // Xóa slot label nào có từ không còn được mở khóa
+            document.querySelectorAll('.drop-slot[data-bank="label"]').forEach(slotEl => {
+                if (slotEl.dataset.filled === '1') {
+                    const word = (slotEl.dataset.sourceWord || slotEl.textContent).trim();
+                    if (!unlocked.some(u => u.toLowerCase() === word.toLowerCase())) {
+                        slotEl.textContent = '';
+                        slotEl.dataset.filled = '0';
+                        slotEl.dataset.sourceWord = '';
+                        slotEl.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                }
+            });
+
+            if (unlocked.length === 0) {
+                bankEl.innerHTML = '<div class="bank-placeholder" style="color:var(--text-muted, #7f8c8d); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;"> Hoàn thành đúng các câu ở bài 1 phía trên để tạo từ vựng cho bài tập này.</div>';
+                if (selectedWordEl && selectedWordEl.dataset.bank === 'label') {
+                    selectedWordEl = null;
+                }
+                return;
+            }
+
+            const usedWords = Array.from(document.querySelectorAll('.drop-slot[data-bank="label"]'))
+                .filter(s => s.dataset.filled === '1')
+                .map(s => (s.dataset.sourceWord || s.textContent).trim().toLowerCase());
+
+            bankEl.innerHTML = '';
+            unlocked.forEach(w => {
+                const isUsed = usedWords.includes(w.toLowerCase());
+                const div = document.createElement('div');
+                div.className = 'word-item' + (isUsed ? ' used' : '');
+                div.textContent = w;
+                div.draggable = !isUsed;
+                div.dataset.word = w;
+                div.dataset.bank = 'label';
+                div.addEventListener('dragstart', onWordDragStart);
+                div.addEventListener('dragend', onWordDragEnd);
+                div.addEventListener('click', onWordClick);
+                bankEl.appendChild(div);
+            });
+
+            if (selectedWordEl && selectedWordEl.dataset.bank === 'label' && !bankEl.contains(selectedWordEl)) {
+                selectedWordEl = null;
+            }
+        }
+
+        function showSingleLabelAns(slotId) {
+            const slotEl = document.getElementById(slotId);
+            if (!slotEl) return;
+            const ans = slotEl.dataset.ans;
+            const isCurrentlyCorrect = slotEl.dataset.filled === '1' && slotEl.textContent.trim().toLowerCase() === ans.toLowerCase();
+
+            if (isCurrentlyCorrect) {
+                removeWordFromSlot(slotEl);
+            } else {
+                if (slotEl.dataset.filled === '1') removeWordFromSlot(slotEl);
+                const bankId = slotEl.dataset.bank || 'label';
+                const wordEl = Array.from(document.querySelectorAll(`.word-item[data-bank="${bankId}"]`))
+                    .find(w => !w.classList.contains('used') && w.dataset.word.toLowerCase() === ans.toLowerCase());
+                if (wordEl) {
+                    placeWordInSlot(wordEl, slotEl);
+                } else {
+                    slotEl.textContent = ans;
+                    slotEl.dataset.filled = '1';
+                    slotEl.dataset.sourceWord = ans;
+                    slotEl.classList.add('filled');
+                }
+                slotEl.classList.add('correct');
+                slotEl.classList.remove('incorrect-marked');
+            }
         }
 
         // ============================================================
@@ -903,7 +1137,7 @@
                         <button class="eye-btn" onclick="showGroupAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                         <div class="hint-detail" style="font-style:italic;color:#666;margin-top:5px;">${it.trans}</div>
@@ -928,7 +1162,7 @@
                         <button class="eye-btn" onclick="showGroupAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                         <div class="hint-detail" style="font-style:italic;color:#666;margin-top:5px;">${it.trans}</div>
@@ -960,7 +1194,7 @@
                         <button class="eye-btn" onclick="showGroupAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </div>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                         <div class="hint-detail" style="font-style:italic;color:#666;margin-top:5px;">${it.trans}</div>
@@ -995,7 +1229,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </div>
-                        <div class="hint-box" id="${qid}-hint">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                             <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                             <div class="hint-detail" style="font-style:italic;color:#666;margin-top:5px;">${it.trans}</div>
@@ -1010,7 +1244,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </div>
-                        <div class="hint-box" id="${qid}-hint">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div>
                             <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                             <div class="hint-detail" style="font-style:italic;color:#666;margin-top:5px;">${it.trans}</div>
@@ -1034,14 +1268,62 @@
             el.style.width = Math.max(text.length * 11 + 30, min) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function toggleGrammarSection(section) {
             const content = document.getElementById('content' + section);
@@ -1091,10 +1373,15 @@
                     } else {
                         slotEl.textContent = slotEl.dataset.ans;
                         slotEl.dataset.filled = '1';
+                        slotEl.dataset.sourceWord = slotEl.dataset.ans;
+                        slotEl.classList.add('filled');
                     }
                     slotEl.classList.add('correct');
                 }
             });
+            if (qid.startsWith('ex1')) {
+                updateLabelWordBank();
+            }
         }
 
         // ============================================================
@@ -1166,6 +1453,8 @@
                 } else {
                     el.textContent = el.dataset.ans;
                     el.dataset.filled = '1';
+                    el.dataset.sourceWord = el.dataset.ans;
+                    el.classList.add('filled');
                 }
                 el.classList.add('correct');
             });
@@ -1176,6 +1465,9 @@
                 el.classList.remove('incorrect-marked');
                 adjustWidth(el);
             });
+            if (prefix === 'ex1') {
+                updateLabelWordBank();
+            }
         }
 
         function resetSection(prefix) {
@@ -1195,6 +1487,9 @@
                 document.querySelectorAll('.ex3-hint-box').forEach(el => el.classList.remove('show'));
                 document.querySelectorAll('#ex3-table .hint-btn.hint-active').forEach(el => el.classList.remove(
                     'hint-active'));
+            }
+            if (prefix === 'ex1') {
+                updateLabelWordBank();
             }
         }
 
@@ -1263,6 +1558,9 @@
             renderEx3();
             renderEx4();
             renderEx5();
+
+            document.querySelectorAll('.drop-slot[data-bank="label"]').forEach(setupSlot);
+            updateLabelWordBank();
 
             document.querySelectorAll('input[data-ans]').forEach(el => {
                 adjustWidth(el);

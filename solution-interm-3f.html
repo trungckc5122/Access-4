@@ -511,61 +511,6 @@
             flex: 1;
         }
 
-        /* ===== OPTION CARDS (radio cards) ===== */
-        .option-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
-            align-items: flex-start;
-        }
-
-        .option-card {
-            border: 1px solid var(--glass-border);
-            padding: 10px 20px 10px 14px;
-            border-radius: 12px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            background: var(--card-bg);
-            transition: all 0.2s;
-            font-size: 0.95rem;
-            max-width: 500px;
-            width: 500px;
-        }
-
-        .option-card:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .option-card.selected {
-            background: var(--primary-light);
-            border-color: var(--primary);
-            font-weight: bold;
-        }
-
-        .option-card.correct-card {
-            border-color: var(--success) !important;
-            background: rgba(var(--success-rgb), 0.1) !important;
-            color: var(--success) !important;
-            font-weight: bold;
-        }
-
-        .option-card.incorrect-card {
-            border-color: var(--error) !important;
-            background: rgba(var(--error-rgb), 0.1) !important;
-            color: var(--error) !important;
-            font-weight: bold;
-        }
-
-        .option-card input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
         /* ===== STRATEGY CARD (đã việt hóa) ===== */
         .strategy-card {
             background: var(--hint-bg, #f0fdfa);
@@ -640,6 +585,41 @@
 
         .pair-row .hint-box {
             margin-top: 8px;
+        }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -887,11 +867,14 @@
             hint: '<strong>Từ:</strong> level<br><strong>Giải thích:</strong> "high level of CO₂" = mức độ CO₂ cao; "shelf isn\'t level" = kệ không bằng phẳng.'
         }];
 
-        // Ex2: trả lời câu hỏi Yes/No
+        // Ex2: trả lời câu hỏi Yes/No (mc-card style, giống Bài 3)
         const ex2Data = {
             q: "Does the research support the theory that students perform better if school starts later?",
-            ans: "Yes",
-            options: ["Yes", "No"],
+            ans: "a",
+            options: [
+                { val: 'a', text: 'Yes' },
+                { val: 'b', text: 'No' }
+            ],
             hint: '<strong>Đáp án: Yes</strong><br><br><strong>Bằng chứng trong đoạn B (3 câu được highlight):</strong><br><br>① <span class="key-word">Schools in some US states have tested this theory, and the findings back up the science.</span> → Các bang ở Mỹ đã thử nghiệm và kết quả ủng hộ lý thuyết khoa học.<br><br>② <span class="key-word">One study that involved 9,000 students revealed that grades in maths, English and science all rose when school began at 8.35 a.m. or later.</span> → Nghiên cứu với 9.000 học sinh: điểm số tất cả các môn đều tăng khi giờ học bắt đầu từ 8h35 trở đi.<br><br>③ <span class="key-word">Studies in other countries such as Brazil, Italy and Israel also show that later start times improve learning.</span> → Nghiên cứu ở nhiều quốc gia khác cũng xác nhận: bắt đầu học muộn hơn giúp cải thiện kết quả học tập.<br><br><strong>Kết luận:</strong> Nghiên cứu <em>ủng hộ</em> (support) lý thuyết → đáp án là <strong>Yes</strong>.'
         };
 
@@ -926,7 +909,7 @@
 
         // Ex3: state cho MCQ (mc-card style)
         const ex3State = {};
-        let ex2Selected = null;
+        const ex2State = {};
 
         // ================================================================
         // UTILITY
@@ -950,17 +933,64 @@
             adjustWidth(el);
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlight-key').forEach(el => el.classList.remove('active-highlight'));
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, hintId) {
             if (event) event.stopPropagation();
             const h = document.getElementById(hintId);
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlight-key').forEach(el => el.classList.remove('active-highlight'));
-            if (!isVisible) {
-                h.style.display = 'block';
-            }
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const infoBtn = event ? (event.currentTarget || event.target) : null;
+            const eyeBtn = infoBtn ? infoBtn.parentElement.querySelector('.eye-btn') : null;
+            const anchorBtn = eyeBtn || infoBtn;
+            currentHintBtn = anchorBtn;
+            if (h.classList.contains('inline-hint')) positionHintBox(h, anchorBtn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showReadingHint(targetKey, hintId) {
             const h = document.getElementById(hintId);
@@ -1130,7 +1160,7 @@
 
                 // Hint box
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = hintId;
                 hintBox.innerHTML = `<div class="hint-detail">${pair.hint}</div>`;
                 pairDiv.appendChild(hintBox);
@@ -1207,19 +1237,21 @@
             const container = document.getElementById('questions-ex2');
             container.innerHTML = '';
 
-            const row = document.createElement('div');
-            row.className = 'question-row';
-            row.style.display = 'block';
+            const qid = 'ex2-q0';
+            const card = document.createElement('div');
+            card.className = 'mc-card';
+
+            const headerDiv = document.createElement('div');
+            headerDiv.style.display = 'flex';
+            headerDiv.style.alignItems = 'flex-start';
+            headerDiv.style.justifyContent = 'space-between';
+            headerDiv.style.gap = '10px';
+            headerDiv.style.marginBottom = '12px';
 
             const qDiv = document.createElement('div');
-            qDiv.style.display = 'flex';
-            qDiv.style.alignItems = 'flex-start';
-            qDiv.style.justifyContent = 'space-between';
-            qDiv.style.gap = '10px';
-
-            const qText = document.createElement('div');
-            qText.textContent = ex2Data.q;
-            qDiv.appendChild(qText);
+            qDiv.className = 'mc-question';
+            qDiv.textContent = ex2Data.q;
+            headerDiv.appendChild(qDiv);
 
             const btnGroup = document.createElement('div');
             btnGroup.className = 'row-btns';
@@ -1229,7 +1261,7 @@
             eyeBtn.textContent = '👁️';
             eyeBtn.addEventListener('click', e => {
                 e.stopPropagation();
-                revealEx2Ans();
+                revealEx2Ans(qid, ex2Data.ans);
             });
             btnGroup.appendChild(eyeBtn);
 
@@ -1242,82 +1274,61 @@
             });
             btnGroup.appendChild(hintBtn);
 
-            qDiv.appendChild(btnGroup);
-            row.appendChild(qDiv);
+            headerDiv.appendChild(btnGroup);
+            card.appendChild(headerDiv);
 
-            const optGroup = document.createElement('div');
-            optGroup.className = 'option-group';
-            ex2Data.options.forEach(val => {
-                const label = document.createElement('label');
-                label.className = 'option-card';
-                label.id = `ex2-opt-${val}`;
-
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = 'ex2-option';
-                radio.value = val;
-
-                const span = document.createElement('span');
-                span.textContent = val;
-
-                label.appendChild(radio);
-                label.appendChild(span);
-                label.addEventListener('click', e => {
-                    e.preventDefault();
-                    selectEx2Option(val);
-                });
-                optGroup.appendChild(label);
+            const optDiv = document.createElement('div');
+            optDiv.className = 'mc-options';
+            ex2Data.options.forEach(opt => {
+                const el = document.createElement('div');
+                el.className = 'mc-option';
+                el.id = `${qid}-opt-${opt.val}`;
+                el.innerHTML = `<span class="mc-badge">${opt.val}</span><span class="mc-text">${opt.text}</span>`;
+                el.addEventListener('click', () => selectEx2Option(qid, opt.val));
+                optDiv.appendChild(el);
             });
-            row.appendChild(optGroup);
+            card.appendChild(optDiv);
 
             const hintBox = document.createElement('div');
             hintBox.className = 'hint-box';
             hintBox.id = 'ex2-hint';
             hintBox.innerHTML = `<div class="hint-detail">${ex2Data.hint}</div>`;
-            row.appendChild(hintBox);
+            card.appendChild(hintBox);
 
-            container.appendChild(row);
+            container.appendChild(card);
         }
 
-        function selectEx2Option(val) {
-            ex2Data.options.forEach(v => {
-                const el = document.getElementById(`ex2-opt-${v}`);
-                if (el) {
-                    el.classList.remove('correct-card', 'incorrect-card');
-                    el.classList.toggle('selected', v === val && ex2Selected !== val);
-                    el.querySelector('input').checked = (v === val && ex2Selected !== val);
-                }
-            });
-            ex2Selected = (ex2Selected === val) ? null : val;
+        function selectEx2Option(qid, val) {
+            document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(opt =>
+                opt.classList.remove('selected', 'correct', 'incorrect'));
+            if (ex2State[qid] === val) {
+                delete ex2State[qid];
+            } else {
+                ex2State[qid] = val;
+                const chosen = document.getElementById(`${qid}-opt-${val}`);
+                if (chosen) chosen.classList.add('selected');
+            }
         }
 
-        function revealEx2Ans() {
-            ex2Data.options.forEach(v => {
-                const el = document.getElementById(`ex2-opt-${v}`);
-                if (el) el.classList.remove('selected', 'correct-card', 'incorrect-card');
-            });
-            ex2Selected = ex2Data.ans;
-            const correctEl = document.getElementById(`ex2-opt-${ex2Data.ans}`);
-            if (correctEl) {
-                correctEl.classList.add('correct-card');
-                correctEl.querySelector('input').checked = true;
+        function revealEx2Ans(qid, correctVal) {
+            if (ex2State[qid] === correctVal) {
+                selectEx2Option(qid, correctVal);
+                document.querySelectorAll('.highlight-key').forEach(el => el.classList.remove('active-highlight'));
+            } else {
+                selectEx2Option(qid, correctVal);
+                const chosen = document.getElementById(`${qid}-opt-${correctVal}`);
+                if (chosen) chosen.classList.add('correct');
             }
         }
 
         function showEx2Answer() {
-            revealEx2Ans();
+            revealEx2Ans('ex2-q0', ex2Data.ans);
         }
 
         function resetEx2() {
-            ex2Selected = null;
-            ex2Data.options.forEach(v => {
-                const el = document.getElementById(`ex2-opt-${v}`);
-                if (el) {
-                    el.classList.remove('selected', 'correct-card', 'incorrect-card');
-                    const input = el.querySelector('input');
-                    if (input) input.checked = false;
-                }
-            });
+            delete ex2State['ex2-q0'];
+            document.querySelectorAll(`[id^="ex2-q0-opt-"]`).forEach(opt =>
+                opt.classList.remove('selected', 'correct', 'incorrect'));
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.highlight-key').forEach(el => el.classList.remove('active-highlight'));
         }
@@ -1475,15 +1486,14 @@
             });
 
             // Check Ex2
-            if (ex2Selected) {
-                ex2Data.options.forEach(v => {
-                    const el = document.getElementById(`ex2-opt-${v}`);
-                    if (!el) return;
-                    el.classList.remove('correct-card', 'incorrect-card');
-                    if (v === ex2Selected) {
-                        el.classList.add(v === ex2Data.ans ? 'correct-card' : 'incorrect-card');
-                    }
-                });
+            const ex2UserVal = ex2State['ex2-q0'];
+            if (ex2UserVal) {
+                document.querySelectorAll(`[id^="ex2-q0-opt-"]`).forEach(opt =>
+                    opt.classList.remove('correct', 'incorrect'));
+                const chosenEx2 = document.getElementById(`ex2-q0-opt-${ex2UserVal}`);
+                if (chosenEx2) {
+                    chosenEx2.classList.add(ex2UserVal === ex2Data.ans ? 'correct' : 'incorrect');
+                }
             }
 
             // Check Ex3

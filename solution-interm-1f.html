@@ -605,6 +605,31 @@
             width: max-content;
             z-index: 9999;
         }
+
+        #hint-popup-singleton::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Popup nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        #hint-popup-singleton.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Popup bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        #hint-popup-singleton.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
         .hint-anchor {
             position: relative;
             display: inline-block;
@@ -658,7 +683,35 @@
             top: auto;
             left: auto;
             margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
 
         .hint-box .key-word,
@@ -832,7 +885,8 @@
         <!-- EXERCISE 2 – Complete sentences (Drag & Drop)                 -->
         <!-- ============================================================ -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete the sentences with the correct form of the nouns and adjectives in
+            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete the sentences with the
+                correct form of the nouns and adjectives in
                 exercise 1.</div>
             <div id="questions-ex2"></div>
             <div class="controls-row">
@@ -949,7 +1003,8 @@
                 <!-- EXERCISE 3 – Multiple Choice (Best summary)                    -->
                 <!-- ============================================================ -->
                 <div style="margin-bottom:40px;">
-                    <div class="exercise-title" style="font-size:1.1rem;border-bottom:none;"><strong class="q-number-inline">3.</strong> Read the text. Choose
+                    <div class="exercise-title" style="font-size:1.1rem;border-bottom:none;"><strong
+                            class="q-number-inline">3.</strong> Read the text. Choose
                         the best summary.</div>
                     <div id="questions-ex3"></div>
                     <div class="controls-row">
@@ -964,7 +1019,8 @@
                 <!-- ============================================================ -->
                 <div>
                     <div class="exercise-title" style="font-size:1.1rem;line-height:1.5;border-bottom:none;">
-                        <strong class="q-number-inline">4.</strong> Match sentences A–F with gaps 1–4 in the text. There are two extra sentences.
+                        <strong class="q-number-inline">4.</strong> Match sentences A–F with gaps 1–4 in the text. There
+                        are two extra sentences.
                     </div>
 
                     <!-- Reading Strategy -->
@@ -1802,6 +1858,13 @@
                 // Tràn xuống dưới (an toàn cuối cùng) → kẹp sát đáy viewport
                 if (top + popupH > vh - 10) top = Math.max(10, vh - popupH - 10);
 
+                // Mũi tên: tính LẠI hướng dựa trên `top` cuối cùng sau khi đã kẹp
+                const below = (top + popupH / 2) > btnRect.top;
+                const arrowX = Math.max(14, Math.min(popupW - 14, (btnRect.left + (btnRect.right - btnRect.left) / 2) - left));
+                popup.style.setProperty('--arrow-x', arrowX + 'px');
+                popup.classList.toggle('arrow-up', below);
+                popup.classList.toggle('arrow-down', !below);
+
                 popup.style.left = left + 'px';
                 popup.style.top = top + 'px';
                 popup.style.visibility = 'visible';
@@ -2121,6 +2184,23 @@
             // Đóng hint-reading và hint-inline
             if (!e.target.closest('.hint-btn') && !e.target.closest('.hint-box')) {
                 document.querySelectorAll('.hint-box.hint-reading, .hint-box.hint-inline').forEach(el => el.style.display = 'none');
+            }
+        });
+
+        // Cuộn/resize khi popup đang mở → đóng lại thay vì để trôi lệch khỏi nút neo
+        // (singleton copy nội dung 1 lần khi mở, không tự tính lại vị trí theo scroll)
+        window.addEventListener('scroll', () => {
+            const popup = document.getElementById('hint-popup-singleton');
+            if (popup && popup.style.display === 'block') {
+                popup.style.display = 'none';
+                popup.dataset.openId = '';
+            }
+        }, true);
+        window.addEventListener('resize', () => {
+            const popup = document.getElementById('hint-popup-singleton');
+            if (popup && popup.style.display === 'block') {
+                popup.style.display = 'none';
+                popup.dataset.openId = '';
             }
         });
 
