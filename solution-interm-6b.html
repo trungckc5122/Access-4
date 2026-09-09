@@ -317,6 +317,41 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
         /* Input chung */
         .task5-input {
             border: none;
@@ -721,7 +756,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </span>
-                    <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div>
                 </span>`;
                 return `<div class="ex-row">
                     <span class="q-number q-label">${item.num}.</span>
@@ -751,7 +786,7 @@
                         <button class="eye-btn" onclick="showEx2Ans('${gapId}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${gapId}')">i</button>
                     </span>
-                    <div class="hint-box absolute" id="${gapId}-hint">${hint}</div>
+                    <div class="hint-box inline-hint" id="${gapId}-hint">${hint}</div>
                 </span>`;
             });
             container.innerHTML = `<div style="line-height:2.6; font-size:1.05rem;">${result}</div>`;
@@ -800,7 +835,7 @@
                             <button class="hint-btn" onclick="toggleHint(event,'ex3-hint-${n}')" style="transform:scale(0.9);">i</button>
                         </div>
                     </div>
-                    <div class="hint-box" id="ex3-hint-${n}-hint" style="margin-top:8px;">${item.hint}</div>
+                    <div class="hint-box inline-hint" id="ex3-hint-${n}-hint">${item.hint}</div>
                     <div class="ex3-rewrite" id="ex3-rewrite-${n}">
                         <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
                             <span class="ex3-rewrite-label">Rewrite:</span>
@@ -865,7 +900,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </span>
-                        <div class="hint-box absolute" id="${qid}-hint">${item.hint}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div>
                     </div>
                 </div>`;
             }).join('');
@@ -885,7 +920,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </span>
-                    <div class="hint-box absolute" id="${qid}-hint">${ex5Hints[item.num]}</div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">${ex5Hints[item.num]}</div>
                 </span>`;
                 return `<div class="ex5-item">
                     <span class="q-number ex5-num">${item.num}.</span>
@@ -906,25 +941,68 @@
             el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) {
-                h.style.display = 'block';
-                const rect = h.getBoundingClientRect();
-                const vw = window.innerWidth || document.documentElement.clientWidth;
-                if (rect.right > vw - 10) {
-                    h.style.left = 'auto';
-                    h.style.right = '0';
-                } else {
-                    h.style.left = '0';
-                    h.style.right = 'auto';
-                }
-            }
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showSingleAns(id) {
             const el = document.getElementById(id);
@@ -1173,6 +1251,7 @@
         window.showAnswers = showAnswers;
         window.resetSection = resetSection;
         window.toggleHint = toggleHint;
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
         window.showSingleAns = showSingleAns;
         window.adjustWidth = adjustWidth;
         window.selectEx2Option = selectEx2Option;

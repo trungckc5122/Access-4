@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
@@ -434,6 +434,43 @@
                 flex-direction: column;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -780,9 +817,9 @@
                             <input type="text" id="${id}" data-ans="${dialogue.answers[i]}" data-bank="${bankWord}" data-bankid="wordbank-ex1" class="task5-input" oninput="adjustWidth(this)" placeholder="">
                             <span class="row-btns">
                                 <button class="eye-btn" onclick="toggleInputAns('${id}')">👁️</button>
-                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${hintId}')">i</button>
                             </span>
-                            <div class="hint-box absolute" id="${hintId}">${dialogue.hints[i]}</div>
+                            <div class="hint-box inline-hint" id="${hintId}">${dialogue.hints[i]}</div>
                         </span>`;
                     } else {
                         rebuilt += part;
@@ -824,9 +861,9 @@
                         const btnHtml = isLast
                             ? `<span class="row-btns">
                                 <button class="eye-btn" onclick="showEx2Row('${baseId}')">👁️</button>
-                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${hintId}')">i</button>
                             </span>
-                            <div class="hint-box absolute" id="${hintId}">${item.hint}</div>`
+                            <div class="hint-box inline-hint" id="${hintId}">${item.hint}</div>`
                             : '';
                         sentenceHtml += `<span class="inline-group">
                             <input type="text" id="${inputId}" data-ans="${ansVal}" class="task5-input" oninput="adjustWidth(this)" placeholder="${ph}">
@@ -921,7 +958,6 @@
             } else {
                 selectEx3Option(qid, correctVal);
                 document.getElementById(`${qid}-opt-${correctVal}`).classList.add('correct');
-                if (tsId) showListeningHint(tsId, hintId);
             }
         }
 
@@ -930,7 +966,7 @@
             const h = document.getElementById(hintBoxId);
             if (!h) return;
             const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             if (!vis) {
                 h.style.display = 'block';
@@ -970,14 +1006,73 @@
             adjustWidth(el);
         }
 
-        function toggleHintById(event, hintId) {
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, hintId) {
             if (event) event.stopPropagation();
             const h = document.getElementById(hintId);
             if (!h) return;
-            const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!vis) h.style.display = 'block';
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            if (h.classList.contains('inline-hint')) positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        // Chụp tham chiếu hàm gốc NGAY LẬP TỨC (trước khi access-core.js kịp chạy và
+        // gán đè window.toggleHint — vì function declaration toàn cục và window.toggleHint
+        // là CÙNG 1 binding, nên nếu chỉ đọc lại `toggleHint` lúc 'load' thì đã bị đổi nghĩa).
+        const _localToggleHint = toggleHint;
+        window.addEventListener('load', () => { window.toggleHint = _localToggleHint; });
 
         function toggleGrammarSection(section) {
             const s = section.charAt(0).toUpperCase() + section.slice(1);
@@ -1048,7 +1143,7 @@
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
             if (prefix === 'ex1') {
                 document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {

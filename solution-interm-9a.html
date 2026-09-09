@@ -59,14 +59,7 @@
             line-height: 1;
         }
 
-        .hint-box.absolute {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            min-width: 260px;
-            max-width: 380px;
-            margin-top: 5px;
-            z-index: 200;
+        .hint-box {
             display: none;
             background: var(--hint-bg);
             border: 1px solid var(--glass-border);
@@ -88,14 +81,6 @@
             font-style: italic;
         }
 
-        @media (max-width: 600px) {
-            .hint-box.absolute {
-                left: 0 !important;
-                right: 0 !important;
-                max-width: 100%;
-            }
-        }
-
         .controls-row {
             margin-top: 20px;
             display: flex;
@@ -104,13 +89,12 @@
         }
 
         .btn {
-            padding: 8px 18px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.95rem;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
         }
 
         .btn-show-all {
@@ -118,20 +102,14 @@
             color: white;
         }
 
-        .btn-show-all:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
+        .btn-show-all:hover { opacity: 0.9; }
 
         .btn-reset {
-            background: #6c757d;
+            background: var(--text-muted);
             color: white;
         }
 
-        .btn-reset:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
-        }
+        .btn-reset:hover { background: #64748b; }
 
         .audio-player-container {
             margin: 10px 0 15px 0;
@@ -444,10 +422,8 @@
             flex-wrap: wrap;
         }
 
-        .ex4-row .task5-input {
-            min-width: 180px;
-            text-align: left;
-            width: auto;
+        .ex4-row .drop-slot {
+            min-width: 190px;
         }
 
         .ex4-row .sentence-text {
@@ -506,8 +482,8 @@
                 min-width: 120px;
             }
 
-            .ex4-row .task5-input {
-                min-width: 120px;
+            .ex4-row .drop-slot {
+                min-width: 130px;
             }
 
             .ex5-row .drop-slot {
@@ -525,6 +501,41 @@
             .reading-split-container {
                 flex-direction: column;
             }
+        }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -657,6 +668,12 @@
         <!-- ==================== EXERCISE 4 ==================== -->
         <div class="exercise-card">
             <div class="exercise-title">4. Complete the sentences with compound nouns from exercise 3.</div>
+            <div class="word-bank sticky-bank" id="bank-ex4" style="min-height:48px; margin-bottom:18px;">
+                <div class="bank-placeholder"
+                    style="color:var(--text-muted, #7f8c8d); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;">
+                    Hoàn thành đúng các câu ở bài 3 phía trên để tạo từ vựng cho bài tập này.
+                </div>
+            </div>
             <div id="questions-ex4"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
@@ -702,11 +719,11 @@
                     <div class="speaker-line" style="margin-top:18px;"><strong>Conversation 3</strong></div>
                     <div class="speaker-line">
                         <strong>Girl:</strong> Look at the queues to get on the ferry, Dad.<br>
-                        <strong>Man:</strong> Don't worry, that's normal. It's a big ferry. It can take lots of
+                        <strong>Man:</strong> Don't worry, that's normal. <span class="highlightable" id="ts5-3c">It's a big ferry.</span> It can take lots of
                         cars.<br>
                         <strong>G:</strong> How long will we have to wait?<br>
                         <strong>M:</strong> They allow all the cars and passengers off first. Then we'll drive on.<br>
-                        <strong>G:</strong> Have we got a cabin?<br>
+                        <strong>G:</strong> Have we got a <span class="highlightable" id="ts5-3d">cabin</span>?<br>
                         <strong>M:</strong> No, but I reserved seats.<br>
                         <strong>G:</strong> <span class="highlightable" id="ts5-3a">I hope I don't feel
                             seasick.</span><br>
@@ -850,9 +867,9 @@
                                 <input type="text" id="${id}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="${ph}">
                                 <span class="row-btns">
                                     <button class="eye-btn" onclick="toggleInputAns('${id}')">👁️</button>
-                                    <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                                    <button class="hint-btn" onclick="toggleHint(event,'${id}')">i</button>
                                 </span>
-                                <div class="hint-box absolute" id="${hintId}">${item.hint}</div>
+                                <div class="hint-box inline-hint" id="${hintId}">${item.hint}</div>
                             </span>
                         </div>`;
                 }).join('');
@@ -949,8 +966,8 @@
                         ${suffixHtml}
                         <span class="row-btns" style="position:relative; margin-left:6px;">
                             <button class="eye-btn" onclick="showEx3Row('${slotId}')">👁️</button>
-                            <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
-                            <div class="hint-box absolute" id="${hintId}">${item.hint}</div>
+                            <button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button>
+                            <div class="hint-box inline-hint" id="${hintId}">${item.hint}</div>
                         </span>
                     </div>`;
             }).join('');
@@ -969,7 +986,7 @@
             }
         }
 
-        // ===================== RENDER EX4 (no placeholder) =====================
+        // ===================== RENDER EX4 (word-bank động từ ex3) =====================
         function renderEx4() {
             const container = document.getElementById('questions-ex4');
             container.innerHTML = ex4Data.map(item => {
@@ -980,19 +997,85 @@
                 let html = parts.map((p, i) => {
                     if (i === parts.length - 1) return p;
                     return `${p}<span class="inline-group">
-                            <input type="text" id="${id}" data-ans="${item.ans}" class="task5-input" oninput="adjustWidth(this)">
+                            <span class="drop-slot" id="${id}" data-section="ex4" data-ans="${item.ans}"
+                                ondragover="handleDragOver(event)" ondragenter="this.classList.add('over')"
+                                ondragleave="this.classList.remove('over')" ondrop="handleDrop(event,'ex4')"
+                                onclick="removeWord('${id}','ex4')"></span>
                             <span class="row-btns">
-                                <button class="eye-btn" onclick="toggleInputAns('${id}')">👁️</button>
-                                <button class="hint-btn" onclick="toggleHintById(event,'${hintId}')">i</button>
+                                <button class="eye-btn" onclick="showEx4Row('${id}')">👁️</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${id}')">i</button>
                             </span>
-                            <div class="hint-box absolute" id="${hintId}">${item.hint}</div>
+                            <div class="hint-box inline-hint" id="${hintId}">${item.hint}</div>
                         </span>`;
                 }).join('');
                 return `<div class="ex4-row">${boldNum} <span class="sentence-text">${html}</span></div>`;
             }).join('');
-            setTimeout(() => {
-                document.querySelectorAll('#questions-ex4 input.task5-input').forEach(el => adjustWidth(el));
-            }, 50);
+            updateEx4WordBank();
+        }
+
+        function showEx4Row(slotId) {
+            const slot = document.getElementById(slotId);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            if (slot.textContent.trim().toLowerCase() === ans.toLowerCase()) {
+                removeWord(slotId, 'ex4');
+            } else {
+                removeWord(slotId, 'ex4');
+                placeWord(slotId, ans, 'ex4');
+                slot.classList.add('correct');
+            }
+        }
+
+        // ===================== EX4 WORDBANK: sinh động từ đáp án đúng bài 3 =====================
+        function getEx3Compound(item) {
+            return [item.prefix, item.ans, item.suffix].filter(Boolean).join(' ');
+        }
+
+        function isEx3ItemCorrect(item) {
+            const slot = document.getElementById('ex3-' + item.num);
+            return !!slot && slot.textContent.trim().toLowerCase() === item.ans.toLowerCase();
+        }
+
+        function getUnlockedEx3Compounds() {
+            return ex3Data.filter(isEx3ItemCorrect).map(getEx3Compound);
+        }
+
+        function updateEx4WordBank() {
+            const bankEl = document.getElementById('bank-ex4');
+            if (!bankEl) return;
+            const unlocked = getUnlockedEx3Compounds();
+
+            // Trả về bank những từ ở ex4 không còn được mở khóa (đáp án ex3 tương ứng đã bị xóa/sai)
+            document.querySelectorAll('.drop-slot[data-section="ex4"]').forEach(slotEl => {
+                const word = slotEl.textContent.trim();
+                if (word && !unlocked.some(u => u.toLowerCase() === word.toLowerCase())) {
+                    removeWord(slotEl.id, 'ex4');
+                }
+            });
+
+            if (unlocked.length === 0) {
+                bankEl.innerHTML = '<div class="bank-placeholder" style="color:var(--text-muted, #7f8c8d); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;">Hoàn thành đúng các câu ở bài 3 phía trên để tạo từ vựng cho bài tập này.</div>';
+                return;
+            }
+
+            const usedWords = Array.from(document.querySelectorAll('.drop-slot[data-section="ex4"]'))
+                .filter(s => s.textContent.trim())
+                .map(s => s.textContent.trim().toLowerCase());
+
+            bankEl.innerHTML = unlocked.map(w => {
+                const isUsed = usedWords.includes(w.toLowerCase());
+                return `<div class="word-item${isUsed ? ' used' : ''}" draggable="true" id="wi-ex4-${safeId(w)}">${w}</div>`;
+            }).join('');
+
+            bankEl.querySelectorAll('.word-item').forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    dragWord = e.target.textContent.trim();
+                    dragSection = 'ex4';
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', dragWord);
+                });
+                el.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+            });
         }
 
         // ===================== RENDER EX5 (drag-drop wordbank) =====================
@@ -1024,8 +1107,8 @@
                             onclick="removeWord('${slotId}','ex5')"></span>
                         <span class="ex5-hint-area">
                             <button class="eye-btn" onclick="showEx5Row('${slotId}')">👁️</button>
-                            <button class="hint-btn" onclick="showListeningHint('${item.tsIds[0]}','${hintId}')">i</button>
-                            <div class="hint-box absolute" id="${hintId}" style="right:auto;left:0;">${item.hint}</div>
+                            <button class="hint-btn" onclick="showListeningHint(event,'${item.tsIds[0]}','${hintId}')">i</button>
+                            <div class="hint-box inline-hint" id="${hintId}">${item.hint}</div>
                         </span>
                     </div>`;
             }).join('');
@@ -1045,16 +1128,20 @@
         }
 
         // ===================== LISTENING HINT =====================
-        function showListeningHint(targetId, hintBoxId) {
+        function showListeningHint(event, targetId, hintBoxId) {
+            if (event) event.stopPropagation();
             const h = document.getElementById(hintBoxId);
             if (!h) return;
             const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             if (!vis) {
                 h.style.display = 'block';
                 const panel = document.getElementById('tp-ex5');
                 if (panel && !panel.classList.contains('active')) panel.classList.add('active');
+                const btn = event ? (event.currentTarget || event.target) : null;
+                currentHintBtn = btn;
+                positionHintBox(h, btn);
                 // Highlight all tsIds for the matching ex5 item
                 const slotNum = hintBoxId.replace('ex5-', '').replace('-hint', '');
                 const item = ex5Data.find(d => String(d.num) === slotNum);
@@ -1101,6 +1188,7 @@
             slot.classList.remove('correct', 'incorrect-marked');
             const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
             if (wordEl) wordEl.classList.add('used');
+            if (section === 'ex3') updateEx4WordBank();
         }
 
         function removeWord(slotId, section) {
@@ -1112,6 +1200,7 @@
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             const wordEl = document.getElementById(`wi-${section}-${safeId(word)}`);
             if (wordEl) wordEl.classList.remove('used');
+            if (section === 'ex3') updateEx4WordBank();
         }
 
         // ===================== UTILITY =====================
@@ -1136,14 +1225,62 @@
             adjustWidth(el);
         }
 
-        function toggleHintById(event, hintId) {
-            if (event) event.stopPropagation();
-            const h = document.getElementById(hintId);
-            if (!h) return;
-            const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!vis) h.style.display = 'block';
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
         }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            if (h.classList.contains('inline-hint')) positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function toggleGrammarSection(section) {
             const s = section.charAt(0).toUpperCase() + section.slice(1);
@@ -1210,10 +1347,11 @@
                 return;
             }
             if (prefix === 'ex4') {
-                document.querySelectorAll('#questions-ex4 input[data-ans]').forEach(el => {
-                    el.value = el.dataset.ans;
-                    el.classList.add('correct');
-                    adjustWidth(el);
+                document.querySelectorAll('.drop-slot[data-section="ex4"]').forEach(slot => {
+                    const ans = slot.dataset.ans;
+                    removeWord(slot.id, 'ex4');
+                    placeWord(slot.id, ans, 'ex4');
+                    slot.classList.add('correct');
                 });
                 return;
             }
@@ -1229,7 +1367,7 @@
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
             if (prefix === 'ex1') {
                 document.querySelectorAll('#questions-ex1-group1 input[data-ans], #questions-ex1-group2 input[data-ans], #questions-ex1-group3 input[data-ans]')
@@ -1249,11 +1387,7 @@
                 return;
             }
             if (prefix === 'ex4') {
-                document.querySelectorAll('#questions-ex4 input[data-ans]').forEach(el => {
-                    el.value = '';
-                    el.classList.remove('correct', 'incorrect-marked');
-                    adjustWidth(el);
-                });
+                document.querySelectorAll('.drop-slot[data-section="ex4"]').forEach(slot => removeWord(slot.id, 'ex4'));
                 return;
             }
             if (prefix === 'ex5') {

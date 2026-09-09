@@ -395,6 +395,51 @@
                 display: none;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
+        /* Ghi đè riêng cho selector lồng ngữ cảnh cha .word-family-table .input-cell .hint-box
+           (specificity 0,3,0 cao hơn .hint-box.inline-hint 0,2,0) */
+        .word-family-table .input-cell .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            z-index: 9999;
+        }
     </style>
 </head>
 
@@ -743,14 +788,69 @@
             el.style.width = Math.max(text.length * 11 + 30, 80) + "px";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function toggleGrammarSection(section) {
             const content = document.getElementById('content' + section);
@@ -979,9 +1079,8 @@
 
                     // Floating hint box
                     const hintBox = document.createElement('div');
-                    hintBox.className = 'hint-box';
+                    hintBox.className = 'hint-box inline-hint';
                     hintBox.id = `ex1-row-${it.num}-hint`;
-                    hintBox.style.cssText = 'position:absolute;top:100%;left:0;min-width:260px;z-index:200;background:var(--card-bg,#fff);border:1px solid var(--border,#ddd);border-radius:8px;padding:12px 16px;box-shadow:0 4px 16px rgba(0,0,0,0.1);';
                     hintBox.innerHTML = `<div class="hint-detail"><span class="key-word">${it.ans1} / ${it.ans2}</span></div><div class="hint-detail" style="color:#2980b9;font-weight:bold;">${it.type}</div><div class="hint-detail" style="font-style:italic;color:#7f8c8d;">${it.meaning}</div>`;
                     wordDiv.appendChild(hintBox);
                 } else {
@@ -1011,9 +1110,8 @@
 
                     // Floating hint box
                     const hintBox = document.createElement('div');
-                    hintBox.className = 'hint-box';
+                    hintBox.className = 'hint-box inline-hint';
                     hintBox.id = `ex1-row-${it.num}-hint`;
-                    hintBox.style.cssText = 'position:absolute;top:100%;left:0;min-width:260px;z-index:200;background:var(--card-bg,#fff);border:1px solid var(--border,#ddd);border-radius:8px;padding:12px 16px;box-shadow:0 4px 16px rgba(0,0,0,0.1);';
                     hintBox.innerHTML = `<div class="hint-detail"><span class="key-word">${it.ans}</span></div><div class="hint-detail" style="color:#2980b9;font-weight:bold;">${it.type}</div><div class="hint-detail" style="font-style:italic;color:#7f8c8d;">${it.meaning}</div>`;
                     wordDiv.appendChild(hintBox);
                 }
@@ -1075,7 +1173,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </span>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans.replace('/', ' hoặc ')}</span></div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                     </div>
@@ -1100,7 +1198,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </span>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans.replace('/', ' hoặc ')}</span></div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                         <div class="hint-detail" style="font-style:italic;color:#7f8c8d;margin-top:4px;">Dịch: ${it.trans}</div>
@@ -1126,7 +1224,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                     </span>
-                    <div class="hint-box" id="${qid}-hint">
+                    <div class="hint-box inline-hint" id="${qid}-hint">
                         <div class="hint-detail"><span class="key-word">${it.ans.replace('/', ' hoặc ')}</span></div>
                         <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${it.hint}</div>
                     </div>
@@ -1149,7 +1247,7 @@
                             <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                         </span>
-                        <div class="hint-box" id="${qid}-hint" style="position:absolute;top:100%;left:0;min-width:260px;max-width:360px;z-index:200;">
+                        <div class="hint-box inline-hint" id="${qid}-hint">
                             <div class="hint-detail"><span class="key-word">${item.a.replace('/', ' / ')}</span></div>
                             <div class="hint-detail" style="font-weight:bold;color:#2980b9;">${item.h}</div>
                         </div>

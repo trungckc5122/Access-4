@@ -425,6 +425,41 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
         .task5-input {
             border: none;
             border-bottom: 2px solid var(--primary);
@@ -885,7 +920,7 @@
                 const parts = item.text.split('______');
                 const before = parts[0] || '';
                 const after = parts[1] || '';
-                return `<div class="ex1-item"><span class="q-number-inline ex1-num">${item.num}.</span>${before}<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="ex1Drop(event, '${slotId}')" onclick="ex1RemoveSlot('${slotId}')"></span>${after}<span class="row-btns"><button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span><div class="hint-box absolute" id="${slotId}-hint">${item.hint}</div></div>`;
+                return `<div class="ex1-item"><span class="q-number-inline ex1-num">${item.num}.</span>${before}<span class="drop-slot" id="${slotId}" data-ans="${item.ans}" ondragover="event.preventDefault(); this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="ex1Drop(event, '${slotId}')" onclick="ex1RemoveSlot('${slotId}')"></span>${after}<span class="row-btns"><button class="eye-btn" onclick="ex1ShowSlot('${slotId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span><div class="hint-box inline-hint" id="${slotId}-hint">${item.hint}</div></div>`;
             }).join('');
         }
 
@@ -1022,7 +1057,7 @@
 
                 // Hint box nằm trong group → position:absolute hoạt động đúng
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box absolute';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = `${slotId}-hint`;
                 hintBox.innerHTML = ex2Hints[slotId] || '<strong>Giải thích chi tiết</strong>';
                 hintBox.style.display = 'none';
@@ -1128,7 +1163,7 @@
                             <button class="hint-btn" onclick="toggleHint(event,'ex3-hint-${n}')" style="transform:scale(0.9);">i</button>
                         </div>
                     </div>
-                    <div class="hint-box" id="ex3-hint-${n}-hint" style="margin-top:8px;">${item.hint}</div>
+                    <div class="hint-box inline-hint" id="ex3-hint-${n}-hint">${item.hint}</div>
                     <div class="ex3-rewrite" id="ex3-rewrite-${n}">
                         <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
                             <span class="ex3-rewrite-label">Rewrite:</span>
@@ -1186,7 +1221,7 @@
             container.innerHTML = ex4Data.map(item => {
                 const qid = `ex4-q${item.num}`;
                 return `<div class="ex4-item">
-                    <div class="ex4-prompt"><span class="q-number-inline q-label">${item.num}.</span> ${item.prompt}<span class="row-btns" style="margin-left:6px; vertical-align:middle;"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span><div class="hint-box absolute" id="${qid}-hint" style="top:100%; left:0;">${item.hint}</div></div>
+                    <div class="ex4-prompt"><span class="q-number-inline q-label">${item.num}.</span> ${item.prompt}<span class="row-btns" style="margin-left:6px; vertical-align:middle;"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span><div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div></div>
                     <div class="ex4-input-group">
                         <input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input" style="text-align:left;" oninput="adjustWidth(this)">
                     </div>
@@ -1205,25 +1240,68 @@
             el.style.width = Math.max(text.length + 3, 8) + "ch";
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) {
-                h.style.display = 'block';
-                const rect = h.getBoundingClientRect();
-                const vw = window.innerWidth || document.documentElement.clientWidth;
-                if (rect.right > vw - 10) {
-                    h.style.left = 'auto';
-                    h.style.right = '0';
-                } else {
-                    h.style.left = '0';
-                    h.style.right = 'auto';
-                }
-            }
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         function showSingleAns(id) {
             const el = document.getElementById(id);
@@ -1523,6 +1601,7 @@
         window.showAnswers = showAnswers;
         window.resetSection = resetSection;
         window.toggleHint = toggleHint;
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
         window.showSingleAns = showSingleAns;
         window.adjustWidth = adjustWidth;
         window.ex1Drop = ex1Drop;

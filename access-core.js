@@ -254,8 +254,18 @@
                 placeholder.style.width = panelW + 'px';
             };
 
-            // Watch active class changes
-            const mo = new MutationObserver(updateFixedPanel);
+            // Watch active class changes — mutual exclusion: chỉ 1 panel active tại 1 thời điểm
+            const mo = new MutationObserver(() => {
+                if (panel.classList.contains('active')) {
+                    // Đóng mọi panel khác ngay khi panel này được mở
+                    document.querySelectorAll('.transcript-panel').forEach(other => {
+                        if (other !== panel && other.classList.contains('active')) {
+                            other.classList.remove('active');
+                        }
+                    });
+                }
+                updateFixedPanel();
+            });
             mo.observe(panel, { attributes: true, attributeFilter: ['class'] });
 
             // Update on scroll and resize
@@ -839,8 +849,12 @@
                 const btn = (event && event.currentTarget) ? event.currentTarget : document.getElementById(id + '-info');
                 h.style.display = 'block';
                 if (btn) {
-                    positionInlineHint(h, btn);
-                    activeInlineHint = { hintEl: h, btnEl: btn };
+                    // Dùng requestAnimationFrame để đảm bảo browser đã layout hint-box
+                    // trước khi đọc offsetWidth/getBoundingClientRect (tránh lỗi width=0)
+                    requestAnimationFrame(() => {
+                        positionInlineHint(h, btn);
+                        activeInlineHint = { hintEl: h, btnEl: btn };
+                    });
                 }
             } else {
                 h.style.display = 'block';

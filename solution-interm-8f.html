@@ -734,6 +734,41 @@
         #ex4-q4-hint .key-word {
             color: #2c3e50;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -1201,8 +1236,7 @@
             const h = document.getElementById(hintBoxId);
             if (!h) return;
             const isShowing = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
             if (!isShowing) {
                 h.style.display = 'block';
                 const el = document.getElementById(targetId);
@@ -1213,15 +1247,73 @@
             }
         }
 
-        function toggleHint(event, hintId) {
-            if (event) event.stopPropagation();
-            const h = document.getElementById(hintId);
-            if (!h) return;
-            const isVisible = h.style.display === 'block';
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
             removeAllHighlights();
-            if (!isVisible) h.style.display = 'block';
+            currentHintBtn = null;
         }
+
+        function toggleHint(event, hintId) {
+            if (event) event.stopPropagation();
+            let h = document.getElementById(hintId);
+            if (!h && hintId) h = document.getElementById(hintId + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            if (h.classList.contains('inline-hint')) positionHintBox(h, btn);
+        }
+
+        const localToggleHint = toggleHint;
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = localToggleHint; });
 
         // ============================================================
         // EXERCISE 1 – DRAG & DROP (Compound nouns)
@@ -1289,13 +1381,13 @@
                 hintBtn.className = 'hint-btn';
                 hintBtn.textContent = 'i';
                 const hintId = `ex1-hint-${idx}`;
-                hintBtn.addEventListener('click', e => toggleHint(e, hintId));
+                hintBtn.addEventListener('click', e => localToggleHint(e, hintId));
                 btnGroup.appendChild(hintBtn);
 
                 row.appendChild(btnGroup);
 
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = hintId;
                 hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
                 row.appendChild(hintBox);
@@ -1366,8 +1458,7 @@
             ex1Data.forEach((_, idx) => {
                 removeEx1Word(idx);
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
         }
 
         // ============================================================
@@ -1456,12 +1547,12 @@
                 hintBtn.textContent = 'i';
                 hintBtn.style.verticalAlign = 'middle';
                 hintBtn.style.marginLeft = '2px';
-                hintBtn.addEventListener('click', e => toggleHint(e, hintId));
+                hintBtn.addEventListener('click', e => localToggleHint(e, hintId));
                 textContainer.appendChild(hintBtn);
 
                 // Hint box (block, bên dưới inline)
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = hintId;
                 hintBox.style.display = 'none';
                 hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
@@ -1538,8 +1629,7 @@
             ex2Data.forEach((_, idx) => {
                 removeEx2Word(idx);
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
         }
 
         // ============================================================
@@ -1677,8 +1767,7 @@
                 document.getElementById(`${qid}-true`).className = 'choice-badge';
                 document.getElementById(`${qid}-false`).className = 'choice-badge';
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
         }
 
         // ============================================================
@@ -1831,8 +1920,7 @@
 
         function resetAllSlots() {
             [1, 2, 3, 4].forEach(q => removeSlot(q));
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
             document.getElementById('ex4-feedback').innerHTML = '';
         }
 
@@ -1841,8 +1929,7 @@
             const h = document.getElementById(`ex4-q${q}-hint`);
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            removeAllHighlights();
+            closeAllHints();
 
             if (!isVisible) {
                 h.style.display = 'block';
@@ -2102,7 +2189,7 @@
         window.showAllDragAnswers = showAllDragAnswers;
         window.resetAllSlots = resetAllSlots;
         window.showReadingHint = showReadingHint;
-        window.toggleHint = toggleHint;
+        window.toggleHint = localToggleHint;
         window.adjustWidth = adjustWidth;
         window.applyManualHighlight = applyManualHighlight;
         window.removeManualHighlight = removeManualHighlight;

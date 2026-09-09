@@ -503,6 +503,41 @@
                 flex-direction: column;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -559,7 +594,8 @@
 
         <!-- EXERCISE 1: COMPUTING VERBS (FILL IN BLANKS) -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the sentences with the words below.</div>
+            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the sentences with the
+                words below.</div>
             <div class="word-bank sticky-bank" id="bank-ex1"></div>
             <div id="questions-ex1"></div>
             <div class="controls-row">
@@ -1018,8 +1054,8 @@
                     <strong class="q-number-inline">${idx + 1}.</strong> ${renderedText}
                     <span class="row-btns" style="position:relative; margin-left:6px; vertical-align:middle;">
                         <button class="eye-btn" onclick="showRowAns('${item.id}', 'ex1')">👁️</button>
-                        <button class="hint-btn" onclick="toggleHintById(event,'${hid}')">i</button>
-                        <div class="hint-box absolute" id="${hid}">${item.hint}</div>
+                        <button class="hint-btn" onclick="toggleHint(event,'${item.id}')">i</button>
+                        <div class="hint-box inline-hint" id="${hid}">${item.hint}</div>
                     </span>
                 </div>`;
             }).join('');
@@ -1052,8 +1088,8 @@
                         onclick="handleSlotClick('${item.id}','ex2')"></span>
                     <span class="row-btns" style="position:relative;">
                         <button class="eye-btn" onclick="showRowAns('${item.id}', 'ex2')">👁️</button>
-                        <button class="hint-btn" onclick="toggleHintById(event,'${hid}')">i</button>
-                        <div class="hint-box" id="${hid}" style="position:absolute; top:100%; left:0; min-width:240px; max-width:340px; z-index:200;">${item.hint}</div>
+                        <button class="hint-btn" onclick="toggleHint(event,'${item.id}')">i</button>
+                        <div class="hint-box inline-hint" id="${hid}">${item.hint}</div>
                     </span>
                 </div>`;
             }).join('');
@@ -1083,8 +1119,8 @@
                 ${it.suffix ? `<span style="color:var(--text);">${it.suffix}</span>` : ''}
                 <span style="display:inline-flex; gap:3px; align-items:center; position:relative; margin-left:4px;">
                     <button class="eye-btn" onclick="eyeEx4('${it.id}','${it.tsId}')">👁️</button>
-                    <button class="hint-btn" onclick="hintEx4('${it.id}','${it.tsId}')">i</button>
-                    <div class="hint-box" id="${hid}" style="position:absolute; top:100%; right:0; min-width:260px; max-width:340px; z-index:200;">${it.hint}</div>
+                    <button class="hint-btn" onclick="hintEx4(event,'${it.id}','${it.tsId}')">i</button>
+                    <div class="hint-box inline-hint" id="${hid}">${it.hint}</div>
                 </span>
             </span>
         </div>`;
@@ -1114,9 +1150,6 @@
             if (!alreadyCorrect) {
                 ex3State = '2';
                 document.getElementById('ex3-opt-2').classList.add('correct');
-                document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
-                const t = document.getElementById('ts3-join');
-                if (t) { t.classList.add('active-highlight'); toggleTranscript('tp-ex3', true); t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             } else {
                 ex3State = null;
             }
@@ -1126,7 +1159,7 @@
             const h = document.getElementById('ex3-hint');
             if (!h) return;
             const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             if (!vis) {
                 h.style.display = 'block';
@@ -1162,23 +1195,21 @@
             if (!it) return;
             showWordChoiceAns(`${id}-gap1`);
             if (it.ans2) showWordChoiceAns(`${id}-gap2`);
-            if (tsId) {
-                document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
-                toggleTranscript('tp-ex4', true);
-                const t = document.getElementById(tsId);
-                if (t) { t.classList.add('active-highlight'); setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150); }
-            }
         }
 
-        function hintEx4(id, tsId) {
+        function hintEx4(event, id, tsId) {
+            if (event) event.stopPropagation();
             const hid = id + '-hint';
             const h = document.getElementById(hid);
             if (!h) return;
             const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
             if (!vis) {
                 h.style.display = 'block';
+                const btn = event ? (event.currentTarget || event.target) : null;
+                currentHintBtn = btn;
+                positionHintBox(h, btn);
                 if (tsId) {
                     toggleTranscript('tp-ex4', true);
                     const t = document.getElementById(tsId);
@@ -1204,14 +1235,61 @@
         }
 
         // ===================== HINT UTILS =====================
-        function toggleHintById(event, hintId) {
-            if (event) event.stopPropagation();
-            const h = document.getElementById(hintId);
-            if (!h) return;
-            const vis = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!vis) h.style.display = 'block';
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
         }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // ===================== CHECK ALL =====================
         function checkAll() {
@@ -1290,7 +1368,7 @@
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
             if (prefix === 'ex1') {
                 document.querySelectorAll('.drop-slot[data-section="ex1"]').forEach(slot => removeWord(slot.id, 'ex1'));
@@ -1331,6 +1409,7 @@
 
         // ===================== INIT =====================
         window.onload = function () {
+            window.toggleHint = toggleHint;
             initEx1();
             initEx2();
             initEx4();

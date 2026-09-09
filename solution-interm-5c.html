@@ -414,6 +414,41 @@
             opacity: 0.9;
             transform: translateY(-1px);
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -557,7 +592,8 @@
                         <span><strong>M:</strong> Thanks.</span><br>
                         <span><strong>W:</strong> Thank you! Why are you going left? He said straight on at the
                             lights.</span><br>
-                        <span><strong>M:</strong> Yes, but he didn't know, did he? I mean, <span class="highlightable" id="text-ex5-3">he didn't sound very sure. I think it's up this road</span>.</span><br>
+                        <span><strong>M:</strong> Yes, but he didn't know, did he? I mean, <span class="highlightable"
+                                id="text-ex5-3">he didn't sound very sure. I think it's up this road</span>.</span><br>
                         <span><strong>W:</strong> Well, you might be right. Let's see.</span><br>
                         <span><strong>M:</strong> He's waving at us. Look!</span><br>
                         <span><strong>W:</strong> Oh dear, how embarrassing! He's just trying to be helpful.</span><br>
@@ -799,9 +835,9 @@
                             <span style="display:inline-flex; align-items:center; gap:3px; margin:0 2px; vertical-align:middle;">
                                 <input type="text" id="${inputId}" data-ans="${ans}" placeholder="${part}" class="phrase-gap-input" autocomplete="off" style="min-width:${Math.max(part.length * 8 + 20, 80)}px;" title="Nhập từ tương ứng">
                                 <button class="eye-btn" onclick="showSingleAnsEx1('${inputId}')">👁️</button>
-                                <button class="hint-btn" onclick="showHintOnly('${inputId}-hint')">i</button>
+                                <button class="hint-btn" onclick="toggleHint(event,'${inputId}')">i</button>
                             </span>
-                            <div class="hint-box" id="${inputId}-hint" style="display:none; flex-basis:100%; margin-top:4px;">${it.hint}</div>
+                            <div class="hint-box inline-hint" id="${inputId}-hint">${it.hint}</div>
                         `;
                         inputIdx++;
                     } else {
@@ -869,18 +905,8 @@
             if (!alreadyCorrect) {
                 ex2State[qid] = correctVal;
                 document.getElementById(`${qid}-opt-${correctVal}`).classList.add('correct');
-                if (target) {
-                    document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
-                    toggleTranscript('1.23', true);
-                    const t = document.getElementById(target);
-                    if (t) {
-                        t.classList.add('active-highlight');
-                        scrollToTarget(target);
-                    }
-                }
             } else {
                 delete ex2State[qid];
-                document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
             }
         }
 
@@ -924,7 +950,7 @@
                 });
                 const hintAction = it.target
                     ? `showReadingHint(event, ['${it.target}'], '${qid}-hint', '1.23')`
-                    : `showHintOnly('${qid}-hint')`;
+                    : `showReadingHint(event, [], '${qid}-hint', '1.23')`;
                 container.innerHTML += `
                     <div class="question-row" style="margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--glass-border); display:block; line-height:2.2;">
                         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
@@ -1012,7 +1038,7 @@
 
         function resetEx3() {
             Object.keys(ex3SlotState).forEach(key => removeEx3Word(parseInt(key)));
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
         }
 
         // ----- Exercise 5: mc-card/mc-option/mc-badge -----
@@ -1065,18 +1091,8 @@
             if (!alreadyCorrect) {
                 ex5State[qid] = correctVal;
                 if (targetOpt) targetOpt.classList.add('correct');
-                if (targets && targets.length) {
-                    document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
-                    toggleTranscript('1.24', true);
-                    targets.forEach(tid => {
-                        const t = document.getElementById(tid);
-                        if (t) t.classList.add('active-highlight');
-                    });
-                    scrollToTarget(targets[0]);
-                }
             } else {
                 delete ex5State[qid];
-                document.querySelectorAll('.highlightable').forEach(h => h.classList.remove('active-highlight'));
             }
         }
 
@@ -1126,17 +1142,63 @@
             adjustWidth(el);
         }
 
-        // Show hint only (no transcript)
-        function showHintOnly(hintBoxId) {
-            const hintBox = document.getElementById(hintBoxId);
-            if (!hintBox) return;
-            const isVisible = hintBox.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
-            if (!isVisible) {
-                hintBox.style.display = 'block';
-            }
+        // Show hint with positioning (chuẩn hóa - tương thích access-core.js)
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
         }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // ----- Shared -----
         function toggleTranscript(track, forceOpen = false) {
@@ -1169,7 +1231,7 @@
                 toggleTranscript(track, true);
             }
 
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
 
             hintBox.style.display = 'block';
@@ -1305,13 +1367,14 @@
                     delete ex5State[qid];
                 });
             }
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
         }
 
         /* ── INIT ─────────────────────────────────────────────────── */
 
         window.onload = function () {
+            window.toggleHint = toggleHint;
             renderEx1();
             renderEx2();
             renderEx3();

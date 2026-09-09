@@ -329,6 +329,41 @@
                 flex-direction: column;
             }
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -415,7 +450,8 @@
                         <span><strong>G:</strong> Basically because mobile phones became popular so quickly. In the
                             mid-1980s, there were two mobile phone companies in the UK. The government gave them both
                             permission to build a network. <span class="highlightable" id="text-ex4-1">Each company was
-                                hoping to attract about 20,000 users during the next ten years. But in fact, within three
+                                hoping to attract about 20,000 users during the next ten years. But in fact, within
+                                three
                                 years, they had half a million users each!</span></span><br>
                         <span><strong>H:</strong> So how did they go about building this network? What is the network
                             actually made of?</span><br>
@@ -750,7 +786,7 @@
                             <button class="eye-btn" onclick="showSingleAnsEx1('${qid}')">👁️</button>
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </span>
-                        <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
                     </div>
                 `;
             });
@@ -822,12 +858,6 @@
                 opt.classList.remove('selected', 'correct', 'incorrect'));
             mcqState[qid] = correctVal;
             if (correctEl) correctEl.classList.add('selected', 'correct');
-            const dataMap = { ex2: ex2Data, ex3: ex3Data, ex4: ex4Data };
-            const item = (dataMap[prefix] && idx !== undefined) ? dataMap[prefix][idx] : null;
-            if (item && (item.targets || item.target)) {
-                const targets = item.targets || [item.target];
-                showReadingHint(null, targets, `${qid}-hint`, item.track);
-            }
         }
 
         /* ── INTERACTION FUNCTIONS ───────────────────────────────── */
@@ -886,15 +916,70 @@
             panel.classList.add('active');
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            currentHintBtn = null;
+        }
+
         function toggleHint(event, id) {
             if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            if (h.classList.contains('inline-hint')) positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function showReadingHint(event, targets, hintBoxId, track) {
             if (event) event.stopPropagation();
@@ -911,8 +996,7 @@
                 toggleTranscript(track, true);
             }
 
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            closeAllHints();
 
             hintBox.style.display = 'block';
 
@@ -1046,8 +1130,7 @@
                         opt.classList.remove('selected', 'correct', 'incorrect'));
                 });
             }
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
-            document.querySelectorAll('.highlightable').forEach(el => el.classList.remove('active-highlight'));
+            closeAllHints();
         }
 
         /* ── INIT ─────────────────────────────────────────────────── */

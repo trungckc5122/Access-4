@@ -528,6 +528,45 @@
         #ex4-q4-hint .key-word {
             color: #2c3e50;
         }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (chỉ áp dụng cho .hint-box mở qua toggleHint — Ex1; hint mở qua
+           showReadingHint (Ex2/Ex3) giữ nguyên vì đang ở luồng bình thường) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -818,11 +857,62 @@
             panel.scrollTo({ top: target, behavior: 'smooth' });
         }
 
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            // Mũi tên: hướng tính LẠI dựa trên `top` sau khi đã kẹp — không dùng
+            // cờ từ nhánh if/else phía trên (dễ lỗi thời khi bị kẹp lần 2)
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        // Nút neo đã cuộn khuất hẳn khỏi viewport → tự đóng hint thay vì kẹp mép
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box.inline-hint[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            currentHintBtn = null;
+        }
+
         function showReadingHint(targetKey, hintId) {
             const h = document.getElementById(hintId);
             if (!h) return;
             const isShowing = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             removeAllHighlights();
             if (!isShowing) {
                 h.style.display = 'block';
@@ -839,10 +929,19 @@
             const h = document.getElementById(hintId);
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             removeAllHighlights();
-            if (!isVisible) h.style.display = 'block';
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        const localToggleHint = toggleHint;
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
 
         // ================================================================
         // EXERCISE 1 – Input fields for measurements
@@ -887,13 +986,13 @@
                 hintBtn.className = 'hint-btn';
                 hintBtn.textContent = 'i';
                 const hintId = `ex1-hint-${idx}`;
-                hintBtn.addEventListener('click', e => toggleHint(e, hintId));
+                hintBtn.addEventListener('click', e => localToggleHint(e, hintId));
                 btnGroup.appendChild(hintBtn);
 
                 div.appendChild(btnGroup);
 
                 const hintBox = document.createElement('div');
-                hintBox.className = 'hint-box';
+                hintBox.className = 'hint-box inline-hint';
                 hintBox.id = hintId;
                 hintBox.innerHTML = `<div class="hint-detail">${item.hint}</div>`;
                 div.appendChild(hintBox);
@@ -935,7 +1034,7 @@
                 input.classList.remove('correct', 'incorrect-marked');
                 adjustWidth(input);
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             removeAllHighlights();
         }
 
@@ -1061,7 +1160,7 @@
                 delete ex2State[qid];
                 document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(o => o.className = 'mc-option');
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             removeAllHighlights();
         }
 
@@ -1182,7 +1281,7 @@
                 delete ex3State[qid];
                 document.querySelectorAll(`[id^="${qid}-opt-"]`).forEach(o => o.className = 'mc-option');
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             removeAllHighlights();
         }
 
@@ -1392,6 +1491,8 @@
             initResizer();
         });
 
+        window.addEventListener('load', () => { window.toggleHint = localToggleHint; window.showReadingHint = showReadingHint; });
+
         // Expose functions
         window.checkAllEx = checkAllEx;
         window.showEx1All = showEx1All;
@@ -1405,7 +1506,7 @@
         window.selectEx3Option = selectEx3Option;
         window.revealEx3Ans = revealEx3Ans;
         window.showReadingHint = showReadingHint;
-        window.toggleHint = toggleHint;
+        window.toggleHint = localToggleHint;
         window.showSingleAns = showSingleAns;
         window.adjustWidth = adjustWidth;
         window.applyManualHighlight = applyManualHighlight;
