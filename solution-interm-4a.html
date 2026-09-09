@@ -120,6 +120,44 @@
             font-style: italic;
         }
 
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
+           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
+           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
+
         /* ===== INLINE GROUP ===== */
         .inline-group {
             display: inline-flex;
@@ -406,7 +444,8 @@
 
         <!-- ========== EXERCISE 1: Complete types of home with vowels ========== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the types of home with <strong>a, e, i, o</strong> and
+            <div class="exercise-title"><strong class="q-number-inline">1.</strong> Complete the types of home with
+                <strong>a, e, i, o</strong> and
                 <strong>u</strong>.
             </div>
             <div class="ex1-grid" id="questions-ex1"></div>
@@ -418,7 +457,8 @@
 
         <!-- ========== EXERCISE 2: Picture + labels side by side ========== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Look at the picture and complete the labels.</div>
+            <div class="exercise-title"><strong class="q-number-inline">2.</strong> Look at the picture and complete the
+                labels.</div>
             <div class="ex2-split">
                 <div class="ex2-img-box">
                     <img src="img-int/module 4a-ex1.png" alt="House exterior with numbered labels">
@@ -433,7 +473,8 @@
 
         <!-- ========== EXERCISE 3: Listening - complete the description ========== -->
         <div class="exercise-card">
-            <div class="exercise-title"><strong class="q-number-inline">3.</strong> 🎧 1.17 Listen to someone describing their ideal home. Complete the
+            <div class="exercise-title"><strong class="q-number-inline">3.</strong> 🎧 1.17 Listen to someone describing
+                their ideal home. Complete the
                 description with the missing words.</div>
             <div class="audio-player-container">
                 <audio controls>
@@ -616,9 +657,9 @@
                             oninput="adjustWidth(this)" placeholder="${it.placeholder}">
                         <span class="row-btns">
                             <button class="eye-btn" onclick="toggleInputAns('${it.id}')">👁️</button>
-                            <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${it.id}')">i</button>
                         </span>
-                        <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${hintId}">${it.hint}</div>
                     </span>
                 `;
                 container.appendChild(row);
@@ -642,9 +683,9 @@
                             oninput="adjustWidth(this)" placeholder="${it.prefix}">${suffixHtml}
                         <span class="row-btns">
                             <button class="eye-btn" onclick="ex2Eye('${it.id}')">👁️</button>
-                            <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                            <button class="hint-btn" onclick="toggleHint(event, '${it.id}')">i</button>
                         </span>
-                        <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                        <div class="hint-box inline-hint" id="${hintId}">${it.hint}</div>
                     </span>
                 `;
                 container.appendChild(row);
@@ -682,9 +723,9 @@
                     <input type="text" id="${it.id}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)">
                     <span class="row-btns">
                         <button class="eye-btn" onclick="toggleInputAns('${it.id}')">👁️</button>
-                        <button class="hint-btn" onclick="toggleHintById(event, '${hintId}')">i</button>
+                        <button class="hint-btn" onclick="toggleHint(event, '${it.id}')">i</button>
                     </span>
-                    <div class="hint-box absolute" id="${hintId}">${it.hint}</div>
+                    <div class="hint-box inline-hint" id="${hintId}">${it.hint}</div>
                 </span>`;
             };
             container.innerHTML = `
@@ -706,14 +747,62 @@
             if (content && icon) { content.classList.toggle('active'); icon.classList.toggle('active'); }
         }
 
-        function toggleHintById(event, hintId) {
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            closeAllHints();
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
             if (event) event.stopPropagation();
-            const h = document.getElementById(hintId);
+            const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
-            if (!isVisible) h.style.display = 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function toggleInputAns(id) {
             const el = document.getElementById(id);
@@ -781,7 +870,7 @@
         }
 
         function resetSection(prefix) {
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            closeAllHints();
             if (prefix === 'ex1') {
                 document.querySelectorAll('#questions-ex1 input[data-ans]').forEach(el => {
                     el.value = '';

@@ -586,8 +586,39 @@
             top: auto;
             left: auto;
             margin-top: 0;
-            width: 320px;
-            z-index: 9999;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 99999 !important;
+        }
+
+        /* wordbank-ex2 được tạo động từ đáp án đúng ở Ex1 — giữ z-index thấp
+           để hint (99999) luôn nổi đè lên trên, không bị wordbank che mất */
+        #wordbank-ex2 {
+            z-index: 10;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
 
         /* Override selector lồng ngữ cảnh cha (.ex1-item, .ex2-item) —
@@ -598,7 +629,9 @@
             top: auto;
             left: auto;
             margin-left: 0;
-            width: 320px;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
         }
     </style>
 </head>
@@ -650,6 +683,12 @@
         <div class="exercise-card">
             <div class="exercise-title"><strong class="q-number-inline">2.</strong> Complete the sentences with compound
                 nouns from exercise 1.</div>
+            <div class="word-bank sticky-bank" id="wordbank-ex2" style="min-height:48px; margin-bottom:18px;">
+                <div class="bank-placeholder"
+                    style="color:var(--text-muted, #64748b); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;">
+                    Hoàn thành đúng các câu ở bài 1 phía trên để tạo từ vựng cho bài tập này.
+                </div>
+            </div>
             <div id="questions-ex2"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showEx2All()">Show All</button>
@@ -888,35 +927,77 @@
             adjustWidth(el);
         }
 
-        // toggleHint được cung cấp bởi access-core.js (load ở cuối file)
-        // Không định nghĩa lại ở đây để tránh bị ghi đè gây lỗi
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let top = rect.bottom + 6;
+            if (top + boxRect.height > window.innerHeight - 8) top = rect.top - boxRect.height - 6;
+            if (top < 8) top = 8;
+            let left = rect.left;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            if (left < 8) left = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+        }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         // ===== HÀM SHOW HINT VỚI SCROLL GIỮA MÀN HÌNH =====
         function showReadingHint(event, targetKey, hintId) {
             const h = document.getElementById(hintId);
             if (!h) return;
             const isShowing = h.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
 
             if (!isShowing) {
-                // Định vị position:fixed cạnh nút bấm
                 if (event) {
                     const btn = event.currentTarget || event.target;
-                    const rect = btn.getBoundingClientRect();
                     h.style.display = 'block';
-                    const hW = h.offsetWidth || 320;
-                    const hH = h.offsetHeight || 120;
-                    const vw = window.innerWidth;
-                    const vh = window.innerHeight;
-                    let top = rect.bottom + 6;
-                    let left = rect.left;
-                    if (left + hW > vw - 8) left = vw - hW - 8;
-                    if (left < 8) left = 8;
-                    if (top + hH > vh - 8) top = rect.top - hH - 6;
-                    if (top < 8) top = 8;
-                    h.style.top = top + 'px';
-                    h.style.left = left + 'px';
+                    currentHintBtn = btn;
+                    positionHintBox(h, btn);
                 } else {
                     h.style.display = 'block';
                 }
@@ -1052,6 +1133,7 @@
 
             const wordEl = document.getElementById(`word-${word}`);
             if (wordEl) wordEl.classList.add('used');
+            updateEx2WordBank();
         }
 
         function removeEx1Word(idx) {
@@ -1065,6 +1147,66 @@
 
             const wordEl = document.getElementById(`word-${word}`);
             if (wordEl) wordEl.classList.remove('used');
+            updateEx2WordBank();
+        }
+
+        // ================================================================
+        // EX1 → EX2 WORDBANK SYNC
+        // wordbank-ex2 tự lấy compound noun (đáp án đúng) từ những câu Ex1
+        // đã được điền đúng, giống cơ chế wordbank-label ở bài 2e (Label the
+        // photos), thay vì hiển thị cố định sẵn.
+        // ================================================================
+        function getUnlockedEx2Words() {
+            const list = [];
+            ex1Data.forEach((item, idx) => {
+                if (ex1SlotState[idx] === item.ans) list.push(item.compound);
+            });
+            return list;
+        }
+
+        function updateEx2WordBank() {
+            const bankEl = document.getElementById('wordbank-ex2');
+            if (!bankEl) return;
+            const unlocked = getUnlockedEx2Words();
+
+            // Nếu 1 từ đã điền ở Ex2 không còn nằm trong danh sách mở khóa
+            // (vì đáp án Ex1 tương ứng bị xóa/sửa sai) thì xóa khỏi ô đó
+            Object.keys(ex2SlotState).forEach(key => {
+                const word = ex2SlotState[key];
+                if (word && !unlocked.some(u => u.toLowerCase() === word.toLowerCase())) {
+                    const slot = document.getElementById(`ex2-slot-${key}`);
+                    if (slot) {
+                        slot.textContent = '';
+                        slot.classList.remove('filled', 'correct', 'incorrect-marked');
+                    }
+                    ex2SlotState[key] = '';
+                }
+            });
+
+            if (unlocked.length === 0) {
+                bankEl.innerHTML = '<div class="bank-placeholder" style="color:var(--text-muted, #64748b); font-style:italic; font-size:0.95rem; padding:8px 12px; width:100%; text-align:center;">Hoàn thành đúng các câu ở bài 1 phía trên để tạo từ vựng cho bài tập này.</div>';
+                return;
+            }
+
+            const usedWords = Object.values(ex2SlotState)
+                .filter(Boolean)
+                .map(w => w.toLowerCase());
+
+            bankEl.innerHTML = '';
+            unlocked.forEach(w => {
+                const isUsed = usedWords.includes(w.toLowerCase());
+                const div = document.createElement('div');
+                div.className = 'word-item' + (isUsed ? ' used' : '');
+                div.textContent = w;
+                div.draggable = !isUsed;
+                div.dataset.word = w;
+                div.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', w);
+                    div.classList.add('dragging');
+                });
+                div.addEventListener('dragend', () => div.classList.remove('dragging'));
+                bankEl.appendChild(div);
+            });
         }
 
         function revealEx1Slot(idx) {
@@ -1090,7 +1232,7 @@
             ex1Data.forEach((_, idx) => {
                 removeEx1Word(idx);
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
         }
 
@@ -1190,8 +1332,7 @@
             slot.classList.remove('correct', 'incorrect-marked');
             ex2SlotState[idx] = word;
 
-            const wordEl = document.getElementById(`word-${word}`);
-            if (wordEl) wordEl.classList.add('used');
+            updateEx2WordBank();
         }
 
         function removeEx2Word(idx) {
@@ -1203,8 +1344,7 @@
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             ex2SlotState[idx] = '';
 
-            const wordEl = document.getElementById(`word-${word}`);
-            if (wordEl) wordEl.classList.remove('used');
+            updateEx2WordBank();
         }
 
         function revealEx2Slot(idx) {
@@ -1230,7 +1370,7 @@
             ex2Data.forEach((_, idx) => {
                 removeEx2Word(idx);
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
         }
 
@@ -1346,27 +1486,15 @@
             const hintBox = document.getElementById('ex3-hint-box');
             if (!hintBox) return;
             const isVisible = hintBox.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
             if (!isVisible) {
                 hintBox.innerHTML = `<div class="hint-detail">${ex3Data.hint}</div>`;
-                // Định vị position:fixed cạnh nút bấm
                 if (event) {
                     const btn = event.currentTarget || event.target;
-                    const rect = btn.getBoundingClientRect();
                     hintBox.style.display = 'block';
-                    const hW = hintBox.offsetWidth || 320;
-                    const hH = hintBox.offsetHeight || 120;
-                    const vw = window.innerWidth;
-                    const vh = window.innerHeight;
-                    let top = rect.bottom + 6;
-                    let left = rect.left;
-                    if (left + hW > vw - 8) left = vw - hW - 8;
-                    if (left < 8) left = 8;
-                    if (top + hH > vh - 8) top = rect.top - hH - 6;
-                    if (top < 8) top = 8;
-                    hintBox.style.top = top + 'px';
-                    hintBox.style.left = left + 'px';
+                    currentHintBtn = btn;
+                    positionHintBox(hintBox, btn);
                 } else {
                     hintBox.style.display = 'block';
                 }
@@ -1529,7 +1657,7 @@
                     opt.classList.remove('selected', 'correct', 'incorrect');
                 });
             });
-            document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
+            closeAllHints();
             document.querySelectorAll('.highlight-sentence').forEach(el => el.classList.remove('active-highlight'));
         }
 
@@ -1770,6 +1898,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             renderEx1();
             renderEx2();
+            updateEx2WordBank();
             renderEx3();
             renderEx4();
             document.querySelectorAll('input').forEach(adjustWidth);

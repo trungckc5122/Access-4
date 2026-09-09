@@ -262,10 +262,7 @@
             }
         }
 
-        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
-           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
-           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
-           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
         .hint-box.inline-hint {
             position: fixed;
             top: auto;
@@ -276,6 +273,28 @@
             white-space: normal;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -833,9 +852,35 @@
                     <div class="hint-box inline-hint" id="${slotId}-hint">${ex5Hints[item.num]}</div>
                 </div>`;
             }).join('');
+            refreshEx5Bank();
+        }
+
+        // Đếm số lần mỗi từ đã được điền ĐÚNG vào slot, so với tổng số lần từ đó
+        // là đáp án đúng trong ex5Items — chỉ gạch (.used) pill trong bank khi từ đó
+        // đã được dùng hết tất cả các lượt cần thiết (không gạch sau lần dùng đầu,
+        // vì từ còn cần dùng lại ở câu khác).
+        function refreshEx5Bank() {
+            const neededCount = {};
+            ex5Items.forEach(item => {
+                neededCount[item.ans] = (neededCount[item.ans] || 0) + 1;
+            });
+            const filledCount = {};
+            ex5Items.forEach(item => {
+                const val = ex5State[`ex5-slot-${item.num}`];
+                if (val && val === item.ans) {
+                    filledCount[val] = (filledCount[val] || 0) + 1;
+                }
+            });
+            document.querySelectorAll('#ex5-bank .word-item').forEach(el => {
+                const w = el.dataset.word;
+                const total = neededCount[w] || 0;
+                const done = filledCount[w] || 0;
+                el.classList.toggle('used', total > 0 && done >= total);
+            });
         }
 
         function ex5DragStart(e) {
+            if (e.target.classList.contains('used')) { e.preventDefault(); return; }
             ex5Dragging = e.target.dataset.word;
             e.target.classList.add('dragging');
             e.dataTransfer.setData('text/plain', ex5Dragging);
@@ -851,8 +896,9 @@
             slot.textContent = ex5Dragging;
             slot.classList.add('filled');
             ex5State[slotId] = ex5Dragging;
-            // KHÔNG đánh dấu .used để cho phép kéo thả nhiều lần
+            // Chỉ gạch pill trong bank khi từ đã dùng hết số lượt cần thiết (xem refreshEx5Bank)
             ex5Dragging = null;
+            refreshEx5Bank();
         }
 
         function ex5RemoveSlot(slotId) {
@@ -862,6 +908,7 @@
             slot.textContent = '';
             slot.classList.remove('filled', 'correct', 'incorrect-marked');
             delete ex5State[slotId];
+            refreshEx5Bank();
         }
 
         function ex5ShowSlot(slotId) {
@@ -876,6 +923,7 @@
             slot.textContent = ans;
             slot.classList.add('filled', 'correct');
             ex5State[slotId] = ans;
+            refreshEx5Bank();
         }
 
         // -------- Ex6 (adverb comparison) --------
@@ -943,10 +991,14 @@
             if (left < 8) left = 8;
             hintBox.style.top = top + 'px';
             hintBox.style.left = left + 'px';
+
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
         }
 
-        // Nếu nút neo đã cuộn khuất hẳn khỏi viewport, tự đóng hint thay vì kẹp
-        // mép (tránh hint dính đè lên nội dung không liên quan khi cuộn nhanh)
         function isBtnOffScreen(btn) {
             if (!btn || !btn.isConnected) return true;
             const r = btn.getBoundingClientRect();
@@ -973,13 +1025,16 @@
             closeAllHints();
             if (isVisible) return;
             h.style.display = 'block';
-            const btn = event ? (event.currentTarget || event.target) : null;
-            currentHintBtn = btn;
-            positionHintBox(h, btn);
+            const infoBtn = event ? (event.currentTarget || event.target) : null;
+            const eyeBtn = infoBtn ? infoBtn.parentElement.querySelector('.eye-btn') : null;
+            const anchorBtn = eyeBtn || infoBtn;
+            currentHintBtn = anchorBtn;
+            positionHintBox(h, anchorBtn);
         }
 
         window.addEventListener('scroll', repositionCurrentHint, true);
         window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function showSingleAns(id) {
             const el = document.getElementById(id);
@@ -1096,6 +1151,7 @@
                     slot.classList.add('filled', 'correct');
                     ex5State[slotId] = ans;
                 });
+                refreshEx5Bank();
             } else if (prefix === 'ex6') {
                 ex6Data.forEach((item) => {
                     const ansParts = item.ans.split(', ');
@@ -1130,14 +1186,14 @@
                     el.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(el);
                 });
-                document.querySelectorAll('#ex1-container .hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
             } else if (prefix === 'ex2') {
                 document.querySelectorAll('#ex2-container input').forEach(el => {
                     el.value = '';
                     el.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(el);
                 });
-                document.querySelectorAll('#ex2-container .hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
             } else if (prefix === 'ex3') {
                 document.querySelectorAll('#ex3-left input, #ex3-right input').forEach(el => {
                     el.value = '';
@@ -1152,14 +1208,14 @@
                     }
                     delete ex3State[key];
                 }
-                document.querySelectorAll('#ex3-left .hint-box, #ex3-right .hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
             } else if (prefix === 'ex4') {
                 document.querySelectorAll('#ex4-container input').forEach(el => {
                     el.value = '';
                     el.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(el);
                 });
-                document.querySelectorAll('#ex4-container .hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
             } else if (prefix === 'ex5') {
                 for (let key in ex5State) {
                     const slot = document.getElementById(key);
@@ -1169,14 +1225,15 @@
                     }
                     delete ex5State[key];
                 }
-                document.querySelectorAll('#ex5-items .hint-box').forEach(h => h.style.display = 'none');
+                refreshEx5Bank();
+                closeAllHints();
             } else if (prefix === 'ex6') {
                 document.querySelectorAll('#ex6-container input').forEach(el => {
                     el.value = '';
                     el.classList.remove('correct', 'incorrect-marked');
                     adjustWidth(el);
                 });
-                document.querySelectorAll('#ex6-container .hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
             }
         }
 
@@ -1260,9 +1317,7 @@
         window.checkAll = checkAll;
         window.showAnswers = showAnswers;
         window.resetSection = resetSection;
-        // Lưới an toàn: access-core.js nằm sau trong file, đảm bảo bản cục bộ
-        // (đầy đủ logic positionHintBox) luôn thắng bất kể thứ tự thực thi
-        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
+        window.toggleHint = toggleHint;
         window.showSingleAns = showSingleAns;
         window.adjustWidth = adjustWidth;
         window.ex3Drop = ex3Drop;
