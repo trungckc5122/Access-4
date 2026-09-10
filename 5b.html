@@ -7,14 +7,13 @@
     <title>Access 4 - Module 5b</title>
     <link rel="stylesheet" href="access-theme.css">
     <style>
-        .hint-box {
-            background-color: #F0FDFA !important;
-            color: #115E59 !important;
-            border-left-color: #0D9488 !important;
-        }
-
-        .hint-box .hint-detail {
-            border-color: #0D9488 !important;
+        /* Task 4: per-gap eye/hint controls, inline right after each input */
+        .inline-q-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            margin: 0 4px 4px 0;
         }
 
         /* Vocab TTS - clickable words */
@@ -47,6 +46,43 @@
         .grammar-list li strong.vocab-speak:hover::after,
         .grammar-list li strong.vocab-speak.speaking::after {
             opacity: 1;
+        }
+
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
+           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
+           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+        }
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -272,11 +308,10 @@
             </div>
         </div>
 
-        <!-- TASK 3: Indefinite Pronouns -->
+        <!-- TASK 3: some or any -->
         <div class="exercise-card" id="card-t3">
-            <div class="exercise-title">Task 3: Indefinite Pronouns – Complete the sentences</div>
-            <div class="instructions">Complete each sentence with a suitable word formed from some / any / no / every +
-                body / one / thing / where.</div>
+            <div class="exercise-title">Task 3: Complete the sentences with some or any</div>
+            <div class="instructions">Complete each sentence with some or any.</div>
             <div id="questions-t3"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('t3')">Show All</button>
@@ -284,10 +319,10 @@
             </div>
         </div>
 
-        <!-- TASK 4: a lot of / many / much -->
+        <!-- TASK 4: some / any / anyone / someone / something / anything / somewhere / anywhere -->
         <div class="exercise-card" id="card-t4">
-            <div class="exercise-title">Task 4: a lot of / many / much – Complete the sentences</div>
-            <div class="instructions">Complete each sentence with a lot of, many, or much.</div>
+            <div class="exercise-title">Task 4: Complete the conversations</div>
+            <div class="instructions">Put in some, any, anyone, someone, something, anything, somewhere, anywhere.</div>
             <div id="questions-t4"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('t4')">Show All</button>
@@ -458,92 +493,126 @@
             }
         ];
 
-        // Task 3: Indefinite Pronouns - STRUCTURE PATTERN: { q, ans, hint }
+        // Task 3: some or any - STRUCTURE PATTERN: { q, ans, hint }
         const t3_data = [
             {
-                q: "1. The classroom was locked, but ______ had left a bag outside the door.", ans: "someone|somebody",
-                hint: "<div class='hint-detail'><span class='key-word'>someone / somebody</span>: một người nào đó</div><div class='hint-detail'>Dấu hiệu: '<strong>but ___ had left a bag outside the door</strong>' → câu khẳng định, chỉ một người không xác định → <strong>someone/somebody</strong>.</div>"
+                q: "1. We didn't buy ______ flowers.", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: dùng trong câu phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>We didn't buy ___ flowers</strong>' → câu phủ định (didn't) → <strong>any</strong>.</div>"
             },
             {
-                q: "2. I looked in the fridge, but there was ______ to eat.", ans: "nothing",
-                hint: "<div class='hint-detail'><span class='key-word'>nothing</span>: không có gì</div><div class='hint-detail'>Dấu hiệu: '<strong>but there was ___ to eat</strong>' → mang nghĩa phủ định, không có gì → <strong>nothing</strong>.</div>"
+                q: "2. This evening I'm going out with ______ friends of mine.", ans: "some",
+                hint: "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>I'm going out with ___ friends of mine</strong>' → câu khẳng định → <strong>some</strong>.</div>"
             },
             {
-                q: "3. The teacher asked a question, but ______ in the class could answer it.", ans: "no one|nobody",
-                hint: "<div class='hint-detail'><span class='key-word'>no one / nobody</span>: không ai</div><div class='hint-detail'>Dấu hiệu: '<strong>but ___ in the class could answer it</strong>' → không ai làm được việc đó → <strong>no one/nobody</strong>.</div>"
+                q: "3. I didn't have ______ money, so I had to borrow ______.", ans: "any|some",
+                hint: "<div class='hint-detail'><span class='key-word'>any / some</span>: any trong câu phủ định, some trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>I didn't have ___ money</strong>' → phủ định → <strong>any</strong>; '<strong>so I had to borrow ___</strong>' → khẳng định → <strong>some</strong>.</div>"
             },
             {
-                q: "4. Is there ______ who knows how dolphins communicate?", ans: "anyone|anybody",
-                hint: "<div class='hint-detail'><span class='key-word'>anyone / anybody</span>: bất kỳ ai (trong câu hỏi)</div><div class='hint-detail'>Dấu hiệu: '<strong>Is there ___ who knows how dolphins communicate?</strong>' → câu hỏi → <strong>anyone/anybody</strong>.</div>"
+                q: "4. Can I have ______ milk on my coffee, please?", ans: "some",
+                hint: "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong câu hỏi mang tính đề nghị/lời mời</div><div class='hint-detail'>Dấu hiệu: '<strong>Can I have ___ milk on my coffee, please?</strong>' → câu hỏi lịch sự, mong câu trả lời 'có' → <strong>some</strong>.</div>"
             },
             {
-                q: "5. The museum was very interesting, and ______ learned something new there.", ans: "everyone|everybody",
-                hint: "<div class='hint-detail'><span class='key-word'>everyone / everybody</span>: mọi người</div><div class='hint-detail'>Dấu hiệu: '<strong>and ___ learned something new there</strong>' → câu khẳng định, tất cả mọi người → <strong>everyone/everybody</strong>.</div>"
+                q: "5. I was too tired to do ______ work.", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: dùng khi câu mang nghĩa phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>I was too tired to do ___ work</strong>' → 'too tired to' mang nghĩa phủ định (không làm được) → <strong>any</strong>.</div>"
             },
             {
-                q: "6. We searched ______ for the lost cat, but we still couldn't find it.", ans: "everywhere",
-                hint: "<div class='hint-detail'><span class='key-word'>everywhere</span>: mọi nơi</div><div class='hint-detail'>Dấu hiệu: '<strong>We searched ___ for the lost cat</strong>' → tìm khắp mọi nơi → <strong>everywhere</strong>.</div>"
+                q: "6. Have you seen ______ good films recently?", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: dùng trong câu hỏi</div><div class='hint-detail'>Dấu hiệu: '<strong>Have you seen ___ good films recently?</strong>' → câu hỏi thông thường → <strong>any</strong>.</div>"
             },
             {
-                q: "7. The room was silent, and ______ made a sound during the test.", ans: "no one|nobody",
-                hint: "<div class='hint-detail'><span class='key-word'>no one / nobody</span>: không ai</div><div class='hint-detail'>Dấu hiệu: '<strong>silent, and ___ made a sound during the test</strong>' → không ai gây tiếng động → <strong>no one/nobody</strong>.</div>"
+                q: "7. Can you give me ______ information about places of interest in the town?", ans: "some",
+                hint: "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong câu hỏi mang tính yêu cầu/đề nghị</div><div class='hint-detail'>Dấu hiệu: '<strong>Can you give me ___ information...?</strong>' → câu hỏi mang tính yêu cầu, lịch sự → <strong>some</strong>.</div>"
             },
             {
-                q: "8. She checked her pocket carefully, but there wasn't ______ inside.", ans: "anything",
-                hint: "<div class='hint-detail'><span class='key-word'>anything</span>: bất cứ thứ gì (trong phủ định)</div><div class='hint-detail'>Dấu hiệu: '<strong>but there wasn't ___ inside</strong>' → câu phủ định → <strong>anything</strong>.</div>"
+                q: "8. With the special tourist train ticket, you can travel on ______ train you like.", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: mang nghĩa 'bất kỳ, tùy ý'</div><div class='hint-detail'>Dấu hiệu: '<strong>you can travel on ___ train you like</strong>' → bất kỳ chuyến tàu nào tùy thích → <strong>any</strong>.</div>"
             },
             {
-                q: "9. ______ has taken my notebook, because it is not on my desk anymore.", ans: "someone|somebody",
-                hint: "<div class='hint-detail'><span class='key-word'>someone / somebody</span>: một ai đó</div><div class='hint-detail'>Dấu hiệu: '<strong>___ has taken my notebook</strong>' → câu khẳng định, một người không xác định → <strong>someone/somebody</strong>.</div>"
+                q: "9. If there are ______ words you don't understand, use a dictionary.", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: dùng sau 'if' (mệnh đề điều kiện, giống câu hỏi)</div><div class='hint-detail'>Dấu hiệu: '<strong>If there are ___ words you don't understand</strong>' → mệnh đề 'if' mang tính không chắc chắn, giống câu hỏi → <strong>any</strong>.</div>"
             },
             {
-                q: "10. The guide explained the rules clearly so that ______ could understand them.", ans: "everyone|everybody",
-                hint: "<div class='hint-detail'><span class='key-word'>everyone / everybody</span>: mọi người</div><div class='hint-detail'>Dấu hiệu: '<strong>so that ___ could understand them</strong>' → tất cả mọi người → <strong>everyone/everybody</strong>.</div>"
+                q: "10. She went out without ______ money.", ans: "any",
+                hint: "<div class='hint-detail'><span class='key-word'>any</span>: dùng sau 'without' (mang nghĩa phủ định)</div><div class='hint-detail'>Dấu hiệu: '<strong>She went out without ___ money</strong>' → 'without' mang nghĩa phủ định → <strong>any</strong>.</div>"
             }
         ];
 
-        // Task 4: a lot of / many / much - STRUCTURE PATTERN: { q, ans, hint }
+        // Task 4: some / any / anyone / someone / something / anything / somewhere / anywhere - STRUCTURE PATTERN: { q, ans, hints[] } — hints[i] pairs with the i-th gap (per-gap eye + hint, not shared)
         const t4_data = [
             {
-                q: "1. Scientists do not have ______ information about how animals communicate in the wild.", ans: "much",
-                hint: "<div class='hint-detail'><span class='key-word'>much</span>: + danh từ không đếm được</div><div class='hint-detail'>Dấu hiệu: '<strong>do not have ___ information</strong>' → 'information' không đếm được, câu phủ định → <strong>much</strong>.</div>"
+                q: "1. A: We haven't got ______ bread.<br>B: You'd better go to the shop, then. We need ______ tomatoes, too.", ans: "any|some",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>any</span>: dùng trong câu phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>We haven't got ___ bread</strong>' → phủ định (haven't) → <strong>any</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>We need ___ tomatoes, too</strong>' → khẳng định → <strong>some</strong>.</div>"
+                ]
             },
             {
-                q: "2. There are ______ birds in this area that use sound to warn others of danger.", ans: "many|a lot of",
-                hint: "<div class='hint-detail'><span class='key-word'>many / a lot of</span>: + danh từ đếm được số nhiều</div><div class='hint-detail'>Dấu hiệu: '<strong>There are ___ birds in this area</strong>' → 'birds' đếm được, câu khẳng định → <strong>many/a lot of</strong>.</div>"
+                q: "2. A: Would you like ______ cheese and biscuits?<br>B: Oh, no thank you. That was delicious, but I couldn't eat ______ else.", ans: "some|anything",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong lời mời lịch sự</div><div class='hint-detail'>Dấu hiệu: '<strong>Would you like ___ cheese and biscuits?</strong>' → câu hỏi mời → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>anything</span>: dùng trong câu phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>I couldn't eat ___ else</strong>' → phủ định (couldn't) → <strong>anything</strong>.</div>"
+                ]
             },
             {
-                q: "3. The student didn't spend ______ time preparing for the science presentation.", ans: "much",
-                hint: "<div class='hint-detail'><span class='key-word'>much</span>: + danh từ không đếm được, phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>didn't spend ___ time preparing</strong>' → 'time' không đếm được, phủ định → <strong>much</strong>.</div>"
+                q: "3. A: There's ______ at the door.<br>B: Are you expecting ______ visitors?", ans: "someone|any",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>someone</span>: chỉ một người không xác định, dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>There's ___ at the door</strong>' → khẳng định, một người không xác định → <strong>someone</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span>: dùng trong câu hỏi</div><div class='hint-detail'>Dấu hiệu: '<strong>Are you expecting ___ visitors?</strong>' → câu hỏi → <strong>any</strong>.</div>"
+                ]
             },
             {
-                q: "4. ______ research has been done on animal senses in recent years.", ans: "A lot of",
-                hint: "<div class='hint-detail'><span class='key-word'>a lot of</span>: + danh từ không đếm được hoặc đếm được</div><div class='hint-detail'>Dấu hiệu: '<strong>___ research has been done</strong>' → 'research' không đếm được, câu khẳng định → <strong>A lot of</strong>.</div>"
+                q: "4. A: Has ______ offered to help you with the tea?<br>B: No, but I'd be very grateful for ______ help you can give.", ans: "anyone|any",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>anyone</span>: dùng trong câu hỏi</div><div class='hint-detail'>Dấu hiệu: '<strong>Has ___ offered to help you...?</strong>' → câu hỏi → <strong>anyone</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span>: đi với danh từ không đếm được, mang nghĩa 'bất kỳ'</div><div class='hint-detail'>Dấu hiệu: '<strong>grateful for ___ help you can give</strong>' → 'help' không đếm được, mang nghĩa 'bất kỳ' → <strong>any</strong>.</div>"
+                ]
             },
             {
-                q: "5. How ______ noise can bats hear when they are flying at night?", ans: "much",
-                hint: "<div class='hint-detail'><span class='key-word'>how much</span>: + danh từ không đếm được, trong câu hỏi</div><div class='hint-detail'>Dấu hiệu: '<strong>How ___ noise can bats hear</strong>' → 'noise' không đếm được, câu hỏi → <strong>much</strong>.</div>"
+                q: "5. A: I was looking for ______, and now I can't remember what it was.<br>B: You said you were looking for ______ matches.", ans: "something|some",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>something</span>: chỉ một vật không xác định, dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>I was looking for ___</strong>' → khẳng định, một thứ không xác định → <strong>something</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span>: đi với danh từ đếm được số nhiều, dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>looking for ___ matches</strong>' → 'matches' đếm được số nhiều, khẳng định → <strong>some</strong>.</div>"
+                ]
             },
             {
-                q: "6. We learned ______ new facts about animal vision in today's lesson.", ans: "a lot of|many",
-                hint: "<div class='hint-detail'><span class='key-word'>a lot of / many</span>: + danh từ đếm được</div><div class='hint-detail'>Dấu hiệu: '<strong>We learned ___ new facts</strong>' → 'facts' đếm được, câu khẳng định → <strong>a lot of/many</strong>.</div>"
+                q: "6. A: Does ______ mind if I open the window?<br>B: No, please do. We all need ______ fresh air.", ans: "anyone|some",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>anyone</span>: dùng trong câu hỏi lịch sự</div><div class='hint-detail'>Dấu hiệu: '<strong>Does ___ mind if I open the window?</strong>' → câu hỏi → <strong>anyone</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span>: dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>We all need ___ fresh air</strong>' → khẳng định → <strong>some</strong>.</div>"
+                ]
             },
             {
-                q: "7. There aren't ______ differences between the two experiments.", ans: "many",
-                hint: "<div class='hint-detail'><span class='key-word'>many</span>: + danh từ đếm được, phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>aren't ___ differences between the two experiments</strong>' → 'differences' đếm được, phủ định → <strong>many</strong>.</div>"
+                q: "7. A: Where shall we go on holiday?<br>B: Let's go ______ warm and sunny.", ans: "somewhere",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>somewhere</span>: một nơi nào đó (không xác định)</div><div class='hint-detail'>Dấu hiệu: '<strong>Let's go ___ warm and sunny</strong>' → đề nghị đi đến một nơi không xác định → <strong>somewhere</strong>.</div>"
+                ]
             },
             {
-                q: "8. The teacher doesn't give ______ homework during the school holidays.", ans: "much",
-                hint: "<div class='hint-detail'><span class='key-word'>much</span>: + danh từ không đếm được, phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>doesn't give ___ homework</strong>' → 'homework' không đếm được, phủ định → <strong>much</strong>.</div>"
+                q: "8. A: What happened to Sally last night?<br>B: I don't know exactly. She was upset about ______ and refused to talk to ______.", ans: "something|anyone",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>something</span>: chỉ một điều không xác định, dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>She was upset about ___</strong>' → khẳng định, một điều không xác định → <strong>something</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>anyone</span>: dùng trong câu phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>refused to talk to ___</strong>' → 'refused' mang nghĩa phủ định → <strong>anyone</strong>.</div>"
+                ]
             },
             {
-                q: "9. ______ students were surprised by how far a falcon can see.", ans: "Many|A lot of",
-                hint: "<div class='hint-detail'><span class='key-word'>many / a lot of</span>: + danh từ đếm được</div><div class='hint-detail'>Dấu hiệu: '<strong>___ students were surprised</strong>' → 'students' đếm được, câu khẳng định → <strong>many/a lot of</strong>.</div>"
+                q: "9. A: Would you like ______ to eat?<br>B: No, I don't want ______ to eat. But I'm thirsty, I want ______ to drink.<br>A: What would you like?<br>B: I don't mind. ______.", ans: "something|anything|something|Anything",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>something</span>: dùng trong lời mời lịch sự</div><div class='hint-detail'>Dấu hiệu: '<strong>Would you like ___ to eat?</strong>' → câu hỏi mời → <strong>something</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>anything</span>: dùng trong câu phủ định</div><div class='hint-detail'>Dấu hiệu: '<strong>I don't want ___ to eat</strong>' → phủ định (don't) → <strong>anything</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>something</span>: dùng trong câu khẳng định</div><div class='hint-detail'>Dấu hiệu: '<strong>I want ___ to drink</strong>' → khẳng định → <strong>something</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>Anything</span>: mang nghĩa 'bất cứ thứ gì cũng được', dùng khi trả lời chung chung</div><div class='hint-detail'>Dấu hiệu: '<strong>I don't mind. ___</strong>' → trả lời mang nghĩa 'cái gì cũng được' → <strong>Anything</strong>.</div>"
+                ]
+            },
+            {
+                q: "10. A: Do you live ______ near Jim?<br>B: No, he lives in another part of town.", ans: "anywhere",
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>anywhere</span>: dùng trong câu hỏi</div><div class='hint-detail'>Dấu hiệu: '<strong>Do you live ___ near Jim?</strong>' → câu hỏi → <strong>anywhere</strong>.</div>"
+                ]
             }
         ];
 
         /* --- GIỮ NGUYÊN PHẦN JAVASCRIPT (chức năng) từ bản gốc 5b --- */
-        let currentActiveHint = null;
+        let currentHintBtn = null;
         let answerStates = new Map();
 
         // Hàm phát âm từ vựng bằng Web Speech API
@@ -576,31 +645,70 @@
             updateWordBank();
         }
 
-        function toggleHint(id, wordToSpeak = null) {
-            const h = document.getElementById(id + '-hint');
-            const infoBtn = document.getElementById(id + '-info');
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top, spaceBelow = window.innerHeight - rect.bottom;
+            let top;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) { top = rect.top - boxRect.height - 12; }
+            else { top = rect.bottom + 12; }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
 
-            if (h) {
-                if (currentActiveHint === h) {
-                    h.style.display = 'none';
-                    if (infoBtn) infoBtn.classList.remove('active');
-                    currentActiveHint = null;
-                } else {
-                    if (currentActiveHint) {
-                        currentActiveHint.style.display = 'none';
-                        const oldId = currentActiveHint.id.replace('-hint', '-info');
-                        const oldBtn = document.getElementById(oldId);
-                        if (oldBtn) oldBtn.classList.remove('active');
-                    }
-                    h.style.display = 'block';
-                    if (infoBtn) infoBtn.classList.add('active');
-                    currentActiveHint = h;
-                    if (wordToSpeak && id.startsWith('t1')) {
-                        speakText(wordToSpeak);
-                    }
-                }
+            // Mũi tên: hướng tính LẠI dựa trên `top` sau khi đã kẹp mép màn hình
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            document.querySelectorAll('.info-btn.active').forEach(btn => btn.classList.remove('active'));
+            currentHintBtn = null;
+        }
+
+        function toggleHint(event, id, wordToSpeak = null) {
+            if (event) event.stopPropagation();
+            const h = document.getElementById(id + '-hint');
+            if (!h) return;
+            const isVisible = h.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            h.style.display = 'block';
+            const infoBtn = document.getElementById(id + '-info');
+            if (infoBtn) infoBtn.classList.add('active');
+            const btn = event ? (event.currentTarget || event.target) : infoBtn;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
+            if (wordToSpeak && id.startsWith('t1')) {
+                speakText(wordToSpeak);
             }
         }
+
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        // Lưới an toàn thứ tự script: access-core.js load sau, đảm bảo bản chuẩn này luôn thắng
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
 
         function toggleSingleAns(id) {
             const el = document.getElementById(id);
@@ -759,8 +867,8 @@
             });
 
             // Reset global hint state
-            if (currentActiveHint && currentActiveHint.id.includes(prefix)) {
-                currentActiveHint = null;
+            if (currentHintBtn && currentHintBtn.id.includes(prefix)) {
+                currentHintBtn = null;
             }
 
             // Clear answer states for this section
@@ -903,9 +1011,9 @@
                 <input type="text" class="letter-input" id="${qid}" data-type="input" data-ans="${item.letter}" maxlength="1" oninput="adjustWidth(this)">
                 <div class="row-btns">
                     <button class="btn-small" id="${qid}-eye" onclick="toggleSingleAns('${qid}')" title="Show/Hide answer">👁️</button>
-                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}', '${item.v.replace(/'/g, "\\'")}')" title="Show/Hide hint">i</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint(event, '${qid}', '${item.v.replace(/'/g, "\\'")}')" title="Show/Hide hint">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${item.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div>
             </div>`;
             });
         }
@@ -950,9 +1058,9 @@
                 ${numberHtml} ${sentence}
                 <div class="row-btns">
                     <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
-                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
 
                 setTimeout(() => {
@@ -999,9 +1107,9 @@
                 ${numberHtml} ${sentence}
                 <div class="row-btns">
                     <button class="btn-small" id="${qid}-eye" onclick="toggleMultiGapAns('${qid}', ${gapCount}, '${it.ans}')">👁️</button>
-                    <button class="info-btn" id="${qid}-info" onclick="toggleHint('${qid}')">i</button>
+                    <button class="info-btn" id="${qid}-info" onclick="toggleHint(event, '${qid}')">i</button>
                 </div>
-                <div class="hint-box" id="${qid}-hint">${it.hint}</div>
+                <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
 
                 setTimeout(() => {
@@ -1015,11 +1123,57 @@
             });
         }
 
+        // Task 4 only: each gap gets its OWN 👁️ eye button + its OWN hint box (not shared per question)
+        function renderGrammarFillPerGap(id, data) {
+            const container = document.getElementById(`questions-${id}`);
+
+            container.innerHTML = '';
+
+            data.forEach((it, i) => {
+                const qid = `${id}-q${i}`;
+
+                let sentence = it.q;
+                let numberHtml = '';
+                const numberMatch = sentence.match(/^(\d+)\.\s+/);
+
+                if (numberMatch) {
+                    sentence = sentence.replace(/^\d+\.\s+/, '');
+                    numberHtml = `<span class="existing-number">${numberMatch[1]}.</span>`;
+                } else {
+                    numberHtml = `<span class="exercise-number">${i + 1}</span>`;
+                }
+
+                const answers = it.ans.split('|');
+                const hints = it.hints || [];
+                let gapIndex = 0;
+                let hintBoxesHtml = '';
+
+                sentence = sentence.replace(/_{2,}/g, () => {
+                    const inputId = `${qid}-${gapIndex}`;
+                    const ans = (answers[gapIndex] || '').replace(/"/g, '&quot;');
+                    const hint = hints[gapIndex] || '';
+
+                    hintBoxesHtml += `<div class="hint-box inline-hint" id="${inputId}-hint">${hint}</div>`;
+
+                    const gapHtml = `<span class="inline-q-wrap"><input type="text" class="grammar-input" id="${inputId}" data-type="input" data-parent="${qid}" data-gap-index="${gapIndex}" data-ans="${ans}" oninput="adjustWidth(this)"><button class="btn-small" id="${inputId}-eye" onclick="toggleSingleAns('${inputId}')">👁️</button><button class="info-btn" id="${inputId}-info" onclick="toggleHint(event, '${inputId}')">i</button></span>`;
+
+                    gapIndex++;
+                    return gapHtml;
+                });
+
+                container.innerHTML += `
+            <div class="question-row">
+                ${numberHtml} ${sentence}
+                ${hintBoxesHtml}
+            </div>`;
+            });
+        }
+
         window.onload = () => {
             renderMatching('t1', t1_data);
             renderGapFill('t2', t2_data, 'bank-t2');
             renderGrammarFill('t3', t3_data);
-            renderGrammarFill('t4', t4_data);
+            renderGrammarFillPerGap('t4', t4_data);
         };
 
         /* --- KEYBOARD SUPPORT --- */

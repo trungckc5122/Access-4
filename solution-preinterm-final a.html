@@ -1,3 +1,4 @@
+=
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -46,48 +47,6 @@
         .task5-input.incorrect-marked {
             color: var(--error, #e74c3c);
             border-bottom-color: var(--error, #e74c3c);
-        }
-
-        /* Word Bank (sticky drag & drop) */
-        .word-bank-simple {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light);
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            border: 1px solid var(--glass-border);
-        }
-
-        .word-bank-simple .word-item {
-            background: #fff;
-            padding: 6px 14px;
-            border-radius: 8px;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            font-weight: 700;
-            cursor: grab;
-            user-select: none;
-            transition: 0.2s;
-        }
-
-        .word-bank-simple .word-item:hover {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .word-bank-simple .word-item.used {
-            opacity: 0.4;
-            pointer-events: none;
-            cursor: default;
-        }
-
-        .sticky-word-bank {
-            position: sticky;
-            top: 10px;
-            z-index: 100;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
 
         /* Drop slot (inline) */
@@ -279,6 +238,40 @@
             align-items: center;
             justify-content: flex-end;
         }
+
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+            z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
+        }
     </style>
 </head>
 
@@ -311,7 +304,7 @@
         <div class="exercise-card" id="card-v2">
             <div class="exercise-title"><strong>Task 2:</strong> Complete the weather forecast with the words below.
                 There are two extra words.</div>
-            <div class="word-bank-simple sticky-word-bank" id="bank-v2"></div>
+            <div class="word-bank sticky-bank" id="bank-v2"></div>
             <div id="questions-v2"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('v2')">Show All</button>
@@ -333,7 +326,7 @@
         <div class="exercise-card" id="card-v4">
             <div class="exercise-title"><strong>Task 4:</strong> Read the definitions and write the correct word. Use
                 these words:</div>
-            <div class="word-bank-simple sticky-word-bank" id="bank-v4"></div>
+            <div class="word-bank sticky-bank" id="bank-v4"></div>
             <div id="questions-v4"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('v4')">Show All</button>
@@ -345,7 +338,7 @@
         <div class="exercise-card" id="card-v5">
             <div class="exercise-title"><strong>Task 5:</strong> Complete the sentences with one word from the box:
             </div>
-            <div class="word-bank-simple sticky-word-bank" id="bank-v5"></div>
+            <div class="word-bank sticky-bank" id="bank-v5"></div>
             <div id="questions-v5"></div>
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('v5')">Show All</button>
@@ -453,7 +446,7 @@
             </div>
         </div>
     </div>
-    <button onclick="checkAll()" class="check-all-btn">✓ CHECK ALL ANSWERS (ENTER)</button>
+    <button onclick="checkAll()" class="check-all-btn">CHECK ALL ANSWERS (ENTER)</button>
     <script src="access-core.js"></script>
     <script>
         // ========== DRAG & DROP CORE (dùng cho tất cả các bài kéo thả) ==========
@@ -519,7 +512,7 @@
             }
             activeDragWord = el;
             activeDragSection = bankSelector;
-            el.classList.add('active-word');
+            el.classList.add('dragging');
             e.dataTransfer.setData('text/plain', el.dataset.value);
         }
 
@@ -531,7 +524,7 @@
             e.currentTarget.classList.remove('drag-over');
             if (activeDragWord && activeDragSection === bankSelector) {
                 placeWordInSlot(e.currentTarget, activeDragWord.dataset.value, bankSelector, allowDuplicates);
-                activeDragWord.classList.remove('active-word');
+                activeDragWord.classList.remove('dragging');
                 activeDragWord = null; activeDragSection = null;
             }
         }
@@ -549,7 +542,7 @@
             bank.innerHTML = words.map(w =>
                 `<span class="word-item" data-value="${w}" draggable="true" 
                   ondragstart="handleDragStart(event, '${bankSelector}')" 
-                  ondragend="if(this.classList.contains('active-word')) this.classList.remove('active-word'); activeDragWord=null; activeDragSection=null;">${w}</span>`
+                  ondragend="if(this.classList.contains('dragging')) this.classList.remove('dragging'); activeDragWord=null; activeDragSection=null;">${w}</span>`
             ).join('');
         }
 
@@ -581,16 +574,16 @@
 
         // ========== DATA ==========
         const v1Data = [
-            { q: "1. Take an umbrella with you. It's starting to [INPUT].", ans: "rain", ph: "r_ _ _", hint: "<strong>Đáp án:</strong> rain<br><strong>Giải thích:</strong> 'rain' (mưa) bắt đầu bằng 'r'. Lấy ô che vì trời bắt đầu mưa." },
-            { q: "2. It's a beautiful day. Let's sit outside in the [INPUT].", ans: "sunshine", ph: "s_ _ _ _ _ _ _", hint: "<strong>Đáp án:</strong> sunshine<br><strong>Giải thích:</strong> 'sunshine' (ánh nắng). Trời đẹp nên ra ngoài ngồi dưới ánh nắng." },
-            { q: "3. It's going to [INPUT] in the mountains today, so maybe we can go skiing later.", ans: "snow", ph: "s_ _ _", hint: "<strong>Đáp án:</strong> snow<br><strong>Giải thích:</strong> 'snow' (tuyết rơi). Tuyết rơi trên núi nên có thể đi trượt tuyết." },
-            { q: "4. I love it when it's [INPUT], and you can't see very far.", ans: "misty", ph: "m_ _ _ _", hint: "<strong>Đáp án:</strong> misty<br><strong>Giải thích:</strong> 'misty' (nhiều sương mù). Khi có sương mù, bạn không thể nhìn xa." },
-            { q: "5. We can go kite-surfing today. It's really [INPUT].", ans: "windy", ph: "w_ _ _ _", hint: "<strong>Đáp án:</strong> windy<br><strong>Giải thích:</strong> 'windy' (nhiều gió). Lướt ván diều cần rất nhiều gió." },
-            { q: "6. The clouds opened and the sun began to [INPUT].", ans: "shine", ph: "s_ _ _ _", hint: "<strong>Đáp án:</strong> shine<br><strong>Giải thích:</strong> 'shine' (chiếu sáng). Mặt trời bắt đầu chiếu sáng." },
-            { q: "7. It was a [INPUT] night with rain and very strong winds. I didn't sleep at all.", ans: "stormy", ph: "s_ _ _ _ _", hint: "<strong>Đáp án:</strong> stormy<br><strong>Giải thích:</strong> 'stormy' (bão bùng). Đêm bão có mưa và gió mạnh." },
-            { q: "8. I hope we have some [INPUT] in December because I want to go skiing.", ans: "snow", ph: "s_ _ _", hint: "<strong>Đáp án:</strong> snow<br><strong>Giải thích:</strong> 'snow' (tuyết). Cần tuyết để trượt tuyết." },
-            { q: "9. It's so cold this morning, but the trees look beautiful because of the [INPUT].", ans: "frost", ph: "f_ _ _ _", hint: "<strong>Đáp án:</strong> frost<br><strong>Giải thích:</strong> 'frost' (băng giá, sương giá). Bám trên cây trông rất đẹp." },
-            { q: "10. The pavements are very [INPUT] so be careful not to slip.", ans: "icy", ph: "i_ _", hint: "<strong>Đáp án:</strong> icy<br><strong>Giải thích:</strong> 'icy' (đóng băng, trơn trượt). Vỉa hè đóng băng nên dễ trượt ngã." }
+            { q: "1. Take an umbrella with you. It's starting to [INPUT].", ans: "rain", ph: "r_ _ _", hint: "<div class='hint-detail'><span class='key-word'>rain</span> (động từ): mưa.</div><div class='hint-detail'>Dấu hiệu: '<strong>Take an umbrella with you</strong>' → mang ô vì trời sắp mưa → <strong>rain</strong>.</div>" },
+            { q: "2. It's a beautiful day. Let's sit outside in the [INPUT].", ans: "sunshine", ph: "s_ _ _ _ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>sunshine</span> (danh từ): ánh nắng.</div><div class='hint-detail'>Dấu hiệu: '<strong>a beautiful day... sit outside</strong>' → ngày đẹp trời, ngồi ngoài trời tắm nắng → <strong>sunshine</strong>.</div>" },
+            { q: "3. It's going to [INPUT] in the mountains today, so maybe we can go skiing later.", ans: "snow", ph: "s_ _ _", hint: "<div class='hint-detail'><span class='key-word'>snow</span> (động từ): có tuyết rơi.</div><div class='hint-detail'>Dấu hiệu: '<strong>go skiing later</strong>' → đi trượt tuyết cần có tuyết → <strong>snow</strong>.</div>" },
+            { q: "4. I love it when it's [INPUT], and you can't see very far.", ans: "misty", ph: "m_ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>misty</span> (tính từ): có sương mù.</div><div class='hint-detail'>Dấu hiệu: '<strong>can't see very far</strong>' → tầm nhìn hạn chế do sương mù → <strong>misty</strong>.</div>" },
+            { q: "5. We can go kite-surfing today. It's really [INPUT].", ans: "windy", ph: "w_ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>windy</span> (tính từ): nhiều gió.</div><div class='hint-detail'>Dấu hiệu: '<strong>kite-surfing</strong>' → môn lướt ván diều cần có gió mạnh → <strong>windy</strong>.</div>" },
+            { q: "6. The clouds opened and the sun began to [INPUT].", ans: "shine", ph: "s_ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>shine</span> (động từ): chiếu sáng, tỏa nắng.</div><div class='hint-detail'>Dấu hiệu: '<strong>The clouds opened and the sun began to</strong>' → mây tan, mặt trời bắt đầu tỏa sáng → <strong>shine</strong>.</div>" },
+            { q: "7. It was a [INPUT] night with rain and very strong winds. I didn't sleep at all.", ans: "stormy", ph: "s_ _ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>stormy</span> (tính từ): có bão.</div><div class='hint-detail'>Dấu hiệu: '<strong>rain and very strong winds</strong>' → mưa và gió mạnh là đặc điểm của đêm bão → <strong>stormy</strong>.</div>" },
+            { q: "8. I hope we have some [INPUT] in December because I want to go skiing.", ans: "snow", ph: "s_ _ _", hint: "<div class='hint-detail'><span class='key-word'>snow</span> (danh từ): tuyết.</div><div class='hint-detail'>Dấu hiệu: '<strong>want to go skiing</strong>' → muốn đi trượt tuyết nên cần có tuyết → <strong>snow</strong>.</div>" },
+            { q: "9. It's so cold this morning, but the trees look beautiful because of the [INPUT].", ans: "frost", ph: "f_ _ _ _", hint: "<div class='hint-detail'><span class='key-word'>frost</span> (danh từ): sương giá.</div><div class='hint-detail'>Dấu hiệu: '<strong>so cold this morning</strong>' → trời lạnh khiến cây phủ sương giá đẹp mắt → <strong>frost</strong>.</div>" },
+            { q: "10. The pavements are very [INPUT] so be careful not to slip.", ans: "icy", ph: "i_ _", hint: "<div class='hint-detail'><span class='key-word'>icy</span> (tính từ): đóng băng, trơn trượt.</div><div class='hint-detail'>Dấu hiệu: '<strong>be careful not to slip</strong>' → cẩn thận kẻo trượt vì vỉa hè đóng băng → <strong>icy</strong>.</div>" }
         ];
 
         const v2BankWords = ["cool", "degrees", "hot", "icy", "showers", "winds", "thunderstorms", "Celsius", "fog", "sunny", "thunder", "warm", "wind", "zero"];
@@ -598,113 +591,133 @@
             {
                 text: "<strong>First forecast:</strong><br>It was a lovely 1.[INPUT] day today and the temperature was thirty-two 2.[INPUT] Celsius in many parts of the country. However, this evening there will be some wet weather with a few 3.[INPUT] in the east. Tomorrow there will be strong 4.[INPUT] of 70 kilometres per hour or more along the south coast, and there will be 5.[INPUT] in Devon and Cornwall, so be careful if you plan to go camping this weekend.",
                 blanks: [
-                    { ans: "hot", hint: "<strong>Đáp án:</strong> hot<br><strong>Giải thích:</strong> Ngày nóng, nhiệt độ 32 độ." },
-                    { ans: "degrees", hint: "<strong>Đáp án:</strong> degrees<br><strong>Giải thích:</strong> 'degrees' dùng để chỉ đơn vị nhiệt độ." },
-                    { ans: "showers", hint: "<strong>Đáp án:</strong> showers<br><strong>Giải thích:</strong> Mưa rào nhẹ ở phía đông." },
-                    { ans: "winds", hint: "<strong>Đáp án:</strong> winds<br><strong>Giải thích:</strong> Gió mạnh 70 km/h." },
-                    { ans: "thunderstorms", hint: "<strong>Đáp án:</strong> thunderstorms<br><strong>Giải thích:</strong> Giông bão có thể gây nguy hiểm khi cắm trại." }
+                    { ans: "hot", hint: "<div class='hint-detail'><span class='key-word'>hot</span> (tính từ): nóng.</div><div class='hint-detail'>Dấu hiệu: '<strong>the temperature was thirty-two ... Celsius</strong>' → 32 độ C là nhiệt độ nóng → <strong>hot</strong>.</div>" },
+                    { ans: "degrees", hint: "<div class='hint-detail'><span class='key-word'>degrees</span> (danh từ): độ (đơn vị nhiệt độ).</div><div class='hint-detail'>Dấu hiệu: '<strong>thirty-two ... Celsius</strong>' → đứng trước 'Celsius' là đơn vị đo nhiệt độ → <strong>degrees</strong>.</div>" },
+                    { ans: "showers", hint: "<div class='hint-detail'><span class='key-word'>showers</span> (danh từ): mưa rào.</div><div class='hint-detail'>Dấu hiệu: '<strong>wet weather... in the east</strong>' → thời tiết ẩm ướt do mưa rào nhẹ → <strong>showers</strong>.</div>" },
+                    { ans: "winds", hint: "<div class='hint-detail'><span class='key-word'>winds</span> (danh từ, số nhiều): gió.</div><div class='hint-detail'>Dấu hiệu: '<strong>70 kilometres per hour or more</strong>' → tốc độ đo bằng km/h là của gió → <strong>winds</strong>.</div>" },
+                    { ans: "thunderstorms", hint: "<div class='hint-detail'><span class='key-word'>thunderstorms</span> (danh từ, số nhiều): giông bão.</div><div class='hint-detail'>Dấu hiệu: '<strong>be careful if you plan to go camping</strong>' → cảnh báo nguy hiểm khi cắm trại do có giông bão → <strong>thunderstorms</strong>.</div>" }
                 ]
             },
             {
                 text: "<strong>Second forecast:</strong><br>Temperatures were between twelve and fifteen degrees 1.[INPUT] this morning, so it was quite 2.[INPUT] for March. However, this afternoon a cold 3.[INPUT] will blow from the east and temperatures will fall to below 4.[INPUT] in the north of the country. Be careful if you're travelling on the roads this evening as there will be 5.[INPUT] in many places and it will be difficult to see the road.",
                 blanks: [
-                    { ans: "Celsius", hint: "<strong>Đáp án:</strong> Celsius<br><strong>Giải thích:</strong> 'Celsius' là đơn vị đo nhiệt độ." },
-                    { ans: "warm", hint: "<strong>Đáp án:</strong> warm<br><strong>Giải thích:</strong> 12-15 độ C là khá ấm cho tháng 3." },
-                    { ans: "wind", hint: "<strong>Đáp án:</strong> wind<br><strong>Giải thích:</strong> Gió lạnh thổi từ phía đông." },
-                    { ans: "zero", hint: "<strong>Đáp án:</strong> zero<br><strong>Giải thích:</strong> Nhiệt độ giảm xuống dưới 0 độ." },
-                    { ans: "fog", hint: "<strong>Đáp án:</strong> fog<br><strong>Giải thích:</strong> Sương mù dày đặc làm khó nhìn đường." }
+                    { ans: "Celsius", hint: "<div class='hint-detail'><span class='key-word'>Celsius</span> (danh từ): độ C.</div><div class='hint-detail'>Dấu hiệu: '<strong>Temperatures were between twelve and fifteen degrees</strong>' → sau 'degrees' cần đơn vị nhiệt độ → <strong>Celsius</strong>.</div>" },
+                    { ans: "warm", hint: "<div class='hint-detail'><span class='key-word'>warm</span> (tính từ): ấm áp.</div><div class='hint-detail'>Dấu hiệu: '<strong>twelve and fifteen degrees... for March</strong>' → 12-15 độ C khá ấm so với tháng 3 → <strong>warm</strong>.</div>" },
+                    { ans: "wind", hint: "<div class='hint-detail'><span class='key-word'>wind</span> (danh từ): gió.</div><div class='hint-detail'>Dấu hiệu: '<strong>will blow from the east</strong>' → thổi từ hướng đông là hành động của gió → <strong>wind</strong>.</div>" },
+                    { ans: "zero", hint: "<div class='hint-detail'><span class='key-word'>zero</span> (danh từ): số 0, độ.</div><div class='hint-detail'>Dấu hiệu: '<strong>temperatures will fall to below</strong>' → nhiệt độ giảm xuống dưới mốc 0 độ → <strong>zero</strong>.</div>" },
+                    { ans: "fog", hint: "<div class='hint-detail'><span class='key-word'>fog</span> (danh từ): sương mù.</div><div class='hint-detail'>Dấu hiệu: '<strong>difficult to see the road</strong>' → khó nhìn đường vì sương mù dày đặc → <strong>fog</strong>.</div>" }
                 ]
             }
         ];
 
         const v3Data = [
-            { q: "1. I love flying my kite when it's [CHOICE:icy / windy / misty].", ans: "windy", hint: "<strong>Đáp án:</strong> windy<br><strong>Giải thích:</strong> Thả diều cần có gió (windy)." },
-            { q: "2. I don't mind wet weather because I like watching [CHOICE:clouds / raindrops / storms] run down the window.", ans: "raindrops", hint: "<strong>Đáp án:</strong> raindrops<br><strong>Giải thích:</strong> Giọt mưa (raindrops) chảy dài trên cửa sổ." },
-            { q: "3. It was very cold last night and the car windows were covered with [CHOICE:frost / shower / cloud] this morning.", ans: "frost", hint: "<strong>Đáp án:</strong> frost<br><strong>Giải thích:</strong> Trời rất lạnh làm kính xe bị bao phủ bởi lớp sương giá (frost)." },
-            { q: "4. I often take my umbrella with me when I go out in case it [CHOICE:storms / rains / shines].", ans: "rains", hint: "<strong>Đáp án:</strong> rains<br><strong>Giải thích:</strong> Mang ô phòng trường hợp trời mưa (rains)." },
-            { q: "5. Be careful going for a walk in the winter as it's easy to slip on [CHOICE:rain / mist / ice].", ans: "ice", hint: "<strong>Đáp án:</strong> ice<br><strong>Giải thích:</strong> Trượt ngã trên băng (ice) vào mùa đông." },
-            { q: "6. If there's a [CHOICE:sun / snow / storm], it's a good idea to stay indoors.", ans: "storm", hint: "<strong>Đáp án:</strong> storm<br><strong>Giải thích:</strong> Nếu có bão (storm) thì nên ở trong nhà." },
-            { q: "7. People often say that [CHOICE:sunshine / lightning / thunder] makes them happy.", ans: "sunshine", hint: "<strong>Đáp án:</strong> sunshine<br><strong>Giải thích:</strong> Ánh nắng mặt trời (sunshine) thường làm con người cảm thấy vui vẻ." },
-            { q: "8. Children love playing out in [CHOICE:snowy / sunny / cloudy] weather if they are wearing warm clothes.", ans: "snowy", hint: "<strong>Đáp án:</strong> snowy<br><strong>Giải thích:</strong> Trẻ em thích chơi ngoài trời tuyết (snowy) nếu được mặc ấm." },
-            { q: "9. It was difficult to see in the [CHOICE:wind / mist / snow], but then he noticed her walking towards him.", ans: "mist", hint: "<strong>Đáp án:</strong> mist<br><strong>Giải thích:</strong> Sương mù (mist) làm giảm tầm nhìn." },
-            { q: "10. In the winter, I love watching [CHOICE:showers / winds / snowflakes] fall. It's amazing that each one is different.", ans: "snowflakes", hint: "<strong>Đáp án:</strong> snowflakes<br><strong>Giải thích:</strong> Bông tuyết (snowflakes) rơi vào mùa đông, và mỗi bông tuyết đều có hình dạng khác nhau." }
+            { q: "1. I love flying my kite when it's [CHOICE:icy / windy / misty].", ans: "windy", hint: "<div class='hint-detail'><span class='key-word'>windy</span> (tính từ): nhiều gió.</div><div class='hint-detail'>Dấu hiệu: '<strong>flying my kite</strong>' → thả diều cần có gió → <strong>windy</strong>.</div>" },
+            { q: "2. I don't mind wet weather because I like watching [CHOICE:clouds / raindrops / storms] run down the window.", ans: "raindrops", hint: "<div class='hint-detail'><span class='key-word'>raindrops</span> (danh từ, số nhiều): giọt mưa.</div><div class='hint-detail'>Dấu hiệu: '<strong>wet weather... run down the window</strong>' → giọt mưa chảy dài trên cửa sổ → <strong>raindrops</strong>.</div>" },
+            { q: "3. It was very cold last night and the car windows were covered with [CHOICE:frost / shower / cloud] this morning.", ans: "frost", hint: "<div class='hint-detail'><span class='key-word'>frost</span> (danh từ): sương giá.</div><div class='hint-detail'>Dấu hiệu: '<strong>very cold last night</strong>' → trời rất lạnh khiến kính xe phủ sương giá → <strong>frost</strong>.</div>" },
+            { q: "4. I often take my umbrella with me when I go out in case it [CHOICE:storms / rains / shines].", ans: "rains", hint: "<div class='hint-detail'><span class='key-word'>rains</span> (động từ): mưa.</div><div class='hint-detail'>Dấu hiệu: '<strong>take my umbrella with me</strong>' → mang ô phòng trường hợp trời mưa → <strong>rains</strong>.</div>" },
+            { q: "5. Be careful going for a walk in the winter as it's easy to slip on [CHOICE:rain / mist / ice].", ans: "ice", hint: "<div class='hint-detail'><span class='key-word'>ice</span> (danh từ): băng.</div><div class='hint-detail'>Dấu hiệu: '<strong>easy to slip on</strong>' → dễ trượt ngã trên băng vào mùa đông → <strong>ice</strong>.</div>" },
+            { q: "6. If there's a [CHOICE:sun / snow / storm], it's a good idea to stay indoors.", ans: "storm", hint: "<div class='hint-detail'><span class='key-word'>storm</span> (danh từ): cơn bão.</div><div class='hint-detail'>Dấu hiệu: '<strong>a good idea to stay indoors</strong>' → nên ở trong nhà khi có bão → <strong>storm</strong>.</div>" },
+            { q: "7. People often say that [CHOICE:sunshine / lightning / thunder] makes them happy.", ans: "sunshine", hint: "<div class='hint-detail'><span class='key-word'>sunshine</span> (danh từ): ánh nắng.</div><div class='hint-detail'>Dấu hiệu: '<strong>makes them happy</strong>' → ánh nắng mặt trời thường làm con người vui vẻ → <strong>sunshine</strong>.</div>" },
+            { q: "8. Children love playing out in [CHOICE:snowy / sunny / cloudy] weather if they are wearing warm clothes.", ans: "snowy", hint: "<div class='hint-detail'><span class='key-word'>snowy</span> (tính từ): có tuyết.</div><div class='hint-detail'>Dấu hiệu: '<strong>wearing warm clothes</strong>' → mặc ấm để chơi trong trời tuyết → <strong>snowy</strong>.</div>" },
+            { q: "9. It was difficult to see in the [CHOICE:wind / mist / snow], but then he noticed her walking towards him.", ans: "mist", hint: "<div class='hint-detail'><span class='key-word'>mist</span> (danh từ): sương mù.</div><div class='hint-detail'>Dấu hiệu: '<strong>difficult to see</strong>' → sương mù làm giảm tầm nhìn → <strong>mist</strong>.</div>" },
+            { q: "10. In the winter, I love watching [CHOICE:showers / winds / snowflakes] fall. It's amazing that each one is different.", ans: "snowflakes", hint: "<div class='hint-detail'><span class='key-word'>snowflakes</span> (danh từ, số nhiều): bông tuyết.</div><div class='hint-detail'>Dấu hiệu: '<strong>each one is different</strong>' → mỗi bông tuyết rơi vào mùa đông đều có hình dạng khác nhau → <strong>snowflakes</strong>.</div>" }
         ];
 
         const v4BankWords = ["avalanche", "drought", "earthquake", "epidemic", "famine", "flood", "forest fire", "mudslide", "tornado", "tsunami", "volcanic eruption"];
         const v4Data = [
-            { q: "1. This happens when mud slides down a hill or mountain after heavy rain. &rarr; [INPUT]", ans: "mudslide", hint: "<strong>Đáp án:</strong> mudslide<br><strong>Giải thích:</strong> Lở bùn (mudslide) xảy ra khi bùn trượt xuống đồi sau mưa lớn." },
-            { q: "2. This happens when a volcano explodes and lava, ash, and gases come out. &rarr; [INPUT]", ans: "volcanic eruption", hint: "<strong>Đáp án:</strong> volcanic eruption<br><strong>Giải thích:</strong> Phun trào núi lửa (volcanic eruption) giải phóng dung nham, tro bụi và khí ga." },
-            { q: "3. This is when a disease spreads quickly to many people. &rarr; [INPUT]", ans: "epidemic", hint: "<strong>Đáp án:</strong> epidemic<br><strong>Giải thích:</strong> Dịch bệnh (epidemic) là khi một căn bệnh lây lan nhanh chóng cho nhiều người." },
-            { q: "4. If there is too much rain in a short period of time, you might experience one of these. &rarr; [INPUT]", ans: "flood", hint: "<strong>Đáp án:</strong> flood<br><strong>Giải thích:</strong> Lũ lụt (flood) xảy ra khi có quá nhiều mưa trong thời gian ngắn." },
-            { q: "5. This is a fire that spreads through trees and plants in a dry area. &rarr; [INPUT]", ans: "forest fire", hint: "<strong>Đáp án:</strong> forest fire<br><strong>Giải thích:</strong> Cháy rừng (forest fire) lan rộng qua cây cối ở khu vực khô hạn." },
-            { q: "6. When one of these happens, buildings shake and sometimes fall down. &rarr; [INPUT]", ans: "earthquake", hint: "<strong>Đáp án:</strong> earthquake<br><strong>Giải thích:</strong> Động đất (earthquake) làm các tòa nhà rung chuyển và có thể đổ sập." },
-            { q: "7. This happens in an area where there isn't enough food for everyone to eat. &rarr; [INPUT]", ans: "famine", hint: "<strong>Đáp án:</strong> famine<br><strong>Giải thích:</strong> Nạn đói (famine) là khi không có đủ thức ăn cho mọi người." },
-            { q: "8. This can happen in a place where it doesn't rain for a long time. &rarr; [INPUT]", ans: "drought", hint: "<strong>Đáp án:</strong> drought<br><strong>Giải thích:</strong> Hạn hán (drought) xảy ra khi không có mưa trong thời gian dài." },
-            { q: "9. This is a huge wave caused by an earthquake under the sea. &rarr; [INPUT]", ans: "tsunami", hint: "<strong>Đáp án:</strong> tsunami<br><strong>Giải thích:</strong> Sóng thần (tsunami) là một cơn sóng khổng lồ do động đất dưới đáy biển gây ra." },
-            { q: "10. This happens when strong winds form a spinning funnel that moves over land. &rarr; [INPUT]", ans: "tornado", hint: "<strong>Đáp án:</strong> tornado<br><strong>Giải thích:</strong> Lốc xoáy (tornado) là những luồng gió mạnh tạo thành phễu xoáy di chuyển trên mặt đất." },
-            { q: "11. This happens when snow, ice, and rocks fall quickly down the side of a mountain. &rarr; [INPUT]", ans: "avalanche", hint: "<strong>Đáp án:</strong> avalanche<br><strong>Giải thích:</strong> Tuyết lở (avalanche) là khi tuyết, đá và băng rơi nhanh xuống sườn núi." }
+            { q: "1. This happens when mud slides down a hill or mountain after heavy rain. &rarr; [INPUT]", ans: "mudslide", hint: "<div class='hint-detail'><span class='key-word'>mudslide</span> (danh từ): lở bùn.</div><div class='hint-detail'>Dấu hiệu: '<strong>mud slides down a hill or mountain</strong>' → mô tả đúng hiện tượng bùn trượt xuống đồi → <strong>mudslide</strong>.</div>" },
+            { q: "2. This happens when a volcano explodes and lava, ash, and gases come out. &rarr; [INPUT]", ans: "volcanic eruption", hint: "<div class='hint-detail'><span class='key-word'>volcanic eruption</span> (danh từ): phun trào núi lửa.</div><div class='hint-detail'>Dấu hiệu: '<strong>a volcano explodes and lava, ash, and gases come out</strong>' → núi lửa phun trào giải phóng dung nham, tro bụi, khí ga → <strong>volcanic eruption</strong>.</div>" },
+            { q: "3. This is when a disease spreads quickly to many people. &rarr; [INPUT]", ans: "epidemic", hint: "<div class='hint-detail'><span class='key-word'>epidemic</span> (danh từ): dịch bệnh.</div><div class='hint-detail'>Dấu hiệu: '<strong>a disease spreads quickly to many people</strong>' → bệnh lây lan nhanh cho nhiều người → <strong>epidemic</strong>.</div>" },
+            { q: "4. If there is too much rain in a short period of time, you might experience one of these. &rarr; [INPUT]", ans: "flood", hint: "<div class='hint-detail'><span class='key-word'>flood</span> (danh từ): lũ lụt.</div><div class='hint-detail'>Dấu hiệu: '<strong>too much rain in a short period of time</strong>' → mưa quá nhiều trong thời gian ngắn gây ngập lụt → <strong>flood</strong>.</div>" },
+            { q: "5. This is a fire that spreads through trees and plants in a dry area. &rarr; [INPUT]", ans: "forest fire", hint: "<div class='hint-detail'><span class='key-word'>forest fire</span> (danh từ): cháy rừng.</div><div class='hint-detail'>Dấu hiệu: '<strong>spreads through trees and plants in a dry area</strong>' → lửa lan qua cây cối ở khu vực khô hạn → <strong>forest fire</strong>.</div>" },
+            { q: "6. When one of these happens, buildings shake and sometimes fall down. &rarr; [INPUT]", ans: "earthquake", hint: "<div class='hint-detail'><span class='key-word'>earthquake</span> (danh từ): động đất.</div><div class='hint-detail'>Dấu hiệu: '<strong>buildings shake and sometimes fall down</strong>' → nhà rung chuyển và có thể sập là hậu quả của động đất → <strong>earthquake</strong>.</div>" },
+            { q: "7. This happens in an area where there isn't enough food for everyone to eat. &rarr; [INPUT]", ans: "famine", hint: "<div class='hint-detail'><span class='key-word'>famine</span> (danh từ): nạn đói.</div><div class='hint-detail'>Dấu hiệu: '<strong>there isn't enough food for everyone to eat</strong>' → không đủ thức ăn cho mọi người → <strong>famine</strong>.</div>" },
+            { q: "8. This can happen in a place where it doesn't rain for a long time. &rarr; [INPUT]", ans: "drought", hint: "<div class='hint-detail'><span class='key-word'>drought</span> (danh từ): hạn hán.</div><div class='hint-detail'>Dấu hiệu: '<strong>doesn't rain for a long time</strong>' → không mưa trong thời gian dài gây hạn hán → <strong>drought</strong>.</div>" },
+            { q: "9. This is a huge wave caused by an earthquake under the sea. &rarr; [INPUT]", ans: "tsunami", hint: "<div class='hint-detail'><span class='key-word'>tsunami</span> (danh từ): sóng thần.</div><div class='hint-detail'>Dấu hiệu: '<strong>a huge wave caused by an earthquake under the sea</strong>' → sóng khổng lồ do động đất dưới biển → <strong>tsunami</strong>.</div>" },
+            { q: "10. This happens when strong winds form a spinning funnel that moves over land. &rarr; [INPUT]", ans: "tornado", hint: "<div class='hint-detail'><span class='key-word'>tornado</span> (danh từ): lốc xoáy.</div><div class='hint-detail'>Dấu hiệu: '<strong>strong winds form a spinning funnel</strong>' → gió mạnh tạo thành phễu xoáy → <strong>tornado</strong>.</div>" },
+            { q: "11. This happens when snow, ice, and rocks fall quickly down the side of a mountain. &rarr; [INPUT]", ans: "avalanche", hint: "<div class='hint-detail'><span class='key-word'>avalanche</span> (danh từ): tuyết lở.</div><div class='hint-detail'>Dấu hiệu: '<strong>snow, ice, and rocks fall quickly down the side of a mountain</strong>' → tuyết, đá và băng rơi nhanh xuống sườn núi → <strong>avalanche</strong>.</div>" }
         ];
 
         const v5BankWords = ["sweltering", "mild", "hot", "cool", "freezing", "warm", "cold"];
         const v5Data = [
-            { q: "1. It's -10°C. &rarr; It's [INPUT].", ans: "freezing", hint: "<strong>Đáp án:</strong> freezing<br><strong>Giải thích:</strong> Nhiệt độ -10°C là rất lạnh, đóng băng (freezing)." },
-            { q: "2. It's 2°C. &rarr; It's [INPUT].", ans: "cold", hint: "<strong>Đáp án:</strong> cold<br><strong>Giải thích:</strong> 2°C là mức nhiệt độ lạnh (cold)." },
-            { q: "3. It's 10°C. &rarr; It's [INPUT].", ans: "cool", hint: "<strong>Đáp án:</strong> cool<br><strong>Giải thích:</strong> 10°C là mát mẻ, hơi lạnh (cool)." },
-            { q: "4. It's 17°C. &rarr; It's [INPUT].", ans: "mild", hint: "<strong>Đáp án:</strong> mild<br><strong>Giải thích:</strong> 17°C là thời tiết ôn hòa, dịu mát (mild)." },
-            { q: "5. It's 23°C. &rarr; It's [INPUT].", ans: "warm", hint: "<strong>Đáp án:</strong> warm<br><strong>Giải thích:</strong> 23°C là ấm áp (warm)." },
-            { q: "6. It's 30°C. &rarr; It's [INPUT].", ans: "hot", hint: "<strong>Đáp án:</strong> hot<br><strong>Giải thích:</strong> 30°C là mức nhiệt độ nóng (hot)." },
-            { q: "7. It's 38°C. &rarr; It's [INPUT].", ans: "sweltering", hint: "<strong>Đáp án:</strong> sweltering<br><strong>Giải thích:</strong> 38°C là cực kì nóng bức, ngột ngạt (sweltering)." }
+            { q: "1. It's -10°C. &rarr; It's [INPUT].", ans: "freezing", hint: "<div class='hint-detail'><span class='key-word'>freezing</span> (tính từ): lạnh cóng, dưới 0 độ.</div><div class='hint-detail'>Dấu hiệu: '<strong>-10°C</strong>' → nhiệt độ âm, rất lạnh → <strong>freezing</strong>.</div>" },
+            { q: "2. It's 2°C. &rarr; It's [INPUT].", ans: "cold", hint: "<div class='hint-detail'><span class='key-word'>cold</span> (tính từ): lạnh.</div><div class='hint-detail'>Dấu hiệu: '<strong>2°C</strong>' → nhiệt độ thấp, mang nghĩa lạnh → <strong>cold</strong>.</div>" },
+            { q: "3. It's 10°C. &rarr; It's [INPUT].", ans: "cool", hint: "<div class='hint-detail'><span class='key-word'>cool</span> (tính từ): mát, hơi lạnh.</div><div class='hint-detail'>Dấu hiệu: '<strong>10°C</strong>' → nhiệt độ mát mẻ, hơi se lạnh → <strong>cool</strong>.</div>" },
+            { q: "4. It's 17°C. &rarr; It's [INPUT].", ans: "mild", hint: "<div class='hint-detail'><span class='key-word'>mild</span> (tính từ): ôn hòa, dịu.</div><div class='hint-detail'>Dấu hiệu: '<strong>17°C</strong>' → nhiệt độ dễ chịu, không nóng không lạnh → <strong>mild</strong>.</div>" },
+            { q: "5. It's 23°C. &rarr; It's [INPUT].", ans: "warm", hint: "<div class='hint-detail'><span class='key-word'>warm</span> (tính từ): ấm áp.</div><div class='hint-detail'>Dấu hiệu: '<strong>23°C</strong>' → nhiệt độ ấm áp, dễ chịu → <strong>warm</strong>.</div>" },
+            { q: "6. It's 30°C. &rarr; It's [INPUT].", ans: "hot", hint: "<div class='hint-detail'><span class='key-word'>hot</span> (tính từ): nóng.</div><div class='hint-detail'>Dấu hiệu: '<strong>30°C</strong>' → nhiệt độ cao, oi nóng → <strong>hot</strong>.</div>" },
+            { q: "7. It's 38°C. &rarr; It's [INPUT].", ans: "sweltering", hint: "<div class='hint-detail'><span class='key-word'>sweltering</span> (tính từ): nóng bức, ngột ngạt.</div><div class='hint-detail'>Dấu hiệu: '<strong>38°C</strong>' → nhiệt độ rất cao, cực kỳ oi bức → <strong>sweltering</strong>.</div>" }
         ];
 
         const g1Data = [
-            { q: "<strong>Email 1 (Jeremy to Dean):</strong><br>Hi Dean<br>Do you want to come to my house on Saturday and watch 1.[CHOICE:some / any] DVDs? I've got a lot of good science fiction and comedy films. I know you like horror too, but I haven't got 2.[CHOICE:some / any] new horror films.<br>You often buy DVDs in town, so have you got 3.[CHOICE:some / any] good new films? Bring 4.[CHOICE:some / any] with you on Saturday, and we can watch your DVDs too. My mum says we can watch DVDs all day - and we can eat 5.[CHOICE:some / any] pizzas too!<br>Anyway, email or phone me later today. Jeremy", ans: ["some", "any", "any", "some", "some"], hint: "<strong>Đáp án:</strong> 1. some | 2. any | 3. any | 4. some | 5. some<br><strong>Giải thích:</strong><br>1. 'some' dùng trong câu mời mọc/đề nghị.<br>2. 'any' dùng trong câu phủ định.<br>3. 'any' dùng trong câu hỏi.<br>4. 'some' dùng như đại từ thay thế trong câu khẳng định.<br>5. 'some' dùng trong câu khẳng định." },
-            { q: "<strong>Email 2 (Karen to Julie):</strong><br>Hi Julie<br>It's the last day of the reality show Family Wars, and I'm really excited. Tonight, the families have to play 1.[CHOICE:some / any] really difficult games, and they don't get 2.[CHOICE:some / any] help.<br>I know you like watching the show too, so come to my house and watch it with me! We can eat 3.[CHOICE:some / any] food while we're watching TV too. I've got 4.[CHOICE:some / any] popcorn. Have you got 5.[CHOICE:some / any] crisps?<br>Phone me later. Karen", ans: ["some", "any", "some", "some", "any"], hint: "<strong>Đáp án:</strong> 1. some | 2. any | 3. some | 4. some | 5. any<br><strong>Giải thích:</strong><br>1, 3, 4. 'some' dùng trong câu khẳng định.<br>2. 'any' dùng trong câu phủ định (don't get).<br>5. 'any' dùng trong câu hỏi." }
+            {
+                q: "<strong>Email 1 (Jeremy to Dean):</strong><br>Hi Dean<br>Do you want to come to my house on Saturday and watch 1.[CHOICE:some / any] DVDs? I've got a lot of good science fiction and comedy films. I know you like horror too, but I haven't got 2.[CHOICE:some / any] new horror films.<br>You often buy DVDs in town, so have you got 3.[CHOICE:some / any] good new films? Bring 4.[CHOICE:some / any] with you on Saturday, and we can watch your DVDs too. My mum says we can watch DVDs all day - and we can eat 5.[CHOICE:some / any] pizzas too!<br>Anyway, email or phone me later today. Jeremy",
+                ans: ["some", "any", "any", "some", "some"],
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu mời mọc, đề nghị.</div><div class='hint-detail'>Dấu hiệu: '<strong>Do you want to come... and watch</strong>' → câu hỏi mang tính mời mọc, đề nghị → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span> (lượng từ): dùng trong câu phủ định.</div><div class='hint-detail'>Dấu hiệu: '<strong>I haven't got ... new horror films</strong>' → câu phủ định → <strong>any</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span> (lượng từ): dùng trong câu hỏi thông thường.</div><div class='hint-detail'>Dấu hiệu: '<strong>have you got ... good new films?</strong>' → câu hỏi thông thường, không phải lời mời → <strong>any</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu mệnh lệnh/đề nghị mang nghĩa khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>Bring ... with you on Saturday</strong>' → câu mệnh lệnh, đề nghị mang theo → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>we can eat ... pizzas too</strong>' → câu khẳng định → <strong>some</strong>.</div>"
+                ]
+            },
+            {
+                q: "<strong>Email 2 (Karen to Julie):</strong><br>Hi Julie<br>It's the last day of the reality show Family Wars, and I'm really excited. Tonight, the families have to play 1.[CHOICE:some / any] really difficult games, and they don't get 2.[CHOICE:some / any] help.<br>I know you like watching the show too, so come to my house and watch it with me! We can eat 3.[CHOICE:some / any] food while we're watching TV too. I've got 4.[CHOICE:some / any] popcorn. Have you got 5.[CHOICE:some / any] crisps?<br>Phone me later. Karen",
+                ans: ["some", "any", "some", "some", "any"],
+                hints: [
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>the families have to play ... really difficult games</strong>' → câu khẳng định → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span> (lượng từ): dùng trong câu phủ định.</div><div class='hint-detail'>Dấu hiệu: '<strong>they don't get ... help</strong>' → câu phủ định → <strong>any</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>We can eat ... food while we're watching TV</strong>' → câu khẳng định → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>some</span> (lượng từ): dùng trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>I've got ... popcorn</strong>' → câu khẳng định → <strong>some</strong>.</div>",
+                    "<div class='hint-detail'><span class='key-word'>any</span> (lượng từ): dùng trong câu hỏi.</div><div class='hint-detail'>Dấu hiệu: '<strong>Have you got ... crisps?</strong>' → câu hỏi → <strong>any</strong>.</div>"
+                ]
+            }
         ];
 
         const g2Data = [
-            { q: "1. How [CHOICE:many / much] time have we got?", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'time' (thời gian) là danh từ không đếm được nên dùng 'How much'." },
-            { q: "2. I know [CHOICE:a few / a little] actors because my mum works for a film company.", ans: "a few", hint: "<strong>Đáp án:</strong> a few<br><strong>Giải thích:</strong> 'actors' là danh từ đếm được số nhiều nên dùng 'a few'." },
-            { q: "3. There is [CHOICE:much / a lot of] traffic in the city centre today.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> 'a lot of' dùng phổ biến trong câu khẳng định với danh từ không đếm được ('traffic'). 'much' thường chỉ dùng trong phủ định và nghi vấn." },
-            { q: "4. We haven't got [CHOICE:many / much] milk in the fridge.", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'milk' là danh từ không đếm được nên dùng 'much'." },
-            { q: "5. There are [CHOICE:much / a lot of] trees behind my house.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> 'trees' là danh từ đếm được số nhiều nên dùng 'a lot of' (much chỉ dùng cho không đếm được)." },
-            { q: "6. How [CHOICE:many / much] people are coming to the party?", ans: "many", hint: "<strong>Đáp án:</strong> many<br><strong>Giải thích:</strong> 'people' là danh từ đếm được số nhiều nên dùng 'How many'." },
-            { q: "7. There aren't [CHOICE:any / some] chairs in the garden.", ans: "any", hint: "<strong>Đáp án:</strong> any<br><strong>Giải thích:</strong> Câu phủ định (aren't) dùng 'any'." },
-            { q: "8. I need [CHOICE:a few / a little] more time to finish my school project.", ans: "a little", hint: "<strong>Đáp án:</strong> a little<br><strong>Giải thích:</strong> 'time' là danh từ không đếm được nên dùng 'a little'." },
-            { q: "9. There is [CHOICE:much / a lot of] wildlife in the park near our house.", ans: "a lot of", hint: "<strong>Đáp án:</strong> a lot of<br><strong>Giải thích:</strong> Trong câu khẳng định thường dùng 'a lot of' thay vì 'much'." },
-            { q: "10. Is there [CHOICE:much / a few] rubbish in your street?", ans: "much", hint: "<strong>Đáp án:</strong> much<br><strong>Giải thích:</strong> 'rubbish' (rác) là danh từ không đếm được nên dùng 'much'." }
+            { q: "1. How [CHOICE:many / much] time have we got?", ans: "much", hint: "<div class='hint-detail'><span class='key-word'>much</span> (lượng từ): dùng với danh từ không đếm được.</div><div class='hint-detail'>Dấu hiệu: '<strong>time</strong>' → danh từ không đếm được → <strong>much</strong>.</div>" },
+            { q: "2. I know [CHOICE:a few / a little] actors because my mum works for a film company.", ans: "a few", hint: "<div class='hint-detail'><span class='key-word'>a few</span> (lượng từ): dùng với danh từ đếm được số nhiều.</div><div class='hint-detail'>Dấu hiệu: '<strong>actors</strong>' → danh từ đếm được, số nhiều → <strong>a few</strong>.</div>" },
+            { q: "3. There is [CHOICE:much / a lot of] traffic in the city centre today.", ans: "a lot of", hint: "<div class='hint-detail'><span class='key-word'>a lot of</span> (lượng từ): dùng phổ biến trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>There is ... traffic</strong>' → câu khẳng định với danh từ không đếm được, 'much' chỉ dùng trong phủ định/nghi vấn → <strong>a lot of</strong>.</div>" },
+            { q: "4. We haven't got [CHOICE:many / much] milk in the fridge.", ans: "much", hint: "<div class='hint-detail'><span class='key-word'>much</span> (lượng từ): dùng với danh từ không đếm được.</div><div class='hint-detail'>Dấu hiệu: '<strong>milk</strong>' → danh từ không đếm được → <strong>much</strong>.</div>" },
+            { q: "5. There are [CHOICE:much / a lot of] trees behind my house.", ans: "a lot of", hint: "<div class='hint-detail'><span class='key-word'>a lot of</span> (lượng từ): dùng với danh từ đếm được số nhiều trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>trees</strong>' → danh từ đếm được số nhiều, 'much' chỉ dùng cho không đếm được → <strong>a lot of</strong>.</div>" },
+            { q: "6. How [CHOICE:many / much] people are coming to the party?", ans: "many", hint: "<div class='hint-detail'><span class='key-word'>many</span> (lượng từ): dùng với danh từ đếm được số nhiều.</div><div class='hint-detail'>Dấu hiệu: '<strong>people</strong>' → danh từ đếm được, số nhiều → <strong>many</strong>.</div>" },
+            { q: "7. There aren't [CHOICE:any / some] chairs in the garden.", ans: "any", hint: "<div class='hint-detail'><span class='key-word'>any</span> (lượng từ): dùng trong câu phủ định.</div><div class='hint-detail'>Dấu hiệu: '<strong>aren't</strong>' → câu phủ định → <strong>any</strong>.</div>" },
+            { q: "8. I need [CHOICE:a few / a little] more time to finish my school project.", ans: "a little", hint: "<div class='hint-detail'><span class='key-word'>a little</span> (lượng từ): dùng với danh từ không đếm được.</div><div class='hint-detail'>Dấu hiệu: '<strong>time</strong>' → danh từ không đếm được → <strong>a little</strong>.</div>" },
+            { q: "9. There is [CHOICE:much / a lot of] wildlife in the park near our house.", ans: "a lot of", hint: "<div class='hint-detail'><span class='key-word'>a lot of</span> (lượng từ): dùng phổ biến trong câu khẳng định.</div><div class='hint-detail'>Dấu hiệu: '<strong>There is ... wildlife</strong>' → câu khẳng định, thường dùng 'a lot of' thay vì 'much' → <strong>a lot of</strong>.</div>" },
+            { q: "10. Is there [CHOICE:much / a few] rubbish in your street?", ans: "much", hint: "<div class='hint-detail'><span class='key-word'>much</span> (lượng từ): dùng với danh từ không đếm được.</div><div class='hint-detail'>Dấu hiệu: '<strong>rubbish</strong>' → danh từ không đếm được → <strong>much</strong>.</div>" }
         ];
 
         const g3Data = [
-            { q: "1. We [CHOICE:needn't / mustn't] talk in the exam.", ans: "mustn't", hint: "<strong>Đáp án:</strong> mustn't<br><strong>Giải thích:</strong> Cấm nói chuyện trong phòng thi (mustn't)." },
-            { q: "2. I [CHOICE:must / don't have to] buy my dad a present because it's his birthday this weekend.", ans: "must", hint: "<strong>Đáp án:</strong> must<br><strong>Giải thích:</strong> 'must' chỉ sự bắt buộc, bổn phận từ phía người nói (phải mua quà cho bố)." },
-            { q: "3. We [CHOICE:have to / don't have to] do any school work tonight because the teacher didn't give us any homework.", ans: "don't have to", hint: "<strong>Đáp án:</strong> don't have to<br><strong>Giải thích:</strong> Giáo viên không giao bài tập nên 'không cần thiết phải làm' (don't have to)." },
-            { q: "4. In the UK, you [CHOICE:needn't / have to] be seventeen or older when you learn to drive.", ans: "have to", hint: "<strong>Đáp án:</strong> have to<br><strong>Giải thích:</strong> 'have to' chỉ quy định của pháp luật (phải đủ 17 tuổi)." },
-            { q: "5. We [CHOICE:needn't / have to] tidy the house now. We can do it later.", ans: "needn't", hint: "<strong>Đáp án:</strong> needn't<br><strong>Giải thích:</strong> Không cần thiết phải dọn bây giờ, có thể dọn sau (needn't = don't have to)." },
-            { q: "6. Dad says we [CHOICE:mustn't / needn't] play loud music in the evenings.", ans: "mustn't", hint: "<strong>Đáp án:</strong> mustn't<br><strong>Giải thích:</strong> Bố cấm không được mở nhạc to buổi tối (mustn't)." },
-            { q: "7. You [CHOICE:don't have to / must] buy a ticket before you go into the concert.", ans: "must", hint: "<strong>Đáp án:</strong> must<br><strong>Giải thích:</strong> Bắt buộc phải mua vé trước khi vào (must / have to)." },
-            { q: "8. You [CHOICE:don't have to / have to] keep this door closed because it's a fire door.", ans: "have to", hint: "<strong>Đáp án:</strong> have to<br><strong>Giải thích:</strong> Phải đóng cửa vì đây là cửa thoát hiểm (bắt buộc)." },
-            { q: "9. I [CHOICE:needn't / have to] get up early tomorrow because it's Sunday.", ans: "needn't", hint: "<strong>Đáp án:</strong> needn't<br><strong>Giải thích:</strong> Không cần dậy sớm vì mai là Chủ nhật." },
-            { q: "10. We [CHOICE:mustn't / don't have to] finish our projects tonight - the teacher doesn't want them tomorrow.", ans: "don't have to", hint: "<strong>Đáp án:</strong> don't have to<br><strong>Giải thích:</strong> Không cần thiết phải làm xong tối nay vì mai cô chưa thu." }
+            { q: "1. We [CHOICE:needn't / mustn't] talk in the exam.", ans: "mustn't", hint: "<div class='hint-detail'><span class='key-word'>mustn't</span> (động từ khiếm khuyết): cấm đoán, không được phép.</div><div class='hint-detail'>Dấu hiệu: '<strong>talk in the exam</strong>' → nói chuyện trong phòng thi là điều bị cấm → <strong>mustn't</strong>.</div>" },
+            { q: "2. I [CHOICE:must / don't have to] buy my dad a present because it's his birthday this weekend.", ans: "must", hint: "<div class='hint-detail'><span class='key-word'>must</span> (động từ khiếm khuyết): bắt buộc chủ quan, xuất phát từ ý muốn người nói.</div><div class='hint-detail'>Dấu hiệu: '<strong>it's his birthday this weekend</strong>' → tự thấy cần phải mua quà cho bố → <strong>must</strong>.</div>" },
+            { q: "3. We [CHOICE:have to / don't have to] do any school work tonight because the teacher didn't give us any homework.", ans: "don't have to", hint: "<div class='hint-detail'><span class='key-word'>don't have to</span> (động từ khiếm khuyết): không bắt buộc, không cần thiết.</div><div class='hint-detail'>Dấu hiệu: '<strong>the teacher didn't give us any homework</strong>' → không có bài tập nên không cần làm → <strong>don't have to</strong>.</div>" },
+            { q: "4. In the UK, you [CHOICE:needn't / have to] be seventeen or older when you learn to drive.", ans: "have to", hint: "<div class='hint-detail'><span class='key-word'>have to</span> (động từ khiếm khuyết): bắt buộc khách quan, theo quy định.</div><div class='hint-detail'>Dấu hiệu: '<strong>In the UK</strong>' → quy định pháp luật về độ tuổi lái xe → <strong>have to</strong>.</div>" },
+            { q: "5. We [CHOICE:needn't / have to] tidy the house now. We can do it later.", ans: "needn't", hint: "<div class='hint-detail'><span class='key-word'>needn't</span> (động từ khiếm khuyết): không cần thiết.</div><div class='hint-detail'>Dấu hiệu: '<strong>We can do it later</strong>' → không cần dọn ngay vì có thể làm sau → <strong>needn't</strong>.</div>" },
+            { q: "6. Dad says we [CHOICE:mustn't / needn't] play loud music in the evenings.", ans: "mustn't", hint: "<div class='hint-detail'><span class='key-word'>mustn't</span> (động từ khiếm khuyết): cấm đoán.</div><div class='hint-detail'>Dấu hiệu: '<strong>Dad says</strong>' → lệnh cấm từ bố, không được mở nhạc to → <strong>mustn't</strong>.</div>" },
+            { q: "7. You [CHOICE:don't have to / must] buy a ticket before you go into the concert.", ans: "must", hint: "<div class='hint-detail'><span class='key-word'>must</span> (động từ khiếm khuyết): bắt buộc.</div><div class='hint-detail'>Dấu hiệu: '<strong>before you go into the concert</strong>' → bắt buộc phải mua vé trước khi vào → <strong>must</strong>.</div>" },
+            { q: "8. You [CHOICE:don't have to / have to] keep this door closed because it's a fire door.", ans: "have to", hint: "<div class='hint-detail'><span class='key-word'>have to</span> (động từ khiếm khuyết): bắt buộc khách quan.</div><div class='hint-detail'>Dấu hiệu: '<strong>it's a fire door</strong>' → quy định an toàn bắt buộc đóng cửa thoát hiểm → <strong>have to</strong>.</div>" },
+            { q: "9. I [CHOICE:needn't / have to] get up early tomorrow because it's Sunday.", ans: "needn't", hint: "<div class='hint-detail'><span class='key-word'>needn't</span> (động từ khiếm khuyết): không cần thiết.</div><div class='hint-detail'>Dấu hiệu: '<strong>it's Sunday</strong>' → không cần dậy sớm vì là Chủ nhật → <strong>needn't</strong>.</div>" },
+            { q: "10. We [CHOICE:mustn't / don't have to] finish our projects tonight - the teacher doesn't want them tomorrow.", ans: "don't have to", hint: "<div class='hint-detail'><span class='key-word'>don't have to</span> (động từ khiếm khuyết): không bắt buộc.</div><div class='hint-detail'>Dấu hiệu: '<strong>the teacher doesn't want them tomorrow</strong>' → không cần nộp mai nên không bắt buộc làm xong tối nay → <strong>don't have to</strong>.</div>" }
         ];
 
         const g4Data = [
-            { q: "1. It's very important to practise playing the game.<br>'I [INPUT].'", ans: "must practise playing the game", hint: "<strong>Đáp án:</strong> I must practise playing the game.<br><strong>Giải thích:</strong> 'Rất quan trọng' (very important) thể hiện ý chí, quyết tâm cá nhân → dùng <strong>must</strong> (bắt buộc chủ quan)." },
-            { q: "2. You are not allowed to talk to other people during the competition.<br>'I [INPUT].'", ans: "mustn't talk to other people during the competition", hint: "<strong>Đáp án:</strong> I mustn't talk to other people during the competition.<br><strong>Giải thích:</strong> 'Không được phép' (not allowed) là lệnh cấm từ ban tổ chức → dùng <strong>mustn't</strong> (cấm đoán)." },
-            { q: "3. Don't forget to pay £10 to enter.<br>'I [INPUT].'", ans: "mustn't forget to pay £10 to enter", hint: "<strong>Đáp án:</strong> I mustn't forget to pay £10 to enter.<br><strong>Giải thích:</strong> 'Đừng quên' là lời nhắc nhở bản thân → <strong>mustn't forget</strong> (bắt buộc chủ quan)." },
-            { q: "4. It's compulsory to bring ID with you.<br>'I [INPUT].'", ans: "have to bring ID with me", hint: "<strong>Đáp án:</strong> I have to bring ID with me.<br><strong>Giải thích:</strong> 'Bắt buộc' (compulsory) là quy định bên ngoài, không phải ý muốn cá nhân → dùng <strong>have to</strong> (bắt buộc khách quan)." },
-            { q: "5. If you are sixteen or under, you are obliged to take a break every hour.<br>'I [INPUT].'", ans: "have to take a break every hour", hint: "<strong>Đáp án:</strong> I have to take a break every hour.<br><strong>Giải thích:</strong> 'Bị bắt buộc' (obliged) là quy định từ ban tổ chức giải đấu → dùng <strong>have to</strong> (bắt buộc khách quan)." },
-            { q: "6. It isn't necessary to bring your own headphones.<br>'I [INPUT].'", ans: "needn't bring my own headphones", hint: "<strong>Đáp án:</strong> I needn't bring my own headphones.<br><strong>Giải thích:</strong> 'Không cần thiết' (isn't necessary) → không bắt buộc → dùng <strong>needn't</strong> (không cần)." },
-            { q: "7. You are not allowed to use your mobile phone.<br>'I [INPUT].'", ans: "mustn't use my mobile phone", hint: "<strong>Đáp án:</strong> I mustn't use my mobile phone.<br><strong>Giải thích:</strong> 'Không được phép' (not allowed) là lệnh cấm → dùng <strong>mustn't</strong> (cấm đoán)." }
+            { q: "1. It's very important to practise playing the game.<br>'I [INPUT].'", ans: "must practise playing the game", hint: "<div class='hint-detail'><span class='key-word'>must</span> (động từ khiếm khuyết): bắt buộc chủ quan, xuất phát từ ý chí cá nhân.</div><div class='hint-detail'>Dấu hiệu: '<strong>very important</strong>' → thể hiện quyết tâm cá nhân → <strong>must practise playing the game</strong>.</div>" },
+            { q: "2. You are not allowed to talk to other people during the competition.<br>'I [INPUT].'", ans: "mustn't talk to other people during the competition", hint: "<div class='hint-detail'><span class='key-word'>mustn't</span> (động từ khiếm khuyết): cấm đoán.</div><div class='hint-detail'>Dấu hiệu: '<strong>not allowed</strong>' → lệnh cấm từ ban tổ chức → <strong>mustn't talk to other people during the competition</strong>.</div>" },
+            { q: "3. Don't forget to pay £10 to enter.<br>'I [INPUT].'", ans: "mustn't forget to pay £10 to enter", hint: "<div class='hint-detail'><span class='key-word'>mustn't forget</span> (động từ khiếm khuyết): bắt buộc chủ quan, lời tự nhắc nhở.</div><div class='hint-detail'>Dấu hiệu: '<strong>Don't forget</strong>' → lời nhắc nhở bản thân → <strong>mustn't forget to pay £10 to enter</strong>.</div>" },
+            { q: "4. It's compulsory to bring ID with you.<br>'I [INPUT].'", ans: "have to bring ID with me", hint: "<div class='hint-detail'><span class='key-word'>have to</span> (động từ khiếm khuyết): bắt buộc khách quan, theo quy định.</div><div class='hint-detail'>Dấu hiệu: '<strong>compulsory</strong>' → quy định bên ngoài, không phải ý muốn cá nhân → <strong>have to bring ID with me</strong>.</div>" },
+            { q: "5. If you are sixteen or under, you are obliged to take a break every hour.<br>'I [INPUT].'", ans: "have to take a break every hour", hint: "<div class='hint-detail'><span class='key-word'>have to</span> (động từ khiếm khuyết): bắt buộc khách quan, theo quy định.</div><div class='hint-detail'>Dấu hiệu: '<strong>obliged</strong>' → quy định từ ban tổ chức giải đấu → <strong>have to take a break every hour</strong>.</div>" },
+            { q: "6. It isn't necessary to bring your own headphones.<br>'I [INPUT].'", ans: "needn't bring my own headphones", hint: "<div class='hint-detail'><span class='key-word'>needn't</span> (động từ khiếm khuyết): không cần thiết.</div><div class='hint-detail'>Dấu hiệu: '<strong>isn't necessary</strong>' → không bắt buộc → <strong>needn't bring my own headphones</strong>.</div>" },
+            { q: "7. You are not allowed to use your mobile phone.<br>'I [INPUT].'", ans: "mustn't use my mobile phone", hint: "<div class='hint-detail'><span class='key-word'>mustn't</span> (động từ khiếm khuyết): cấm đoán.</div><div class='hint-detail'>Dấu hiệu: '<strong>not allowed</strong>' → lệnh cấm → <strong>mustn't use my mobile phone</strong>.</div>" }
         ];
 
         const rData = [
-            { q: "1. Some parts of Australia receive too much rain in summer. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-1b", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Trong bài viết: 'in some parts, there is hardly any rain for months' (có những nơi hầu như không có mưa trong nhiều tháng)." },
-            { q: "2. Droughts can kill farm animals and plants. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-1c", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'Farmers suffer greatly, as their animals and crops often don't survive. These long dry periods are called droughts.'" },
-            { q: "3. In Southeast Asia, floods are common during the dry season. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-2b", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Lũ lụt xảy ra vào mùa mưa (rainy season), không phải mùa khô (dry season)." },
-            { q: "4. Tornadoes happen in some areas of the USA. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-3a", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'in the United States, tornadoes are a big threat in some states.'" },
-            { q: "5. People always have a long time to prepare for tornadoes. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-3c", hint: "<strong>Đáp án:</strong> F<br><strong>Giải thích:</strong> Bài đọc nói: 'sometimes there is very little time to prepare' (đôi khi có rất ít thời gian để chuẩn bị)." },
-            { q: "6. Climate change is believed to be making weather worse. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4a", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'Many people now agree that climate change is making extreme weather worse.'" },
-            { q: "7. Children in some schools are learning about weather safety. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4c", hint: "<strong>Đáp án:</strong> T<br><strong>Giải thích:</strong> 'That's why more schools are teaching students about climate and how to stay safe...'" }
+            { q: "1. Some parts of Australia receive too much rain in summer. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-1b", hint: "<div class='hint-detail'><span class='key-word'>F</span> (False): thông tin trái ngược với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>in some parts, there is hardly any rain for months</strong>' → một số nơi hầu như không có mưa trong nhiều tháng, không phải quá nhiều mưa → <strong>F</strong>.</div>" },
+            { q: "2. Droughts can kill farm animals and plants. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-1c", hint: "<div class='hint-detail'><span class='key-word'>T</span> (True): thông tin đúng với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>their animals and crops often don't survive</strong>' → vật nuôi và cây trồng thường không sống sót qua hạn hán → <strong>T</strong>.</div>" },
+            { q: "3. In Southeast Asia, floods are common during the dry season. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-2b", hint: "<div class='hint-detail'><span class='key-word'>F</span> (False): thông tin trái ngược với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>rainy season</strong>' → lũ lụt xảy ra vào mùa mưa, không phải mùa khô → <strong>F</strong>.</div>" },
+            { q: "4. Tornadoes happen in some areas of the USA. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-3a", hint: "<div class='hint-detail'><span class='key-word'>T</span> (True): thông tin đúng với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>in the United States, tornadoes are a big threat in some states</strong>' → lốc xoáy là mối đe dọa lớn ở một số bang của Mỹ → <strong>T</strong>.</div>" },
+            { q: "5. People always have a long time to prepare for tornadoes. [CHOICE:T / F]", ans: "F", subctx: "r-ctx-3c", hint: "<div class='hint-detail'><span class='key-word'>F</span> (False): thông tin trái ngược với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>sometimes there is very little time to prepare</strong>' → đôi khi chỉ có rất ít thời gian chuẩn bị, không phải luôn có nhiều thời gian → <strong>F</strong>.</div>" },
+            { q: "6. Climate change is believed to be making weather worse. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4a", hint: "<div class='hint-detail'><span class='key-word'>T</span> (True): thông tin đúng với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>climate change is making extreme weather worse</strong>' → nhiều người đồng ý biến đổi khí hậu làm thời tiết cực đoan tệ hơn → <strong>T</strong>.</div>" },
+            { q: "7. Children in some schools are learning about weather safety. [CHOICE:T / F]", ans: "T", subctx: "r-ctx-4c", hint: "<div class='hint-detail'><span class='key-word'>T</span> (True): thông tin đúng với bài đọc.</div><div class='hint-detail'>Dấu hiệu: '<strong>more schools are teaching students about climate and how to stay safe</strong>' → nhiều trường học đang dạy học sinh về khí hậu và cách giữ an toàn → <strong>T</strong>.</div>" }
         ];
 
         // ========== RENDER ==========
@@ -720,7 +733,7 @@
                 <span class="inline-group">
                     <button class="eye-btn" onclick="toggleInputAns('${qid}')">👁️</button>
                     <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
-                    <div class="hint-box" id="${qid}-hint">${it.hint || ''}</div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">${it.hint || ''}</div>
                 </span></div>`;
             });
             container.innerHTML = html;
@@ -744,7 +757,7 @@
                     <span class="inline-group">
                         <button class="eye-btn" onclick="toggleSlotAns('${id}','${ans}','${bankSelector}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
-                        <div class="hint-box" id="${id}-hint">${hint}</div>
+                        <div class="hint-box inline-hint" id="${id}-hint">${hint}</div>
                     </span>`;
                 });
                 html += `<div class="q-row">${text}</div>`;
@@ -782,31 +795,127 @@
                 <span class="inline-group">
                     <button class="eye-btn" onclick="${eyeOnclick}">👁️</button>
                     <button class="hint-btn" onclick="${hintOnclick}">i</button>
-                    <div class="hint-box" id="${qid}-hint">${it.hint || ''}</div>
+                    <div class="hint-box inline-hint" id="${qid}-hint">${it.hint || ''}</div>
                 </span></div>`;
             });
             container.innerHTML = html;
         }
 
-        // ========== INTERACTION ==========
-        function toggleHint(e, id) {
-            e.stopPropagation();
-            const hintBox = document.getElementById(id + '-hint');
-            if (hintBox) {
-                if (hintBox.style.display === 'block') { hintBox.style.display = 'none'; }
-                else { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); hintBox.style.display = 'block'; }
-            }
+        // Giống renderChoiceGaps nhưng MỖI chỗ trống (mỗi [CHOICE:]) có nút mắt + giải thích riêng
+        // (dùng cho các bài có nhiều gap trong một đoạn văn/email dài, ví dụ Grammar Task 1)
+        function renderChoiceGapsPerGap(containerId, data, prefix) {
+            const container = document.getElementById(containerId);
+            let html = "";
+            data.forEach((it, i) => {
+                const qid = `${prefix}-q${i}`;
+                let count = 0;
+                let qHtml = it.q.replace(/\[CHOICE:([^\]]+)\]/g, (match, choicesStr) => {
+                    const id = count === 0 ? qid : `${qid}_${count}`;
+                    const ans = Array.isArray(it.ans) ? it.ans[count] : it.ans;
+                    const hint = (it.hints && it.hints[count]) || '';
+                    count++;
+                    const choices = choicesStr.split('/').map(c => c.trim());
+                    const spans = choices.map(c => `<span class="word-choice" onclick="selectChoice(this)" data-val="${c}">${c}</span>`);
+                    return `<span class="choice-gap" id="${id}" data-ans="${ans}">${spans.join('<span class="choice-sep">/</span>')}</span><span class="inline-group">
+                    <button class="eye-btn" onclick="toggleSingleChoiceAns('${id}')">👁️</button>
+                    <button class="hint-btn" onclick="toggleHint(event, '${id}')">i</button>
+                    <div class="hint-box inline-hint" id="${id}-hint">${hint}</div>
+                </span>`;
+                });
+                if (count === 0) return;
+                html += `<div class="q-row">${qHtml}</div>`;
+            });
+            container.innerHTML = html;
         }
+
+        // ========== INTERACTION ==========
+        let currentHintBtn = null;
+
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+
+            // Căn giữa hộp hint theo TÂM của nút neo.
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+
+            // Mặc định hiện PHÍA DƯỚI nút; chỉ lật lên TRÊN khi phía dưới không đủ
+            // chỗ VÀ phía trên còn rộng hơn phía dưới.
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceBelow < boxRect.height + 12 && spaceAbove > spaceBelow) {
+                top = rect.top - boxRect.height - 12;
+                below = false;
+            } else {
+                top = rect.bottom + 12;
+                below = true;
+            }
+            if (top < 8) top = 8;
+
+            hintBox.style.top = top + 'px';
+            hintBox.style.left = left + 'px';
+
+            // Xác định lại hướng mũi tên DỰA THEO vị trí thực tế SAU KHI đã kẹp
+            // top về 8px — không dùng lại cờ below tính trước khi kẹp.
+            below = (top + boxRect.height / 2) > rect.top;
+
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        // Nút neo đã cuộn khuất hẳn khỏi viewport → tự đóng hint thay vì kẹp mép.
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
+
+        function toggleHint(e, id) {
+            if (e) e.stopPropagation();
+            const hintBox = document.getElementById(id + '-hint');
+            if (!hintBox) return;
+            const isVisible = hintBox.style.display === 'block';
+            closeAllHints();
+            if (isVisible) return;
+            hintBox.style.display = 'block';
+            // Neo theo đúng nút "i" (hint-btn) vừa được bấm.
+            const btn = e ? (e.currentTarget || e.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(hintBox, btn);
+        }
+        window.toggleHint = toggleHint;
 
         function toggleReadingHint(e, id, subctxId) {
             e.stopPropagation();
             const hintBox = document.getElementById(id + '-hint');
             if (!hintBox) return;
             const isVisible = hintBox.style.display === 'block';
-            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            const btn = e.currentTarget;
+            closeAllHints();
             document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
             if (!isVisible) {
                 hintBox.style.display = 'block';
+                currentHintBtn = btn;
+                positionHintBox(hintBox, btn);
                 const ctxEl = document.getElementById(subctxId);
                 if (ctxEl) {
                     ctxEl.classList.add('active-highlight');
@@ -824,7 +933,7 @@
 
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.hint-box') && !e.target.closest('.hint-btn') && !e.target.closest('.eye-btn')) {
-                document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+                closeAllHints();
                 if (!e.target.closest('#readingPanel')) {
                     document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
                 }
@@ -855,23 +964,25 @@
             }
         }
 
-        function toggleMultiChoiceAns(id) {
-            function toggleOneGap(gapEl) {
-                if (!gapEl) return;
-                const correctAns = gapEl.dataset.ans;
-                const correctSpan = Array.from(gapEl.querySelectorAll('.word-choice')).find(s => s.dataset.val === correctAns);
-                if (!correctSpan) return;
-                if (correctSpan.classList.contains('correct-select')) {
-                    gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
-                } else {
-                    gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
-                    correctSpan.classList.add('selected', 'correct-select');
-                }
+        function toggleSingleChoiceAns(id) {
+            const gapEl = document.getElementById(id);
+            if (!gapEl) return;
+            const correctAns = gapEl.dataset.ans;
+            const correctSpan = Array.from(gapEl.querySelectorAll('.word-choice')).find(s => s.dataset.val === correctAns);
+            if (!correctSpan) return;
+            if (correctSpan.classList.contains('correct-select')) {
+                gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+            } else {
+                gapEl.querySelectorAll('.word-choice').forEach(w => w.classList.remove('selected', 'correct-select', 'incorrect-select'));
+                correctSpan.classList.add('selected', 'correct-select');
             }
-            toggleOneGap(document.getElementById(id));
+        }
+
+        function toggleMultiChoiceAns(id) {
+            toggleSingleChoiceAns(id);
             let k = 1;
             while (document.getElementById(`${id}_${k}`)) {
-                toggleOneGap(document.getElementById(`${id}_${k}`));
+                toggleSingleChoiceAns(`${id}_${k}`);
                 k++;
             }
         }
@@ -941,7 +1052,7 @@
                 const bankSelector = slot.dataset.bank;
                 if (bankSelector) clearSlot(slot, bankSelector);
             });
-            container.querySelectorAll('.word-bank-simple .word-item').forEach(w => w.classList.remove('used', 'active-word'));
+            container.querySelectorAll('.word-bank .word-item').forEach(w => w.classList.remove('used', 'dragging'));
             container.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
             document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
         }
@@ -1018,7 +1129,7 @@
                 return `<div class="q-row">${qHtml.replace('[INPUT]', `<span class="drop-slot-inline" id="v4-q${i}" data-ans="${d.ans}"></span>
             <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v4-q${i}','${d.ans}','#bank-v4')">👁️</button>
             <button class="hint-btn" onclick="toggleHint(event, 'v4-q${i}')">i</button>
-            <div class="hint-box" id="v4-q${i}-hint">${d.hint}</div></span>`)}</div>`;
+            <div class="hint-box inline-hint" id="v4-q${i}-hint">${d.hint}</div></span>`)}</div>`;
             }).join('');
             createDropSlots(document.getElementById('questions-v4'), '#bank-v4', 'v4', v4Data.length);
             createWordBank('bank-v5', v5BankWords, '#bank-v5');
@@ -1027,10 +1138,10 @@
                 return `<div class="q-row">${qHtml.replace('[INPUT]', `<span class="drop-slot-inline" id="v5-q${i}" data-ans="${d.ans}"></span>
             <span class="inline-group"><button class="eye-btn" onclick="toggleSlotAns('v5-q${i}','${d.ans}','#bank-v5')">👁️</button>
             <button class="hint-btn" onclick="toggleHint(event, 'v5-q${i}')">i</button>
-            <div class="hint-box" id="v5-q${i}-hint">${d.hint}</div></span>`)}</div>`;
+            <div class="hint-box inline-hint" id="v5-q${i}-hint">${d.hint}</div></span>`)}</div>`;
             }).join('');
             createDropSlots(document.getElementById('questions-v5'), '#bank-v5', 'v5', v5Data.length);
-            renderChoiceGaps('questions-g1', g1Data, 'g1');
+            renderChoiceGapsPerGap('questions-g1', g1Data, 'g1');
             renderChoiceGaps('questions-g2', g2Data, 'g2');
             renderChoiceGaps('questions-g3', g3Data, 'g3');
             renderStandardInputs('questions-g4', g4Data, 'g4');

@@ -249,50 +249,7 @@
             padding: 0 2px;
         }
 
-        /* Word bank drag-drop */
-        .word-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: var(--primary-light);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 22px;
-            border: 1px solid var(--border-medium);
-            justify-content: center;
-            position: sticky;
-            top: 15px;
-            z-index: 90;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        .word-item {
-            background: var(--card-bg);
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            font-weight: 600;
-            cursor: grab;
-            transition: all 0.2s;
-            user-select: none;
-        }
-
-        .word-item:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .word-item.active-word {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.3);
-        }
-
-        .word-item.used {
-            opacity: 0.35;
-            cursor: default;
-            pointer-events: none;
-        }
+        /* Word bank drag-drop — .word-bank/.word-item inherited from access-theme.css (Rule 1) */
 
         .drop-slot {
             display: inline-flex;
@@ -373,28 +330,35 @@
             text-align: left;
         }
 
-        /* Endings display bank (non-draggable) */
-        .endings-bank {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 12px;
-            background: var(--grammar-bg, #f8fafc);
-            border-radius: 10px;
-            margin-bottom: 18px;
-            border: 1px dashed var(--primary);
-            align-items: center;
+        /* Task 3 endings bank now uses canonical .word-bank/.word-item (access-theme.css) — see Rule 1 */
+
+        .hint-box.inline-hint {
+            position: fixed;
+            top: auto;
+            left: auto;
+            margin-top: 0;
+            max-width: 380px;
+            width: max-content;
+            white-space: normal;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
         }
 
-        .ending-chip {
-            background: var(--card-bg);
-            padding: 4px 12px;
-            border-radius: 14px;
-            border: 1px solid var(--primary);
-            font-weight: 500;
-            color: var(--primary-dark);
-            font-size: 0.9rem;
-            white-space: nowrap;
+        .hint-box.inline-hint::after {
+            content: "";
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            transform: translateX(-50%);
+            border-width: 8px;
+            border-style: solid;
+            bottom: 100%;
+            border-color: transparent transparent var(--hint-border) transparent;
+        }
+
+        .hint-box.inline-hint.arrow-down::after {
+            bottom: auto;
+            top: 100%;
+            border-color: var(--hint-border) transparent transparent transparent;
         }
     </style>
 </head>
@@ -450,16 +414,20 @@
                 one extra word.</div>
             <!-- Set 1 -->
             <div style="font-weight:600; margin-bottom:8px;">Set 1</div>
-            <div class="word-bank" id="bank-ex4-set1" style="position:sticky; top:15px; z-index:90;"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4-set1"></div>
             <div id="ex4-set1-container"></div>
+            <div class="controls-row">
+                <button class="btn btn-show-all" onclick="showAnswers('ex4-set1')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4-set1')">Reset</button>
+            </div>
             <hr style="margin:25px 0; border-top:2px dashed var(--glass-border);">
             <!-- Set 2 -->
             <div style="font-weight:600; margin-bottom:8px;">Set 2</div>
-            <div class="word-bank" id="bank-ex4-set2" style="position:sticky; top:15px; z-index:90;"></div>
+            <div class="word-bank sticky-bank" id="bank-ex4-set2"></div>
             <div id="ex4-set2-container"></div>
             <div class="controls-row">
-                <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
-                <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
+                <button class="btn btn-show-all" onclick="showAnswers('ex4-set2')">Show All</button>
+                <button class="btn btn-reset" onclick="resetSection('ex4-set2')">Reset</button>
             </div>
         </div>
 
@@ -478,7 +446,7 @@
         <div class="exercise-card" id="card-ex6">
             <div class="exercise-title"><strong>Task 6:</strong> Complete Sam's email with the words below. There are
                 two extra words.</div>
-            <div class="word-bank" id="bank-ex6">
+            <div class="word-bank sticky-bank" id="bank-ex6">
                 <div class="word-item" draggable="true" data-value="travel guide">travel guide</div>
                 <div class="word-item" draggable="true" data-value="suncream">suncream</div>
                 <div class="word-item" draggable="true" data-value="campsite">campsite</div>
@@ -548,25 +516,84 @@
             const text = el.value || el.placeholder || "";
             el.style.width = Math.max(text.length * 12 + 40, 80) + "px";
         }
-        function closeAllHints() { document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none'); }
+        let currentHintBtn = null;
+        function positionHintBox(hintBox, btn) {
+            if (!btn) return;
+            const rect = btn.getBoundingClientRect();
+            const boxRect = hintBox.getBoundingClientRect();
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) left = window.innerWidth - boxRect.width - 8;
+            const spaceAbove = rect.top, spaceBelow = window.innerHeight - rect.bottom;
+            let top, below;
+            if (spaceAbove < boxRect.height + 12 && spaceBelow > spaceAbove) { top = rect.bottom + 12; below = true; }
+            else { top = rect.top - boxRect.height - 12; below = false; }
+            if (top < 8) top = 8;
+            hintBox.style.top = top + 'px'; hintBox.style.left = left + 'px';
+            below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
+        }
+        function repositionCurrentHint() {
+            if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
+            const open = document.querySelector('.hint-box[style*="display: block"]');
+            if (open) positionHintBox(open, currentHintBtn);
+        }
+        function closeAllHints() {
+            document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
+            currentHintBtn = null;
+        }
         function toggleHint(event, id) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             const h = document.getElementById(id + '-hint');
             if (!h) return;
             const isVisible = h.style.display === 'block';
             closeAllHints();
-            if (!isVisible) h.style.display = 'block';
+            if (isVisible) return;
+            h.style.display = 'block';
+            const btn = event ? (event.currentTarget || event.target) : null;
+            currentHintBtn = btn;
+            positionHintBox(h, btn);
         }
+        window.addEventListener('scroll', repositionCurrentHint, true);
+        window.addEventListener('resize', repositionCurrentHint);
+        window.addEventListener('load', () => { window.toggleHint = toggleHint; });
+
+        // Cơ chế A helper: strike/un-strike a bank word (Task 3 endings-bank mapping)
+        function setWordUsed(bankId, word, used) {
+            if (!word || !bankId) return;
+            const bank = document.getElementById(bankId);
+            if (!bank) return;
+            const target = word.trim().toLowerCase();
+            bank.querySelectorAll('.word-item').forEach(el => {
+                if (el.textContent.trim().toLowerCase() === target) {
+                    el.classList.toggle('used', used);
+                }
+            });
+        }
+
         function toggleInputAns(input) {
             if (!input || !input.dataset.ans) return;
             const answers = input.dataset.ans.split('|').map(a => a.trim());
             const cur = input.value.trim();
+            let nowUsed;
             if (answers.includes(cur) && input.classList.contains('correct')) {
                 input.value = ''; input.classList.remove('correct', 'incorrect-marked');
+                nowUsed = false;
             } else {
                 input.value = answers[0]; input.classList.remove('incorrect-marked'); input.classList.add('correct');
+                nowUsed = true;
             }
             adjustWidth(input);
+            if (input.dataset.bank) setWordUsed(input.dataset.bankid, input.dataset.bank, nowUsed);
         }
         function selectChoice(span) {
             const gap = span.closest('.choice-gap');
@@ -588,14 +615,30 @@
                 });
             }
         }
+        // Non-toggle sibling used only by "Show All" (bugfix-showall-toggle-ex1.md pattern):
+        // toggleChoiceAns above is a toggle (eye button 👁️) — Show All must never call it
+        // directly, or an already-revealed question gets flipped back to hidden.
+        function showChoiceAnsAll(id) {
+            const gap = document.getElementById(id);
+            if (!gap) return;
+            const correctVal = gap.dataset.ans;
+            const choices = gap.querySelectorAll('.word-choice');
+            choices.forEach(c => {
+                c.classList.remove('selected', 'correct-select', 'incorrect-select');
+                if (c.dataset.val === correctVal) c.classList.add('selected', 'correct-select');
+            });
+        }
 
         // ========== DRAG & DROP ENGINE ==========
         let dragWord = null;
         function setupDragDrop(bankSelector, slotSelector) {
             document.querySelectorAll(bankSelector + ' .word-item').forEach(w => {
                 w.setAttribute('draggable', 'true');
-                w.addEventListener('dragstart', e => { dragWord = w; w.classList.add('active-word'); e.dataTransfer.effectAllowed = 'move'; });
-                w.addEventListener('dragend', () => { w.classList.remove('active-word'); dragWord = null; });
+                w.addEventListener('dragstart', e => {
+                    if (w.classList.contains('used')) { e.preventDefault(); return; }
+                    dragWord = w; w.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move';
+                });
+                w.addEventListener('dragend', () => { w.classList.remove('dragging'); dragWord = null; });
             });
             document.querySelectorAll(slotSelector).forEach(slot => {
                 slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
@@ -634,111 +677,111 @@
 
         // ========== DATA ==========
         const task1Data = [
-            { text: "I can’t open this bottle. Don’t worry, <span class='choice-gap' id='ex1-q0' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> do it for you.", hint: "<strong>Đáp án:</strong> I’ll<br><strong>Bằng chứng:</strong> Lời đề nghị tức thì – 'Don’t worry'.<br><strong>Giải thích:</strong> Dùng <em>will</em> cho quyết định tại thời điểm nói." },
-            { text: "Look at those black clouds! It <span class='choice-gap' id='ex1-q1' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> rain soon.", hint: "<strong>Đáp án:</strong> is going to<br><strong>Bằng chứng:</strong> Dấu hiệu hiện tại – 'black clouds'.<br><strong>Giải thích:</strong> <em>Be going to</em> dùng khi có bằng chứng rõ ràng." },
-            { text: "We’re late already – the film <span class='choice-gap' id='ex1-q2' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> start in five minutes.", hint: "<strong>Đáp án:</strong> is going to<br><strong>Bằng chứng:</strong> Lịch chiếu cố định – 'in five minutes'.<br><strong>Giải thích:</strong> Dùng <em>be going to</em> cho sự kiện sắp xảy ra." },
-            { text: "Don’t tell anyone my secret. I promise <span class='choice-gap' id='ex1-q3' data-ans='I won’t'><span class='word-choice' onclick='selectChoice(this)' data-val='I won’t'>I won’t</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m not going to'>I’m not going to</span></span> say a word.", hint: "<strong>Đáp án:</strong> I won’t<br><strong>Bằng chứng:</strong> Lời hứa – 'I promise'.<br><strong>Giải thích:</strong> Dùng <em>will</em> trong lời hứa." },
-            { text: "Watch out! That glass <span class='choice-gap' id='ex1-q4' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> fall off the table.", hint: "<strong>Đáp án:</strong> is going to<br><strong>Bằng chứng:</strong> Dấu hiệu trước mắt – kính sắp rơi.<br><strong>Giải thích:</strong> <em>Be going to</em> cho dự đoán có cơ sở hiển nhiên." },
-            { text: "I’ve decided what to eat. <span class='choice-gap' id='ex1-q5' data-ans='I’m going to'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> have chicken curry.", hint: "<strong>Đáp án:</strong> I’m going to<br><strong>Bằng chứng:</strong> Quyết định đã có trước – 'I’ve decided'.<br><strong>Giải thích:</strong> Dùng <em>be going to</em> cho dự định đã quyết." },
-            { text: "My sister is so excited. <span class='choice-gap' id='ex1-q6' data-ans='She’s going to'><span class='word-choice' onclick='selectChoice(this)' data-val='She’ll'>She’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='She’s going to'>She’s going to</span></span> study in Australia next year.", hint: "<strong>Đáp án:</strong> She’s going to<br><strong>Bằng chứng:</strong> Kế hoạch đã định – 'next year'.<br><strong>Giải thích:</strong> <em>Be going to</em> cho kế hoạch trong tương lai." },
-            { text: "Oh no! I forgot my homework. The teacher <span class='choice-gap' id='ex1-q7' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> be angry with me.", hint: "<strong>Đáp án:</strong> is going to<br><strong>Bằng chứng:</strong> Hậu quả chắc chắn – quên bài tập.<br><strong>Giải thích:</strong> Dùng <em>be going to</em> cho dự đoán dựa trên tình huống hiện tại." },
-            { text: "I feel terrible. I think <span class='choice-gap' id='ex1-q8' data-ans='I’m going to'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> be sick.", hint: "<strong>Đáp án:</strong> I’m going to<br><strong>Bằng chứng:</strong> Cảm giác hiện tại – 'I feel terrible'.<br><strong>Giải thích:</strong> <em>Be going to</em> cho dự đoán dựa trên cảm giác." },
-            { text: "Do you want tea or coffee? – I think <span class='choice-gap' id='ex1-q9' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> have coffee, thanks.", hint: "<strong>Đáp án:</strong> I’ll<br><strong>Bằng chứng:</strong> Quyết định tại chỗ – 'I think'.<br><strong>Giải thích:</strong> <em>Will</em> cho quyết định tức thời." },
-            { text: "Careful! That dog looks like it <span class='choice-gap' id='ex1-q10' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> bite you.", hint: "<strong>Đáp án:</strong> is going to<br><strong>Bằng chứng:</strong> Hành vi của chó – 'looks like'.<br><strong>Giải thích:</strong> <em>Be going to</em> cho dự đoán có dấu hiệu rõ ràng." },
-            { text: "Don’t worry, Dad. <span class='choice-gap' id='ex1-q11' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> wash the car after lunch.", hint: "<strong>Đáp án:</strong> I’ll<br><strong>Bằng chứng:</strong> Lời đề nghị/ hứa – 'Don’t worry'.<br><strong>Giải thích:</strong> Dùng <em>will</em> cho hành động tình nguyện." },
-            { text: "He has already packed his suitcase. <span class='choice-gap' id='ex1-q12' data-ans='He’s going to'><span class='word-choice' onclick='selectChoice(this)' data-val='He’ll'>He’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='He’s going to'>He’s going to</span></span> leave early tomorrow morning.", hint: "<strong>Đáp án:</strong> He’s going to<br><strong>Bằng chứng:</strong> Chuẩn bị rồi – 'already packed'.<br><strong>Giải thích:</strong> <em>Be going to</em> cho kế hoạch đã có." },
-            { text: "The train is late again. I’m sure people <span class='choice-gap' id='ex1-q13' data-ans='will'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='are going to'>are going to</span></span> complain.", hint: "<strong>Đáp án:</strong> will<br><strong>Bằng chứng:</strong> Suy đoán – 'I’m sure'.<br><strong>Giải thích:</strong> Dùng <em>will</em> cho dự đoán mang tính ý kiến." },
-            { text: "You look tired. <span class='choice-gap' id='ex1-q14' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> carry your bag for you.", hint: "<strong>Đáp án:</strong> I’ll<br><strong>Bằng chứng:</strong> Đề nghị giúp đỡ.<br><strong>Giải thích:</strong> <em>Will</em> cho hành động tự nguyện." }
+            { text: "I can’t open this bottle. Don’t worry, <span class='choice-gap' id='ex1-q0' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> do it for you.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng cho quyết định được đưa ra ngay tại thời điểm nói.</div><div class='hint-detail'>Dấu hiệu: '<strong>Don’t worry</strong>' → lời đề nghị tức thì, quyết định ngay lúc nói → <strong>I’ll</strong>.</div>" },
+            { text: "Look at those black clouds! It <span class='choice-gap' id='ex1-q1' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> rain soon.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng khi có dấu hiệu/bằng chứng rõ ràng cho dự đoán.</div><div class='hint-detail'>Dấu hiệu: '<strong>black clouds</strong>' → có bằng chứng rõ ràng ngay trước mắt → <strong>is going to</strong>.</div>" },
+            { text: "We’re late already – the film <span class='choice-gap' id='ex1-q2' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> start in five minutes.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho sự việc chắc chắn sắp xảy ra theo lịch trình.</div><div class='hint-detail'>Dấu hiệu: '<strong>in five minutes</strong>' → sự kiện đã có lịch trình cố định sắp diễn ra → <strong>is going to</strong>.</div>" },
+            { text: "Don’t tell anyone my secret. I promise <span class='choice-gap' id='ex1-q3' data-ans='I won’t'><span class='word-choice' onclick='selectChoice(this)' data-val='I won’t'>I won’t</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m not going to'>I’m not going to</span></span> say a word.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng trong lời hứa.</div><div class='hint-detail'>Dấu hiệu: '<strong>I promise</strong>' → lời hứa → <strong>I won’t</strong>.</div>" },
+            { text: "Watch out! That glass <span class='choice-gap' id='ex1-q4' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> fall off the table.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho dự đoán có căn cứ rõ ràng ngay trước mắt.</div><div class='hint-detail'>Dấu hiệu: '<strong>Watch out!</strong>' → dấu hiệu trước mắt cho thấy điều sắp xảy ra (kính sắp rơi) → <strong>is going to</strong>.</div>" },
+            { text: "I’ve decided what to eat. <span class='choice-gap' id='ex1-q5' data-ans='I’m going to'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> have chicken curry.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho dự định đã quyết định từ trước, không phải tại thời điểm nói.</div><div class='hint-detail'>Dấu hiệu: '<strong>I’ve decided</strong>' → quyết định đã có từ trước → <strong>I’m going to</strong>.</div>" },
+            { text: "My sister is so excited. <span class='choice-gap' id='ex1-q6' data-ans='She’s going to'><span class='word-choice' onclick='selectChoice(this)' data-val='She’ll'>She’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='She’s going to'>She’s going to</span></span> study in Australia next year.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho kế hoạch đã lên sẵn cho tương lai.</div><div class='hint-detail'>Dấu hiệu: '<strong>next year</strong>' → kế hoạch tương lai đã định trước → <strong>She’s going to</strong>.</div>" },
+            { text: "Oh no! I forgot my homework. The teacher <span class='choice-gap' id='ex1-q7' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> be angry with me.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho dự đoán dựa trên tình huống thực tế hiện tại.</div><div class='hint-detail'>Dấu hiệu: '<strong>I forgot my homework</strong>' → dự đoán dựa trên tình huống hiện tại → <strong>is going to</strong>.</div>" },
+            { text: "I feel terrible. I think <span class='choice-gap' id='ex1-q8' data-ans='I’m going to'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> be sick.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho dự đoán dựa trên cảm giác hiện tại.</div><div class='hint-detail'>Dấu hiệu: '<strong>I feel terrible</strong>' → dự đoán dựa trên cảm giác hiện tại → <strong>I’m going to</strong>.</div>" },
+            { text: "Do you want tea or coffee? – I think <span class='choice-gap' id='ex1-q9' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> have coffee, thanks.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng cho quyết định tức thời.</div><div class='hint-detail'>Dấu hiệu: '<strong>I think</strong>' → quyết định được đưa ra ngay tại chỗ → <strong>I’ll</strong>.</div>" },
+            { text: "Careful! That dog looks like it <span class='choice-gap' id='ex1-q10' data-ans='is going to'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='is going to'>is going to</span></span> bite you.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho dự đoán có dấu hiệu rõ ràng.</div><div class='hint-detail'>Dấu hiệu: '<strong>looks like</strong>' → dấu hiệu rõ ràng từ hành vi hiện tại → <strong>is going to</strong>.</div>" },
+            { text: "Don’t worry, Dad. <span class='choice-gap' id='ex1-q11' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> wash the car after lunch.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng cho hành động tình nguyện, quyết định tại thời điểm nói.</div><div class='hint-detail'>Dấu hiệu: '<strong>Don’t worry, Dad</strong>' → lời đề nghị/hứa ngay lúc nói → <strong>I’ll</strong>.</div>" },
+            { text: "He has already packed his suitcase. <span class='choice-gap' id='ex1-q12' data-ans='He’s going to'><span class='word-choice' onclick='selectChoice(this)' data-val='He’ll'>He’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='He’s going to'>He’s going to</span></span> leave early tomorrow morning.", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: dùng cho kế hoạch đã chuẩn bị sẵn.</div><div class='hint-detail'>Dấu hiệu: '<strong>already packed</strong>' → đã chuẩn bị/sắp xếp từ trước → <strong>He’s going to</strong>.</div>" },
+            { text: "The train is late again. I’m sure people <span class='choice-gap' id='ex1-q13' data-ans='will'><span class='word-choice' onclick='selectChoice(this)' data-val='will'>will</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='are going to'>are going to</span></span> complain.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng cho dự đoán mang tính ý kiến, suy đoán chung.</div><div class='hint-detail'>Dấu hiệu: '<strong>I’m sure</strong>' → dự đoán mang tính ý kiến cá nhân → <strong>will</strong>.</div>" },
+            { text: "You look tired. <span class='choice-gap' id='ex1-q14' data-ans='I’ll'><span class='word-choice' onclick='selectChoice(this)' data-val='I’ll'>I’ll</span><span class='choice-sep'>/</span><span class='word-choice' onclick='selectChoice(this)' data-val='I’m going to'>I’m going to</span></span> carry your bag for you.", hint: "<div class='hint-detail'><span class='key-word'>Will</span>: dùng cho hành động tự nguyện, đề nghị giúp đỡ.</div><div class='hint-detail'>Dấu hiệu: '<strong>You look tired</strong>' → đề nghị giúp đỡ ngay tại thời điểm nói → <strong>I’ll</strong>.</div>" }
         ];
 
         const task2Lines = [
-            { speaker: "Joe", text: "This summer I’ll travel around Europe by train – Mum just bought me a ticket.", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Ben", text: "Wow. You’re lucky. <span class='highlightable' id='err-2-1'>Probably I’ll</span> stay in this country.", correct: "I’ll probably", hint: "<strong>Đáp án:</strong> I’ll probably stay<br><strong>Bằng chứng:</strong> Trạng từ 'probably' đứng sai vị trí.<br><strong>Giải thích:</strong> Trạng từ thường đứng sau 'will' và trước động từ chính.", mistakeSpanId: "err-2-1" },
-            { speaker: "Joe", text: "Are you <span class='highlightable' id='err-2-2'>going see</span> your grandma this summer like you usually do?", correct: "going to see", hint: "<strong>Đáp án:</strong> going to see<br><strong>Bằng chứng:</strong> Thiếu 'to' trong cấu trúc 'going to'.<br><strong>Giải thích:</strong> Cấu trúc tương lai gần: be going to + V (nguyên thể).", mistakeSpanId: "err-2-2" },
-            { speaker: "Ben", text: "Definitely. But I’m going to have extra maths lessons too – that’s my worst subject.", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Joe", text: "If I don’t pass my exams, I have to study this summer too.", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Ben", text: "Oh well, good luck. I hope you pass because it’s going to be a great summer!", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Leo", text: "Don’t worry, I’ll carry your bag for you.", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Mia", text: "Thanks. If you wait here, <span class='highlightable' id='err-2-7'>I tell</span> you when the bus arrives.", correct: "I’ll tell", hint: "<strong>Đáp án:</strong> I’ll tell<br><strong>Bằng chứng:</strong> Dùng 'will' cho lời hứa hoặc quyết định tại chỗ.<br><strong>Giải thích:</strong> Trong câu điều kiện loại 1, mệnh đề chính dùng 'will + V'.", mistakeSpanId: "err-2-7" },
-            { speaker: "Leo", text: "Are you going to visit your uncle in London next weekend?", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null },
-            { speaker: "Mia", text: "Yes, <span class='highlightable' id='err-2-9'>I’m go</span> to stay with him for three days.", correct: "I’m going", hint: "<strong>Đáp án:</strong> I’m going<br><strong>Bằng chứng:</strong> Thiếu '-ing' trong 'going'.<br><strong>Giải thích:</strong> Cấu trúc be going to: am/is/are + going to + V.", mistakeSpanId: "err-2-9" },
-            { speaker: "Leo", text: "That sounds fun. <span class='highlightable' id='err-2-10'>Probably I’ll</span> be in London next month too.", correct: "I’ll probably", hint: "<strong>Đáp án:</strong> I’ll probably be<br><strong>Bằng chứng:</strong> Trạng từ 'probably' đặt sai vị trí.<br><strong>Giải thích:</strong> Trạng từ đứng sau 'will' và trước động từ chính.", mistakeSpanId: "err-2-10" },
-            { speaker: "Mia", text: "Really? Then I’m going to send you a message when I arrive. I promise!", correct: "", hint: "<strong>Không có lỗi.</strong>", mistakeSpanId: null }
+            { speaker: "Joe", text: "This summer I’ll travel around Europe by train – Mum just bought me a ticket.", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Ben", text: "Wow. You’re lucky. <span class='highlightable' id='err-2-1'>Probably I’ll</span> stay in this country.", correct: "I’ll probably", hint: "<div class='hint-detail'><span class='key-word'>Vị trí trạng từ</span>: trạng từ (probably) thường đứng sau trợ động từ 'will' và trước động từ chính.</div><div class='hint-detail'>Dấu hiệu: '<strong>Probably I’ll</strong>' → trạng từ đặt sai vị trí → <strong>I’ll probably stay</strong>.</div>", mistakeSpanId: "err-2-1" },
+            { speaker: "Joe", text: "Are you <span class='highlightable' id='err-2-2'>going see</span> your grandma this summer like you usually do?", correct: "going to see", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: cấu trúc tương lai gần be going to + V (nguyên thể), không được thiếu 'to'.</div><div class='hint-detail'>Dấu hiệu: '<strong>going see</strong>' → thiếu 'to' trong cấu trúc be going to → <strong>going to see</strong>.</div>", mistakeSpanId: "err-2-2" },
+            { speaker: "Ben", text: "Definitely. But I’m going to have extra maths lessons too – that’s my worst subject.", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Joe", text: "If I don’t pass my exams, I have to study this summer too.", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Ben", text: "Oh well, good luck. I hope you pass because it’s going to be a great summer!", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Leo", text: "Don’t worry, I’ll carry your bag for you.", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Mia", text: "Thanks. If you wait here, <span class='highlightable' id='err-2-7'>I tell</span> you when the bus arrives.", correct: "I’ll tell", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: mệnh đề chính của câu điều kiện loại 1 dùng 'will + V'.</div><div class='hint-detail'>Dấu hiệu: '<strong>I tell</strong>' → thiếu 'will' trong mệnh đề chính → <strong>I’ll tell</strong>.</div>", mistakeSpanId: "err-2-7" },
+            { speaker: "Leo", text: "Are you going to visit your uncle in London next weekend?", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null },
+            { speaker: "Mia", text: "Yes, <span class='highlightable' id='err-2-9'>I’m go</span> to stay with him for three days.", correct: "I’m going", hint: "<div class='hint-detail'><span class='key-word'>Be going to</span>: cấu trúc be going to: am/is/are + going to + V, động từ 'go' phải chia -ing.</div><div class='hint-detail'>Dấu hiệu: '<strong>I’m go</strong>' → thiếu đuôi -ing trong 'going' → <strong>I’m going</strong>.</div>", mistakeSpanId: "err-2-9" },
+            { speaker: "Leo", text: "That sounds fun. <span class='highlightable' id='err-2-10'>Probably I’ll</span> be in London next month too.", correct: "I’ll probably", hint: "<div class='hint-detail'><span class='key-word'>Vị trí trạng từ</span>: trạng từ (probably) thường đứng sau trợ động từ 'will' và trước động từ chính.</div><div class='hint-detail'>Dấu hiệu: '<strong>Probably I’ll</strong>' → trạng từ đặt sai vị trí → <strong>I’ll probably be</strong>.</div>", mistakeSpanId: "err-2-10" },
+            { speaker: "Mia", text: "Really? Then I’m going to send you a message when I arrive. I promise!", correct: "", hint: "<div class='hint-detail'>Không có lỗi trong câu này.</div>", mistakeSpanId: null }
         ];
 
         const task3Set1Endings = ["have no money left", "apply for another job", "meet famous actors", "get a degree", "stay in bed", "buy you a present", "get in trouble with the teacher"];
         const task3Set1 = [
-            { ifClause: "If I spend all my pocket money on that game,", ans: "I’ll have no money left", hint: "<strong>Câu hoàn chỉnh:</strong> If I spend all my pocket money on that game, I’ll have no money left.<br><strong>Giải thích:</strong> Tiêu hết tiền vào trò chơi sẽ dẫn đến hết tiền." },
-            { ifClause: "If you don’t do your homework,", ans: "you’ll get in trouble with the teacher", hint: "<strong>Câu hoàn chỉnh:</strong> If you don’t do your homework, you’ll get in trouble with the teacher.<br><strong>Giải thích:</strong> Không làm bài tập sẽ gặp rắc rối với giáo viên." },
-            { ifClause: "If you do well in your test,", ans: "I’ll buy you a present", hint: "<strong>Câu hoàn chỉnh:</strong> If you do well in your test, I’ll buy you a present.<br><strong>Giải thích:</strong> Đạt kết quả tốt sẽ được thưởng quà." },
-            { ifClause: "If I don’t do well in the interview tomorrow,", ans: "I’ll apply for another job", hint: "<strong>Câu hoàn chỉnh:</strong> If I don’t do well in the interview tomorrow, I’ll apply for another job.<br><strong>Giải thích:</strong> Phỏng vấn không tốt thì sẽ nộp đơn nơi khác." },
-            { ifClause: "If you study hard at university,", ans: "you’ll get a degree", hint: "<strong>Câu hoàn chỉnh:</strong> If you study hard at university, you’ll get a degree.<br><strong>Giải thích:</strong> Học chăm chỉ sẽ lấy được bằng." },
-            { ifClause: "If I get a job at a movie studio,", ans: "I’ll meet famous actors", hint: "<strong>Câu hoàn chỉnh:</strong> If I get a job at a movie studio, I’ll meet famous actors.<br><strong>Giải thích:</strong> Làm việc ở phim trường sẽ gặp diễn viên nổi tiếng." },
-            { ifClause: "If I feel tired tomorrow,", ans: "I’ll stay in bed", hint: "<strong>Câu hoàn chỉnh:</strong> If I feel tired tomorrow, I’ll stay in bed.<br><strong>Giải thích:</strong> Mệt thì sẽ nằm nghỉ." }
+            { ifClause: "If I spend all my pocket money on that game,", ans: "I’ll have no money left", bank: "have no money left", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>spend all my pocket money</strong>' → tiêu hết tiền vào trò chơi thì sẽ không còn tiền → <strong>I’ll have no money left</strong>.</div>" },
+            { ifClause: "If you don’t do your homework,", ans: "you’ll get in trouble with the teacher", bank: "get in trouble with the teacher", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>don’t do your homework</strong>' → không làm bài tập sẽ gặp rắc rối với giáo viên → <strong>you’ll get in trouble with the teacher</strong>.</div>" },
+            { ifClause: "If you do well in your test,", ans: "I’ll buy you a present", bank: "buy you a present", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>do well in your test</strong>' → đạt kết quả tốt trong bài kiểm tra sẽ được thưởng quà → <strong>I’ll buy you a present</strong>.</div>" },
+            { ifClause: "If I don’t do well in the interview tomorrow,", ans: "I’ll apply for another job", bank: "apply for another job", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>don’t do well in the interview</strong>' → phỏng vấn không tốt thì sẽ nộp đơn nơi khác → <strong>I’ll apply for another job</strong>.</div>" },
+            { ifClause: "If you study hard at university,", ans: "you’ll get a degree", bank: "get a degree", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>study hard at university</strong>' → học chăm chỉ ở đại học sẽ lấy được bằng → <strong>you’ll get a degree</strong>.</div>" },
+            { ifClause: "If I get a job at a movie studio,", ans: "I’ll meet famous actors", bank: "meet famous actors", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>get a job at a movie studio</strong>' → làm việc ở phim trường sẽ được gặp diễn viên nổi tiếng → <strong>I’ll meet famous actors</strong>.</div>" },
+            { ifClause: "If I feel tired tomorrow,", ans: "I’ll stay in bed", bank: "stay in bed", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>feel tired tomorrow</strong>' → mệt thì sẽ nằm nghỉ trên giường → <strong>I’ll stay in bed</strong>.</div>" }
         ];
         const task3Set2Endings = ["build one", "buy the tickets", "get really fit", "improve your English", "help people who are sick", "get any qualifications", "be really fit"];
         const task3Set2 = [
-            { ifClause: "If I can’t find a flat to rent,", ans: "I’ll build one", hint: "<strong>Câu hoàn chỉnh:</strong> If I can’t find a flat to rent, I’ll build one.<br><strong>Giải thích:</strong> Không thuê được thì sẽ tự xây." },
-            { ifClause: "If you go to work in America,", ans: "you’ll improve your English", hint: "<strong>Câu hoàn chỉnh:</strong> If you go to work in America, you’ll improve your English.<br><strong>Giải thích:</strong> Làm việc ở Mỹ sẽ cải thiện tiếng Anh." },
-            { ifClause: "If you become a sports coach,", ans: "you’ll get really fit", hint: "<strong>Câu hoàn chỉnh:</strong> If you become a sports coach, you’ll get really fit.<br><strong>Giải thích:</strong> Làm huấn luyện viên thể thao sẽ rất khỏe." },
-            { ifClause: "If I drop out of school,", ans: "I won’t get any qualifications", hint: "<strong>Câu hoàn chỉnh:</strong> If I drop out of school, I won’t get any qualifications.<br><strong>Giải thích:</strong> Bỏ học sẽ không có bằng cấp." },
-            { ifClause: "If you decide to work in a hospital,", ans: "you’ll help people who are sick", hint: "<strong>Câu hoàn chỉnh:</strong> If you decide to work in a hospital, you’ll help people who are sick.<br><strong>Giải thích:</strong> Làm việc ở bệnh viện sẽ giúp người bệnh." },
-            { ifClause: "If you want to come with me to the concert next week,", ans: "I’ll buy the tickets", hint: "<strong>Câu hoàn chỉnh:</strong> If you want to come with me to the concert next week, I’ll buy the tickets.<br><strong>Giải thích:</strong> Muốn đi cùng thì sẽ mua vé." },
-            { ifClause: "If you train as a lifeguard,", ans: "you’ll be really fit", hint: "<strong>Câu hoàn chỉnh:</strong> If you train as a lifeguard, you’ll be really fit.<br><strong>Giải thích:</strong> Tập luyện làm nhân viên cứu hộ sẽ rất khỏe." }
+            { ifClause: "If I can’t find a flat to rent,", ans: "I’ll build one", bank: "build one", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>can’t find a flat to rent</strong>' → không thuê được nhà thì sẽ tự xây → <strong>I’ll build one</strong>.</div>" },
+            { ifClause: "If you go to work in America,", ans: "you’ll improve your English", bank: "improve your English", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>go to work in America</strong>' → làm việc ở Mỹ sẽ cải thiện tiếng Anh → <strong>you’ll improve your English</strong>.</div>" },
+            { ifClause: "If you become a sports coach,", ans: "you’ll get really fit", bank: "get really fit", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>become a sports coach</strong>' → làm huấn luyện viên thể thao sẽ rất khỏe mạnh → <strong>you’ll get really fit</strong>.</div>" },
+            { ifClause: "If I drop out of school,", ans: "I won’t get any qualifications", bank: "get any qualifications", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + won’t + V khi phủ định.</div><div class='hint-detail'>Dấu hiệu: '<strong>drop out of school</strong>' → bỏ học sẽ không có bằng cấp nào → <strong>I won’t get any qualifications</strong>.</div>" },
+            { ifClause: "If you decide to work in a hospital,", ans: "you’ll help people who are sick", bank: "help people who are sick", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>work in a hospital</strong>' → làm việc ở bệnh viện sẽ giúp đỡ người bệnh → <strong>you’ll help people who are sick</strong>.</div>" },
+            { ifClause: "If you want to come with me to the concert next week,", ans: "I’ll buy the tickets", bank: "buy the tickets", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>come with me to the concert</strong>' → muốn đi cùng đến buổi hòa nhạc thì sẽ mua vé → <strong>I’ll buy the tickets</strong>.</div>" },
+            { ifClause: "If you train as a lifeguard,", ans: "you’ll be really fit", bank: "be really fit", hint: "<div class='hint-detail'><span class='key-word'>Câu điều kiện loại 1</span>: If + S + V (hiện tại đơn), S + will + V.</div><div class='hint-detail'>Dấu hiệu: '<strong>train as a lifeguard</strong>' → tập luyện làm nhân viên cứu hộ sẽ rất khỏe mạnh → <strong>you’ll be really fit</strong>.</div>" }
         ];
 
         const task4Set1Words = ["art gallery", "aquarium", "botanical gardens", "castle", "cathedral", "fountain", "harbour", "opera house", "ruins", "safari park", "theme park"];
         const task4Set1Defs = [
-            { def: "This is a place where you can see fish and other creatures that live in water.", ans: "aquarium", hint: "<strong>Đáp án:</strong> aquarium<br><strong>Dịch câu:</strong> Nơi bạn có thể xem cá và sinh vật sống dưới nước.<br><strong>Giải thích:</strong> aquarium = thủy cung." },
-            { def: "These are the broken parts of a building or an old town.", ans: "ruins", hint: "<strong>Đáp án:</strong> ruins<br><strong>Dịch câu:</strong> Những phần hư hại, đổ vỡ của tòa nhà hoặc thị trấn cổ.<br><strong>Giải thích:</strong> ruins = tàn tích." },
-            { def: "This is a place where plants and trees are grown for scientific study.", ans: "botanical gardens", hint: "<strong>Đáp án:</strong> botanical gardens<br><strong>Dịch câu:</strong> Nơi trồng cây để nghiên cứu khoa học.<br><strong>Giải thích:</strong> botanical gardens = vườn bách thảo." },
-            { def: "This is a big old building with thick walls built to protect people inside.", ans: "castle", hint: "<strong>Đáp án:</strong> castle<br><strong>Dịch câu:</strong> Tòa nhà cổ lớn có tường dày để bảo vệ người bên trong.<br><strong>Giải thích:</strong> castle = lâu đài." },
-            { def: "You can find this type of water feature in parks or gardens.", ans: "fountain", hint: "<strong>Đáp án:</strong> fountain<br><strong>Dịch câu:</strong> Bạn có thể tìm thấy tiểu cảnh nước này trong công viên hoặc vườn.<br><strong>Giải thích:</strong> fountain = đài phun nước." },
-            { def: "You can drive through this place and see wild animals.", ans: "safari park", hint: "<strong>Đáp án:</strong> safari park<br><strong>Dịch câu:</strong> Bạn có thể lái xe qua nơi này và xem động vật hoang dã.<br><strong>Giải thích:</strong> safari park = công viên safari." },
-            { def: "This is a place with lots of entertainment and fun things to do.", ans: "theme park", hint: "<strong>Đáp án:</strong> theme park<br><strong>Dịch câu:</strong> Nơi có nhiều hoạt động giải trí và vui chơi.<br><strong>Giải thích:</strong> theme park = công viên giải trí." },
-            { def: "You can see famous paintings here.", ans: "art gallery", hint: "<strong>Đáp án:</strong> art gallery<br><strong>Dịch câu:</strong> Bạn có thể xem tranh nổi tiếng ở đây.<br><strong>Giải thích:</strong> art gallery = phòng triển lãm tranh." },
-            { def: "This is a good place to go if you enjoy a particular kind of music.", ans: "opera house", hint: "<strong>Đáp án:</strong> opera house<br><strong>Dịch câu:</strong> Nơi thích hợp nếu bạn thích một loại nhạc cụ thể.<br><strong>Giải thích:</strong> opera house = nhà hát opera." },
-            { def: "A very large church.", ans: "cathedral", hint: "<strong>Đáp án:</strong> cathedral<br><strong>Dịch câu:</strong> Một nhà thờ rất lớn.<br><strong>Giải thích:</strong> cathedral = nhà thờ lớn." }
+            { def: "This is a place where you can see fish and other creatures that live in water.", ans: "aquarium", hint: "<div class='hint-detail'><span class='key-word'>aquarium</span> (danh từ): thủy cung.</div><div class='hint-detail'>Nơi bạn có thể xem cá và các sinh vật khác sống dưới nước.</div>" },
+            { def: "These are the broken parts of a building or an old town.", ans: "ruins", hint: "<div class='hint-detail'><span class='key-word'>ruins</span> (danh từ): tàn tích.</div><div class='hint-detail'>Những phần đổ vỡ của một tòa nhà hoặc thị trấn cổ.</div>" },
+            { def: "This is a place where plants and trees are grown for scientific study.", ans: "botanical gardens", hint: "<div class='hint-detail'><span class='key-word'>botanical gardens</span> (danh từ): vườn bách thảo.</div><div class='hint-detail'>Nơi trồng cây cối để phục vụ nghiên cứu khoa học.</div>" },
+            { def: "This is a big old building with thick walls built to protect people inside.", ans: "castle", hint: "<div class='hint-detail'><span class='key-word'>castle</span> (danh từ): lâu đài.</div><div class='hint-detail'>Tòa nhà cổ lớn có tường dày để bảo vệ người bên trong.</div>" },
+            { def: "You can find this type of water feature in parks or gardens.", ans: "fountain", hint: "<div class='hint-detail'><span class='key-word'>fountain</span> (danh từ): đài phun nước.</div><div class='hint-detail'>Tiểu cảnh nước mà bạn có thể tìm thấy trong công viên hoặc khu vườn.</div>" },
+            { def: "You can drive through this place and see wild animals.", ans: "safari park", hint: "<div class='hint-detail'><span class='key-word'>safari park</span> (danh từ): công viên safari.</div><div class='hint-detail'>Nơi bạn có thể lái xe qua để ngắm động vật hoang dã.</div>" },
+            { def: "This is a place with lots of entertainment and fun things to do.", ans: "theme park", hint: "<div class='hint-detail'><span class='key-word'>theme park</span> (danh từ): công viên giải trí.</div><div class='hint-detail'>Nơi có nhiều hoạt động giải trí và vui chơi.</div>" },
+            { def: "You can see famous paintings here.", ans: "art gallery", hint: "<div class='hint-detail'><span class='key-word'>art gallery</span> (danh từ): phòng triển lãm tranh.</div><div class='hint-detail'>Nơi bạn có thể xem những bức tranh nổi tiếng.</div>" },
+            { def: "This is a good place to go if you enjoy a particular kind of music.", ans: "opera house", hint: "<div class='hint-detail'><span class='key-word'>opera house</span> (danh từ): nhà hát opera.</div><div class='hint-detail'>Nơi thích hợp nếu bạn thích một loại nhạc cụ thể.</div>" },
+            { def: "A very large church.", ans: "cathedral", hint: "<div class='hint-detail'><span class='key-word'>cathedral</span> (danh từ): nhà thờ lớn.</div><div class='hint-detail'>Một nhà thờ có quy mô rất lớn.</div>" }
         ];
 
         const task4Set2Words = ["harbour", "monument", "museum", "palace", "shopping district", "square", "statue", "temple", "theatre", "tower", "water park"];
         const task4Set2Defs = [
-            { def: "This is a tall narrow building. If you climb to the top, you can see a long way.", ans: "tower", hint: "<strong>Đáp án:</strong> tower<br><strong>Dịch câu:</strong> Tòa nhà cao và hẹp. Nếu leo lên đỉnh, bạn có thể nhìn xa.<br><strong>Giải thích:</strong> tower = tháp." },
-            { def: "This is a building where a royal family lives.", ans: "palace", hint: "<strong>Đáp án:</strong> palace<br><strong>Dịch câu:</strong> Tòa nhà nơi hoàng gia sinh sống.<br><strong>Giải thích:</strong> palace = cung điện." },
-            { def: "This is a religious place, often visited for prayers or ceremonies.", ans: "temple", hint: "<strong>Đáp án:</strong> temple<br><strong>Dịch câu:</strong> Nơi tôn giáo, thường đến để cầu nguyện hoặc dự lễ.<br><strong>Giải thích:</strong> temple = đền thờ." },
-            { def: "This is an area with lots of shops where people go to buy things.", ans: "shopping district", hint: "<strong>Đáp án:</strong> shopping district<br><strong>Dịch câu:</strong> Khu vực có nhiều cửa hàng nơi mọi người mua sắm.<br><strong>Giải thích:</strong> shopping district = khu mua sắm." },
-            { def: "This is a structure or sculpture made of stone or metal, usually outdoors.", ans: "statue", hint: "<strong>Đáp án:</strong> statue<br><strong>Dịch câu:</strong> Cấu trúc hoặc tác phẩm điêu khắc bằng đá hoặc kim loại, thường ở ngoài trời.<br><strong>Giải thích:</strong> statue = tượng." },
-            { def: "This is a place next to the sea where boats are kept safe.", ans: "harbour", hint: "<strong>Đáp án:</strong> harbour<br><strong>Dịch câu:</strong> Nơi cạnh biển nơi tàu thuyền được giữ an toàn.<br><strong>Giải thích:</strong> harbour = cảng." },
-            { def: "This is a place where you can learn about history, art, or science.", ans: "museum", hint: "<strong>Đáp án:</strong> museum<br><strong>Dịch câu:</strong> Nơi bạn có thể tìm hiểu về lịch sử, nghệ thuật hoặc khoa học.<br><strong>Giải thích:</strong> museum = bảo tàng." },
-            { def: "This is a special structure/building built to remember a person or an important event.", ans: "monument", hint: "<strong>Đáp án:</strong> monument<br><strong>Dịch câu:</strong> Công trình đặc biệt được xây dựng để tưởng nhớ một người hoặc sự kiện quan trọng.<br><strong>Giải thích:</strong> monument = đài tưởng niệm." },
-            { def: "This is an open space, often in the middle of a town, where people can gather.", ans: "square", hint: "<strong>Đáp án:</strong> square<br><strong>Dịch câu:</strong> Không gian mở, thường ở trung tâm thị trấn, nơi mọi người tụ tập.<br><strong>Giải thích:</strong> square = quảng trường." },
-            { def: "This is a fun place with water slides and pools where you can play.", ans: "water park", hint: "<strong>Đáp án:</strong> water park<br><strong>Dịch câu:</strong> Nơi vui chơi có máng trượt nước và hồ bơi.<br><strong>Giải thích:</strong> water park = công viên nước." }
+            { def: "This is a tall narrow building. If you climb to the top, you can see a long way.", ans: "tower", hint: "<div class='hint-detail'><span class='key-word'>tower</span> (danh từ): tháp.</div><div class='hint-detail'>Tòa nhà cao và hẹp, nếu leo lên đỉnh bạn có thể nhìn được rất xa.</div>" },
+            { def: "This is a building where a royal family lives.", ans: "palace", hint: "<div class='hint-detail'><span class='key-word'>palace</span> (danh từ): cung điện.</div><div class='hint-detail'>Tòa nhà nơi hoàng gia sinh sống.</div>" },
+            { def: "This is a religious place, often visited for prayers or ceremonies.", ans: "temple", hint: "<div class='hint-detail'><span class='key-word'>temple</span> (danh từ): đền thờ.</div><div class='hint-detail'>Nơi tôn giáo, thường được đến để cầu nguyện hoặc dự lễ.</div>" },
+            { def: "This is an area with lots of shops where people go to buy things.", ans: "shopping district", hint: "<div class='hint-detail'><span class='key-word'>shopping district</span> (danh từ): khu mua sắm.</div><div class='hint-detail'>Khu vực có nhiều cửa hàng, nơi mọi người đến mua sắm.</div>" },
+            { def: "This is a structure or sculpture made of stone or metal, usually outdoors.", ans: "statue", hint: "<div class='hint-detail'><span class='key-word'>statue</span> (danh từ): tượng.</div><div class='hint-detail'>Cấu trúc hoặc tác phẩm điêu khắc bằng đá hoặc kim loại, thường đặt ngoài trời.</div>" },
+            { def: "This is a place next to the sea where boats are kept safe.", ans: "harbour", hint: "<div class='hint-detail'><span class='key-word'>harbour</span> (danh từ): cảng.</div><div class='hint-detail'>Nơi cạnh biển để giữ tàu thuyền an toàn.</div>" },
+            { def: "This is a place where you can learn about history, art, or science.", ans: "museum", hint: "<div class='hint-detail'><span class='key-word'>museum</span> (danh từ): bảo tàng.</div><div class='hint-detail'>Nơi bạn có thể tìm hiểu về lịch sử, nghệ thuật hoặc khoa học.</div>" },
+            { def: "This is a special structure/building built to remember a person or an important event.", ans: "monument", hint: "<div class='hint-detail'><span class='key-word'>monument</span> (danh từ): đài tưởng niệm.</div><div class='hint-detail'>Công trình đặc biệt được xây để tưởng nhớ một người hoặc một sự kiện quan trọng.</div>" },
+            { def: "This is an open space, often in the middle of a town, where people can gather.", ans: "square", hint: "<div class='hint-detail'><span class='key-word'>square</span> (danh từ): quảng trường.</div><div class='hint-detail'>Không gian mở, thường nằm ở trung tâm thị trấn, nơi mọi người tụ tập.</div>" },
+            { def: "This is a fun place with water slides and pools where you can play.", ans: "water park", hint: "<div class='hint-detail'><span class='key-word'>water park</span> (danh từ): công viên nước.</div><div class='hint-detail'>Nơi vui chơi có máng trượt nước và hồ bơi.</div>" }
         ];
 
         const task5Data = [
-            { q: "I want to go somewhere ___ with my husband for our anniversary.", opts: ["disappointing", "romantic", "boring"], ans: "romantic", hint: "<strong>Đáp án:</strong> romantic<br><strong>Dịch câu:</strong> Tôi muốn đi đâu đó lãng mạn với chồng nhân dịp kỷ niệm.<br><strong>Giải thích:</strong> romantic = lãng mạn, phù hợp với kỷ niệm ngày cưới." },
-            { q: "I don’t want to stay anywhere too ___ because I like to be near the shops.", opts: ["remote", "crowded", "expensive"], ans: "remote", hint: "<strong>Đáp án:</strong> remote<br><strong>Dịch câu:</strong> Tôi không muốn ở nơi quá hẻo lánh vì tôi thích gần cửa hàng.<br><strong>Giải thích:</strong> remote = xa xôi, hẻo lánh; trái nghĩa với gần cửa hàng." },
-            { q: "I like going to castles and other ___ buildings where I can learn about the past.", opts: ["expensive", "peaceful", "historic"], ans: "historic", hint: "<strong>Đáp án:</strong> historic<br><strong>Dịch câu:</strong> Tôi thích tham quan lâu đài và các tòa nhà lịch sử để tìm hiểu về quá khứ.<br><strong>Giải thích:</strong> historic = mang tính lịch sử." },
-            { q: "When I’m on holiday, I prefer going to places where the locals go rather than ___ ones.", opts: ["spectacular", "cheap", "touristy"], ans: "touristy", hint: "<strong>Đáp án:</strong> touristy<br><strong>Dịch câu:</strong> Khi đi nghỉ, tôi thích đến nơi người dân địa phương lui tới hơn là những nơi đông khách du lịch.<br><strong>Giải thích:</strong> touristy = được thiết kế thu hút khách du lịch, thường mang nghĩa tiêu cực." },
-            { q: "I live in London, which is a really noisy city, so I like to spend my holidays in ___ places.", opts: ["peaceful", "busy", "spectacular"], ans: "peaceful", hint: "<strong>Đáp án:</strong> peaceful<br><strong>Dịch câu:</strong> Tôi sống ở London, một thành phố rất ồn ào, nên tôi thích nghỉ dưỡng ở nơi yên bình.<br><strong>Giải thích:</strong> peaceful = yên bình, đối lập với ồn ào." }
+            { q: "I want to go somewhere ___ with my husband for our anniversary.", opts: ["disappointing", "romantic", "boring"], ans: "romantic", hint: "<div class='hint-detail'><span class='key-word'>romantic</span> (tính từ): lãng mạn.</div><div class='hint-detail'>Dấu hiệu: '<strong>for our anniversary</strong>' → kỷ niệm ngày cưới cần một nơi lãng mạn → <strong>romantic</strong>.</div>" },
+            { q: "I don’t want to stay anywhere too ___ because I like to be near the shops.", opts: ["remote", "crowded", "expensive"], ans: "remote", hint: "<div class='hint-detail'><span class='key-word'>remote</span> (tính từ): xa xôi, hẻo lánh.</div><div class='hint-detail'>Dấu hiệu: '<strong>near the shops</strong>' → thích ở gần cửa hàng nên không muốn nơi hẻo lánh → <strong>remote</strong>.</div>" },
+            { q: "I like going to castles and other ___ buildings where I can learn about the past.", opts: ["expensive", "peaceful", "historic"], ans: "historic", hint: "<div class='hint-detail'><span class='key-word'>historic</span> (tính từ): mang tính lịch sử.</div><div class='hint-detail'>Dấu hiệu: '<strong>learn about the past</strong>' → tòa nhà giúp tìm hiểu về quá khứ mang tính lịch sử → <strong>historic</strong>.</div>" },
+            { q: "When I’m on holiday, I prefer going to places where the locals go rather than ___ ones.", opts: ["spectacular", "cheap", "touristy"], ans: "touristy", hint: "<div class='hint-detail'><span class='key-word'>touristy</span> (tính từ): mang tính du lịch, đông khách du lịch.</div><div class='hint-detail'>Dấu hiệu: '<strong>rather than</strong>' → trái nghĩa với nơi người dân địa phương hay đến → <strong>touristy</strong>.</div>" },
+            { q: "I live in London, which is a really noisy city, so I like to spend my holidays in ___ places.", opts: ["peaceful", "busy", "spectacular"], ans: "peaceful", hint: "<div class='hint-detail'><span class='key-word'>peaceful</span> (tính từ): yên bình.</div><div class='hint-detail'>Dấu hiệu: '<strong>noisy city</strong>' → đối lập với thành phố ồn ào nên thích nơi yên bình → <strong>peaceful</strong>.</div>" }
         ];
 
         const task6Email = `Hi Mia,<br><br>I can’t wait for our trip next month! I’ve packed my <sup>1</sup><span class="drop-slot" data-id="ex6-0" data-ans="travel guide"></span> so we can read about the best places to visit. Make sure you bring some <sup>2</sup><span class="drop-slot" data-id="ex6-1" data-ans="sunglasses"></span> too because it’s going to be sunny.<br><br>We’ll stay at a small <sup>3</sup><span class="drop-slot" data-id="ex6-2" data-ans="campsite"></span> near the lake. It looks very comfortable, and there’s even a barbecue area.<br><br>I’ve been in touch with my <sup>4</sup><span class="drop-slot" data-id="ex6-3" data-ans="penfriend"></span> from Spain, and he might join us for a few days. That will be fun!<br><br>During the day, we can go <sup>5</sup><span class="drop-slot" data-id="ex6-4" data-ans="sightseeing"></span> around the town and see all the famous landmarks. If you want, we can also buy some <sup>6</sup><span class="drop-slot" data-id="ex6-5" data-ans="souvenirs"></span> to remember our trip.<br><br>Don’t forget your hat and a camera!<br><br>See you soon,<br>Sam`;
 
         const task7Questions = [
-            { id: 1, q: "a moment when the food unexpectedly tastes good?", ans: "C", hint: "<strong>Đáp án:</strong> C<br><strong>Bằng chứng:</strong> \"Once I even said that a type of cat food tasted quite similar to pâté!\"<br><strong>Giải thích:</strong> Đoạn C kể về trải nghiệm thức ăn ngon bất ngờ." },
-            { id: 2, q: "what he has to include in his detailed reports?", ans: "D", hint: "<strong>Đáp án:</strong> D<br><strong>Bằng chứng:</strong> \"I give marks for appearance, smell, and flavor. I also write suggestions…\"<br><strong>Giải thích:</strong> Đoạn D mô tả chi tiết báo cáo." },
-            { id: 3, q: "the common misunderstanding about his job?", ans: "A", hint: "<strong>Đáp án:</strong> A<br><strong>Bằng chứng:</strong> \"Most people think I just eat dog biscuits, but it’s more complicated.\"<br><strong>Giải thích:</strong> Đoạn A nói về hiểu lầm phổ biến." },
+            { id: 1, q: "a moment when the food unexpectedly tastes good?", ans: "C", evidence: "Once I even said that a type of cat food tasted quite similar to pâté!", hint: "<strong>Đáp án:</strong> C<br><strong>Bằng chứng:</strong> \"Once I even said that a type of cat food tasted quite similar to pâté!\"<br><strong>Giải thích:</strong> Đoạn C kể về trải nghiệm thức ăn ngon bất ngờ." },
+            { id: 2, q: "what he has to include in his detailed reports?", ans: "D", evidence: "I give marks for appearance, smell, and flavor.", hint: "<strong>Đáp án:</strong> D<br><strong>Bằng chứng:</strong> \"I give marks for appearance, smell, and flavor. I also write suggestions…\"<br><strong>Giải thích:</strong> Đoạn D mô tả chi tiết báo cáo." },
+            { id: 3, q: "the common misunderstanding about his job?", ans: "A", evidence: "Most people think I just eat dog biscuits, but it's more complicated.", hint: "<strong>Đáp án:</strong> A<br><strong>Bằng chứng:</strong> \"Most people think I just eat dog biscuits, but it’s more complicated.\"<br><strong>Giải thích:</strong> Đoạn A nói về hiểu lầm phổ biến." },
             { id: 4, q: "a comparison between pet food and human dishes he cooked himself?", ans: "–", hint: "<strong>Đáp án:</strong> – (không có đoạn nào)<br><strong>Giải thích:</strong> Không đoạn nào nói anh ấy tự nấu." },
-            { id: 5, q: "the unpleasant parts of tasting the food?", ans: "E", hint: "<strong>Đáp án:</strong> E<br><strong>Bằng chứng:</strong> \"Sometimes the food really tastes bad, and I have to force myself to try it.\"<br><strong>Giải thích:</strong> Đoạn E nói về khó khăn." },
-            { id: 6, q: "why the company needs human testers in addition to machines?", ans: "B", hint: "<strong>Đáp án:</strong> B<br><strong>Bằng chứng:</strong> \"animals can’t tell us what the food tastes like. So, people like me are asked to describe…\"<br><strong>Giải thích:</strong> Đoạn B giải thích lý do cần người thử." },
+            { id: 5, q: "the unpleasant parts of tasting the food?", ans: "E", evidence: "Sometimes the food really tastes bad, and I have to force myself to try it.", hint: "<strong>Đáp án:</strong> E<br><strong>Bằng chứng:</strong> \"Sometimes the food really tastes bad, and I have to force myself to try it.\"<br><strong>Giải thích:</strong> Đoạn E nói về khó khăn." },
+            { id: 6, q: "why the company needs human testers in addition to machines?", ans: "B", evidence: "animals can't tell us what the food tastes like. So, people like me are asked to describe", hint: "<strong>Đáp án:</strong> B<br><strong>Bằng chứng:</strong> \"animals can’t tell us what the food tastes like. So, people like me are asked to describe…\"<br><strong>Giải thích:</strong> Đoạn B giải thích lý do cần người thử." },
             { id: 7, q: "what he plans to do after leaving this job?", ans: "–", hint: "<strong>Đáp án:</strong> – (không có đoạn nào)<br><strong>Giải thích:</strong> Không đề cập đến kế hoạch sau khi nghỉ việc." }
         ];
 
         // ========== RENDER ==========
         function renderEx1() {
             const container = document.getElementById('ex1-container');
-            container.innerHTML = task1Data.map((item, i) => `<div class="question-row"><strong>${i + 1}</strong> ${item.text} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceAns('ex1-q${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex1-q${i}')">i</button></span><div class="hint-box" id="ex1-q${i}-hint">${item.hint}</div></div>`).join('');
+            container.innerHTML = task1Data.map((item, i) => `<div class="question-row"><strong>${i + 1}</strong> ${item.text} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceAns('ex1-q${i}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex1-q${i}')">i</button></span><div class="hint-box inline-hint" id="ex1-q${i}-hint">${item.hint}</div></div>`).join('');
         }
         function renderEx2() {
             const container = document.getElementById('ex2-container');
@@ -755,7 +798,7 @@
                     <button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button>
                 </span>
             </div>
-            <div class="hint-box" id="${qid}-hint">${line.hint}</div>
+            <div class="hint-box inline-hint" id="${qid}-hint">${line.hint}</div>
         </div>`;
             });
             container.innerHTML = html;
@@ -806,16 +849,16 @@
             const container = document.getElementById('ex3-container');
             let html = '';
             html += `<p><strong>Set 1</strong></p>`;
-            html += `<div class="endings-bank"><span style="font-weight:600; margin-right:8px;">Endings:</span>${task3Set1Endings.map(e => `<span class="ending-chip">${e}</span>`).join('')}</div>`;
+            html += `<div class="word-bank" id="bank-ex3-s1"><span style="font-weight:600; margin-right:8px; align-self:center;">Endings:</span>${task3Set1Endings.map(e => `<span class="word-item" data-value="${e}">${e}</span>`).join('')}</div>`;
             task3Set1.forEach((item, i) => {
                 const qid = `ex3-s1-${i}`;
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.ifClause} <span class="inline-input-group"><input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input wide-input" oninput="adjustWidth(this)"><span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('${qid}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span></span><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.ifClause} <span class="inline-input-group"><input type="text" id="${qid}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex3-s1" class="task5-input wide-input" oninput="adjustWidth(this)"><span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('${qid}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span></span><div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div></div>`;
             });
             html += `<p style="margin-top:25px;"><strong>Set 2</strong></p>`;
-            html += `<div class="endings-bank"><span style="font-weight:600; margin-right:8px;">Endings:</span>${task3Set2Endings.map(e => `<span class="ending-chip">${e}</span>`).join('')}</div>`;
+            html += `<div class="word-bank" id="bank-ex3-s2"><span style="font-weight:600; margin-right:8px; align-self:center;">Endings:</span>${task3Set2Endings.map(e => `<span class="word-item" data-value="${e}">${e}</span>`).join('')}</div>`;
             task3Set2.forEach((item, i) => {
                 const qid = `ex3-s2-${i}`;
-                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.ifClause} <span class="inline-input-group"><input type="text" id="${qid}" data-ans="${item.ans}" class="task5-input wide-input" oninput="adjustWidth(this)"><span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('${qid}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span></span><div class="hint-box" id="${qid}-hint">${item.hint}</div></div>`;
+                html += `<div class="question-row"><strong>${i + 1}</strong> ${item.ifClause} <span class="inline-input-group"><input type="text" id="${qid}" data-ans="${item.ans}" data-bank="${item.bank}" data-bankid="bank-ex3-s2" class="task5-input wide-input" oninput="adjustWidth(this)"><span class="row-btns"><button class="eye-btn" onclick="toggleInputAns(document.getElementById('${qid}'))">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${qid}')">i</button></span></span><div class="hint-box inline-hint" id="${qid}-hint">${item.hint}</div></div>`;
             });
             container.innerHTML = html;
         }
@@ -828,7 +871,7 @@
                 const slotId = `ex4-s1-${i}`;
                 return `<div class="question-row">${i + 1}. ${d.def} <span class="drop-slot" id="${slotId}" data-ans="${d.ans}"></span>
             <span class="row-btns"><button class="eye-btn" onclick="toggleSlotAns('${slotId}','#bank-ex4-set1')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span>
-            <div class="hint-box" id="${slotId}-hint">${d.hint}</div></div>`;
+            <div class="hint-box inline-hint" id="${slotId}-hint">${d.hint}</div></div>`;
             }).join('');
             setupDragDrop('#bank-ex4-set1', '#ex4-set1-container .drop-slot');
 
@@ -839,7 +882,7 @@
                 const slotId = `ex4-s2-${i}`;
                 return `<div class="question-row">${i + 1}. ${d.def} <span class="drop-slot" id="${slotId}" data-ans="${d.ans}"></span>
             <span class="row-btns"><button class="eye-btn" onclick="toggleSlotAns('${slotId}','#bank-ex4-set2')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${slotId}')">i</button></span>
-            <div class="hint-box" id="${slotId}-hint">${d.hint}</div></div>`;
+            <div class="hint-box inline-hint" id="${slotId}-hint">${d.hint}</div></div>`;
             }).join('');
             setupDragDrop('#bank-ex4-set2', '#ex4-set2-container .drop-slot');
         }
@@ -861,13 +904,26 @@
                 if (wi) wi.classList.add('used');
             }
         }
+        // Non-toggle sibling used only by "Show All" — unlike toggleSlotAns (eye button),
+        // this always sets the correct answer + strikes the bank word, never clears an
+        // already-revealed slot back to empty (Rule 7: toggle fn must not be called by Show All).
+        function showSlotAnsAll(slotId, bankSelector) {
+            const slot = document.getElementById(slotId) || document.querySelector(`.drop-slot[data-id="${slotId}"]`);
+            if (!slot) return;
+            const ans = slot.dataset.ans;
+            slot.innerText = ans; slot.classList.add('filled', 'correct'); slot.classList.remove('incorrect-marked');
+            slot.style.minWidth = Math.max(ans.length * 10 + 20, 110) + 'px';
+            const bank = document.querySelector(bankSelector);
+            const wi = bank ? bank.querySelector(`.word-item[data-value="${ans}"]`) : null;
+            if (wi) wi.classList.add('used');
+        }
 
         function renderEx5() {
             const container = document.getElementById('ex5-container');
             container.innerHTML = task5Data.map((item, i) => {
                 const gapId = `ex5-q${i}`;
                 const choiceHtml = `<span class="choice-gap" id="${gapId}" data-ans="${item.ans}">${item.opts.map(opt => `<span class="word-choice" onclick="selectChoice(this)" data-val="${opt}">${opt}</span>`).join('<span class="choice-sep">/</span>')}</span>`;
-                return `<div class="question-row"><strong>${i + 1}</strong> ${item.q.replace('___', choiceHtml)} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceAns('${gapId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${gapId}')">i</button></span><div class="hint-box" id="${gapId}-hint">${item.hint}</div></div>`;
+                return `<div class="question-row"><strong>${i + 1}</strong> ${item.q.replace('___', choiceHtml)} <span class="row-btns"><button class="eye-btn" onclick="toggleChoiceAns('${gapId}')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'${gapId}')">i</button></span><div class="hint-box inline-hint" id="${gapId}-hint">${item.hint}</div></div>`;
             }).join('');
         }
 
@@ -875,12 +931,12 @@
             const container = document.getElementById('ex6-container');
             container.innerHTML = `<div style="background:var(--card-bg); padding:20px; border-radius:12px; line-height:2.4;">${task6Email}</div>`;
             const hints = [
-                "<strong>Đáp án:</strong> travel guide<br><strong>Giải thích:</strong> Sách hướng dẫn du lịch, dùng để đọc về các địa điểm tham quan.",
-                "<strong>Đáp án:</strong> sunglasses<br><strong>Giải thích:</strong> Kính râm, cần thiết khi trời nắng.",
-                "<strong>Đáp án:</strong> campsite<br><strong>Giải thích:</strong> Khu cắm trại, nơi ở nhỏ gần hồ.",
-                "<strong>Đáp án:</strong> penfriend<br><strong>Giải thích:</strong> Bạn qua thư, người mà bạn trao đổi thư từ, ở Tây Ban Nha.",
-                "<strong>Đáp án:</strong> sightseeing<br><strong>Giải thích:</strong> Hoạt động tham quan, ngắm cảnh các địa danh nổi tiếng.",
-                "<strong>Đáp án:</strong> souvenirs<br><strong>Giải thích:</strong> Quà lưu niệm, đồ mua để nhớ chuyến đi."
+                "<div class='hint-detail'><span class='key-word'>travel guide</span> (danh từ): sách hướng dẫn du lịch.</div><div class='hint-detail'>Dấu hiệu: '<strong>read about the best places to visit</strong>' → cần sách hướng dẫn để đọc về các địa điểm tham quan → <strong>travel guide</strong>.</div>",
+                "<div class='hint-detail'><span class='key-word'>sunglasses</span> (danh từ): kính râm.</div><div class='hint-detail'>Dấu hiệu: '<strong>it’s going to be sunny</strong>' → trời nắng nên cần mang kính râm → <strong>sunglasses</strong>.</div>",
+                "<div class='hint-detail'><span class='key-word'>campsite</span> (danh từ): khu cắm trại.</div><div class='hint-detail'>Dấu hiệu: '<strong>near the lake</strong>' → nơi ở nhỏ gần hồ để cắm trại → <strong>campsite</strong>.</div>",
+                "<div class='hint-detail'><span class='key-word'>penfriend</span> (danh từ): bạn qua thư.</div><div class='hint-detail'>Dấu hiệu: '<strong>been in touch with ... from Spain</strong>' → người bạn trao đổi thư từ, đến từ Tây Ban Nha → <strong>penfriend</strong>.</div>",
+                "<div class='hint-detail'><span class='key-word'>sightseeing</span> (danh từ): tham quan, ngắm cảnh.</div><div class='hint-detail'>Dấu hiệu: '<strong>see all the famous landmarks</strong>' → hoạt động đi ngắm cảnh các địa danh nổi tiếng → <strong>sightseeing</strong>.</div>",
+                "<div class='hint-detail'><span class='key-word'>souvenirs</span> (danh từ): quà lưu niệm.</div><div class='hint-detail'>Dấu hiệu: '<strong>to remember our trip</strong>' → mua đồ lưu niệm để nhớ về chuyến đi → <strong>souvenirs</strong>.</div>"
             ];
             for (let i = 0; i < 6; i++) {
                 const slot = document.querySelector(`.drop-slot[data-id="ex6-${i}"]`);
@@ -890,7 +946,7 @@
                     btnSpan.style.marginLeft = '5px';
                     btnSpan.innerHTML = `<button class="eye-btn" onclick="toggleSlotAns('ex6-${i}','#bank-ex6')">👁️</button><button class="hint-btn" onclick="toggleHint(event,'ex6-${i}')">i</button>`;
                     const hintDiv = document.createElement('div');
-                    hintDiv.className = 'hint-box';
+                    hintDiv.className = 'hint-box inline-hint';
                     hintDiv.id = `ex6-${i}-hint`;
                     hintDiv.innerHTML = hints[i];
                     slot.parentNode.insertBefore(btnSpan, slot.nextSibling);
@@ -910,6 +966,33 @@
             }).join('');
         }
 
+        // Keyword-only highlighting for Task 7 (only the evidence phrase gets highlighted, not the whole paragraph)
+        const ex7ParaOriginalHTML = {};
+        function ex7EscapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        function ex7BuildEvidenceRegex(phrase) {
+            const pattern = ex7EscapeRegExp(phrase)
+                .replace(/['’]/g, "['’]")
+                .replace(/\s+/g, '\\s+');
+            return new RegExp(pattern);
+        }
+        function highlightEx7Evidence(letter, phrase) {
+            const paraId = 'par' + letter;
+            const para = document.getElementById(paraId);
+            if (!para) return;
+            if (!(paraId in ex7ParaOriginalHTML)) ex7ParaOriginalHTML[paraId] = para.innerHTML;
+            const original = ex7ParaOriginalHTML[paraId];
+            if (!phrase) { para.innerHTML = original; return; }
+            const match = original.match(ex7BuildEvidenceRegex(phrase));
+            para.innerHTML = match
+                ? original.slice(0, match.index) + '<span class="active-highlight">' + match[0] + '</span>' + original.slice(match.index + match[0].length)
+                : original;
+        }
+        function clearEx7EvidenceHighlights() {
+            Object.keys(ex7ParaOriginalHTML).forEach(id => {
+                const para = document.getElementById(id);
+                if (para) para.innerHTML = ex7ParaOriginalHTML[id];
+            });
+        }
         function showTask7Hint(event, qid) {
             event.stopPropagation();
             const num = parseInt(qid);
@@ -920,13 +1003,13 @@
             if (!h) return;
             const isVisible = h.style.display === 'block';
             closeAllHints();
-            document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+            clearEx7EvidenceHighlights();
             if (!isVisible) {
                 h.style.display = 'block';
                 if (question.ans && question.ans !== '–') {
+                    highlightEx7Evidence(question.ans, question.evidence);
                     const para = document.getElementById('par' + question.ans);
                     if (para) {
-                        para.classList.add('active-highlight');
                         const panel = document.getElementById('readingPanel7');
                         if (panel) {
                             panel.scrollTo({ top: para.offsetTop - 80, behavior: 'smooth' });
@@ -938,23 +1021,24 @@
 
         // ========== SHOW / RESET ==========
         window.showAnswers = function (section) {
-            if (section === 'ex1') task1Data.forEach((_, i) => toggleChoiceAns(`ex1-q${i}`));
+            if (section === 'ex1') task1Data.forEach((_, i) => showChoiceAnsAll(`ex1-q${i}`));
             if (section === 'ex2') task2Lines.forEach((_, i) => showEx2Ans(`ex2-${i}`));
             if (section === 'ex3') {
                 document.querySelectorAll('#ex3-container .task5-input').forEach(inp => {
                     const ans = inp.dataset.ans.split('|')[0].trim();
                     inp.value = ans; inp.classList.remove('incorrect-marked'); inp.classList.add('correct'); adjustWidth(inp);
+                    if (inp.dataset.bank) setWordUsed(inp.dataset.bankid, inp.dataset.bank, true);
                 });
             }
-            if (section === 'ex4') {
-                document.querySelectorAll('#ex4-set1-container .drop-slot, #ex4-set2-container .drop-slot').forEach(slot => {
-                    const bankSel = slot.closest('#ex4-set1-container') ? '#bank-ex4-set1' : '#bank-ex4-set2';
-                    toggleSlotAns(slot.id, bankSel);
-                });
+            if (section === 'ex4-set1') {
+                document.querySelectorAll('#ex4-set1-container .drop-slot').forEach(slot => showSlotAnsAll(slot.id, '#bank-ex4-set1'));
             }
-            if (section === 'ex5') task5Data.forEach((_, i) => toggleChoiceAns(`ex5-q${i}`));
-            if (section === 'ex6') { for (let i = 0; i < 6; i++) toggleSlotAns(`ex6-${i}`, '#bank-ex6'); }
-            if (section === 'ex7') task7Questions.forEach((_, i) => toggleChoiceAns(`ex7-q${i}`));
+            if (section === 'ex4-set2') {
+                document.querySelectorAll('#ex4-set2-container .drop-slot').forEach(slot => showSlotAnsAll(slot.id, '#bank-ex4-set2'));
+            }
+            if (section === 'ex5') task5Data.forEach((_, i) => showChoiceAnsAll(`ex5-q${i}`));
+            if (section === 'ex6') { for (let i = 0; i < 6; i++) showSlotAnsAll(`ex6-${i}`, '#bank-ex6'); }
+            if (section === 'ex7') task7Questions.forEach((_, i) => showChoiceAnsAll(`ex7-q${i}`));
         };
 
         window.resetSection = function (section) {
@@ -972,13 +1056,15 @@
                 });
             }
             if (section === 'ex3') {
-                document.querySelectorAll('#ex3-container .task5-input').forEach(inp => { inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp); });
-            }
-            if (section === 'ex4') {
-                ['set1', 'set2'].forEach(set => {
-                    document.querySelectorAll(`#ex4-${set}-container .drop-slot`).forEach(s => { s.innerText = ''; s.classList.remove('filled', 'correct', 'incorrect-marked'); s.style.minWidth = '110px'; });
-                    document.querySelectorAll(`#bank-ex4-${set} .word-item`).forEach(w => w.classList.remove('used'));
+                document.querySelectorAll('#ex3-container .task5-input').forEach(inp => {
+                    inp.value = ''; inp.classList.remove('correct', 'incorrect-marked'); adjustWidth(inp);
+                    if (inp.dataset.bank) setWordUsed(inp.dataset.bankid, inp.dataset.bank, false);
                 });
+            }
+            if (section === 'ex4-set1' || section === 'ex4-set2') {
+                const set = section === 'ex4-set1' ? 'set1' : 'set2';
+                document.querySelectorAll(`#ex4-${set}-container .drop-slot`).forEach(s => { s.innerText = ''; s.classList.remove('filled', 'correct', 'incorrect-marked'); s.style.minWidth = '110px'; });
+                document.querySelectorAll(`#bank-ex4-${set} .word-item`).forEach(w => w.classList.remove('used'));
             }
             if (section === 'ex5') {
                 document.querySelectorAll('#ex5-container .word-choice').forEach(s => s.classList.remove('selected', 'correct-select', 'incorrect-select'));
@@ -992,6 +1078,7 @@
             }
             closeAllHints();
             document.querySelectorAll('.active-highlight').forEach(el => el.classList.remove('active-highlight'));
+            clearEx7EvidenceHighlights();
         };
 
         // ========== CHECK ALL ==========
@@ -1023,11 +1110,17 @@
                 }
             });
             document.querySelectorAll('.task5-input[data-ans]').forEach(inp => {
-                if (!inp.value.trim()) { inp.classList.remove('correct', 'incorrect-marked'); return; }
+                if (!inp.value.trim()) {
+                    inp.classList.remove('correct', 'incorrect-marked');
+                    if (inp.dataset.bank) setWordUsed(inp.dataset.bankid, inp.dataset.bank, false);
+                    return;
+                }
                 const answers = inp.dataset.ans.split('|').map(a => a.trim().toLowerCase());
                 const val = inp.value.trim().toLowerCase();
                 inp.classList.remove('correct', 'incorrect-marked');
-                inp.classList.add(answers.includes(val) ? 'correct' : 'incorrect-marked');
+                const isCorrect = answers.includes(val);
+                inp.classList.add(isCorrect ? 'correct' : 'incorrect-marked');
+                if (inp.dataset.bank) setWordUsed(inp.dataset.bankid, inp.dataset.bank, isCorrect);
             });
             document.querySelectorAll('.drop-slot[data-ans]').forEach(slot => {
                 if (!slot.innerText.trim()) { slot.classList.remove('correct', 'incorrect-marked'); return; }
