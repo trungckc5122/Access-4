@@ -144,15 +144,44 @@
 
         /* .sticky-bank kế thừa từ access-theme.css — không override ở đây */
 
-        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js */
+        /* Hint popup - chuẩn hóa vị trí nổi cạnh nút i, tương thích access-core.js
+           (access-core.js override toggleHint: nếu .hint-box có class inline-hint,
+           nó sẽ tự dùng position:fixed + getBoundingClientRect để luôn hiện đúng
+           cạnh nút bấm, không bị cắt/tràn ở bất kỳ mép nào của màn hình) */
         .hint-box.inline-hint {
             position: fixed;
             top: auto;
             left: auto;
             margin-top: 0;
             max-width: 380px;
+            width: max-content;
+            white-space: normal;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
             z-index: 9999;
+        }
+
+        .hint-box.inline-hint::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: var(--arrow-x, 20px);
+            width: 0;
+            height: 0;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            pointer-events: none;
+        }
+
+        /* Box nằm DƯỚI nút (mặc định) → mũi tên ở mép trên, trỏ LÊN */
+        .hint-box.inline-hint.arrow-up::after {
+            bottom: 100%;
+            border-bottom-color: var(--hint-border);
+        }
+
+        /* Box bị lật lên TRÊN nút (tràn đáy màn hình) → mũi tên ở mép dưới, trỏ XUỐNG */
+        .hint-box.inline-hint.arrow-down::after {
+            top: 100%;
+            border-top-color: var(--hint-border);
         }
     </style>
 </head>
@@ -309,66 +338,66 @@
     <script src="access-core.js"></script>
     <script>
         const ex1Data = [
-            { q: "We [INPUT] (get) to the hotel in time for dinner.", ans: "didn't get", mean: "không đến nơi", trans: "Chúng tôi đã không đến khách sạn kịp giờ ăn tối." },
-            { q: "Our team [INPUT] (win) the last match of the season.", ans: "didn't win", mean: "không thắng", trans: "Đội của chúng tôi đã không thắng trận cuối cùng của mùa giải." },
-            { q: "It was a long film, but I [INPUT] (feel) bored.", ans: "didn't feel", mean: "không cảm thấy", trans: "Đó là một bộ phim dài, nhưng tôi đã không cảm thấy chán." },
-            { q: "They [INPUT] (spend) all their money on holiday.", ans: "didn't spend", mean: "không tiêu (tiền)", trans: "Họ đã không tiêu hết tiền trong kỳ nghỉ." },
-            { q: "My aunt [INPUT] (be) at the family wedding last weekend.", ans: "wasn't", mean: "đã không ở (số ít)", trans: "Dì tôi đã không ở đám cưới gia đình cuối tuần trước." },
-            { q: "Our teacher [INPUT] (give) us a lot of homework.", ans: "didn't give", mean: "không giao (bài tập)", trans: "Giáo viên đã không giao cho chúng tôi nhiều bài tập về nhà." },
-            { q: "It [INPUT] (rain) at all last month.", ans: "didn't rain", mean: "trời đã không mưa", trans: "Tháng trước trời đã không mưa chút nào." },
-            { q: "I enjoyed the film, but I [INPUT] (can) understand all of the dialogue.", ans: "couldn't", mean: "đã không thể", trans: "Tôi thích bộ phim, nhưng tôi đã không thể hiểu hết lời thoại." }
+            { q: "We [INPUT] (get) to the hotel in time for dinner.", ans: "didn't get", mean: "không đến nơi", sig: "(get) to the hotel in time for dinner", explain: "động từ 'get' cho trong ngoặc cần chia ở thể phủ định quá khứ đơn" },
+            { q: "Our team [INPUT] (win) the last match of the season.", ans: "didn't win", mean: "không thắng", sig: "(win) the last match of the season", explain: "động từ 'win' cho trong ngoặc cần chia ở thể phủ định quá khứ đơn" },
+            { q: "It was a long film, but I [INPUT] (feel) bored.", ans: "didn't feel", mean: "không cảm thấy", sig: "It was a long film, but I (feel) bored", explain: "'but' báo hiệu sự tương phản: phim dài nhưng lại KHÔNG thấy chán" },
+            { q: "They [INPUT] (spend) all their money on holiday.", ans: "didn't spend", mean: "không tiêu (tiền)", sig: "(spend) all their money on holiday", explain: "động từ 'spend' cho trong ngoặc cần chia ở thể phủ định quá khứ đơn" },
+            { q: "My aunt [INPUT] (be) at the family wedding last weekend.", ans: "wasn't", mean: "đã không ở (số ít)", sig: "(be) at the family wedding last weekend", explain: "động từ TO BE ở thể phủ định quá khứ đơn với chủ ngữ số ít là 'wasn't'" },
+            { q: "Our teacher [INPUT] (give) us a lot of homework.", ans: "didn't give", mean: "không giao (bài tập)", sig: "(give) us a lot of homework", explain: "động từ 'give' cho trong ngoặc cần chia ở thể phủ định quá khứ đơn" },
+            { q: "It [INPUT] (rain) at all last month.", ans: "didn't rain", mean: "trời đã không mưa", sig: "(rain) at all last month", explain: "cụm 'at all' nhấn mạnh ý phủ định tuyệt đối" },
+            { q: "I enjoyed the film, but I [INPUT] (can) understand all of the dialogue.", ans: "couldn't", mean: "đã không thể", sig: "I enjoyed the film, but I (can) understand all of the dialogue", explain: "'but' báo hiệu sự tương phản: thích phim nhưng lại KHÔNG hiểu hết lời thoại" }
         ];
 
         const ex2Data = [
             { q: "1. I didn't go skiing last winter, I went snowboarding.", isEx: true },
-            { q: "2. Einstein [INPUT] in 1965, he died in 1955.", ans: "didn't die", mean: "đã không qua đời", trans: "Einstein không mất năm 1965, ông ấy mất năm 1955." },
-            { q: "3. The holidays [INPUT] yesterday, they began last week.", ans: "didn't begin", mean: "đã không bắt đầu", trans: "Kỳ nghỉ không bắt đầu hôm qua, nó bắt đầu từ tuần trước." },
-            { q: "4. My grandparents [INPUT] born in Russia, they were born in Germany.", ans: "weren't", mean: "đã không sinh ra (số nhiều)", trans: "Ông bà tôi không sinh ra ở Nga, họ sinh ra ở Đức." },
-            { q: "5. I [INPUT] 'thirteen', I said 'thirty'.", ans: "didn't say", mean: "đã không nói", trans: "Tôi không nói '13', tôi đã nói '30'." },
-            { q: "6. We [INPUT] the first half of the match, but we saw the second half.", ans: "didn't see", mean: "đã không xem", trans: "Chúng tôi đã không xem hiệp một của trận đấu, nhưng đã xem hiệp hai." },
-            { q: "7. At the age of five, I [INPUT] ride a bike, but I could ski.", ans: "couldn't", mean: "đã không thể", trans: "Lúc 5 tuổi, tôi không biết đi xe đạp, nhưng tôi biết trượt tuyết." },
-            { q: "8. It [INPUT] warm yesterday, but it was sunny.", ans: "wasn't", mean: "đã không (thời tiết)", trans: "Hôm qua trời không ấm, nhưng có nắng." }
+            { q: "2. Einstein [INPUT] in 1965, he died in 1955.", ans: "didn't die", mean: "đã không qua đời", sig: "he died in 1955", explain: "thực tế Einstein mất năm 1955 nên câu phủ định năm 1965" },
+            { q: "3. The holidays [INPUT] yesterday, they began last week.", ans: "didn't begin", mean: "đã không bắt đầu", sig: "they began last week", explain: "kỳ nghỉ thực ra bắt đầu từ tuần trước, không phải hôm qua" },
+            { q: "4. My grandparents [INPUT] born in Russia, they were born in Germany.", ans: "weren't", mean: "đã không sinh ra (số nhiều)", sig: "they were born in Germany", explain: "ông bà thực ra sinh ra ở Đức, không phải Nga" },
+            { q: "5. I [INPUT] 'thirteen', I said 'thirty'.", ans: "didn't say", mean: "đã không nói", sig: "I said 'thirty'", explain: "thực tế đã nói '30' chứ không phải '13'" },
+            { q: "6. We [INPUT] the first half of the match, but we saw the second half.", ans: "didn't see", mean: "đã không xem", sig: "but we saw the second half", explain: "'but' báo hiệu tương phản: chỉ xem hiệp hai, không xem hiệp một" },
+            { q: "7. At the age of five, I [INPUT] ride a bike, but I could ski.", ans: "couldn't", mean: "đã không thể", sig: "but I could ski", explain: "'but' báo hiệu tương phản: biết trượt tuyết nhưng KHÔNG biết đi xe đạp" },
+            { q: "8. It [INPUT] warm yesterday, but it was sunny.", ans: "wasn't", mean: "đã không (thời tiết)", sig: "but it was sunny", explain: "'but' báo hiệu tương phản: trời nắng nhưng KHÔNG ấm" }
         ];
 
         const ex3Data = [
-            { q: "1. I [INPUT] (can) swim when I was five.", ans: "could / couldn't", hint: "Sử dụng 'could' nếu bạn biết bơi, 'couldn't' nếu chưa biết lúc 5 tuổi." },
-            { q: "2. Last weekend, I [INPUT] (do) a lot of homework.", ans: "did / didn't do", hint: "Sử dụng 'did' nếu đã làm nhiều bài tập, 'didn't do' nếu không làm." },
-            { q: "3. Five years ago, I [INPUT] (be) a student at this school.", ans: "was / wasn't", hint: "Sử dụng 'was' nếu bạn đã ở trường này 5 năm trước." },
-            { q: "4. Ten years ago, I [INPUT] (live) in a different town.", ans: "lived / didn't live", hint: "Sử dụng 'lived' nếu bạn từng sống ở thị trấn khác." },
-            { q: "5. I [INPUT] (make) my own breakfast this morning.", ans: "made / didn't make", hint: "Sử dụng 'made' nếu sáng nay bạn tự làm bữa sáng." },
-            { q: "6. I [INPUT] (choose) the clothes I’m wearing now.", ans: "chose / didn't choose", hint: "Sử dụng 'chose' nếu bạn tự chọn bộ đồ đang mặc." },
-            { q: "7. Last night, I [INPUT] (go) out with my friends.", ans: "went / didn't go", hint: "Sử dụng 'went' nếu tối qua bạn đi chơi với bạn bè." },
-            { q: "8. When I was six, I [INPUT] (study) English.", ans: "studied / didn't study", hint: "Sử dụng 'studied' nếu bạn đã học tiếng Anh từ lúc 6 tuổi." }
+            { q: "1. I [INPUT] (can) swim when I was five.", ans: "could / couldn't", rule: "thể hiện khả năng làm được / không làm được việc gì trong quá khứ", sig: "(can) swim when I was five", explain: "dùng 'could' nếu bạn biết bơi lúc 5 tuổi, 'couldn't' nếu chưa biết" },
+            { q: "2. Last weekend, I [INPUT] (do) a lot of homework.", ans: "did / didn't do", rule: "diễn tả việc đã làm / chưa làm trong quá khứ", sig: "Last weekend, I (do) a lot of homework", explain: "dùng 'did' nếu cuối tuần trước bạn làm nhiều bài tập, 'didn't do' nếu không" },
+            { q: "3. Five years ago, I [INPUT] (be) a student at this school.", ans: "was / wasn't", rule: "diễn tả tình trạng đã từng / chưa từng đúng trong quá khứ", sig: "Five years ago, I (be) a student at this school", explain: "dùng 'was' nếu 5 năm trước bạn học ở trường này, 'wasn't' nếu không" },
+            { q: "4. Ten years ago, I [INPUT] (live) in a different town.", ans: "lived / didn't live", rule: "diễn tả việc đã từng / chưa từng sống ở đâu trong quá khứ", sig: "Ten years ago, I (live) in a different town", explain: "dùng 'lived' nếu 10 năm trước bạn từng sống ở thị trấn khác, 'didn't live' nếu không" },
+            { q: "5. I [INPUT] (make) my own breakfast this morning.", ans: "made / didn't make", rule: "diễn tả việc đã làm / chưa làm trong quá khứ", sig: "I (make) my own breakfast this morning", explain: "dùng 'made' nếu sáng nay bạn tự làm bữa sáng, 'didn't make' nếu không" },
+            { q: "6. I [INPUT] (choose) the clothes I’m wearing now.", ans: "chose / didn't choose", rule: "diễn tả việc đã làm / chưa làm trong quá khứ", sig: "I (choose) the clothes I’m wearing now", explain: "dùng 'chose' nếu bạn tự chọn bộ đồ đang mặc, 'didn't choose' nếu không" },
+            { q: "7. Last night, I [INPUT] (go) out with my friends.", ans: "went / didn't go", rule: "diễn tả việc đã làm / chưa làm trong quá khứ", sig: "Last night, I (go) out with my friends", explain: "dùng 'went' nếu tối qua bạn đi chơi với bạn bè, 'didn't go' nếu không" },
+            { q: "8. When I was six, I [INPUT] (study) English.", ans: "studied / didn't study", rule: "diễn tả việc đã làm / chưa làm trong quá khứ", sig: "When I was six, I (study) English", explain: "dùng 'studied' nếu bạn học tiếng Anh từ lúc 6 tuổi, 'didn't study' nếu không" }
         ];
 
         const ex4Parts = [
-            { t: "Mia: Hi, Henry. ¹ [INPUT] did you do at the weekend?", ans: "What", hint: "Hỏi về hành động/sự việc (làm gì) → 'What'." },
+            { t: "Mia: Hi, Henry. ¹ [INPUT] did you do at the weekend?", ans: "What", nhan: "từ để hỏi", mean: "dùng để hỏi về hành động/sự việc", sig: "did you do at the weekend", explain: "câu trả lời là một hành động ('went to the beach') nên dùng 'What'" },
             { t: "Henry: I went to the beach on Saturday." },
-            { t: "Mia: That’s nice! ² [INPUT] did you go with?", ans: "Who", hint: "Hỏi về người (đi cùng ai) → 'Who'." },
+            { t: "Mia: That’s nice! ² [INPUT] did you go with?", ans: "Who", nhan: "từ để hỏi", mean: "dùng để hỏi về người", sig: "did you go with", explain: "câu trả lời là người ('Matt and Alex') nên dùng 'Who'" },
             { t: "Henry: Matt and Alex." },
-            { t: "Mia: Alex West? ³ [INPUT] do you see him?", ans: "How often", hint: "Hỏi về tần suất (bao lâu một lần) → 'How often'." },
+            { t: "Mia: Alex West? ³ [INPUT] do you see him?", ans: "How often", nhan: "cụm từ để hỏi", mean: "dùng để hỏi về tần suất", sig: "do you see him", explain: "câu trả lời là tần suất ('two or three times a year') nên dùng 'How often'" },
             { t: "Henry: Only two or three times a year. He doesn’t live near here any more." },
-            { t: "Mia: ⁴ [INPUT] does he live now?", ans: "Where", hint: "Hỏi về nơi chốn (sống ở đâu) → 'Where'." },
+            { t: "Mia: ⁴ [INPUT] does he live now?", ans: "Where", nhan: "từ để hỏi", mean: "dùng để hỏi về nơi chốn", sig: "does he live now", explain: "câu trả lời là địa điểm ('In London') nên dùng 'Where'" },
             { t: "Henry: In London." },
-            { t: "Mia: Does he? ⁵ [INPUT] part of London?", ans: "Which", hint: "Hỏi về sự lựa chọn trong một nhóm (khu vực nào) dùng 'Which'." },
+            { t: "Mia: Does he? ⁵ [INPUT] part of London?", ans: "Which", nhan: "từ để hỏi", mean: "dùng để hỏi về sự lựa chọn trong một nhóm cụ thể", sig: "part of London", explain: "hỏi chọn ra một khu vực cụ thể trong London nên dùng 'Which'" },
             { t: "Henry: I’m not sure. North London, I think." },
-            { t: "Mia: ⁶ [INPUT] did he move?", ans: "Why", hint: "Hỏi về lý do (tại sao) → 'Why'." },
-            { t: "Henry: I think his mum got a new job. Anyway, ⁷ [INPUT] did you last see him?", ans: "When", hint: "Hỏi về thời điểm (lần cuối gặp khi nào) dùng 'When'." },
+            { t: "Mia: ⁶ [INPUT] did he move?", ans: "Why", nhan: "từ để hỏi", mean: "dùng để hỏi về lý do", sig: "did he move", explain: "câu trả lời là lý do ('his mum got a new job') nên dùng 'Why'" },
+            { t: "Henry: I think his mum got a new job. Anyway, ⁷ [INPUT] did you last see him?", ans: "When", nhan: "từ để hỏi", mean: "dùng để hỏi về thời điểm", sig: "did you last see him", explain: "câu trả lời là thời điểm ('about two years ago') nên dùng 'When'" },
             { t: "Mia: Oh, about two years ago." }
         ];
 
         const ex5Data = [
-            { q: "homework / how much / last / did / you / night / do / ?", ans: "How much homework did you do last night?", hint: "Cấu trúc: How much + danh từ + did + S + V?" },
-            { q: "with / travel / did / to / school / you / who / today / ?", ans: "Who did you travel to school with today?", hint: "Cấu trúc: Who + did + S + V + with?" },
-            { q: "best / meet / where / you / did / friend / your / ?", ans: "Where did you meet your best friend?", hint: "Cấu trúc: Where + did + S + V?" },
-            { q: "first / teacher / who / your / was / English / ?", ans: "Who was your first English teacher?", hint: "Lưu ý: Với động từ 'be' không dùng trợ động từ 'did'." }
+            { q: "homework / how much / last / did / you / night / do / ?", ans: "How much homework did you do last night?", rule: "How much + danh từ không đếm được + did + S + V?", sig: "homework", explain: "'homework' là danh từ không đếm được nên dùng 'How much' + danh từ ở đầu câu hỏi" },
+            { q: "with / travel / did / to / school / you / who / today / ?", ans: "Who did you travel to school with today?", rule: "Who + did + S + V + with?", sig: "with", explain: "giới từ 'with' đặt ở cuối câu hỏi khi hỏi về người đi cùng bằng 'Who'" },
+            { q: "best / meet / where / you / did / friend / your / ?", ans: "Where did you meet your best friend?", rule: "Where + did + S + V?", sig: "where", explain: "từ 'where' trong các từ xáo trộn cho biết cần hỏi về địa điểm" },
+            { q: "first / teacher / who / your / was / English / ?", ans: "Who was your first English teacher?", rule: "Who + was + S?", sig: "was", explain: "từ 'was' trong các từ xáo trộn cho biết câu dùng động từ TO BE, không cần trợ động từ 'did'" }
         ];
 
         const ex6Data = [
             { q: "Jack gave his old bike to his sister. <br>Q: What did Jack give his sister? A: His old bike.", isEx: true },
-            { q: "Sam had dinner early <u>because he was hungry</u>.", givenAns: "because he was hungry", ans: "Why did Sam have dinner early", hint: "Vì câu trả lời có 'because' nên ta dùng 'Why' để hỏi lý do." },
-            { q: "Mason and <u>Tyler</u> went to London together.", givenAns: "Tyler", ans: "Who did Mason go to London with", hint: "Câu trả lời là 'Tyler' (người) nên ta dùng 'Who' và cấu trúc 'go with'." },
-            { q: "Grace listened to <u>three</u> Lady Gaga CDs.", givenAns: "three", ans: "How many Lady Gaga CDs did Grace listen to", hint: "Câu trả lời là 'Three' (số lượng) nên ta dùng 'How many'." }
+            { q: "Sam had dinner early <u>because he was hungry</u>.", givenAns: "because he was hungry", ans: "Why did Sam have dinner early", rule: "Why + did + S + V...?", explain: "cụm 'because' cho biết đây là lý do nên dùng 'Why' để hỏi" },
+            { q: "Mason and <u>Tyler</u> went to London together.", givenAns: "Tyler", ans: "Who did Mason go to London with", rule: "Who + did + S + V + with?", explain: "phần được gạch chân là tên người nên dùng 'Who' kết hợp cấu trúc 'go...with'" },
+            { q: "Grace listened to <u>three</u> Lady Gaga CDs.", givenAns: "three", ans: "How many Lady Gaga CDs did Grace listen to", rule: "How many + danh từ số nhiều + did + S + V?", explain: "phần được gạch chân là số lượng nên dùng 'How many' + danh từ số nhiều" }
         ];
 
         function adjustWidth(el) {
@@ -398,10 +427,26 @@
             if (left < 8) left = 8;
             hintBox.style.top = top + 'px';
             hintBox.style.left = left + 'px';
+
+            // Mũi tên: hướng tính LẠI dựa trên `top` sau khi đã kẹp — không dùng
+            // cờ từ nhánh if/else phía trên (dễ lỗi thời khi bị kẹp lần 2, xem mục 4d)
+            const below = (top + boxRect.height / 2) > rect.top;
+            const arrowX = Math.max(14, Math.min(boxRect.width - 14, (rect.left + rect.width / 2) - left));
+            hintBox.style.setProperty('--arrow-x', arrowX + 'px');
+            hintBox.classList.toggle('arrow-up', below);
+            hintBox.classList.toggle('arrow-down', !below);
+        }
+
+        // Nút neo đã cuộn khuất hẳn khỏi viewport → tự đóng hint thay vì kẹp mép
+        function isBtnOffScreen(btn) {
+            if (!btn || !btn.isConnected) return true;
+            const r = btn.getBoundingClientRect();
+            return r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth;
         }
 
         function repositionCurrentHint() {
             if (!currentHintBtn) return;
+            if (isBtnOffScreen(currentHintBtn)) { closeAllHints(); return; }
             const open = document.querySelector('.hint-box[style*="display: block"]');
             if (open) positionHintBox(open, currentHintBtn);
         }
@@ -445,7 +490,7 @@
             ex1Data.forEach((it, i) => {
                 const qid = `ex1-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${i + 1}. ${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span> (quá khứ đơn, phủ định): ${it.mean}.</div><div class="hint-detail">Dấu hiệu: '<strong>${it.sig}</strong>' → ${it.explain} → <strong>${it.ans}</strong>.</div></div></div>`;
             });
         }
 
@@ -458,7 +503,7 @@
                 }
                 const qid = `ex2-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span>: ${it.mean}</div><div class="hint-detail" style="font-style: italic; color: #666;">${it.trans}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span> (quá khứ đơn, phủ định): ${it.mean}.</div><div class="hint-detail">Dấu hiệu: '<strong>${it.sig}</strong>' → ${it.explain} → <strong>${it.ans}</strong>.</div></div></div>`;
             });
         }
 
@@ -467,7 +512,7 @@
             ex3Data.forEach((it, i) => {
                 const qid = `ex3-q${i}`;
                 const html = it.q.replace('[INPUT]', `<input type="text" id="${qid}" data-ans="${it.ans}" class="task5-input" oninput="adjustWidth(this)" placeholder="">`);
-                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div></div>`;
+                container.innerHTML += `<div class="question-row">${html} <div class="row-btns"><button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span> (động từ, quá khứ đơn): ${it.rule}.</div><div class="hint-detail">Dấu hiệu: '<strong>${it.sig}</strong>' → ${it.explain} → <strong>${it.ans}</strong>.</div></div></div>`;
             });
         }
 
@@ -490,7 +535,7 @@
                 let processedLine = line.t;
                 if (line.t.includes('[INPUT]')) {
                     const qid = `ex4-q${count}`;
-                    processedLine = line.t.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${line.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div> <div class="row-btns"><button class="eye-btn" onclick="revealEx4Ans('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><strong>Đáp án:</strong> ${line.ans}<br><strong>Giải thích:</strong> ${line.hint}</div></div>`);
+                    processedLine = line.t.replace('[INPUT]', `<div class="drop-slot" id="${qid}" data-ans="${line.ans}" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="removeWord('${qid}')"></div> <div class="row-btns"><button class="eye-btn" onclick="revealEx4Ans('${qid}')">👁️</button><button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button></div><div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${line.ans}</span> (${line.nhan}): ${line.mean}.</div><div class="hint-detail">Dấu hiệu: '<strong>${line.sig}</strong>' → ${line.explain} → <strong>${line.ans}</strong>.</div></div>`);
                     count++;
                 }
                 fullHtml += `<div>${processedLine}</div>`;
@@ -590,7 +635,7 @@
                         <button class="eye-btn" onclick="showSingleAns('${qid}')">👁️</button>
                         <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                     </div>
-                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span> (cấu trúc câu hỏi): ${it.rule}.</div><div class="hint-detail">Dấu hiệu: '<strong>${it.sig}</strong>' → ${it.explain} → <strong>${it.ans}</strong>.</div></div>
                     <br>
                     A: <input type="text" class="task5-input" style="text-align: left; min-width: 300px;" placeholder="Your own answer...">
                 </div>`;
@@ -615,7 +660,7 @@
                             <button class="hint-btn" onclick="toggleHint(event, '${qid}')">i</button>
                         </div>
                     </div>
-                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail">${it.hint}</div></div>
+                    <div class="hint-box inline-hint" id="${qid}-hint"><div class="hint-detail"><span class="key-word">${it.ans}</span> (cấu trúc câu hỏi): ${it.rule}.</div><div class="hint-detail">Dấu hiệu: '<strong>${it.givenAns}</strong>' → ${it.explain} → <strong>${it.ans}</strong>.</div></div>
                     <div style="margin-top: 5px; color: #555;">
                         <strong>A:</strong> ${it.givenAns}
                     </div>
@@ -681,6 +726,7 @@
         window.onload = () => {
             renderEx1(); renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6();
             document.querySelectorAll('input').forEach(adjustWidth);
+            window.toggleHint = toggleHint; // lưới an toàn thứ tự script (xem mục 0c)
         };
     </script>
 </body>
