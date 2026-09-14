@@ -886,7 +886,10 @@
             if (!item || !item.coords) return;
             item.coords.forEach(([r, c]) => {
                 const cell = document.querySelector(`.ws-cell[data-r="${r}"][data-c="${c}"]`);
-                if (cell) cell.classList.toggle('lit', on);
+                if (!cell) return;
+                const count = (+cell.dataset.litCount || 0) + (on ? 1 : -1);
+                cell.dataset.litCount = Math.max(0, count);
+                cell.classList.toggle('lit', count > 0);
             });
         }
 
@@ -907,11 +910,17 @@
         }
 
         function showWordSearchAnswers() {
+            document.querySelectorAll('.ws-cell').forEach(cell => {
+                cell.dataset.litCount = '0';
+                cell.classList.remove('lit');
+            });
             ex1Answers.forEach((_, i) => {
                 const input = document.getElementById(`ex1-${i}`);
-                input.value = input.dataset.ans;
-                input.classList.add('correct');
-                adjustWidth(input);
+                if (input) {
+                    input.value = input.dataset.ans;
+                    input.classList.add('correct');
+                    adjustWidth(input);
+                }
                 lightWord(i, true);
             });
         }
@@ -919,10 +928,15 @@
         function resetWordSearch() {
             ex1Answers.forEach((_, i) => {
                 const input = document.getElementById(`ex1-${i}`);
-                input.value = '';
-                input.classList.remove('correct', 'incorrect-marked');
-                lightWord(i, false);
-                adjustWidth(input);
+                if (input) {
+                    input.value = '';
+                    input.classList.remove('correct', 'incorrect-marked');
+                    adjustWidth(input);
+                }
+            });
+            document.querySelectorAll('.ws-cell').forEach(cell => {
+                cell.dataset.litCount = '0';
+                cell.classList.remove('lit');
             });
             document.querySelectorAll('.hint-box').forEach(el => el.style.display = 'none');
         }
