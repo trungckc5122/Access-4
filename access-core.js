@@ -227,9 +227,12 @@
                 const cRect = container.getBoundingClientRect();
                 const vh = window.innerHeight;
 
-                // If container is not visible at all, hide panel
+                // If container is completely out of viewport → auto-close transcript
+                // (remove 'active' so it stays closed when scrolling back)
                 if (cRect.bottom < 0 || cRect.top > vh) {
+                    panel.classList.remove('active');
                     panel.style.display = 'none';
+                    placeholder.style.width = '0';
                     return;
                 }
 
