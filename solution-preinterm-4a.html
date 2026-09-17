@@ -211,6 +211,97 @@
             background: white;
         }
 
+        /* Horizontal intensity scale (temperature) — horizontal counterpart of the
+           vertical-arrow-box used in 1a Exercise 2 (Modifying Adverbs) */
+        .horizontal-arrow-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin: 20px 0 10px;
+        }
+
+        .h-line {
+            height: 15px;
+            flex-grow: 1;
+            background: linear-gradient(to right, #ff6b35, #4dabf7);
+            border-radius: 4px 0 0 4px;
+            position: relative;
+            margin-right: 18px;
+        }
+
+        .h-line::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -18px;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 17px solid transparent;
+            border-bottom: 17px solid transparent;
+            border-left: 18px solid #4dabf7;
+        }
+
+        .horizontal-arrow-box .arrow-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .horizontal-arrow-box .arrow-label.label-hot {
+            color: #ff6b35;
+        }
+
+        .horizontal-arrow-box .arrow-label.label-cold {
+            color: #4dabf7;
+        }
+
+        .temp-scale-track {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .scale-slot {
+            flex: 1 1 0;
+            min-width: 68px;
+            min-height: 54px;
+            border: 2px dashed var(--slot-c, var(--glass-border, #ccc));
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6px 4px;
+            background: var(--card-bg, #fff);
+            transition: all 0.2s ease;
+        }
+
+        .scale-slot .scale-rank {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: var(--text-muted, #888);
+        }
+
+        .scale-slot .scale-word {
+            font-weight: 700;
+            color: var(--slot-c, var(--primary));
+            font-size: 0.9rem;
+            min-height: 1.2em;
+            word-break: break-word;
+        }
+
+        .scale-slot.filled {
+            border-style: solid;
+            border-color: var(--slot-c, var(--primary));
+            background: var(--slot-bg, var(--primary-light, #e0f2f1));
+        }
+
         .speaker-line {
             margin-bottom: 15px;
             display: block;
@@ -618,6 +709,14 @@
         <div class="exercise-card">
             <div class="exercise-title">4. Number the adjectives in order from hottest (1) to coldest (7).</div>
             <div id="questions-ex4" class="ex4-grid"></div>
+
+            <div class="horizontal-arrow-box">
+                <span class="arrow-label label-hot">Hottest</span>
+                <div class="h-line"></div>
+                <span class="arrow-label label-cold">Coldest</span>
+            </div>
+            <div class="temp-scale-track" id="temp-scale-track"></div>
+
             <div class="controls-row">
                 <button class="btn btn-show-all" onclick="showAnswers('ex4')">Show All</button>
                 <button class="btn btn-reset" onclick="resetSection('ex4')">Reset</button>
@@ -841,7 +940,7 @@
             ex4Data.forEach((it, i) => {
                 const qid = `ex4-${i + 1}`;
                 container.innerHTML += `<div class="order-item" style="position: relative; display: flex; align-items: center; gap: 8px;">
-                <input type="text" id="${qid}" data-ans="${it.ans}" class="order-input" maxlength="1"> 
+                <input type="text" id="${qid}" data-ans="${it.ans}" class="order-input" maxlength="1" oninput="updateScaleTrack()"> 
                 <span style="min-width: 80px;">${it.word}</span>
                 <span class="row-btns" style="display: flex; gap: 4px;">
                     <button class="btn-small eye-btn" onclick="showRowAns('${qid}')">👁️</button>
@@ -849,6 +948,52 @@
                 </span>
                 <div class="hint-box inline-hint" id="${qid}-hint">${it.hint}</div>
             </div>`;
+            });
+        }
+
+        function interpolateHex(hexA, hexB, t) {
+            const a = [1, 3, 5].map(i => parseInt(hexA.slice(i, i + 2), 16));
+            const b = [1, 3, 5].map(i => parseInt(hexB.slice(i, i + 2), 16));
+            const c = a.map((v, i) => Math.round(v + (b[i] - v) * t));
+            return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+        }
+
+        function renderScaleTrack() {
+            const track = document.getElementById('temp-scale-track');
+            if (!track) return;
+            const HOT = '#ff6b35';
+            const COLD = '#4dabf7';
+            let html = "";
+            for (let rank = 1; rank <= ex4Data.length; rank++) {
+                const t = ex4Data.length > 1 ? (rank - 1) / (ex4Data.length - 1) : 0;
+                const c = interpolateHex(HOT, COLD, t);
+                const bg = interpolateHex('#ffffff', c, 0.18);
+                html += `<div class="scale-slot" data-rank="${rank}" style="--slot-c:${c}; --slot-bg:${bg};">
+                <span class="scale-rank">${rank}</span>
+                <span class="scale-word"></span>
+            </div>`;
+            }
+            track.innerHTML = html;
+        }
+
+        function updateScaleTrack() {
+            const track = document.getElementById('temp-scale-track');
+            if (!track) return;
+            track.querySelectorAll('.scale-slot').forEach(slot => {
+                slot.querySelector('.scale-word').textContent = "";
+                slot.classList.remove('filled');
+            });
+            ex4Data.forEach((it, i) => {
+                const el = document.getElementById(`ex4-${i + 1}`);
+                if (!el) return;
+                const rank = parseInt(el.value.trim(), 10);
+                if (rank >= 1 && rank <= ex4Data.length) {
+                    const slot = track.querySelector(`.scale-slot[data-rank="${rank}"]`);
+                    if (slot) {
+                        slot.querySelector('.scale-word').textContent = it.word;
+                        slot.classList.add('filled');
+                    }
+                }
             });
         }
 
@@ -1027,6 +1172,7 @@
                 adjustWidth(el);
             });
             if (typeof updateWordBank === 'function') updateWordBank();
+            if (typeof updateScaleTrack === 'function') updateScaleTrack();
         }
 
         function showEx6Ans(qid) {
@@ -1055,6 +1201,7 @@
                 adjustWidth(el);
             });
             if (typeof updateWordBank === 'function') updateWordBank();
+            if (typeof updateScaleTrack === 'function') updateScaleTrack();
         }
 
         function resetSection(prefix) {
@@ -1066,10 +1213,12 @@
             });
             document.querySelectorAll('.hint-box').forEach(h => h.style.display = 'none');
             if (typeof updateWordBank === 'function') updateWordBank();
+            if (typeof updateScaleTrack === 'function') updateScaleTrack();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             renderEx2(); renderEx3(); renderEx4(); renderEx5(); renderEx6();
+            renderScaleTrack(); updateScaleTrack();
             updateWordBank();
             document.querySelectorAll('input').forEach(adjustWidth);
             const t = document.getElementById('theme-toggle');
